@@ -1,6 +1,9 @@
 # Builds
 build/
 
+# Exprts
+project_export.txt
+
 # ---> VisualStudioCode
 .vscode/*
 !.vscode/settings.json
