@@ -11,6 +11,36 @@ Window {
     color: "#2d2d2d"
     visible: true
 
+    // コンテキストメニューの定義
+    Menu {
+        id: contextMenu
+        
+        // メニューが開かれたときのマウス位置（タイムライン上の座標）を保持
+        property int clickFrame: 0
+        property int clickLayer: 0
+
+        MenuItem {
+            text: "Add Text Object"
+            onTriggered: {
+                // C++側に生成リクエストを送る
+                if (TimelineBridge) {
+                    TimelineBridge.createObject("text", contextMenu.clickFrame, contextMenu.clickLayer)
+                }
+            }
+        }
+        MenuItem {
+            text: "Add Shape Object (Rectangle)"
+            onTriggered: {
+                if (TimelineBridge) {
+                    TimelineBridge.createObject("rect", contextMenu.clickFrame, contextMenu.clickLayer)
+                }
+            }
+        }
+    }
+
+
+
+
     // 設定ウィンドウの参照を保持するプロパティ
     property var settingDialog: null
 
@@ -63,6 +93,27 @@ Window {
                             if (drag.active && TimelineBridge) {
                                 TimelineBridge.currentTime = playhead.x
                             }
+                        }
+                    }
+                }
+
+                // 全体を覆うマウスエリア（オブジェクトがない場所のクリック用）
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.RightButton | Qt.LeftButton
+                    z: -1 // オブジェクトより奥に配置
+
+                    onClicked: (mouse) => {
+                        if (mouse.button === Qt.RightButton) {
+                            // クリック位置からフレームとレイヤーを計算
+                            // zoomLevelが未定義のため、一旦1.0fで計算
+                            var frame = Math.floor(mouse.x / 1.0) // TODO: timelineWindow.zoomLevel を使用
+                            var layer = Math.floor(mouse.y / 30) // 30px per layer
+                            
+                            // メニューに情報を渡して表示
+                            contextMenu.clickFrame = frame
+                            contextMenu.clickLayer = layer
+                            contextMenu.popup()
                         }
                     }
                 }

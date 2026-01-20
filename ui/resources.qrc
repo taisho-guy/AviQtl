@@ -3,5 +3,8 @@
         <file>qml/CompositeView.qml</file>
         <file>qml/TimelineWindow.qml</file>
         <file>qml/SettingDialog.qml</file>
+        <!-- 新しいモジュール -->
+        <file>qml/objects/TextObject.qml</file>
+        <file>qml/objects/RectObject.qml</file>
     </qresource>
 </RCC>

@@ -12,6 +12,7 @@ namespace Rina::UI {
         , m_layer(0)
         , m_isClipActive(false)
         , m_isPlaying(false)
+        , m_activeObjectType("rect") // デフォルトは図形
     {
         m_playbackTimer = new QTimer(this);
         m_playbackTimer->setInterval(33); // ~30fps
@@ -177,6 +178,24 @@ namespace Rina::UI {
             m_playbackTimer->stop();
         }
         emit isPlayingChanged();
+    }
+
+    QString TimelineController::activeObjectType() const {
+        return m_activeObjectType;
+    }
+
+    void TimelineController::createObject(const QString& type, int startFrame, int layer) {
+        qDebug() << "Creating Object:" << type << "at Frame:" << startFrame << "Layer:" << layer;
+        
+        // プロトタイプなので、単一のオブジェクトの状態を切り替える実装にする
+        // 本来はECSでEntityを生成しリストに追加する
+        
+        if (m_activeObjectType != type) {
+            m_activeObjectType = type;
+            emit activeObjectTypeChanged();
+        }
+        // TODO: startFrameとlayerを新しいオブジェクトに適用するロジックを追加
+        // 現状は既存のm_clipStartTimeとm_layerを更新する
     }
 
     void TimelineController::log(const QString& msg) {

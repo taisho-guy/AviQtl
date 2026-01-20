@@ -26,6 +26,7 @@ namespace Rina::UI {
         Q_PROPERTY(bool isClipActive READ isClipActive NOTIFY isClipActiveChanged)
         Q_PROPERTY(QVariantList keyframeList READ keyframeList NOTIFY keyframeListChanged)
         Q_PROPERTY(bool isPlaying READ isPlaying NOTIFY isPlayingChanged)
+        Q_PROPERTY(QString activeObjectType READ activeObjectType NOTIFY activeObjectTypeChanged)
 
     public:
         explicit TimelineController(QObject* parent = nullptr);
@@ -59,6 +60,9 @@ namespace Rina::UI {
         Q_INVOKABLE void addKeyframe(int frame, float value);
         QVariantList keyframeList() const;
 
+        Q_INVOKABLE void createObject(const QString& type, int startFrame, int layer);
+        QString activeObjectType() const;
+
         Q_INVOKABLE void togglePlay();
         bool isPlaying() const;
 
@@ -76,6 +80,7 @@ namespace Rina::UI {
         void isClipActiveChanged();
         void keyframeListChanged();
         void isPlayingChanged();
+        void activeObjectTypeChanged();
 
     private:
         void updateClipActiveState();
@@ -94,5 +99,6 @@ namespace Rina::UI {
         std::vector<Keyframe> m_keyframesX;
         QTimer* m_playbackTimer;
         bool m_isPlaying = false;
+        QString m_activeObjectType = "rect"; // デフォルトは図形
     };
 }

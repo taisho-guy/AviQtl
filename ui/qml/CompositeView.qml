@@ -30,36 +30,34 @@ View3D {
         ambientColor: "#808080"
     }
 
-    // 2Dのテキストを描画する隠しレイヤー (Texture Source)
-    Item {
-        id: textTextureSource
-        width: 1024; height: 1024
-        visible: false // 画面には直接出さない
-        
-        Text {
-            anchors.centerIn: parent
-            text: TimelineBridge ? TimelineBridge.textString : "Text"
-            font.pixelSize: TimelineBridge ? TimelineBridge.textSize : 32
-            color: "white"
-            style: Text.Outline
-            styleColor: "black"
-            font.bold: true
-        }
-    }
-
-    // テキストオブジェクトレイヤー
-    Node {
-        id: textLayer
-        position: Qt.vector3d(TimelineBridge ? TimelineBridge.objectX : 0, TimelineBridge ? TimelineBridge.objectY : 0, 10)
+    // 動的オブジェクトローダー
+    Loader3D {
+        id: objectLoader
         visible: TimelineBridge ? TimelineBridge.isClipActive : false
 
-        Model {
-            source: "#Rectangle"
-            scale: Qt.vector3d(4, 4, 1)
-            materials: DefaultMaterial {
-                diffuseMap: Texture { sourceItem: textTextureSource }
-                blendMode: DefaultMaterial.SourceOver
-                lighting: DefaultMaterial.NoLighting
+        // TimelineBridgeの状態に応じて読み込むファイルを切り替える
+        source: {
+            if (!TimelineBridge) return ""
+            switch (TimelineBridge.activeObjectType) {
+                case "text": return "qrc:/qml/objects/TextObject.qml"
+                case "rect": return "qrc:/qml/objects/RectObject.qml"
+                default: return ""
+            }
+        }
+
+        // ロードされたアイテムに対してプロパティをバインドする
+        onLoaded: {
+            if (item) {
+                // 共通プロパティのバインディング
+                item.positionValue = Qt.binding(function() {
+                    return Qt.vector3d(TimelineBridge.objectX, TimelineBridge.objectY, 10)
+                })
+                
+                // テキスト固有プロパティのバインディング (存在する場合のみ)
+                if (TimelineBridge.activeObjectType === "text") {
+                    item.textContent = Qt.binding(function() { return TimelineBridge.textString })
+                    item.textSize = Qt.binding(function() { return TimelineBridge.textSize })
+                }
             }
         }
     }
