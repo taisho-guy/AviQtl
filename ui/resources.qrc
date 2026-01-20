@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/">
+        <file>qml/CompositeView.qml</file>
+        <file>qml/TimelineWindow.qml</file>
+        <file>qml/SettingDialog.qml</file>
+    </qresource>
+</RCC>

@@ -1,0 +1,166 @@
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+import QtQuick.Layouts 1.15
+
+Window {
+    id: timelineWindow
+    width: 1280
+    height: 300
+    // x: 100; y: 500 // Waylandでは無視されることが多い
+    title: "Timeline [Layer 1-100]"
+    color: "#2d2d2d"
+    visible: true
+
+    // 設定ウィンドウの参照を保持するプロパティ
+    property var settingDialog: null
+
+    ColumnLayout {
+        anchors.fill: parent
+        spacing: 0
+
+        // ツールバー等は省略し、直接タイムラインエリアへ
+
+        ScrollView {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            clip: true
+            
+            Flickable {
+                contentWidth: 2000
+                contentHeight: 3000
+                interactive: true
+
+                // レイヤー区切り線
+                Repeater {
+                    model: 20
+                    Rectangle {
+                        y: index * 30
+                        width: parent.width
+                        height: 1
+                        color: "#333"
+                    }
+                }
+
+                // === Playhead (Current Time) ===
+                Rectangle {
+                    id: playhead
+                    x: TimelineBridge ? TimelineBridge.currentTime : 0
+                    y: 0
+                    width: 2
+                    height: parent.height
+                    color: "red"
+                    z: 100 // 最前面
+
+                    MouseArea {
+                        anchors.fill: parent
+                        anchors.margins: -5 // 掴みやすくする
+                        cursorShape: Qt.SizeHorCursor
+                        drag.target: playhead
+                        drag.axis: Drag.XAxis
+                        drag.minimumX: 0
+                        
+                        onPositionChanged: {
+                            if (drag.active && TimelineBridge) {
+                                TimelineBridge.currentTime = playhead.x
+                            }
+                        }
+                    }
+                }
+
+                // === 3D Box Object (Layer 1) ===
+                Rectangle {
+                    id: obj3dbox
+                    x: TimelineBridge ? TimelineBridge.clipStartTime : 0
+                    y: TimelineBridge ? TimelineBridge.layer * 30 : 0
+                    width: TimelineBridge ? TimelineBridge.clipDuration : 100
+                    height: 28
+                    color: "#6a9"
+                    border.color: "white"
+                    border.width: mouseArea.containsMouse ? 2 : 0
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "3D Box [Standard Draw]"
+                        color: "white"
+                    }
+
+                    MouseArea {
+                        id: mouseArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        // ダブルクリックを検知
+                        onDoubleClicked: {
+                            openSettingDialog()
+                        }
+                        
+                        // ドラッグ移動 (簡易実装)
+                        drag.target: obj3dbox
+                        drag.axis: Drag.XAndYAxis // Allow moving in both Time (X) and Layer (Y)
+                        drag.threshold: 0
+
+                        onPositionChanged: {
+                            if (drag.active && TimelineBridge) {
+                                // Grid Snapping Logic
+                                // X: Snap to nearest integer (assuming 1px = 1 frame)
+                                var snappedX = Math.round(obj3dbox.x)
+                                
+                                // Y: Snap to Layer grid (30px)
+                                var snappedLayer = Math.round(obj3dbox.y / 30)
+                                if (snappedLayer < 0) snappedLayer = 0
+                                
+                                TimelineBridge.clipStartTime = snappedX
+                                TimelineBridge.layer = snappedLayer
+                            }
+                        }
+
+                        onReleased: {
+                            if (TimelineBridge) {
+                                // Restore bindings and snap visually on release
+                                obj3dbox.x = Qt.binding(function() { return TimelineBridge.clipStartTime })
+                                obj3dbox.y = Qt.binding(function() { return TimelineBridge.layer * 30 })
+                            }
+                        }
+                    }
+
+                    // Keyframe Visualization
+                    Repeater {
+                        model: TimelineBridge ? TimelineBridge.keyframeList : []
+                        Rectangle {
+                            // Keyframe position (Relative to Clip)
+                            x: modelData.frame
+                            width: 2
+                            height: parent.height
+                            color: "white"
+                            opacity: 0.7
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 設定ダイアログを開く関数
+    function openSettingDialog() {
+        // すでに開いていたら手前に持ってくる
+        if (settingDialog) {
+            settingDialog.raise()
+            settingDialog.requestActivate()
+            return
+        }
+
+        // 動的にコンポーネントを作成
+        // 同じディレクトリ(qrc:/qml/)にあるSettingDialog.qmlを読み込む
+        var component = Qt.createComponent("SettingDialog.qml")
+        if (component.status === Component.Ready) {
+            // ウィンドウを生成。親はnullにすることで独立したトップレベルウィンドウになる
+            settingDialog = component.createObject(null)
+            
+            // ウィンドウが閉じられたら参照を消す
+            settingDialog.closing.connect(function() {
+                settingDialog = null
+            })
+        } else {
+            console.error("Error loading component:", component.errorString())
+        }
+    }
+}
