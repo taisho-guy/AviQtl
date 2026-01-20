@@ -33,12 +33,22 @@ Window {
             }
         }
 
+        Rectangle { Layout.fillWidth: true; height: 1; color: "#555" }
+        Label { text: "Text Object"; font.bold: true; color: "#aaa" }
+
         // テキスト入力
-        TextArea {
-            text: TimelineBridge ? TimelineBridge.textString : ""
-            onTextChanged: if (TimelineBridge) TimelineBridge.textString = text
+        ScrollView {
             Layout.fillWidth: true
-            Layout.preferredHeight: 60
+            Layout.preferredHeight: 80
+            TextArea {
+                text: TimelineBridge ? TimelineBridge.textString : ""
+                color: "white"
+                background: Rectangle { color: "#222" }
+                // 入力するたびに即時反映
+                onTextChanged: {
+                    if (TimelineBridge) TimelineBridge.textString = text
+                }
+            }
         }
 
         // X座標
@@ -106,10 +116,17 @@ Window {
         RowLayout {
             Label { text: "Size"; color: "white"; Layout.preferredWidth: 30 }
             Slider {
+                id: sizeSlider
                 Layout.fillWidth: true
                 from: 10; to: 200
                 value: TimelineBridge ? TimelineBridge.textSize : 64
                 onMoved: if (TimelineBridge) TimelineBridge.textSize = value
+            }
+            Label {
+                text: sizeSlider.value.toFixed(0)
+                color: "white"
+                Layout.preferredWidth: 40
+                horizontalAlignment: Text.AlignRight
             }
         }
 
