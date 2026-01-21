@@ -47,4 +47,28 @@ namespace Rina::UI {
         QVariant m_newValue;
         QVariant m_oldValue;
     };
+
+    class AddEffectCommand : public QUndoCommand {
+    public:
+        AddEffectCommand(TimelineController* controller, int clipId, const QString& effectId);
+        void undo() override;
+        void redo() override;
+    private:
+        TimelineController* m_controller;
+        int m_clipId;
+        QString m_effectId;
+    };
+
+    class RemoveEffectCommand : public QUndoCommand {
+    public:
+        RemoveEffectCommand(TimelineController* controller, int clipId, int effectIndex);
+        void undo() override;
+        void redo() override;
+        void setRemovedEffect(const EffectInstance& effect) { m_removedEffect = effect; }
+    private:
+        TimelineController* m_controller;
+        int m_clipId;
+        int m_effectIndex;
+        EffectInstance m_removedEffect;
+    };
 }

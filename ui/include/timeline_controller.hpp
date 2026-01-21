@@ -108,6 +108,11 @@ namespace Rina::UI {
         // エフェクト操作
         Q_INVOKABLE QVariantList getClipEffects(int clipId) const;
         Q_INVOKABLE void updateClipEffectParam(int clipId, int effectIndex, const QString& paramName, const QVariant& value);
+        
+        // エフェクト追加・削除
+        Q_INVOKABLE QVariantList getAvailableEffects() const;
+        Q_INVOKABLE void addEffect(int clipId, const QString& effectId);
+        Q_INVOKABLE void removeEffect(int clipId, int effectIndex);
 
         // プロジェクト保存・読み込み
         Q_INVOKABLE bool saveProject(const QString& fileUrl);
@@ -123,6 +128,9 @@ namespace Rina::UI {
         void updateClipInternal(int id, int layer, int startFrame, int duration);
         void updateClipEffectParamInternal(int clipId, int effectIndex, const QString& paramName, const QVariant& value);
         void createObjectInternal(const QString& type, int startFrame, int layer);
+        void addEffectInternal(int clipId, const EffectInstance& effect);
+        void removeEffectInternal(int clipId, int effectIndex);
+        EffectInstance createEffectInstance(const QString& id);
 
     signals:
         void projectWidthChanged();

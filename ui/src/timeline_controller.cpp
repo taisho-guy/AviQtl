@@ -57,6 +57,28 @@ namespace Rina::UI {
         return true;
     }
 
+    // === Effect Commands ===
+    AddEffectCommand::AddEffectCommand(TimelineController* controller, int clipId, const QString& effectId)
+        : m_controller(controller), m_clipId(clipId), m_effectId(effectId) {
+        setText("Add Effect");
+    }
+    void AddEffectCommand::undo() {
+        m_controller->removeEffectInternal(m_clipId, -1); // Remove last
+    }
+    void AddEffectCommand::redo() {
+        EffectInstance eff = m_controller->createEffectInstance(m_effectId);
+        m_controller->addEffectInternal(m_clipId, eff);
+    }
+
+    RemoveEffectCommand::RemoveEffectCommand(TimelineController* controller, int clipId, int effectIndex)
+        : m_controller(controller), m_clipId(clipId), m_effectIndex(effectIndex) { setText("Remove Effect"); }
+    void RemoveEffectCommand::redo() { 
+        m_controller->removeEffectInternal(m_clipId, m_effectIndex); 
+    }
+    void RemoveEffectCommand::undo() { 
+        m_controller->addEffectInternal(m_clipId, m_removedEffect); 
+    }
+
     TimelineController::TimelineController(QObject* parent) 
         : QObject(parent)
         , m_undoStack(new QUndoStack(this))
@@ -677,5 +699,90 @@ namespace Rina::UI {
         }
         
         // 見つからなかった場合（選択解除など）の処理は必要に応じて追加
+    }
+
+    // === エフェクト操作 (Internal実装) ===
+    
+    QVariantList TimelineController::getAvailableEffects() const {
+        QVariantList list;
+        auto add = [&](const QString& id, const QString& name) {
+            QVariantMap m; m["id"] = id; m["name"] = name; list.append(m);
+        };
+        add("blur", "ぼかし");
+        add("color_correction", "色調補正");
+        add("glow", "発光");
+        return list;
+    }
+
+    EffectInstance TimelineController::createEffectInstance(const QString& id) {
+        EffectInstance eff;
+        eff.id = id;
+        eff.enabled = true;
+        if (id == "blur") {
+            eff.name = "ぼかし"; eff.params["size"] = 10;
+        } else if (id == "color_correction") {
+            eff.name = "色調補正"; eff.params["brightness"] = 100; eff.params["contrast"] = 100;
+            eff.params["saturation"] = 100;
+        } else if (id == "glow") {
+            eff.name = "発光"; eff.params["strength"] = 50;
+        } else {
+            eff.name = id;
+        }
+        return eff;
+    }
+
+    void TimelineController::addEffectInternal(int clipId, const EffectInstance& effect) {
+        for (auto& clip : m_clips) {
+            if (clip.id == clipId) {
+                clip.effects.append(effect);
+                if (m_selectedClipId == clipId) emit selectedClipIdChanged();
+                break;
+            }
+        }
+        emit clipsChanged();
+    }
+
+    void TimelineController::removeEffectInternal(int clipId, int effectIndex) {
+        for (auto& clip : m_clips) {
+            if (clip.id == clipId) {
+                if (effectIndex == -1) effectIndex = clip.effects.size() - 1;
+                if (effectIndex >= 0 && effectIndex < clip.effects.size()) {
+                    // Transform(0)の削除禁止等はここで行う
+                    if (effectIndex == 0 && clip.effects[0].id == "transform") return;
+                    
+                    clip.effects.removeAt(effectIndex);
+                    if (m_selectedClipId == clipId) emit selectedClipIdChanged();
+                }
+                break;
+            }
+        }
+        emit clipsChanged();
+    }
+
+    void TimelineController::addEffect(int clipId, const QString& effectId) {
+        m_undoStack->push(new AddEffectCommand(this, clipId, effectId));
+    }
+
+    void TimelineController::removeEffect(int clipId, int effectIndex) {
+        // Undoのために削除されるEffectを保存する必要があるため
+        // Command生成前にデータを取得するか、Command内で取得する
+        EffectInstance removed;
+        bool found = false;
+        for(const auto& c : m_clips) {
+            if(c.id == clipId) {
+                int idx = (effectIndex == -1) ? c.effects.size() - 1 : effectIndex;
+                if(idx >= 0 && idx < c.effects.size()) {
+                    removed = c.effects[idx];
+                    found = true;
+                    break;
+                }
+            }
+        }
+        if(found) {
+            // コマンド生成時に削除対象エフェクトを渡すなどの拡張が必要だが、
+            // ここではシンプルに index ベースで処理する
+            auto* cmd = new RemoveEffectCommand(this, clipId, effectIndex);
+            m_undoStack->push(cmd);
+        }
     }
 }

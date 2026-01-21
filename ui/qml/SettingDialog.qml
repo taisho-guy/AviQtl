@@ -3,8 +3,11 @@ import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 import QtQuick.Window 2.15
 import "common" as Common
+import Qt.labs.qmlmodels 1.0
+import Qt.labs.qmlmodels 1.0
+import QtQml 2.15
 
-Window {
+ApplicationWindow {
     id: root
     width: 350
     height: 500
@@ -36,6 +39,22 @@ Window {
             effectsModel = TimelineBridge.getClipEffects(id)
         } else {
             effectsModel = []
+        }
+    }
+
+    menuBar: MenuBar {
+        Menu {
+            title: "Filter"
+            
+            Repeater {
+                model: TimelineBridge ? TimelineBridge.getAvailableEffects() : []
+                MenuItem {
+                    text: modelData.name
+                    onTriggered: {
+                        if(TimelineBridge) TimelineBridge.addEffect(targetClipId, modelData.id)
+                    }
+                }
+            }
         }
     }
 
@@ -71,6 +90,15 @@ Window {
                             anchors.verticalCenter: parent.verticalCenter
                             anchors.left: parent.left
                             anchors.leftMargin: 10
+                        }
+
+                        // 削除ボタン (Transform以外)
+                        Button {
+                            text: "×"
+                            visible: modelData.id !== "transform" && modelData.id !== "rect" && modelData.id !== "text"
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            onClicked: TimelineBridge.removeEffect(targetClipId, effectRoot.effectIndex)
                         }
                     }
 
