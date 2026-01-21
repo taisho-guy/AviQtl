@@ -14,4 +14,11 @@ git clone https://codeberg.org/taisho-guy/Rina.git
 # ビルドします
 cd Rina
 fish ./BUILD.fish
+
+# 実行します
+./build/Rina
 ```
+
+## ライセンス
+
+Rinaは[GNU AFFERO GENERAL PUBLIC LICENSE Version 3](https://www.gnu.org/licenses/agpl-3.0.txt)に基づいて公開されています。

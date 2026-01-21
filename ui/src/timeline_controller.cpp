@@ -22,42 +22,6 @@ namespace Rina::UI {
         connect(m_playbackTimer, &QTimer::timeout, this, &TimelineController::onPlaybackStep);
         updateClipActiveState();
 
-        // --- Define Prototypes ---
-        QVariantMap rectProps;
-        rectProps["x"] = 0;
-        rectProps["y"] = 0;
-        rectProps["z"] = 0;
-        rectProps["width"] = 100;
-        rectProps["height"] = 100;
-        rectProps["scale"] = 100.0;
-        rectProps["aspect"] = 0.0;
-        rectProps["rotationX"] = 0.0;
-        rectProps["rotationY"] = 0.0;
-        rectProps["rotationZ"] = 0.0;
-        rectProps["anchorX"] = 0.0;
-        rectProps["anchorY"] = 0.0;
-        rectProps["anchorZ"] = 0.0;
-        rectProps["color"] = "#66aa99";
-        rectProps["opacity"] = 1.0;
-        m_prototypes["rect"] = rectProps;
-
-        QVariantMap textProps;
-        textProps["x"] = 0;
-        textProps["y"] = 0;
-        textProps["z"] = 0;
-        textProps["text"] = "Text";
-        textProps["textSize"] = 64;
-        textProps["scale"] = 100.0;
-        textProps["aspect"] = 0.0;
-        textProps["rotationX"] = 0.0;
-        textProps["rotationY"] = 0.0;
-        textProps["rotationZ"] = 0.0;
-        textProps["anchorX"] = 0.0;
-        textProps["anchorY"] = 0.0;
-        textProps["anchorZ"] = 0.0;
-        textProps["color"] = "#ffffff";
-        textProps["opacity"] = 1.0;
-        m_prototypes["text"] = textProps;
     }
 
     int TimelineController::projectWidth() const { return m_projectWidth; }
@@ -116,17 +80,24 @@ namespace Rina::UI {
         
         for (auto& clip : m_clips) {
             if (clip.id == m_selectedClipId) {
-                clip.properties[name] = value;
-                
-                // Update cache
-                m_selectedClipCache[name] = value;
-                emit selectedClipDataChanged();
-                
-                // Update preview
-                emit activeClipsChanged();
-                
-                // Trigger keyframe logic if needed
-                if (name == "x") updateObjectX(); 
+                // 暫定対応: プロパティ名に応じて適切なエフェクトのパラメータを更新する
+                // 本来はUI側でエフェクトインデックスを指定すべき
+                for (int i = 0; i < clip.effects.size(); ++i) {
+                    if (clip.effects[i].params.contains(name)) {
+                        clip.effects[i].params[name] = value;
+                        
+                        // Update cache (flattened view for current UI)
+                        m_selectedClipCache[name] = value;
+                        emit selectedClipDataChanged();
+                        
+                        // Update preview
+                        emit activeClipsChanged();
+                        
+                        // Trigger keyframe logic if needed
+                        if (name == "x") updateObjectX(); 
+                        break; // 最初に見つかったパラメータを更新
+                    }
+                }
                 break;
             }
         }
@@ -294,12 +265,36 @@ namespace Rina::UI {
         newClip.durationFrames = 100; // デフォルト100フレーム
         newClip.layer = layer;
         
-        // Initialize properties from prototype
-        if (m_prototypes.contains(type)) {
-            newClip.properties = m_prototypes[type];
-        } else {
-            newClip.properties = m_prototypes["rect"]; // Fallback
+        // エフェクトスタック構築 (ExEdit概念の導入)
+        // 1. Transform (基本効果 - 標準描画相当の座標管理)
+        EffectInstance transform;
+        transform.id = "transform";
+        transform.name = "座標";
+        transform.params["x"] = 0;
+        transform.params["y"] = 0;
+        transform.params["z"] = 0;
+        transform.params["scale"] = 100.0;
+        transform.params["aspect"] = 0.0;
+        transform.params["rotationX"] = 0.0;
+        transform.params["rotationY"] = 0.0;
+        transform.params["rotationZ"] = 0.0;
+        transform.params["opacity"] = 1.0;
+        newClip.effects.append(transform);
+
+        // 2. Object Specific (オブジェクト本体)
+        EffectInstance content;
+        if (type == "rect") {
+            content.id = "rect";
+            content.name = "図形";
+            content.params["color"] = "#66aa99";
+        } else if (type == "text") {
+            content.id = "text";
+            content.name = "テキスト";
+            content.params["text"] = "Text";
+            content.params["textSize"] = 64;
+            content.params["color"] = "#ffffff";
         }
+        newClip.effects.append(content);
 
         m_clips.append(newClip);
         emit clipsChanged();
@@ -312,7 +307,11 @@ namespace Rina::UI {
         m_selectedClipId = newClip.id;
         
         // Update property cache
-        m_selectedClipCache = newClip.properties;
+        m_selectedClipCache.clear();
+        for(const auto& eff : newClip.effects) {
+            for(auto it = eff.params.begin(); it != eff.params.end(); ++it) 
+                m_selectedClipCache.insert(it.key(), it.value());
+        }
         
         emit clipStartFrameChanged();
         emit clipDurationFramesChanged();
@@ -321,6 +320,37 @@ namespace Rina::UI {
         emit activeClipsChanged();
         emit selectedClipIdChanged();
         emit selectedClipDataChanged();
+    }
+
+    QVariantList TimelineController::getClipEffects(int clipId) const {
+        QVariantList list;
+        for (const auto& clip : m_clips) {
+            if (clip.id == clipId) {
+                for (const auto& eff : clip.effects) {
+                    QVariantMap m;
+                    m["id"] = eff.id;
+                    m["name"] = eff.name;
+                    m["enabled"] = eff.enabled;
+                    m["params"] = eff.params;
+                    list.append(m);
+                }
+                break;
+            }
+        }
+        return list;
+    }
+
+    void TimelineController::updateClipEffectParam(int clipId, int effectIndex, const QString& paramName, const QVariant& value) {
+        for (auto& clip : m_clips) {
+            if (clip.id == clipId) {
+                if (effectIndex >= 0 && effectIndex < clip.effects.size()) {
+                    clip.effects[effectIndex].params[paramName] = value;
+                    // パラメータ変更を通知
+                    emit activeClipsChanged(); // プレビュー更新
+                }
+                break;
+            }
+        }
     }
 
     QVariantList TimelineController::clips() const {
@@ -334,7 +364,13 @@ namespace Rina::UI {
             map["layer"] = clip.layer;
             
             // Include some properties for list view if needed
-            map["text"] = clip.properties.value("text", "");
+            // 暫定: テキストエフェクトがあればそのテキストを表示
+            for(const auto& eff : clip.effects) {
+                if(eff.id == "text" && eff.params.contains("text")) {
+                    map["text"] = eff.params["text"];
+                    break;
+                }
+            }
 
             list.append(map);
         }
@@ -367,8 +403,10 @@ namespace Rina::UI {
             map["layer"] = clip.layer;
             
             // Flatten dynamic properties into the map
-            for (auto it = clip.properties.begin(); it != clip.properties.end(); ++it) {
-                map[it.key()] = it.value();
+            for (const auto& eff : clip.effects) {
+                for (auto it = eff.params.begin(); it != eff.params.end(); ++it) {
+                    map[it.key()] = it.value();
+                }
             }
 
             list.append(map);
@@ -440,8 +478,17 @@ namespace Rina::UI {
             clipObj["duration"] = clip.durationFrames;
             clipObj["layer"] = clip.layer;
             
-            // 動的プロパティ (QVariantMap -> QJsonObject)
-            clipObj["properties"] = QJsonObject::fromVariantMap(clip.properties);
+            // エフェクトスタック保存
+            QJsonArray effArray;
+            for (const auto& eff : clip.effects) {
+                QJsonObject eObj;
+                eObj["id"] = eff.id;
+                eObj["name"] = eff.name;
+                eObj["enabled"] = eff.enabled;
+                eObj["params"] = QJsonObject::fromVariantMap(eff.params);
+                effArray.append(eObj);
+            }
+            clipObj["effects"] = effArray;
             
             clipsArray.append(clipObj);
         }
@@ -498,12 +545,18 @@ namespace Rina::UI {
             clip.durationFrames = c["duration"].toInt();
             clip.layer = c["layer"].toInt();
             
-            // プロパティ復元
-            if (c.contains("properties")) {
-                clip.properties = c["properties"].toObject().toVariantMap();
-            } else {
-                // 旧形式などのフォールバック
-                if (m_prototypes.contains(clip.type)) clip.properties = m_prototypes[clip.type];
+            // エフェクト復元
+            if (c.contains("effects")) {
+                QJsonArray effArr = c["effects"].toArray();
+                for (const auto& ev : effArr) {
+                    QJsonObject eo = ev.toObject();
+                    EffectInstance eff;
+                    eff.id = eo["id"].toString();
+                    eff.name = eo["name"].toString();
+                    eff.enabled = eo["enabled"].toBool(true);
+                    eff.params = eo["params"].toObject().toVariantMap();
+                    clip.effects.append(eff);
+                }
             }
 
             m_clips.append(clip);
@@ -526,7 +579,11 @@ namespace Rina::UI {
         for (const auto& clip : m_clips) {
             if (clip.id == id) {
                 
-                m_selectedClipCache = clip.properties;
+                m_selectedClipCache.clear();
+                for(const auto& eff : clip.effects) {
+                    for(auto it = eff.params.begin(); it != eff.params.end(); ++it) 
+                        m_selectedClipCache.insert(it.key(), it.value());
+                }
                 emit selectedClipDataChanged();
                 
                 if (m_activeObjectType != clip.type) { m_activeObjectType = clip.type; emit activeObjectTypeChanged(); }

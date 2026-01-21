@@ -11,6 +11,14 @@
 #include <QJsonArray>
 
 namespace Rina::UI {
+    // エフェクト（フィルタ）のインスタンス定義
+    struct EffectInstance {
+        QString id;
+        QString name;
+        bool enabled = true;
+        QVariantMap params;
+    };
+
     struct Keyframe {
         int frame;
         float value;
@@ -96,6 +104,10 @@ namespace Rina::UI {
         // クリップの配置・長さを更新（ID指定）
         Q_INVOKABLE void updateClip(int id, int layer, int startFrame, int duration);
 
+        // エフェクト操作
+        Q_INVOKABLE QVariantList getClipEffects(int clipId) const;
+        Q_INVOKABLE void updateClipEffectParam(int clipId, int effectIndex, const QString& paramName, const QVariant& value);
+
         // プロジェクト保存・読み込み
         Q_INVOKABLE bool saveProject(const QString& fileUrl);
         Q_INVOKABLE bool loadProject(const QString& fileUrl);
@@ -136,8 +148,8 @@ namespace Rina::UI {
             int durationFrames;
             int layer;
             
-            // Dynamic Property Store
-            QVariantMap properties;
+            // エフェクトスタック
+            QList<EffectInstance> effects;
         };
         QList<ClipData> m_clips;
         int m_nextClipId = 1;

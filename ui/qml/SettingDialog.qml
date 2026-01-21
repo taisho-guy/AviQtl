@@ -2,257 +2,151 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 import QtQuick.Window 2.15
+import "common" as Common
 
 Window {
     id: root
-    width: 400
-    height: 600
+    width: 350
+    height: 500
     title: "Object Settings"
-    color: palette.window
+    color: "#333"
     visible: true
-    
-    SystemPalette { id: palette; colorGroup: SystemPalette.Active }
-
-    // ウィンドウ生成時に少し位置をずらす
     x: 500
     y: 200
 
-    // データ同期用関数
-    function updateUI() {
-        if (!TimelineBridge) return;
-        var data = TimelineBridge.selectedClipData;
-        if (!data) return;
+    property int targetClipId: TimelineBridge ? TimelineBridge.selectedClipId : -1
+    property var effectsModel: []
+    property bool inputting: false // 入力中フラグ（バインディングループ防止用）
 
-        // 値の更新 (ループ防止のため、UI操作中は更新しない等の制御が必要だが、
-        // ここでは簡易的に全更新。Sliderのpressedプロパティ等でガード可能)
-        
-        if (!xSlider.pressed) xSlider.value = data["x"] !== undefined ? data["x"] : 0
-        if (!ySlider.pressed) ySlider.value = data["y"] !== undefined ? data["y"] : 0
-        if (!zSlider.pressed) zSlider.value = data["z"] !== undefined ? data["z"] : 0
-        
-        if (!scaleSlider.pressed) scaleSlider.value = data["scale"] !== undefined ? data["scale"] : 100
-        if (!aspectSlider.pressed) aspectSlider.value = data["aspect"] !== undefined ? data["aspect"] : 0
-        
-        if (!rxSlider.pressed) rxSlider.value = data["rotationX"] !== undefined ? data["rotationX"] : 0
-        if (!rySlider.pressed) rySlider.value = data["rotationY"] !== undefined ? data["rotationY"] : 0
-        if (!rzSlider.pressed) rzSlider.value = data["rotationZ"] !== undefined ? data["rotationZ"] : 0
-        
-        if (!opacitySlider.pressed) opacitySlider.value = data["opacity"] !== undefined ? data["opacity"] : 1.0
-        
-        if (!colorField.activeFocus) colorField.text = data["color"] !== undefined ? data["color"] : "#ffffff"
-        if (!textArea.activeFocus) textArea.text = data["text"] !== undefined ? data["text"] : ""
-        if (!sizeSlider.pressed) sizeSlider.value = data["textSize"] !== undefined ? data["textSize"] : 64
-    }
-
+    // 選択変更やデータ更新を監視してモデルをリロード
     Connections {
         target: TimelineBridge
-        function onSelectedClipDataChanged() { updateUI() }
+        function onSelectedClipIdChanged() { reload() }
+        // パラメータ変更時の反映用（入力中はリロードしない）
+        function onActiveClipsChanged() { if(!inputting) reload() }
     }
 
-    // 初期表示時にも更新
-    Component.onCompleted: updateUI()
+    Component.onCompleted: reload()
 
-    // 共通スライダーコンポーネント
-    component ParamSlider : RowLayout {
-        property alias label: labelItem.text
-        property alias value: sliderItem.value
-        property alias from: sliderItem.from
-        property alias to: sliderItem.to
-        property string paramName: ""
-        property bool isInt: false
-
-        Label { 
-            id: labelItem
-            text: "Param"
-            color: palette.text 
-            Layout.preferredWidth: 80
-        }
-        Slider {
-            id: sliderItem
-            Layout.fillWidth: true
-            onMoved: {
-                if (TimelineBridge && paramName !== "") {
-                    var v = isInt ? Math.round(value) : value
-                    TimelineBridge.setClipProperty(paramName, v)
-                }
-            }
-        }
-        
-        // AviUtl-like Draggable Number Field
-        Item {
-            Layout.preferredWidth: 60
-            Layout.fillHeight: true
-            
-            // Input Field (Hidden normally, shown on click, or always shown but controlled by MouseArea)
-            TextField {
-                id: inputField
-                anchors.fill: parent
-                text: sliderItem.value.toFixed(isInt ? 0 : 2)
-                color: palette.text
-                background: Rectangle { color: "transparent" }
-                horizontalAlignment: TextInput.AlignRight
-                selectByMouse: false // Controlled by MouseArea
-                readOnly: !activeFocus // Look read-only when not focused
-                
-                // Commit on Enter or focus loss
-                onEditingFinished: {
-                    var val = parseFloat(text);
-                    if (!isNaN(val)) {
-                        if (TimelineBridge && paramName !== "") {
-                            TimelineBridge.setClipProperty(paramName, val);
-                        }
-                        sliderItem.value = val;
-                    }
-                    focus = false; // Remove focus
-                }
-            }
-
-            MouseArea {
-                id: dragArea
-                anchors.fill: parent
-                cursorShape: Qt.SizeHorCursor // Left-Right arrows
-                
-                property real startX: 0
-                property real lastValue: 0
-                property bool isDragging: false
-
-                onPressed: (mouse) => {
-                    startX = mouse.x
-                    lastValue = sliderItem.value
-                    isDragging = false
-                    inputField.focus = false // Unfocus initially
-                }
-
-                onPositionChanged: (mouse) => {
-                    // Treat as drag if moved more than threshold
-                    if (Math.abs(mouse.x - startX) > 2) {
-                        isDragging = true
-                    }
-
-                    if (isDragging) {
-                        // Shift key for precision
-                        var speed = 1.0;
-                        if (mouse.modifiers & Qt.ShiftModifier) {
-                            speed = 0.1;
-                        }
-                        
-                        // Calculate delta
-                        // Integer: 1px = 1 unit, Float: 1px = 0.1 unit
-                        var step = isInt ? 1.0 : 0.1;
-                        var delta = (mouse.x - startX) * step * speed;
-                        
-                        var newValue = lastValue + delta;
-                        if (isInt) newValue = Math.round(newValue);
-                        
-                        // Update slider (which updates UI)
-                        sliderItem.value = newValue;
-                        
-                        // Immediate update to backend
-                        if (TimelineBridge && paramName !== "") {
-                            TimelineBridge.setClipProperty(paramName, newValue);
-                        }
-                    }
-                }
-
-                onReleased: {
-                    if (!isDragging) {
-                        // Clicked without dragging -> Enter edit mode
-                        inputField.forceActiveFocus();
-                        inputField.selectAll();
-                    }
-                    isDragging = false;
-                }
-            }
+    function reload() {
+        if (!TimelineBridge) return
+        var id = TimelineBridge.selectedClipId
+        targetClipId = id
+        if (id >= 0) {
+            effectsModel = TimelineBridge.getClipEffects(id)
+        } else {
+            effectsModel = []
         }
     }
 
-    ColumnLayout {
+    ScrollView {
         anchors.fill: parent
-        anchors.margins: 10
-        spacing: 5
+        contentWidth: parent.width
+        clip: true
 
-        // ヘッダー
-        Rectangle {
-            Layout.fillWidth: true
-            height: 30
-            color: palette.mid
-            Label {
-                text: "Standard Drawing"
-                anchors.centerIn: parent
-                color: palette.text
-                font.bold: true
-            }
-        }
+        ColumnLayout {
+            width: root.width
+            spacing: 1
 
-        ScrollView {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            clip: true
+            Repeater {
+                model: effectsModel
+                delegate: ColumnLayout {
+                    id: effectRoot
+                    width: root.width
+                    spacing: 0
+                    
+                    // 親デリゲートでデータとインデックスを公開
+                    property int effectIndex: index
+                    property var currentParams: modelData.params
 
-            ColumnLayout {
-                width: parent.width
-                spacing: 8
-
-                // --- 座標 ---
-                Label { text: "Coordinates"; font.bold: true; color: palette.text }
-                ParamSlider { id: xSlider; label: "X"; paramName: "x"; from: -1920; to: 1920; isInt: true }
-                ParamSlider { id: ySlider; label: "Y"; paramName: "y"; from: -1080; to: 1080; isInt: true }
-                ParamSlider { id: zSlider; label: "Z"; paramName: "z"; from: -2000; to: 2000; isInt: true }
-
-                Rectangle { Layout.fillWidth: true; height: 1; color: palette.mid }
-
-                // --- 拡大・回転 ---
-                Label { text: "Transform"; font.bold: true; color: palette.text }
-                ParamSlider { id: scaleSlider; label: "Scale (%)"; paramName: "scale"; from: 0; to: 500; }
-                ParamSlider { id: aspectSlider; label: "Aspect"; paramName: "aspect"; from: -2.0; to: 2.0; }
-                
-                ParamSlider { id: rxSlider; label: "Rotate X"; paramName: "rotationX"; from: -360; to: 360; }
-                ParamSlider { id: rySlider; label: "Rotate Y"; paramName: "rotationY"; from: -360; to: 360; }
-                ParamSlider { id: rzSlider; label: "Rotate Z"; paramName: "rotationZ"; from: -360; to: 360; }
-
-                Rectangle { Layout.fillWidth: true; height: 1; color: palette.mid }
-
-                // --- マテリアル ---
-                Label { text: "Material"; font.bold: true; color: palette.text }
-                ParamSlider { id: opacitySlider; label: "Opacity"; paramName: "opacity"; from: 0; to: 1.0; }
-                
-                RowLayout {
-                    Label { text: "Color"; color: palette.text; Layout.preferredWidth: 80 }
-                    TextField {
-                        id: colorField
+                    // エフェクトヘッダー
+                    Rectangle {
                         Layout.fillWidth: true
-                        placeholderText: "#RRGGBB"
-                        onEditingFinished: {
-                            if (TimelineBridge) TimelineBridge.setClipProperty("color", text)
+                        height: 24
+                        color: "#444"
+                        Label {
+                            text: modelData.name
+                            color: "white"
+                            font.bold: true
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.left: parent.left
+                            anchors.leftMargin: 10
                         }
                     }
-                    Rectangle {
-                        width: 20; height: 20
-                        color: colorField.text
-                        border.color: palette.text
+
+                    // パラメータリスト
+                    // Mapを配列に変換してRepeaterに渡す
+                    Repeater {
+                        model: Object.keys(modelData.params).sort()
+                        delegate: RowLayout {
+                            Layout.fillWidth: true
+                            Layout.margins: 4
+                            property string key: modelData
+                            
+                            // 親のコンテキストからデータを取得
+                            property int effIdx: effectRoot.effectIndex
+                            property var effVal: effectRoot.currentParams[key]
+                            
+                            Label { 
+                                text: key
+                                color: "#ccc"
+                                Layout.preferredWidth: 70 
+                                elide: Text.ElideRight
+                            }
+
+                            // 数値の場合: スライダー + 入力欄
+                            // 文字列の場合: テキストエリア
+                            Loader {
+                                Layout.fillWidth: true
+                                sourceComponent: typeof effVal === 'number' ? numberEditor : textEditor
+                            }
+                            
+                            Component {
+                                id: numberEditor
+                                RowLayout {
+                                    Slider {
+                                        Layout.fillWidth: true
+                                        // 簡易的な範囲設定（本来はメタデータが必要）
+                                        from: (key === "scale" || key === "opacity") ? 0 : -1000
+                                        to: (key === "scale") ? 500 : (key === "opacity" ? 1.0 : 1000)
+                                        value: typeof effVal === 'number' ? effVal : 0
+                                        
+                                        onPressedChanged: {
+                                            if (pressed) inputting = true
+                                            else inputting = false
+                                        }
+                                        onMoved: {
+                                            if (TimelineBridge)
+                                                TimelineBridge.updateClipEffectParam(targetClipId, effIdx, key, value)
+                                        }
+                                    }
+                                    TextField {
+                                        Layout.preferredWidth: 60
+                                        text: typeof effVal === 'number' ? effVal.toFixed(2) : String(effVal)
+                                        selectByMouse: true
+                                        onEditingFinished: {
+                                            if (TimelineBridge)
+                                                TimelineBridge.updateClipEffectParam(targetClipId, effIdx, key, Number(text))
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            Component {
+                                id: textEditor
+                                TextField {
+                                    Layout.fillWidth: true
+                                    text: String(effVal)
+                                    selectByMouse: true
+                                    onEditingFinished: {
+                                        if (TimelineBridge)
+                                            TimelineBridge.updateClipEffectParam(targetClipId, effIdx, key, text)
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
-
-                // --- テキスト専用 ---
-                Rectangle { Layout.fillWidth: true; height: 1; color: palette.mid }
-                Label { text: "Text Settings"; font.bold: true; color: palette.text }
-                
-                TextArea {
-                    id: textArea
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 60
-                    color: palette.text
-                    background: Rectangle { 
-                        color: palette.base 
-                        border.color: palette.mid
-                    }
-                    onEditingFinished: {
-                        if(TimelineBridge) TimelineBridge.setClipProperty("text", text)
-                    }
-                }
-                ParamSlider { id: sizeSlider; label: "Size"; paramName: "textSize"; from: 10; to: 200; isInt: true }
-
-                Item { Layout.fillHeight: true } // Spacer
             }
         }
     }
