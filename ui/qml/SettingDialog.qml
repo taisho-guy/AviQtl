@@ -77,11 +77,92 @@ Window {
                 }
             }
         }
-        Label {
-            text: sliderItem.value.toFixed(isInt ? 0 : 2)
-            color: palette.text
-            Layout.preferredWidth: 40
-            horizontalAlignment: Text.AlignRight
+        
+        // AviUtl-like Draggable Number Field
+        Item {
+            Layout.preferredWidth: 60
+            Layout.fillHeight: true
+            
+            // Input Field (Hidden normally, shown on click, or always shown but controlled by MouseArea)
+            TextField {
+                id: inputField
+                anchors.fill: parent
+                text: sliderItem.value.toFixed(isInt ? 0 : 2)
+                color: palette.text
+                background: Rectangle { color: "transparent" }
+                horizontalAlignment: TextInput.AlignRight
+                selectByMouse: false // Controlled by MouseArea
+                readOnly: !activeFocus // Look read-only when not focused
+                
+                // Commit on Enter or focus loss
+                onEditingFinished: {
+                    var val = parseFloat(text);
+                    if (!isNaN(val)) {
+                        if (TimelineBridge && paramName !== "") {
+                            TimelineBridge.setClipProperty(paramName, val);
+                        }
+                        sliderItem.value = val;
+                    }
+                    focus = false; // Remove focus
+                }
+            }
+
+            MouseArea {
+                id: dragArea
+                anchors.fill: parent
+                cursorShape: Qt.SizeHorCursor // Left-Right arrows
+                
+                property real startX: 0
+                property real lastValue: 0
+                property bool isDragging: false
+
+                onPressed: (mouse) => {
+                    startX = mouse.x
+                    lastValue = sliderItem.value
+                    isDragging = false
+                    inputField.focus = false // Unfocus initially
+                }
+
+                onPositionChanged: (mouse) => {
+                    // Treat as drag if moved more than threshold
+                    if (Math.abs(mouse.x - startX) > 2) {
+                        isDragging = true
+                    }
+
+                    if (isDragging) {
+                        // Shift key for precision
+                        var speed = 1.0;
+                        if (mouse.modifiers & Qt.ShiftModifier) {
+                            speed = 0.1;
+                        }
+                        
+                        // Calculate delta
+                        // Integer: 1px = 1 unit, Float: 1px = 0.1 unit
+                        var step = isInt ? 1.0 : 0.1;
+                        var delta = (mouse.x - startX) * step * speed;
+                        
+                        var newValue = lastValue + delta;
+                        if (isInt) newValue = Math.round(newValue);
+                        
+                        // Update slider (which updates UI)
+                        sliderItem.value = newValue;
+                        
+                        // Immediate update to backend
+                        if (TimelineBridge && paramName !== "") {
+                            TimelineBridge.setClipProperty(paramName, newValue);
+                        }
+                    }
+                }
+
+                onReleased: {
+                    if (!isDragging) {
+                        // Clicked without dragging -> Enter edit mode
+                        inputField.forceActiveFocus();
+                        inputField.selectAll();
+                    }
+                    isDragging = false;
+                }
+            }
         }
     }
 

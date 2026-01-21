@@ -1,6 +1,7 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QQuickWindow>
 #include "rina_context.hpp"
 #include <QQuickStyle> // 追加
 #include "window_manager.hpp"
@@ -27,6 +28,9 @@ int main(int argc, char *argv[]) {
     // アプリケーション生存期間中維持されるインスタンスを作成
     auto* timelineController = new Rina::UI::TimelineController(&app);
     engine.rootContext()->setContextProperty("TimelineBridge", timelineController);
+
+    // WindowManager をQMLから触れるように公開
+    engine.rootContext()->setContextProperty("WindowManager", static_cast<QObject*>(&Rina::UI::WindowManager::instance()));
 
     // ウィンドウ生成
     Rina::UI::WindowManager::instance().spawnInitialWindows(&engine);
