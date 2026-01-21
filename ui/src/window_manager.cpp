@@ -14,8 +14,8 @@ namespace Rina::UI {
     }
 
     void WindowManager::spawnInitialWindows(QQmlEngine* engine) {
-        // メインビュー (Qt Quick 3D)
-        spawnWindow(engine, "qrc:/qml/CompositeView.qml", "Rina Main Preview", 640, 480, 100, 100);
+        // メインビュー: Windowルート(MainWindow)を開く（CompositeViewはItemルートのため）
+        spawnWindow(engine, "qrc:/qml/MainWindow.qml", "Rina Main Preview", 640, 480, 100, 100);
         
         // タイムライン
         spawnWindow(engine, "qrc:/qml/TimelineWindow.qml", "Timeline", 1280, 300, 100, 600);

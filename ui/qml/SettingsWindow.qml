@@ -7,36 +7,45 @@ import "common" as Common
 Common.RinaWindow {
     id: root
     visible: true
-    width: 400
-    height: 300
+    width: 450
+    height: 250
+    minimumWidth: 400
+    minimumHeight: 200
     title: "Project Settings"
 
     GridLayout {
-        anchors.centerIn: parent
+        anchors.fill: parent
+        anchors.margins: 20
         columns: 2
-        rowSpacing: 15
-        columnSpacing: 15
+        rowSpacing: 20
+        columnSpacing: 20
 
         // 解像度
-        Label { text: "Resolution:"; color: "white" }
+        Label { text: "Resolution:"; color: palette.text }
         RowLayout {
+            Layout.fillWidth: true
             TextField {
                 text: TimelineBridge ? TimelineBridge.projectWidth : "1920"
                 onEditingFinished: if(TimelineBridge) TimelineBridge.projectWidth = parseInt(text)
                 validator: IntValidator { bottom: 1; top: 8000 }
+                Layout.fillWidth: true
+                horizontalAlignment: TextInput.AlignHCenter
             }
-            Label { text: "x"; color: "white" }
+            Label { text: "x"; color: palette.text }
             TextField {
                 text: TimelineBridge ? TimelineBridge.projectHeight : "1080"
                 onEditingFinished: if(TimelineBridge) TimelineBridge.projectHeight = parseInt(text)
                 validator: IntValidator { bottom: 1; top: 8000 }
+                Layout.fillWidth: true
+                horizontalAlignment: TextInput.AlignHCenter
             }
         }
 
         // FPS
-        Label { text: "FPS:"; color: "white" }
+        Label { text: "FPS:"; color: palette.text }
         ComboBox {
             id: fpsCombo
+            Layout.fillWidth: true
             model: [24, 30, 60]
             
             // 修正: 初期化時にモデルから探して設定
@@ -59,11 +68,15 @@ Common.RinaWindow {
         }
         
         // 総フレーム数
-        Label { text: "Duration (Frames):"; color: "white" }
+        Label { text: "Duration (Frames):"; color: palette.text }
         TextField {
+            Layout.fillWidth: true
             text: TimelineBridge ? TimelineBridge.totalFrames : "3000"
             onEditingFinished: if(TimelineBridge) TimelineBridge.totalFrames = parseInt(text)
             validator: IntValidator { bottom: 1 }
         }
+
+        // 余白埋め（下詰め防止）
+        Item { Layout.fillHeight: true; Layout.columnSpan: 2 }
     }
 }
