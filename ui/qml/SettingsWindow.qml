@@ -101,8 +101,8 @@ Common.RinaWindow {
                 columns: 2
                 Label { text: "Text Content:"; color: palette.text }
                 TextField { 
-                    text: TimelineBridge.textString
-                    onEditingFinished: TimelineBridge.textString = text
+                    text: (TimelineBridge.selectedClipData.text !== undefined) ? TimelineBridge.selectedClipData.text : ""
+                    onEditingFinished: TimelineBridge.setClipProperty("text", text)
                     Layout.fillWidth: true
                 }
             }

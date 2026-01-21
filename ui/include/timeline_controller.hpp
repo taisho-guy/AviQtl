@@ -23,15 +23,9 @@ namespace Rina::UI {
         Q_PROPERTY(int totalFrames READ totalFrames WRITE setTotalFrames NOTIFY totalFramesChanged)
         Q_PROPERTY(double timelineScale READ timelineScale WRITE setTimelineScale NOTIFY timelineScaleChanged)
 
-        Q_PROPERTY(int objectX READ objectX WRITE setObjectX NOTIFY objectXChanged)
-        Q_PROPERTY(int objectY READ objectY WRITE setObjectY NOTIFY objectYChanged)
-        Q_PROPERTY(int objectWidth READ objectWidth WRITE setObjectWidth NOTIFY objectWidthChanged)
-        Q_PROPERTY(int objectHeight READ objectHeight WRITE setObjectHeight NOTIFY objectHeightChanged)
-        Q_PROPERTY(QString textString READ textString WRITE setTextString NOTIFY textStringChanged)
-        Q_PROPERTY(int textSize READ textSize WRITE setTextSize NOTIFY textSizeChanged)
-        Q_PROPERTY(double objectRotation READ objectRotation WRITE setObjectRotation NOTIFY objectRotationChanged)
-        Q_PROPERTY(double objectOpacity READ objectOpacity WRITE setObjectOpacity NOTIFY objectOpacityChanged)
-        Q_PROPERTY(QColor objectColor READ objectColor WRITE setObjectColor NOTIFY objectColorChanged)
+        // Generic property access for the selected clip
+        Q_PROPERTY(QVariantMap selectedClipData READ selectedClipData NOTIFY selectedClipDataChanged)
+
         // フレーム数ベースに変更
         Q_PROPERTY(int currentFrame READ currentFrame WRITE setCurrentFrame NOTIFY currentFrameChanged)
         Q_PROPERTY(int clipStartFrame READ clipStartFrame WRITE setClipStartFrame NOTIFY clipStartFrameChanged)
@@ -64,32 +58,10 @@ namespace Rina::UI {
         double timelineScale() const;
         void setTimelineScale(double scale);
 
-        int objectX() const;
-        void setObjectX(int x);
-
-        int objectY() const;
-        void setObjectY(int y);
-
-        int objectWidth() const;
-        void setObjectWidth(int w);
-
-        int objectHeight() const;
-        void setObjectHeight(int h);
-
-        QString textString() const;
-        void setTextString(const QString& text);
-
-        int textSize() const;
-        void setTextSize(int size);
-
-        double objectRotation() const;
-        void setObjectRotation(double rotation);
-
-        double objectOpacity() const;
-        void setObjectOpacity(double opacity);
-
-        QColor objectColor() const;
-        void setObjectColor(const QColor& color);
+        // Generic Property Operations
+        Q_INVOKABLE void setClipProperty(const QString& name, const QVariant& value);
+        Q_INVOKABLE QVariant getClipProperty(const QString& name) const;
+        QVariantMap selectedClipData() const;
 
         int currentFrame() const;
         void setCurrentFrame(int frame);
@@ -127,15 +99,7 @@ namespace Rina::UI {
         void projectFpsChanged();
         void totalFramesChanged();
         void timelineScaleChanged();
-        void objectXChanged();
-        void objectYChanged();
-        void objectWidthChanged();
-        void objectHeightChanged();
-        void textStringChanged();
-        void textSizeChanged();
-        void objectRotationChanged();
-        void objectOpacityChanged();
-        void objectColorChanged();
+        void selectedClipDataChanged();
         void currentFrameChanged();
         void clipStartFrameChanged();
         void clipDurationFramesChanged();
@@ -161,17 +125,9 @@ namespace Rina::UI {
             int startFrame;
             int durationFrames;
             int layer;
-            // 個別プロパティ
-            int x = 0;
-            int y = 0;
-            int width = 100;
-            int height = 100;
-            QString text = "Text";
-            int textSize = 64;
-            double rotation = 0.0;
-            double opacity = 1.0;
-            QString color = "#ffffff";
-            // 簡易化のためプロパティは最小限
+            
+            // Dynamic Property Store
+            QVariantMap properties;
         };
         QList<ClipData> m_clips;
         int m_nextClipId = 1;
@@ -182,16 +138,8 @@ namespace Rina::UI {
         int m_totalFrames = 3600;
         double m_timelineScale = 1.0; // 1 frame = 1 pixel (default)
         int m_selectedClipId = -1;
+        QVariantMap m_selectedClipCache; // Cache for UI binding
 
-        int m_objectX = 0;
-        int m_objectY = 0;
-        int m_objectWidth = 100;
-        int m_objectHeight = 100;
-        QString m_textString = "Rina Text";
-        int m_textSize = 64;
-        double m_objectRotation = 0.0;
-        double m_objectOpacity = 1.0;
-        QColor m_objectColor = QColor(Qt::white);
         int m_currentFrame = 0;
         int m_clipStartFrame = 100;
         int m_clipDurationFrames = 200;
@@ -201,5 +149,8 @@ namespace Rina::UI {
         QTimer* m_playbackTimer;
         bool m_isPlaying = false;
         QString m_activeObjectType = "rect"; // デフォルトは図形
+
+        // Prototype Definitions (Type -> Default Properties)
+        QMap<QString, QVariantMap> m_prototypes;
     };
 }

@@ -5,7 +5,6 @@
 namespace Rina::UI {
     TimelineController::TimelineController(QObject* parent) 
         : QObject(parent)
-        , m_objectX(0)
         , m_currentFrame(0)
         , m_clipStartFrame(100)
         , m_clipDurationFrames(200)
@@ -14,15 +13,33 @@ namespace Rina::UI {
         , m_isClipActive(false)
         , m_isPlaying(false)
         , m_activeObjectType("rect") // デフォルトは図形
-        , m_objectRotation(0.0)
-        , m_objectOpacity(1.0)
-        , m_objectColor(Qt::white)
     {
         m_playbackTimer = new QTimer(this);
         m_playbackTimer->setTimerType(Qt::PreciseTimer);
         updateTimerInterval(); // 初期FPSで設定
         connect(m_playbackTimer, &QTimer::timeout, this, &TimelineController::onPlaybackStep);
         updateClipActiveState();
+
+        // --- Define Prototypes ---
+        QVariantMap rectProps;
+        rectProps["x"] = 0;
+        rectProps["y"] = 0;
+        rectProps["width"] = 100;
+        rectProps["height"] = 100;
+        rectProps["color"] = "#66aa99";
+        rectProps["opacity"] = 1.0;
+        rectProps["rotation"] = 0.0;
+        m_prototypes["rect"] = rectProps;
+
+        QVariantMap textProps;
+        textProps["x"] = 0;
+        textProps["y"] = 0;
+        textProps["text"] = "Text";
+        textProps["textSize"] = 64;
+        textProps["color"] = "#ffffff";
+        textProps["opacity"] = 1.0;
+        textProps["rotation"] = 0.0;
+        m_prototypes["text"] = textProps;
     }
 
     int TimelineController::projectWidth() const { return m_projectWidth; }
@@ -75,164 +92,37 @@ namespace Rina::UI {
         }
     }
 
-    int TimelineController::objectX() const { return m_objectX; }
-    void TimelineController::setObjectX(int x) {
-        if (m_objectX != x) {
-            m_objectX = x;
-            emit objectXChanged();
-            
-            // 選択中のクリップがあればデータを更新
-            if (m_selectedClipId != -1) {
-                for (auto& clip : m_clips) {
-                    if (clip.id == m_selectedClipId) {
-                        clip.x = x;
-                        emit activeClipsChanged(); // プレビュー更新
-                        break;
-                    }
-                }
+    // --- Generic Property Accessors ---
+    void TimelineController::setClipProperty(const QString& name, const QVariant& value) {
+        if (m_selectedClipId == -1) return;
+        
+        for (auto& clip : m_clips) {
+            if (clip.id == m_selectedClipId) {
+                clip.properties[name] = value;
+                
+                // Update cache
+                m_selectedClipCache[name] = value;
+                emit selectedClipDataChanged();
+                
+                // Update preview
+                emit activeClipsChanged();
+                
+                // Trigger keyframe logic if needed
+                if (name == "x") updateObjectX(); 
+                break;
             }
         }
     }
 
-    int TimelineController::objectY() const { return m_objectY; }
-    void TimelineController::setObjectY(int y) {
-        if (m_objectY != y) {
-            m_objectY = y;
-            emit objectYChanged();
-            
-            if (m_selectedClipId != -1) {
-                for (auto& clip : m_clips) {
-                    if (clip.id == m_selectedClipId) {
-                        clip.y = y;
-                        emit activeClipsChanged();
-                        break;
-                    }
-                }
-            }
+    QVariant TimelineController::getClipProperty(const QString& name) const {
+        if (m_selectedClipId != -1) {
+            return m_selectedClipCache.value(name);
         }
+        return QVariant();
     }
 
-    int TimelineController::objectWidth() const { return m_objectWidth; }
-    void TimelineController::setObjectWidth(int w) {
-        if (m_objectWidth != w) {
-            m_objectWidth = w;
-            emit objectWidthChanged();
-            
-            if (m_selectedClipId != -1) {
-                for (auto& clip : m_clips) {
-                    if (clip.id == m_selectedClipId) {
-                        clip.width = w;
-                        emit activeClipsChanged();
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    int TimelineController::objectHeight() const { return m_objectHeight; }
-    void TimelineController::setObjectHeight(int h) {
-        if (m_objectHeight != h) {
-            m_objectHeight = h;
-            emit objectHeightChanged();
-            
-            if (m_selectedClipId != -1) {
-                for (auto& clip : m_clips) {
-                    if (clip.id == m_selectedClipId) {
-                        clip.height = h;
-                        emit activeClipsChanged();
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    QString TimelineController::textString() const { return m_textString; }
-    void TimelineController::setTextString(const QString& text) {
-        if (m_textString != text) {
-            m_textString = text;
-            emit textStringChanged();
-            
-            if (m_selectedClipId != -1) {
-                for (auto& clip : m_clips) {
-                    if (clip.id == m_selectedClipId) {
-                        clip.text = text;
-                        emit activeClipsChanged();
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    int TimelineController::textSize() const { return m_textSize; }
-    void TimelineController::setTextSize(int size) {
-        if (m_textSize != size) {
-            m_textSize = size;
-            emit textSizeChanged();
-            
-            if (m_selectedClipId != -1) {
-                for (auto& clip : m_clips) {
-                    if (clip.id == m_selectedClipId) {
-                        clip.textSize = size;
-                        emit activeClipsChanged();
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    double TimelineController::objectRotation() const { return m_objectRotation; }
-    void TimelineController::setObjectRotation(double rotation) {
-        if (!qFuzzyCompare(m_objectRotation, rotation)) {
-            m_objectRotation = rotation;
-            emit objectRotationChanged();
-            if (m_selectedClipId != -1) {
-                for (auto& clip : m_clips) {
-                    if (clip.id == m_selectedClipId) {
-                        clip.rotation = rotation;
-                        emit activeClipsChanged();
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    double TimelineController::objectOpacity() const { return m_objectOpacity; }
-    void TimelineController::setObjectOpacity(double opacity) {
-        if (!qFuzzyCompare(m_objectOpacity, opacity)) {
-            m_objectOpacity = opacity;
-            emit objectOpacityChanged();
-            if (m_selectedClipId != -1) {
-                for (auto& clip : m_clips) {
-                    if (clip.id == m_selectedClipId) {
-                        clip.opacity = opacity;
-                        emit activeClipsChanged();
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    QColor TimelineController::objectColor() const { return m_objectColor; }
-    void TimelineController::setObjectColor(const QColor& color) {
-        if (m_objectColor != color) {
-            m_objectColor = color;
-            emit objectColorChanged();
-            if (m_selectedClipId != -1) {
-                for (auto& clip : m_clips) {
-                    if (clip.id == m_selectedClipId) {
-                        clip.color = color.name();
-                        emit activeClipsChanged();
-                        break;
-                    }
-                }
-            }
-        }
+    QVariantMap TimelineController::selectedClipData() const {
+        return m_selectedClipCache;
     }
 
     int TimelineController::currentFrame() const { return m_currentFrame; }
@@ -327,12 +217,9 @@ namespace Rina::UI {
     void TimelineController::updateObjectX() {
         if (m_keyframesX.empty()) return;
         float newVal = calculateInterpolatedValue(m_currentFrame);
-        // Directly set member to avoid loop if we used setter, but emit signal
         int newX = qRound(newVal);
-        if (m_objectX != newX) {
-            m_objectX = newX;
-            emit objectXChanged();
-        }
+        // Update property via generic setter
+        setClipProperty("x", newX);
     }
 
     void TimelineController::updateTimerInterval() {
@@ -344,7 +231,7 @@ namespace Rina::UI {
     }
 
     float TimelineController::calculateInterpolatedValue(int frame) {
-        if (m_keyframesX.empty()) return m_objectX;
+        if (m_keyframesX.empty()) return m_selectedClipCache.value("x", 0).toFloat();
         
         int relFrame = frame - m_clipStartFrame;
 
@@ -388,16 +275,14 @@ namespace Rina::UI {
         newClip.startFrame = startFrame;
         newClip.durationFrames = 100; // デフォルト100フレーム
         newClip.layer = layer;
-        newClip.x = 0;
-        newClip.y = 0;
-        newClip.width = 100;
-        newClip.height = 100;
-        newClip.text = (type == "text") ? "Text" : "";
-        newClip.textSize = 64;
-        newClip.rotation = 0.0;
-        newClip.opacity = 1.0;
-        newClip.color = "#ffffff";
         
+        // Initialize properties from prototype
+        if (m_prototypes.contains(type)) {
+            newClip.properties = m_prototypes[type];
+        } else {
+            newClip.properties = m_prototypes["rect"]; // Fallback
+        }
+
         m_clips.append(newClip);
         emit clipsChanged();
 
@@ -407,15 +292,9 @@ namespace Rina::UI {
         m_layer = newClip.layer;
         m_activeObjectType = type;
         m_selectedClipId = newClip.id;
-        m_objectX = newClip.x;
-        m_objectY = newClip.y;
-        m_objectWidth = newClip.width;
-        m_objectHeight = newClip.height;
-        m_textString = newClip.text;
-        m_textSize = newClip.textSize;
-        m_objectRotation = newClip.rotation;
-        m_objectOpacity = newClip.opacity;
-        m_objectColor = QColor(newClip.color);
+        
+        // Update property cache
+        m_selectedClipCache = newClip.properties;
         
         emit clipStartFrameChanged();
         emit clipDurationFramesChanged();
@@ -423,15 +302,7 @@ namespace Rina::UI {
         emit activeObjectTypeChanged();
         emit activeClipsChanged();
         emit selectedClipIdChanged();
-        emit objectXChanged();
-        emit objectYChanged();
-        emit objectWidthChanged();
-        emit objectHeightChanged();
-        emit textStringChanged();
-        emit textSizeChanged();
-        emit objectRotationChanged();
-        emit objectOpacityChanged();
-        emit objectColorChanged();
+        emit selectedClipDataChanged();
     }
 
     QVariantList TimelineController::clips() const {
@@ -443,10 +314,10 @@ namespace Rina::UI {
             map["startFrame"] = clip.startFrame;
             map["durationFrames"] = clip.durationFrames;
             map["layer"] = clip.layer;
-            map["x"] = clip.x;
-            map["y"] = clip.y;
-            map["text"] = clip.text;
             
+            // Include some properties for list view if needed
+            map["text"] = clip.properties.value("text", "");
+
             list.append(map);
         }
         return list;
@@ -476,15 +347,12 @@ namespace Rina::UI {
             map["startFrame"] = clip.startFrame;
             map["durationFrames"] = clip.durationFrames;
             map["layer"] = clip.layer;
-            map["x"] = clip.x;
-            map["y"] = clip.y;
-            map["width"] = clip.width;
-            map["height"] = clip.height;
-            map["text"] = clip.text;
-            map["textSize"] = clip.textSize;
-            map["rotation"] = clip.rotation;
-            map["opacity"] = clip.opacity;
-            map["color"] = clip.color;
+            
+            // Flatten dynamic properties into the map
+            for (auto it = clip.properties.begin(); it != clip.properties.end(); ++it) {
+                map[it.key()] = it.value();
+            }
+
             list.append(map);
         }
         return list;
@@ -507,15 +375,9 @@ namespace Rina::UI {
         // 選択されたクリップの情報をプロパティにロード
         for (const auto& clip : m_clips) {
             if (clip.id == id) {
-                if (m_objectX != clip.x) { m_objectX = clip.x; emit objectXChanged(); }
-                if (m_objectY != clip.y) { m_objectY = clip.y; emit objectYChanged(); }
-                if (m_objectWidth != clip.width) { m_objectWidth = clip.width; emit objectWidthChanged(); }
-                if (m_objectHeight != clip.height) { m_objectHeight = clip.height; emit objectHeightChanged(); }
-                if (m_textString != clip.text) { m_textString = clip.text; emit textStringChanged(); }
-                if (m_textSize != clip.textSize) { m_textSize = clip.textSize; emit textSizeChanged(); }
-                if (!qFuzzyCompare(m_objectRotation, clip.rotation)) { m_objectRotation = clip.rotation; emit objectRotationChanged(); }
-                if (!qFuzzyCompare(m_objectOpacity, clip.opacity)) { m_objectOpacity = clip.opacity; emit objectOpacityChanged(); }
-                if (m_objectColor.name() != clip.color) { m_objectColor = QColor(clip.color); emit objectColorChanged(); }
+                
+                m_selectedClipCache = clip.properties;
+                emit selectedClipDataChanged();
                 
                 if (m_activeObjectType != clip.type) { m_activeObjectType = clip.type; emit activeObjectTypeChanged(); }
                 if (m_layer != clip.layer) { m_layer = clip.layer; emit layerChanged(); }

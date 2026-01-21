@@ -42,12 +42,12 @@ Window {
             Layout.preferredHeight: 80
             TextArea {
                 id: textArea
-                text: TimelineBridge ? TimelineBridge.textString : ""
+                text: (TimelineBridge && TimelineBridge.selectedClipData.text !== undefined) ? TimelineBridge.selectedClipData.text : ""
                 color: "white"
                 background: Rectangle { color: "#222" }
                 // 入力ループ防止のため、activeFocusがある時のみ更新
                 onTextChanged: {
-                    if (TimelineBridge && activeFocus) TimelineBridge.textString = text
+                    if (TimelineBridge && activeFocus) TimelineBridge.setClipProperty("text", text)
                 }
             }
         }
@@ -59,8 +59,8 @@ Window {
                 id: xSlider
                 Layout.fillWidth: true
                 from: -500; to: 500
-                value: TimelineBridge ? TimelineBridge.objectX : 0
-                onMoved: if (TimelineBridge) TimelineBridge.objectX = Math.round(value)
+                value: (TimelineBridge && TimelineBridge.selectedClipData.x !== undefined) ? TimelineBridge.selectedClipData.x : 0
+                onMoved: if (TimelineBridge) TimelineBridge.setClipProperty("x", Math.round(value))
             }
             
             Button {
@@ -73,9 +73,9 @@ Window {
             }
 
             TextField {
-                text: TimelineBridge ? TimelineBridge.objectX.toFixed(0) : "0"
+                text: (TimelineBridge && TimelineBridge.selectedClipData.x !== undefined) ? TimelineBridge.selectedClipData.x.toFixed(0) : "0"
                 Layout.preferredWidth: 60
-                onEditingFinished: if (TimelineBridge) TimelineBridge.objectX = parseInt(text)
+                onEditingFinished: if (TimelineBridge) TimelineBridge.setClipProperty("x", parseInt(text))
             }
         }
         
@@ -86,13 +86,13 @@ Window {
                 id: ySlider
                 Layout.fillWidth: true
                 from: -500; to: 500
-                value: TimelineBridge ? TimelineBridge.objectY : 0 
-                onMoved: if (TimelineBridge) TimelineBridge.objectY = Math.round(value)
+                value: (TimelineBridge && TimelineBridge.selectedClipData.y !== undefined) ? TimelineBridge.selectedClipData.y : 0
+                onMoved: if (TimelineBridge) TimelineBridge.setClipProperty("y", Math.round(value))
             }
             TextField {
-                text: TimelineBridge ? TimelineBridge.objectY.toFixed(0) : "0"
+                text: (TimelineBridge && TimelineBridge.selectedClipData.y !== undefined) ? TimelineBridge.selectedClipData.y.toFixed(0) : "0"
                 Layout.preferredWidth: 60
-                onEditingFinished: if (TimelineBridge) TimelineBridge.objectY = parseInt(text)
+                onEditingFinished: if (TimelineBridge) TimelineBridge.setClipProperty("y", parseInt(text))
             }
         }
 
@@ -102,13 +102,13 @@ Window {
             Slider {
                 id: wSlider
                 Layout.fillWidth: true; from: 1; to: 1920
-                value: TimelineBridge ? TimelineBridge.objectWidth : 100
-                onMoved: if(TimelineBridge) TimelineBridge.objectWidth = Math.round(value)
+                value: (TimelineBridge && TimelineBridge.selectedClipData.width !== undefined) ? TimelineBridge.selectedClipData.width : 100
+                onMoved: if(TimelineBridge) TimelineBridge.setClipProperty("width", Math.round(value))
             }
             TextField {
-                text: TimelineBridge ? TimelineBridge.objectWidth.toString() : "100"
+                text: (TimelineBridge && TimelineBridge.selectedClipData.width !== undefined) ? TimelineBridge.selectedClipData.width.toString() : "100"
                 Layout.preferredWidth: 60
-                onEditingFinished: if(TimelineBridge) TimelineBridge.objectWidth = parseInt(text)
+                onEditingFinished: if(TimelineBridge) TimelineBridge.setClipProperty("width", parseInt(text))
             }
         }
         RowLayout {
@@ -116,13 +116,13 @@ Window {
             Slider {
                 id: hSlider
                 Layout.fillWidth: true; from: 1; to: 1080
-                value: TimelineBridge ? TimelineBridge.objectHeight : 100
-                onMoved: if(TimelineBridge) TimelineBridge.objectHeight = Math.round(value)
+                value: (TimelineBridge && TimelineBridge.selectedClipData.height !== undefined) ? TimelineBridge.selectedClipData.height : 100
+                onMoved: if(TimelineBridge) TimelineBridge.setClipProperty("height", Math.round(value))
             }
             TextField {
-                text: TimelineBridge ? TimelineBridge.objectHeight.toString() : "100"
+                text: (TimelineBridge && TimelineBridge.selectedClipData.height !== undefined) ? TimelineBridge.selectedClipData.height.toString() : "100"
                 Layout.preferredWidth: 60
-                onEditingFinished: if(TimelineBridge) TimelineBridge.objectHeight = parseInt(text)
+                onEditingFinished: if(TimelineBridge) TimelineBridge.setClipProperty("height", parseInt(text))
             }
         }
 
@@ -133,8 +133,8 @@ Window {
                 id: sizeSlider
                 Layout.fillWidth: true
                 from: 10; to: 200
-                value: TimelineBridge ? TimelineBridge.textSize : 64
-                onMoved: if (TimelineBridge) TimelineBridge.textSize = value
+                value: (TimelineBridge && TimelineBridge.selectedClipData.textSize !== undefined) ? TimelineBridge.selectedClipData.textSize : 64
+                onMoved: if (TimelineBridge) TimelineBridge.setClipProperty("textSize", Math.round(value))
             }
             Label {
                 text: sizeSlider.value.toFixed(0)
@@ -148,11 +148,15 @@ Window {
 
         Connections {
             target: TimelineBridge
-            function onObjectXChanged() { if (TimelineBridge) xSlider.value = TimelineBridge.objectX }
-            function onObjectYChanged() { if (TimelineBridge) ySlider.value = TimelineBridge.objectY }
-            function onObjectWidthChanged() { if (TimelineBridge) wSlider.value = TimelineBridge.objectWidth }
-            function onObjectHeightChanged() { if (TimelineBridge) hSlider.value = TimelineBridge.objectHeight }
-            function onTextSizeChanged() { if (TimelineBridge) sizeSlider.value = TimelineBridge.textSize }
+            function onSelectedClipDataChanged() {
+                if (!TimelineBridge) return;
+                var data = TimelineBridge.selectedClipData;
+                if (data.x !== undefined) xSlider.value = data.x;
+                if (data.y !== undefined) ySlider.value = data.y;
+                if (data.width !== undefined) wSlider.value = data.width;
+                if (data.height !== undefined) hSlider.value = data.height;
+                if (data.textSize !== undefined) sizeSlider.value = data.textSize;
+            }
         }
     }
 }
