@@ -5,15 +5,85 @@ import QtQuick.Window 2.15
 
 Window {
     id: root
-    width: 350
-    height: 400
-    title: "Standard Draw [3D Box]"
-    color: "#333"
+    width: 400
+    height: 600
+    title: "Object Settings"
+    color: palette.window
     visible: true
     
+    SystemPalette { id: palette; colorGroup: SystemPalette.Active }
+
     // ウィンドウ生成時に少し位置をずらす
     x: 500
     y: 200
+
+    // データ同期用関数
+    function updateUI() {
+        if (!TimelineBridge) return;
+        var data = TimelineBridge.selectedClipData;
+        if (!data) return;
+
+        // 値の更新 (ループ防止のため、UI操作中は更新しない等の制御が必要だが、
+        // ここでは簡易的に全更新。Sliderのpressedプロパティ等でガード可能)
+        
+        if (!xSlider.pressed) xSlider.value = data["x"] !== undefined ? data["x"] : 0
+        if (!ySlider.pressed) ySlider.value = data["y"] !== undefined ? data["y"] : 0
+        if (!zSlider.pressed) zSlider.value = data["z"] !== undefined ? data["z"] : 0
+        
+        if (!scaleSlider.pressed) scaleSlider.value = data["scale"] !== undefined ? data["scale"] : 100
+        if (!aspectSlider.pressed) aspectSlider.value = data["aspect"] !== undefined ? data["aspect"] : 0
+        
+        if (!rxSlider.pressed) rxSlider.value = data["rotationX"] !== undefined ? data["rotationX"] : 0
+        if (!rySlider.pressed) rySlider.value = data["rotationY"] !== undefined ? data["rotationY"] : 0
+        if (!rzSlider.pressed) rzSlider.value = data["rotationZ"] !== undefined ? data["rotationZ"] : 0
+        
+        if (!opacitySlider.pressed) opacitySlider.value = data["opacity"] !== undefined ? data["opacity"] : 1.0
+        
+        if (!colorField.activeFocus) colorField.text = data["color"] !== undefined ? data["color"] : "#ffffff"
+        if (!textArea.activeFocus) textArea.text = data["text"] !== undefined ? data["text"] : ""
+        if (!sizeSlider.pressed) sizeSlider.value = data["textSize"] !== undefined ? data["textSize"] : 64
+    }
+
+    Connections {
+        target: TimelineBridge
+        function onSelectedClipDataChanged() { updateUI() }
+    }
+
+    // 初期表示時にも更新
+    Component.onCompleted: updateUI()
+
+    // 共通スライダーコンポーネント
+    component ParamSlider : RowLayout {
+        property alias label: labelItem.text
+        property alias value: sliderItem.value
+        property alias from: sliderItem.from
+        property alias to: sliderItem.to
+        property string paramName: ""
+        property bool isInt: false
+
+        Label { 
+            id: labelItem
+            text: "Param"
+            color: palette.text 
+            Layout.preferredWidth: 80
+        }
+        Slider {
+            id: sliderItem
+            Layout.fillWidth: true
+            onMoved: {
+                if (TimelineBridge && paramName !== "") {
+                    var v = isInt ? Math.round(value) : value
+                    TimelineBridge.setClipProperty(paramName, v)
+                }
+            }
+        }
+        Label {
+            text: sliderItem.value.toFixed(isInt ? 0 : 2)
+            color: palette.text
+            Layout.preferredWidth: 40
+            horizontalAlignment: Text.AlignRight
+        }
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -24,138 +94,84 @@ Window {
         Rectangle {
             Layout.fillWidth: true
             height: 30
-            color: "#444"
+            color: palette.mid
             Label {
-                text: "Standard Draw"
+                text: "Standard Drawing"
                 anchors.centerIn: parent
-                color: "white"
+                color: palette.text
                 font.bold: true
             }
         }
 
-        Rectangle { Layout.fillWidth: true; height: 1; color: "#555" }
-        Label { text: "Text Object"; font.bold: true; color: "#aaa" }
-
-        // テキスト入力
         ScrollView {
             Layout.fillWidth: true
-            Layout.preferredHeight: 80
-            TextArea {
-                id: textArea
-                text: (TimelineBridge && TimelineBridge.selectedClipData.text !== undefined) ? TimelineBridge.selectedClipData.text : ""
-                color: "white"
-                background: Rectangle { color: "#222" }
-                // 入力ループ防止のため、activeFocusがある時のみ更新
-                onTextChanged: {
-                    if (TimelineBridge && activeFocus) TimelineBridge.setClipProperty("text", text)
+            Layout.fillHeight: true
+            clip: true
+
+            ColumnLayout {
+                width: parent.width
+                spacing: 8
+
+                // --- 座標 ---
+                Label { text: "Coordinates"; font.bold: true; color: palette.text }
+                ParamSlider { id: xSlider; label: "X"; paramName: "x"; from: -1920; to: 1920; isInt: true }
+                ParamSlider { id: ySlider; label: "Y"; paramName: "y"; from: -1080; to: 1080; isInt: true }
+                ParamSlider { id: zSlider; label: "Z"; paramName: "z"; from: -2000; to: 2000; isInt: true }
+
+                Rectangle { Layout.fillWidth: true; height: 1; color: palette.mid }
+
+                // --- 拡大・回転 ---
+                Label { text: "Transform"; font.bold: true; color: palette.text }
+                ParamSlider { id: scaleSlider; label: "Scale (%)"; paramName: "scale"; from: 0; to: 500; }
+                ParamSlider { id: aspectSlider; label: "Aspect"; paramName: "aspect"; from: -2.0; to: 2.0; }
+                
+                ParamSlider { id: rxSlider; label: "Rotate X"; paramName: "rotationX"; from: -360; to: 360; }
+                ParamSlider { id: rySlider; label: "Rotate Y"; paramName: "rotationY"; from: -360; to: 360; }
+                ParamSlider { id: rzSlider; label: "Rotate Z"; paramName: "rotationZ"; from: -360; to: 360; }
+
+                Rectangle { Layout.fillWidth: true; height: 1; color: palette.mid }
+
+                // --- マテリアル ---
+                Label { text: "Material"; font.bold: true; color: palette.text }
+                ParamSlider { id: opacitySlider; label: "Opacity"; paramName: "opacity"; from: 0; to: 1.0; }
+                
+                RowLayout {
+                    Label { text: "Color"; color: palette.text; Layout.preferredWidth: 80 }
+                    TextField {
+                        id: colorField
+                        Layout.fillWidth: true
+                        placeholderText: "#RRGGBB"
+                        onEditingFinished: {
+                            if (TimelineBridge) TimelineBridge.setClipProperty("color", text)
+                        }
+                    }
+                    Rectangle {
+                        width: 20; height: 20
+                        color: colorField.text
+                        border.color: palette.text
+                    }
                 }
-            }
-        }
 
-        // X座標
-        RowLayout {
-            Label { text: "X"; color: "white"; Layout.preferredWidth: 30 }
-            Slider {
-                id: xSlider
-                Layout.fillWidth: true
-                from: -500; to: 500
-                value: (TimelineBridge && TimelineBridge.selectedClipData.x !== undefined) ? TimelineBridge.selectedClipData.x : 0
-                onMoved: if (TimelineBridge) TimelineBridge.setClipProperty("x", Math.round(value))
-            }
-            
-            Button {
-                text: "+"
-                Layout.preferredWidth: 30
-                onClicked: {
-                    if (TimelineBridge)
-                        TimelineBridge.addKeyframe(TimelineBridge.currentFrame, Math.round(xSlider.value)) 
+                // --- テキスト専用 ---
+                Rectangle { Layout.fillWidth: true; height: 1; color: palette.mid }
+                Label { text: "Text Settings"; font.bold: true; color: palette.text }
+                
+                TextArea {
+                    id: textArea
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 60
+                    color: palette.text
+                    background: Rectangle { 
+                        color: palette.base 
+                        border.color: palette.mid
+                    }
+                    onEditingFinished: {
+                        if(TimelineBridge) TimelineBridge.setClipProperty("text", text)
+                    }
                 }
-            }
+                ParamSlider { id: sizeSlider; label: "Size"; paramName: "textSize"; from: 10; to: 200; isInt: true }
 
-            TextField {
-                text: (TimelineBridge && TimelineBridge.selectedClipData.x !== undefined) ? TimelineBridge.selectedClipData.x.toFixed(0) : "0"
-                Layout.preferredWidth: 60
-                onEditingFinished: if (TimelineBridge) TimelineBridge.setClipProperty("x", parseInt(text))
-            }
-        }
-        
-        // Y座標
-        RowLayout {
-            Label { text: "Y"; color: "white"; Layout.preferredWidth: 30 }
-            Slider {
-                id: ySlider
-                Layout.fillWidth: true
-                from: -500; to: 500
-                value: (TimelineBridge && TimelineBridge.selectedClipData.y !== undefined) ? TimelineBridge.selectedClipData.y : 0
-                onMoved: if (TimelineBridge) TimelineBridge.setClipProperty("y", Math.round(value))
-            }
-            TextField {
-                text: (TimelineBridge && TimelineBridge.selectedClipData.y !== undefined) ? TimelineBridge.selectedClipData.y.toFixed(0) : "0"
-                Layout.preferredWidth: 60
-                onEditingFinished: if (TimelineBridge) TimelineBridge.setClipProperty("y", parseInt(text))
-            }
-        }
-
-        // Width / Height Controls
-        RowLayout {
-            Label { text: "W"; color: "white"; Layout.preferredWidth: 30 }
-            Slider {
-                id: wSlider
-                Layout.fillWidth: true; from: 1; to: 1920
-                value: (TimelineBridge && TimelineBridge.selectedClipData.width !== undefined) ? TimelineBridge.selectedClipData.width : 100
-                onMoved: if(TimelineBridge) TimelineBridge.setClipProperty("width", Math.round(value))
-            }
-            TextField {
-                text: (TimelineBridge && TimelineBridge.selectedClipData.width !== undefined) ? TimelineBridge.selectedClipData.width.toString() : "100"
-                Layout.preferredWidth: 60
-                onEditingFinished: if(TimelineBridge) TimelineBridge.setClipProperty("width", parseInt(text))
-            }
-        }
-        RowLayout {
-            Label { text: "H"; color: "white"; Layout.preferredWidth: 30 }
-            Slider {
-                id: hSlider
-                Layout.fillWidth: true; from: 1; to: 1080
-                value: (TimelineBridge && TimelineBridge.selectedClipData.height !== undefined) ? TimelineBridge.selectedClipData.height : 100
-                onMoved: if(TimelineBridge) TimelineBridge.setClipProperty("height", Math.round(value))
-            }
-            TextField {
-                text: (TimelineBridge && TimelineBridge.selectedClipData.height !== undefined) ? TimelineBridge.selectedClipData.height.toString() : "100"
-                Layout.preferredWidth: 60
-                onEditingFinished: if(TimelineBridge) TimelineBridge.setClipProperty("height", parseInt(text))
-            }
-        }
-
-        // テキストサイズ
-        RowLayout {
-            Label { text: "Size"; color: "white"; Layout.preferredWidth: 30 }
-            Slider {
-                id: sizeSlider
-                Layout.fillWidth: true
-                from: 10; to: 200
-                value: (TimelineBridge && TimelineBridge.selectedClipData.textSize !== undefined) ? TimelineBridge.selectedClipData.textSize : 64
-                onMoved: if (TimelineBridge) TimelineBridge.setClipProperty("textSize", Math.round(value))
-            }
-            Label {
-                text: sizeSlider.value.toFixed(0)
-                color: "white"
-                Layout.preferredWidth: 40
-                horizontalAlignment: Text.AlignRight
-            }
-        }
-
-        Item { Layout.fillHeight: true } // スペーサー
-
-        Connections {
-            target: TimelineBridge
-            function onSelectedClipDataChanged() {
-                if (!TimelineBridge) return;
-                var data = TimelineBridge.selectedClipData;
-                if (data.x !== undefined) xSlider.value = data.x;
-                if (data.y !== undefined) ySlider.value = data.y;
-                if (data.width !== undefined) wSlider.value = data.width;
-                if (data.height !== undefined) hSlider.value = data.height;
-                if (data.textSize !== undefined) sizeSlider.value = data.textSize;
+                Item { Layout.fillHeight: true } // Spacer
             }
         }
     }

@@ -24,21 +24,37 @@ namespace Rina::UI {
         QVariantMap rectProps;
         rectProps["x"] = 0;
         rectProps["y"] = 0;
+        rectProps["z"] = 0;
         rectProps["width"] = 100;
         rectProps["height"] = 100;
+        rectProps["scale"] = 100.0;
+        rectProps["aspect"] = 0.0;
+        rectProps["rotationX"] = 0.0;
+        rectProps["rotationY"] = 0.0;
+        rectProps["rotationZ"] = 0.0;
+        rectProps["anchorX"] = 0.0;
+        rectProps["anchorY"] = 0.0;
+        rectProps["anchorZ"] = 0.0;
         rectProps["color"] = "#66aa99";
         rectProps["opacity"] = 1.0;
-        rectProps["rotation"] = 0.0;
         m_prototypes["rect"] = rectProps;
 
         QVariantMap textProps;
         textProps["x"] = 0;
         textProps["y"] = 0;
+        textProps["z"] = 0;
         textProps["text"] = "Text";
         textProps["textSize"] = 64;
+        textProps["scale"] = 100.0;
+        textProps["aspect"] = 0.0;
+        textProps["rotationX"] = 0.0;
+        textProps["rotationY"] = 0.0;
+        textProps["rotationZ"] = 0.0;
+        textProps["anchorX"] = 0.0;
+        textProps["anchorY"] = 0.0;
+        textProps["anchorZ"] = 0.0;
         textProps["color"] = "#ffffff";
         textProps["opacity"] = 1.0;
-        textProps["rotation"] = 0.0;
         m_prototypes["text"] = textProps;
     }
 

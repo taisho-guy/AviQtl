@@ -107,10 +107,29 @@ Item {
                 // Qt3DはY上がプラスなので、入力を反転させる
                 x: (modelData.x !== undefined) ? modelData.x : 0
                 y: (modelData.y !== undefined) ? -modelData.y : 0
-                z: modelData.layer * 50 // レイヤー間隔を広げる
+                z: ((modelData.z !== undefined) ? modelData.z : 0) + (modelData.layer * 50)
                 
-                // 回転 (Z軸)
-                eulerRotation.z: (modelData.rotation !== undefined) ? -modelData.rotation : 0
+                // 中心座標 (Pivot)
+                pivot: Qt.vector3d(
+                    (modelData.anchorX !== undefined) ? modelData.anchorX : 0,
+                    (modelData.anchorY !== undefined) ? -modelData.anchorY : 0,
+                    (modelData.anchorZ !== undefined) ? modelData.anchorZ : 0
+                )
+
+                // 3軸回転
+                eulerRotation.x: (modelData.rotationX !== undefined) ? modelData.rotationX : 0
+                eulerRotation.y: (modelData.rotationY !== undefined) ? -modelData.rotationY : 0
+                eulerRotation.z: (modelData.rotationZ !== undefined) ? -modelData.rotationZ : 0
+
+                // 拡大率と縦横比
+                property real baseScale: (modelData.scale !== undefined) ? modelData.scale / 100.0 : 1.0
+                property real asp: (modelData.aspect !== undefined) ? modelData.aspect : 0.0
+                scale: Qt.vector3d(
+                    baseScale * (asp >= 0 ? (1.0 + asp) : 1.0),
+                    baseScale * (asp < 0 ? (1.0 - asp) : 1.0),
+                    baseScale
+                )
+
                 // 不透明度 (全体)
                 opacity: (modelData.opacity !== undefined) ? modelData.opacity : 1.0
 
