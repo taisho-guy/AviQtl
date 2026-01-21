@@ -29,6 +29,15 @@ namespace Rina::UI {
         }
     }
     
+    void TimelineController::onPlaybackStep() {
+        float nextTime = m_currentTime + 1.0f;
+        // ループ再生
+        if (nextTime > m_totalFrames) {
+            nextTime = 0.0f;
+        }
+        setCurrentTime(nextTime);
+    }
+
     int TimelineController::projectHeight() const { return m_projectHeight; }
     void TimelineController::setProjectHeight(int h) {
         if (m_projectHeight != h) {
