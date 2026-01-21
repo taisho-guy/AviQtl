@@ -35,6 +35,18 @@ ApplicationWindow {
         shortcut: "Ctrl+Q"
         onTriggered: if (WindowManager) WindowManager.requestQuit()
     }
+    Action {
+        id: undoAction
+        text: "Undo"
+        shortcut: "Ctrl+Z"
+        onTriggered: if (TimelineBridge) TimelineBridge.undo()
+    }
+    Action {
+        id: redoAction
+        text: "Redo"
+        shortcut: "Ctrl+Shift+Z"
+        onTriggered: if (TimelineBridge) TimelineBridge.redo()
+    }
 
     menuBar: MenuBar {
         Menu {
@@ -57,6 +69,11 @@ ApplicationWindow {
                 checked: WindowManager ? WindowManager.objectSettingsVisible : false
                 onTriggered: if (WindowManager) WindowManager.objectSettingsVisible = checked
             }
+        }
+        Menu {
+            title: "Edit"
+            MenuItem { action: undoAction }
+            MenuItem { action: redoAction }
         }
         Menu {
             title: "File"

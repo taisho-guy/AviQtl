@@ -1,12 +1,65 @@
 #include "timeline_controller.hpp"
+#include "commands.hpp"
 #include "../../engine/timeline/ecs.hpp"
 #include <algorithm>
 #include <QFile>
 #include <QUrl>
 
 namespace Rina::UI {
+    // === Commands Implementation ===
+
+    AddClipCommand::AddClipCommand(TimelineController* controller, const QString& type, int startFrame, int layer)
+        : m_controller(controller), m_type(type), m_startFrame(startFrame), m_layer(layer) {
+        setText("Add Clip");
+    }
+    void AddClipCommand::undo() {
+        // TODO: Implement removeClip logic properly
+        // m_controller->removeClip(m_generatedId);
+    }
+    void AddClipCommand::redo() {
+        m_controller->createObjectInternal(m_type, m_startFrame, m_layer);
+    }
+
+    MoveClipCommand::MoveClipCommand(TimelineController* controller, int clipId, 
+                                     int oldLayer, int oldStart, int oldDuration,
+                                     int newLayer, int newStart, int newDuration)
+        : m_controller(controller), m_clipId(clipId),
+          m_oldLayer(oldLayer), m_oldStart(oldStart), m_oldDuration(oldDuration),
+          m_newLayer(newLayer), m_newStart(newStart), m_newDuration(newDuration) {
+        setText("Move Clip");
+    }
+    void MoveClipCommand::undo() {
+        m_controller->updateClipInternal(m_clipId, m_oldLayer, m_oldStart, m_oldDuration);
+    }
+    void MoveClipCommand::redo() {
+        m_controller->updateClipInternal(m_clipId, m_newLayer, m_newStart, m_newDuration);
+    }
+
+    UpdateEffectParamCommand::UpdateEffectParamCommand(TimelineController* controller, int clipId, int effectIndex, 
+                                                       const QString& paramName, const QVariant& newValue, const QVariant& oldValue)
+        : m_controller(controller), m_clipId(clipId), m_effectIndex(effectIndex), 
+          m_paramName(paramName), m_newValue(newValue), m_oldValue(oldValue) {
+        setText("Update Param: " + paramName);
+    }
+    void UpdateEffectParamCommand::undo() {
+        m_controller->updateClipEffectParamInternal(m_clipId, m_effectIndex, m_paramName, m_oldValue);
+    }
+    void UpdateEffectParamCommand::redo() {
+        m_controller->updateClipEffectParamInternal(m_clipId, m_effectIndex, m_paramName, m_newValue);
+    }
+    int UpdateEffectParamCommand::id() const { return 1001; }
+    bool UpdateEffectParamCommand::mergeWith(const QUndoCommand *other) {
+        if (other->id() != id()) return false;
+        const auto* cmd = static_cast<const UpdateEffectParamCommand*>(other);
+        if (cmd->m_clipId != m_clipId || cmd->m_effectIndex != m_effectIndex || cmd->m_paramName != m_paramName)
+            return false;
+        m_newValue = cmd->m_newValue;
+        return true;
+    }
+
     TimelineController::TimelineController(QObject* parent) 
         : QObject(parent)
+        , m_undoStack(new QUndoStack(this))
         , m_currentFrame(0)
         , m_clipStartFrame(100)
         , m_clipDurationFrames(200)
@@ -23,6 +76,9 @@ namespace Rina::UI {
         updateClipActiveState();
 
     }
+
+    void TimelineController::undo() { m_undoStack->undo(); }
+    void TimelineController::redo() { m_undoStack->redo(); }
 
     int TimelineController::projectWidth() const { return m_projectWidth; }
     void TimelineController::setProjectWidth(int w) {
@@ -255,6 +311,10 @@ namespace Rina::UI {
     }
 
     void TimelineController::createObject(const QString& type, int startFrame, int layer) {
+        m_undoStack->push(new AddClipCommand(this, type, startFrame, layer));
+    }
+
+    void TimelineController::createObjectInternal(const QString& type, int startFrame, int layer) {
         qDebug() << "Creating Object:" << type << "at Frame:" << startFrame << "Layer:" << layer;
         
         // 新規クリップ作成
@@ -341,6 +401,17 @@ namespace Rina::UI {
     }
 
     void TimelineController::updateClipEffectParam(int clipId, int effectIndex, const QString& paramName, const QVariant& value) {
+        QVariant oldValue;
+        for(const auto& c : m_clips) {
+            if(c.id == clipId && effectIndex < c.effects.size()) {
+                oldValue = c.effects[effectIndex].params[paramName];
+                break;
+            }
+        }
+        m_undoStack->push(new UpdateEffectParamCommand(this, clipId, effectIndex, paramName, value, oldValue));
+    }
+
+    void TimelineController::updateClipEffectParamInternal(int clipId, int effectIndex, const QString& paramName, const QVariant& value) {
         for (auto& clip : m_clips) {
             if (clip.id == clipId) {
                 if (effectIndex >= 0 && effectIndex < clip.effects.size()) {
@@ -423,6 +494,14 @@ namespace Rina::UI {
     }
 
     void TimelineController::updateClip(int id, int layer, int startFrame, int duration) {
+        int oldLayer = 0, oldStart = 0, oldDur = 0;
+        for(const auto& c : m_clips) {
+            if(c.id == id) { oldLayer=c.layer; oldStart=c.startFrame; oldDur=c.durationFrames; break; }
+        }
+        m_undoStack->push(new MoveClipCommand(this, id, oldLayer, oldStart, oldDur, layer, startFrame, duration));
+    }
+
+    void TimelineController::updateClipInternal(int id, int layer, int startFrame, int duration) {
         if (startFrame < 0) startFrame = 0;
         if (duration < 1) duration = 1;
         if (layer < 0) layer = 0;

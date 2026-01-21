@@ -9,6 +9,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QUndoStack>
 
 namespace Rina::UI {
     // エフェクト（フィルタ）のインスタンス定義
@@ -115,6 +116,14 @@ namespace Rina::UI {
         int selectedClipId() const;
         Q_INVOKABLE void selectClip(int id);
 
+        Q_INVOKABLE void undo();
+        Q_INVOKABLE void redo();
+
+        // Internal methods called by Commands
+        void updateClipInternal(int id, int layer, int startFrame, int duration);
+        void updateClipEffectParamInternal(int clipId, int effectIndex, const QString& paramName, const QVariant& value);
+        void createObjectInternal(const QString& type, int startFrame, int layer);
+
     signals:
         void projectWidthChanged();
         void projectHeightChanged();
@@ -154,6 +163,7 @@ namespace Rina::UI {
         QList<ClipData> m_clips;
         int m_nextClipId = 1;
 
+        QUndoStack* m_undoStack;
         int m_projectWidth = 1920;
         int m_projectHeight = 1080;
         double m_projectFps = 60.0;
