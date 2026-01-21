@@ -1,8 +1,9 @@
 # Builds
 build/
 
-# Exprts
+# Exports
 project_export.txt
+project_context.txt
 
 # ---> VisualStudioCode
 .vscode/*

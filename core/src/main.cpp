@@ -2,6 +2,7 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include "rina_context.hpp"
+#include <QQuickStyle> // 追加
 #include "window_manager.hpp"
 #include "timeline_controller.hpp"
 
@@ -12,6 +13,13 @@ int main(int argc, char *argv[]) {
 #endif
     QGuiApplication app(argc, argv);
     app.setApplicationName("Rina");
+
+    // 1. スタイルの強制適用 (KDE Plasma Native)
+    // これにより、システムの色設定（ダークモード等）が自動的にQMLに反映される
+    if (qEnvironmentVariableIsEmpty("QT_QUICK_CONTROLS_STYLE")) {
+        QQuickStyle::setStyle("org.kde.desktop");
+    }
+    QQuickStyle::setFallbackStyle("Fusion"); // 非KDE環境でも最低限見れるようにする
 
     QQmlApplicationEngine engine;
 

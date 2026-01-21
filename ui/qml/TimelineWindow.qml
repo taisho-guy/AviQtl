@@ -1,14 +1,14 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import "common" as Common
 
-Window {
+Common.RinaWindow {
     id: timelineWindow
     width: 1280
     height: 300
     // x: 100; y: 500 // Waylandでは無視されることが多い
     title: "Timeline [Layer 1-100]"
-    color: "#2d2d2d"
     visible: true
 
     // コンテキストメニューの定義

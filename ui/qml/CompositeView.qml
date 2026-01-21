@@ -17,8 +17,9 @@ View3D {
     }
     
     environment: SceneEnvironment {
-        clearColor: "#101010" // 少し明るい黒（AviUtlっぽい背景色）
+        id: sceneEnv
         backgroundMode: SceneEnvironment.Color
+        clearColor: "#1a1a1a" // 暗灰色（映像編集ソフトの標準）
         antialiasingMode: SceneEnvironment.MSAA
         antialiasingQuality: SceneEnvironment.High
     }
@@ -26,6 +27,7 @@ View3D {
     // 照明 (2D的な見た目にするためアンビエント強め)
     DirectionalLight {
         eulerRotation.x: -30
+        eulerRotation.y: -70
         brightness: 1.0
         ambientColor: "#808080"
     }
