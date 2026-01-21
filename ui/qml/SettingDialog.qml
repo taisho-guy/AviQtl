@@ -41,12 +41,13 @@ Window {
             Layout.fillWidth: true
             Layout.preferredHeight: 80
             TextArea {
+                id: textArea
                 text: TimelineBridge ? TimelineBridge.textString : ""
                 color: "white"
                 background: Rectangle { color: "#222" }
-                // 入力するたびに即時反映
+                // 入力ループ防止のため、activeFocusがある時のみ更新
                 onTextChanged: {
-                    if (TimelineBridge) TimelineBridge.textString = text
+                    if (TimelineBridge && activeFocus) TimelineBridge.textString = text
                 }
             }
         }
@@ -58,16 +59,8 @@ Window {
                 id: xSlider
                 Layout.fillWidth: true
                 from: -500; to: 500
-                value: TimelineBridge ? TimelineBridge.objectX : 0 // objectXはintだが、Sliderのvalueはfloatなのでそのままバインド
-                onMoved: if (TimelineBridge) TimelineBridge.objectX = Math.round(value) // Sliderのfloat値をintに丸めて設定
-                
-                // バインディング: C++ -> スライダー (外部要因で変わった場合)
-                Connections {
-                    target: TimelineBridge
-                    function onObjectXChanged() {
-                        if (TimelineBridge) xSlider.value = TimelineBridge.objectX
-                    }
-                }
+                value: TimelineBridge ? TimelineBridge.objectX : 0
+                onMoved: if (TimelineBridge) TimelineBridge.objectX = Math.round(value)
             }
             
             Button {
@@ -75,14 +68,14 @@ Window {
                 Layout.preferredWidth: 30
                 onClicked: {
                     if (TimelineBridge)
-                        TimelineBridge.addKeyframe(TimelineBridge.currentFrame, Math.round(xSlider.value)) // currentTime -> currentFrame, xSlider.valueはfloatなので丸める
+                        TimelineBridge.addKeyframe(TimelineBridge.currentFrame, Math.round(xSlider.value)) 
                 }
             }
 
             TextField {
-                text: TimelineBridge ? TimelineBridge.objectX.toFixed(0) : "0" // objectXはintなのでtoFixed(0)で表示
+                text: TimelineBridge ? TimelineBridge.objectX.toFixed(0) : "0"
                 Layout.preferredWidth: 60
-                onEditingFinished: if (TimelineBridge) TimelineBridge.objectX = parseInt(text) // objectXはintなのでparseIntで設定
+                onEditingFinished: if (TimelineBridge) TimelineBridge.objectX = parseInt(text)
             }
         }
         
@@ -93,20 +86,43 @@ Window {
                 id: ySlider
                 Layout.fillWidth: true
                 from: -500; to: 500
-                value: TimelineBridge ? TimelineBridge.objectY : 0 // objectYはintだが、Sliderのvalueはfloatなのでそのままバインド
-                onMoved: if (TimelineBridge) TimelineBridge.objectY = Math.round(value) // Sliderのfloat値をintに丸めて設定
-                
-                Connections {
-                    target: TimelineBridge
-                    function onObjectYChanged() {
-                        if (TimelineBridge) ySlider.value = TimelineBridge.objectY
-                    }
-                }
+                value: TimelineBridge ? TimelineBridge.objectY : 0 
+                onMoved: if (TimelineBridge) TimelineBridge.objectY = Math.round(value)
             }
             TextField {
-                text: TimelineBridge ? TimelineBridge.objectY.toFixed(0) : "0" // objectYはintなのでtoFixed(0)で表示
+                text: TimelineBridge ? TimelineBridge.objectY.toFixed(0) : "0"
                 Layout.preferredWidth: 60
-                onEditingFinished: if (TimelineBridge) TimelineBridge.objectY = parseInt(text) // objectYはintなのでparseIntで設定
+                onEditingFinished: if (TimelineBridge) TimelineBridge.objectY = parseInt(text)
+            }
+        }
+
+        // Width / Height Controls
+        RowLayout {
+            Label { text: "W"; color: "white"; Layout.preferredWidth: 30 }
+            Slider {
+                id: wSlider
+                Layout.fillWidth: true; from: 1; to: 1920
+                value: TimelineBridge ? TimelineBridge.objectWidth : 100
+                onMoved: if(TimelineBridge) TimelineBridge.objectWidth = Math.round(value)
+            }
+            TextField {
+                text: TimelineBridge ? TimelineBridge.objectWidth.toString() : "100"
+                Layout.preferredWidth: 60
+                onEditingFinished: if(TimelineBridge) TimelineBridge.objectWidth = parseInt(text)
+            }
+        }
+        RowLayout {
+            Label { text: "H"; color: "white"; Layout.preferredWidth: 30 }
+            Slider {
+                id: hSlider
+                Layout.fillWidth: true; from: 1; to: 1080
+                value: TimelineBridge ? TimelineBridge.objectHeight : 100
+                onMoved: if(TimelineBridge) TimelineBridge.objectHeight = Math.round(value)
+            }
+            TextField {
+                text: TimelineBridge ? TimelineBridge.objectHeight.toString() : "100"
+                Layout.preferredWidth: 60
+                onEditingFinished: if(TimelineBridge) TimelineBridge.objectHeight = parseInt(text)
             }
         }
 
@@ -129,5 +145,14 @@ Window {
         }
 
         Item { Layout.fillHeight: true } // スペーサー
+
+        Connections {
+            target: TimelineBridge
+            function onObjectXChanged() { if (TimelineBridge) xSlider.value = TimelineBridge.objectX }
+            function onObjectYChanged() { if (TimelineBridge) ySlider.value = TimelineBridge.objectY }
+            function onObjectWidthChanged() { if (TimelineBridge) wSlider.value = TimelineBridge.objectWidth }
+            function onObjectHeightChanged() { if (TimelineBridge) hSlider.value = TimelineBridge.objectHeight }
+            function onTextSizeChanged() { if (TimelineBridge) sizeSlider.value = TimelineBridge.textSize }
+        }
     }
 }

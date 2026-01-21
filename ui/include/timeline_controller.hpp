@@ -5,6 +5,7 @@
 #include <vector>
 #include <QVariant>
 #include <QTimer>
+#include <QColor>
 
 namespace Rina::UI {
     struct Keyframe {
@@ -24,8 +25,13 @@ namespace Rina::UI {
 
         Q_PROPERTY(int objectX READ objectX WRITE setObjectX NOTIFY objectXChanged)
         Q_PROPERTY(int objectY READ objectY WRITE setObjectY NOTIFY objectYChanged)
+        Q_PROPERTY(int objectWidth READ objectWidth WRITE setObjectWidth NOTIFY objectWidthChanged)
+        Q_PROPERTY(int objectHeight READ objectHeight WRITE setObjectHeight NOTIFY objectHeightChanged)
         Q_PROPERTY(QString textString READ textString WRITE setTextString NOTIFY textStringChanged)
         Q_PROPERTY(int textSize READ textSize WRITE setTextSize NOTIFY textSizeChanged)
+        Q_PROPERTY(double objectRotation READ objectRotation WRITE setObjectRotation NOTIFY objectRotationChanged)
+        Q_PROPERTY(double objectOpacity READ objectOpacity WRITE setObjectOpacity NOTIFY objectOpacityChanged)
+        Q_PROPERTY(QColor objectColor READ objectColor WRITE setObjectColor NOTIFY objectColorChanged)
         // フレーム数ベースに変更
         Q_PROPERTY(int currentFrame READ currentFrame WRITE setCurrentFrame NOTIFY currentFrameChanged)
         Q_PROPERTY(int clipStartFrame READ clipStartFrame WRITE setClipStartFrame NOTIFY clipStartFrameChanged)
@@ -64,11 +70,26 @@ namespace Rina::UI {
         int objectY() const;
         void setObjectY(int y);
 
+        int objectWidth() const;
+        void setObjectWidth(int w);
+
+        int objectHeight() const;
+        void setObjectHeight(int h);
+
         QString textString() const;
         void setTextString(const QString& text);
 
         int textSize() const;
         void setTextSize(int size);
+
+        double objectRotation() const;
+        void setObjectRotation(double rotation);
+
+        double objectOpacity() const;
+        void setObjectOpacity(double opacity);
+
+        QColor objectColor() const;
+        void setObjectColor(const QColor& color);
 
         int currentFrame() const;
         void setCurrentFrame(int frame);
@@ -108,8 +129,13 @@ namespace Rina::UI {
         void timelineScaleChanged();
         void objectXChanged();
         void objectYChanged();
+        void objectWidthChanged();
+        void objectHeightChanged();
         void textStringChanged();
         void textSizeChanged();
+        void objectRotationChanged();
+        void objectOpacityChanged();
+        void objectColorChanged();
         void currentFrameChanged();
         void clipStartFrameChanged();
         void clipDurationFramesChanged();
@@ -141,6 +167,10 @@ namespace Rina::UI {
             int width = 100;
             int height = 100;
             QString text = "Text";
+            int textSize = 64;
+            double rotation = 0.0;
+            double opacity = 1.0;
+            QString color = "#ffffff";
             // 簡易化のためプロパティは最小限
         };
         QList<ClipData> m_clips;
@@ -155,8 +185,13 @@ namespace Rina::UI {
 
         int m_objectX = 0;
         int m_objectY = 0;
+        int m_objectWidth = 100;
+        int m_objectHeight = 100;
         QString m_textString = "Rina Text";
         int m_textSize = 64;
+        double m_objectRotation = 0.0;
+        double m_objectOpacity = 1.0;
+        QColor m_objectColor = QColor(Qt::white);
         int m_currentFrame = 0;
         int m_clipStartFrame = 100;
         int m_clipDurationFrames = 200;

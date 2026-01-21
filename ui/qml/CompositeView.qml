@@ -59,7 +59,7 @@ Item {
         environment: SceneEnvironment {
             id: sceneEnv
             backgroundMode: SceneEnvironment.Color
-            clearColor: "blue" // デバッグ用: 画面が青くなれば View3D は動いている
+            clearColor: "#000000"
             antialiasingMode: SceneEnvironment.MSAA
             antialiasingQuality: SceneEnvironment.High
         }
@@ -80,6 +80,7 @@ Item {
                 }
                 // 奥に配置
                 position: Qt.vector3d(0, 0, -10)
+                visible: false // 邪魔なので一旦隠す
             }
         }
 
@@ -102,20 +103,31 @@ Item {
             }
 
             delegate: Node {
-                // 座標変換修正: Y軸反転とオフセット
-                // 2D(0,0) -> 3D(-960, 540)
-                x: (modelData.x !== undefined ? modelData.x : 0) - 960
-                y: 540 - (modelData.y !== undefined ? modelData.y : 0)
+                // 座標変換: 中心(0,0)、Y軸下プラス(AviUtl互換)
+                // Qt3DはY上がプラスなので、入力を反転させる
+                x: (modelData.x !== undefined) ? modelData.x : 0
+                y: (modelData.y !== undefined) ? -modelData.y : 0
                 z: modelData.layer * 50 // レイヤー間隔を広げる
+                
+                // 回転 (Z軸)
+                eulerRotation.z: (modelData.rotation !== undefined) ? -modelData.rotation : 0
+                // 不透明度 (全体)
+                opacity: (modelData.opacity !== undefined) ? modelData.opacity : 1.0
 
                 RectObject {
                     visible: modelData.type === "rect"
-                    // 必要ならサイズもバインド
+                    sizeW: (modelData.width !== undefined) ? modelData.width : 100
+                    sizeH: (modelData.height !== undefined) ? modelData.height : 100
+                    color: (modelData.color !== undefined) ? modelData.color : "#ffffff"
+                    opacity: (modelData.opacity !== undefined) ? modelData.opacity : 1.0
                 }
 
                 TextObject {
                     visible: modelData.type === "text"
                     textContent: (modelData.text !== undefined) ? modelData.text : ""
+                    textSize: (modelData.textSize !== undefined) ? modelData.textSize : 64
+                    color: (modelData.color !== undefined) ? modelData.color : "#ffffff"
+                    opacity: (modelData.opacity !== undefined) ? modelData.opacity : 1.0
                 }
             }
         }

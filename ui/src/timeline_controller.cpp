@@ -14,6 +14,9 @@ namespace Rina::UI {
         , m_isClipActive(false)
         , m_isPlaying(false)
         , m_activeObjectType("rect") // デフォルトは図形
+        , m_objectRotation(0.0)
+        , m_objectOpacity(1.0)
+        , m_objectColor(Qt::white)
     {
         m_playbackTimer = new QTimer(this);
         m_playbackTimer->setTimerType(Qt::PreciseTimer);
@@ -109,6 +112,42 @@ namespace Rina::UI {
         }
     }
 
+    int TimelineController::objectWidth() const { return m_objectWidth; }
+    void TimelineController::setObjectWidth(int w) {
+        if (m_objectWidth != w) {
+            m_objectWidth = w;
+            emit objectWidthChanged();
+            
+            if (m_selectedClipId != -1) {
+                for (auto& clip : m_clips) {
+                    if (clip.id == m_selectedClipId) {
+                        clip.width = w;
+                        emit activeClipsChanged();
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    int TimelineController::objectHeight() const { return m_objectHeight; }
+    void TimelineController::setObjectHeight(int h) {
+        if (m_objectHeight != h) {
+            m_objectHeight = h;
+            emit objectHeightChanged();
+            
+            if (m_selectedClipId != -1) {
+                for (auto& clip : m_clips) {
+                    if (clip.id == m_selectedClipId) {
+                        clip.height = h;
+                        emit activeClipsChanged();
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
     QString TimelineController::textString() const { return m_textString; }
     void TimelineController::setTextString(const QString& text) {
         if (m_textString != text) {
@@ -132,6 +171,67 @@ namespace Rina::UI {
         if (m_textSize != size) {
             m_textSize = size;
             emit textSizeChanged();
+            
+            if (m_selectedClipId != -1) {
+                for (auto& clip : m_clips) {
+                    if (clip.id == m_selectedClipId) {
+                        clip.textSize = size;
+                        emit activeClipsChanged();
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    double TimelineController::objectRotation() const { return m_objectRotation; }
+    void TimelineController::setObjectRotation(double rotation) {
+        if (!qFuzzyCompare(m_objectRotation, rotation)) {
+            m_objectRotation = rotation;
+            emit objectRotationChanged();
+            if (m_selectedClipId != -1) {
+                for (auto& clip : m_clips) {
+                    if (clip.id == m_selectedClipId) {
+                        clip.rotation = rotation;
+                        emit activeClipsChanged();
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    double TimelineController::objectOpacity() const { return m_objectOpacity; }
+    void TimelineController::setObjectOpacity(double opacity) {
+        if (!qFuzzyCompare(m_objectOpacity, opacity)) {
+            m_objectOpacity = opacity;
+            emit objectOpacityChanged();
+            if (m_selectedClipId != -1) {
+                for (auto& clip : m_clips) {
+                    if (clip.id == m_selectedClipId) {
+                        clip.opacity = opacity;
+                        emit activeClipsChanged();
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    QColor TimelineController::objectColor() const { return m_objectColor; }
+    void TimelineController::setObjectColor(const QColor& color) {
+        if (m_objectColor != color) {
+            m_objectColor = color;
+            emit objectColorChanged();
+            if (m_selectedClipId != -1) {
+                for (auto& clip : m_clips) {
+                    if (clip.id == m_selectedClipId) {
+                        clip.color = color.name();
+                        emit activeClipsChanged();
+                        break;
+                    }
+                }
+            }
         }
     }
 
@@ -290,7 +390,13 @@ namespace Rina::UI {
         newClip.layer = layer;
         newClip.x = 0;
         newClip.y = 0;
+        newClip.width = 100;
+        newClip.height = 100;
         newClip.text = (type == "text") ? "Text" : "";
+        newClip.textSize = 64;
+        newClip.rotation = 0.0;
+        newClip.opacity = 1.0;
+        newClip.color = "#ffffff";
         
         m_clips.append(newClip);
         emit clipsChanged();
@@ -303,7 +409,13 @@ namespace Rina::UI {
         m_selectedClipId = newClip.id;
         m_objectX = newClip.x;
         m_objectY = newClip.y;
+        m_objectWidth = newClip.width;
+        m_objectHeight = newClip.height;
         m_textString = newClip.text;
+        m_textSize = newClip.textSize;
+        m_objectRotation = newClip.rotation;
+        m_objectOpacity = newClip.opacity;
+        m_objectColor = QColor(newClip.color);
         
         emit clipStartFrameChanged();
         emit clipDurationFramesChanged();
@@ -313,7 +425,13 @@ namespace Rina::UI {
         emit selectedClipIdChanged();
         emit objectXChanged();
         emit objectYChanged();
+        emit objectWidthChanged();
+        emit objectHeightChanged();
         emit textStringChanged();
+        emit textSizeChanged();
+        emit objectRotationChanged();
+        emit objectOpacityChanged();
+        emit objectColorChanged();
     }
 
     QVariantList TimelineController::clips() const {
@@ -360,7 +478,13 @@ namespace Rina::UI {
             map["layer"] = clip.layer;
             map["x"] = clip.x;
             map["y"] = clip.y;
+            map["width"] = clip.width;
+            map["height"] = clip.height;
             map["text"] = clip.text;
+            map["textSize"] = clip.textSize;
+            map["rotation"] = clip.rotation;
+            map["opacity"] = clip.opacity;
+            map["color"] = clip.color;
             list.append(map);
         }
         return list;
@@ -385,7 +509,13 @@ namespace Rina::UI {
             if (clip.id == id) {
                 if (m_objectX != clip.x) { m_objectX = clip.x; emit objectXChanged(); }
                 if (m_objectY != clip.y) { m_objectY = clip.y; emit objectYChanged(); }
+                if (m_objectWidth != clip.width) { m_objectWidth = clip.width; emit objectWidthChanged(); }
+                if (m_objectHeight != clip.height) { m_objectHeight = clip.height; emit objectHeightChanged(); }
                 if (m_textString != clip.text) { m_textString = clip.text; emit textStringChanged(); }
+                if (m_textSize != clip.textSize) { m_textSize = clip.textSize; emit textSizeChanged(); }
+                if (!qFuzzyCompare(m_objectRotation, clip.rotation)) { m_objectRotation = clip.rotation; emit objectRotationChanged(); }
+                if (!qFuzzyCompare(m_objectOpacity, clip.opacity)) { m_objectOpacity = clip.opacity; emit objectOpacityChanged(); }
+                if (m_objectColor.name() != clip.color) { m_objectColor = QColor(clip.color); emit objectColorChanged(); }
                 
                 if (m_activeObjectType != clip.type) { m_activeObjectType = clip.type; emit activeObjectTypeChanged(); }
                 if (m_layer != clip.layer) { m_layer = clip.layer; emit layerChanged(); }

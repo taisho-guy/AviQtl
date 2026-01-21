@@ -7,6 +7,8 @@ Node {
     // 外部から制御されるプロパティ
     property string textContent: "Text"
     property int textSize: 64
+    property color color: "white"
+    property real opacity: 1.0
 
     // 隠しテクスチャソース (インスタンスごとに独立させる必要がある)
     // ※パフォーマンス最適化のため、実際には共有リソースマネージャを使うべきだが、まずは独立させる
@@ -19,7 +21,7 @@ Node {
             anchors.centerIn: parent
             text: root.textContent
             font.pixelSize: root.textSize
-            color: "white"
+            color: root.color
             style: Text.Outline; styleColor: "black"
         }
     }
@@ -27,6 +29,7 @@ Node {
     Model {
         source: "#Rectangle"
         scale: Qt.vector3d(4, 4, 1)
+        opacity: root.opacity
         materials: DefaultMaterial {
             diffuseMap: Texture { sourceItem: textureSource }
             blendMode: DefaultMaterial.SourceOver
