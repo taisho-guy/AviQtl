@@ -20,20 +20,22 @@ namespace Rina::UI {
         Q_PROPERTY(int projectHeight READ projectHeight WRITE setProjectHeight NOTIFY projectHeightChanged)
         Q_PROPERTY(double projectFps READ projectFps WRITE setProjectFps NOTIFY projectFpsChanged)
         Q_PROPERTY(int totalFrames READ totalFrames WRITE setTotalFrames NOTIFY totalFramesChanged)
+        Q_PROPERTY(double timelineScale READ timelineScale WRITE setTimelineScale NOTIFY timelineScaleChanged)
 
-        Q_PROPERTY(float objectX READ objectX WRITE setObjectX NOTIFY objectXChanged)
-        Q_PROPERTY(float objectY READ objectY WRITE setObjectY NOTIFY objectYChanged)
+        Q_PROPERTY(int objectX READ objectX WRITE setObjectX NOTIFY objectXChanged)
+        Q_PROPERTY(int objectY READ objectY WRITE setObjectY NOTIFY objectYChanged)
         Q_PROPERTY(QString textString READ textString WRITE setTextString NOTIFY textStringChanged)
         Q_PROPERTY(int textSize READ textSize WRITE setTextSize NOTIFY textSizeChanged)
-        Q_PROPERTY(float currentTime READ currentTime WRITE setCurrentTime NOTIFY currentTimeChanged)
-        Q_PROPERTY(float clipStartTime READ clipStartTime WRITE setClipStartTime NOTIFY clipStartTimeChanged)
-        Q_PROPERTY(float clipDuration READ clipDuration WRITE setClipDuration NOTIFY clipDurationChanged)
+        // フレーム数ベースに変更
+        Q_PROPERTY(int currentFrame READ currentFrame WRITE setCurrentFrame NOTIFY currentFrameChanged)
+        Q_PROPERTY(int clipStartFrame READ clipStartFrame WRITE setClipStartFrame NOTIFY clipStartFrameChanged)
+        Q_PROPERTY(int clipDurationFrames READ clipDurationFrames WRITE setClipDurationFrames NOTIFY clipDurationFramesChanged)
         Q_PROPERTY(int layer READ layer WRITE setLayer NOTIFY layerChanged)
         Q_PROPERTY(bool isClipActive READ isClipActive NOTIFY isClipActiveChanged)
         Q_PROPERTY(QVariantList keyframeList READ keyframeList NOTIFY keyframeListChanged)
         Q_PROPERTY(bool isPlaying READ isPlaying NOTIFY isPlayingChanged)
         Q_PROPERTY(QString activeObjectType READ activeObjectType NOTIFY activeObjectTypeChanged)
-    Q_PROPERTY(QVariantList clips READ clips NOTIFY clipsChanged) // 追加
+        Q_PROPERTY(QVariantList clips READ clips NOTIFY clipsChanged)
 
     public:
         explicit TimelineController(QObject* parent = nullptr);
@@ -51,11 +53,14 @@ namespace Rina::UI {
         int totalFrames() const;
         void setTotalFrames(int frames);
 
-        float objectX() const;
-        void setObjectX(float x);
+        double timelineScale() const;
+        void setTimelineScale(double scale);
 
-        float objectY() const;
-        void setObjectY(float y);
+        int objectX() const;
+        void setObjectX(int x);
+
+        int objectY() const;
+        void setObjectY(int y);
 
         QString textString() const;
         void setTextString(const QString& text);
@@ -63,14 +68,14 @@ namespace Rina::UI {
         int textSize() const;
         void setTextSize(int size);
 
-        float currentTime() const;
-        void setCurrentTime(float time);
+        int currentFrame() const;
+        void setCurrentFrame(int frame);
 
-        float clipStartTime() const;
-        void setClipStartTime(float time);
+        int clipStartFrame() const;
+        void setClipStartFrame(int frame);
 
-        float clipDuration() const;
-        void setClipDuration(float duration);
+        int clipDurationFrames() const;
+        void setClipDurationFrames(int frames);
 
         int layer() const;
         void setLayer(int layer);
@@ -94,13 +99,14 @@ namespace Rina::UI {
         void projectHeightChanged();
         void projectFpsChanged();
         void totalFramesChanged();
+        void timelineScaleChanged();
         void objectXChanged();
         void objectYChanged();
         void textStringChanged();
         void textSizeChanged();
-        void currentTimeChanged();
-        void clipStartTimeChanged();
-        void clipDurationChanged();
+        void currentFrameChanged();
+        void clipStartFrameChanged();
+        void clipDurationFramesChanged();
         void layerChanged();
         void isClipActiveChanged();
         void keyframeListChanged();
@@ -113,13 +119,13 @@ namespace Rina::UI {
         void updateClipActiveState();
         void updateObjectX();
         void updateTimerInterval();
-        float calculateInterpolatedValue(float time);
+    float calculateInterpolatedValue(int frame);
 
         struct ClipData {
             int id;
             QString type;
-            float start;
-            float duration;
+            int startFrame;
+            int durationFrames;
             int layer;
             // 簡易化のためプロパティは最小限
         };
@@ -129,15 +135,16 @@ namespace Rina::UI {
         int m_projectWidth = 1920;
         int m_projectHeight = 1080;
         double m_projectFps = 60.0;
-        int m_totalFrames = 3000; // 50秒 @ 60fps
+        int m_totalFrames = 3600;
+        double m_timelineScale = 1.0; // 1 frame = 1 pixel (default)
 
-        float m_objectX = 0.0f;
-        float m_objectY = 0.0f;
+        int m_objectX = 0;
+        int m_objectY = 0;
         QString m_textString = "Rina Text";
         int m_textSize = 64;
-        float m_currentTime = 0.0f;
-        float m_clipStartTime = 100.0f;
-        float m_clipDuration = 200.0f;
+        int m_currentFrame = 0;
+        int m_clipStartFrame = 100;
+        int m_clipDurationFrames = 200;
         int m_layer = 0;
         bool m_isClipActive = false;
         std::vector<Keyframe> m_keyframesX;

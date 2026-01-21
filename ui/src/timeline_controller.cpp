@@ -5,10 +5,10 @@
 namespace Rina::UI {
     TimelineController::TimelineController(QObject* parent) 
         : QObject(parent)
-        , m_objectX(0.0f)
-        , m_currentTime(0.0f)
-        , m_clipStartTime(100.0f)
-        , m_clipDuration(200.0f)
+        , m_objectX(0)
+        , m_currentFrame(0)
+        , m_clipStartFrame(100)
+        , m_clipDurationFrames(200)
         , m_layer(0)
         , m_isClipActive(false)
         , m_isPlaying(false)
@@ -30,12 +30,12 @@ namespace Rina::UI {
     }
     
     void TimelineController::onPlaybackStep() {
-        float nextTime = m_currentTime + 1.0f;
+        int nextFrame = m_currentFrame + 1;
         // ループ再生
-        if (nextTime > m_totalFrames) {
-            nextTime = 0.0f;
+        if (nextFrame > m_totalFrames) {
+            nextFrame = 0;
         }
-        setCurrentTime(nextTime);
+        setCurrentFrame(nextFrame);
     }
 
     int TimelineController::projectHeight() const { return m_projectHeight; }
@@ -63,17 +63,25 @@ namespace Rina::UI {
         }
     }
 
-    float TimelineController::objectX() const { return m_objectX; }
-    void TimelineController::setObjectX(float x) {
-        if (qAbs(m_objectX - x) > 0.001f) {
+    double TimelineController::timelineScale() const { return m_timelineScale; }
+    void TimelineController::setTimelineScale(double scale) {
+        if (qAbs(m_timelineScale - scale) > 0.001) {
+            m_timelineScale = scale;
+            emit timelineScaleChanged();
+        }
+    }
+
+    int TimelineController::objectX() const { return m_objectX; }
+    void TimelineController::setObjectX(int x) {
+        if (m_objectX != x) {
             m_objectX = x;
             emit objectXChanged();
         }
     }
 
-    float TimelineController::objectY() const { return m_objectY; }
-    void TimelineController::setObjectY(float y) {
-        if (qAbs(m_objectY - y) > 0.001f) {
+    int TimelineController::objectY() const { return m_objectY; }
+    void TimelineController::setObjectY(int y) {
+        if (m_objectY != y) {
             m_objectY = y;
             emit objectYChanged();
         }
@@ -95,32 +103,32 @@ namespace Rina::UI {
         }
     }
 
-    float TimelineController::currentTime() const { return m_currentTime; }
-    void TimelineController::setCurrentTime(float time) {
-        if (qAbs(m_currentTime - time) > 0.001f) {
-            m_currentTime = time;
-            emit currentTimeChanged();
+    int TimelineController::currentFrame() const { return m_currentFrame; }
+    void TimelineController::setCurrentFrame(int frame) {
+        if (m_currentFrame != frame) {
+            m_currentFrame = frame;
+            emit currentFrameChanged();
             updateClipActiveState();
             updateObjectX();
         }
     }
 
-    float TimelineController::clipStartTime() const { return m_clipStartTime; }
-    void TimelineController::setClipStartTime(float time) {
-        if (qAbs(m_clipStartTime - time) > 0.001f) {
-            m_clipStartTime = time;
-            emit clipStartTimeChanged();
+    int TimelineController::clipStartFrame() const { return m_clipStartFrame; }
+    void TimelineController::setClipStartFrame(int frame) {
+        if (m_clipStartFrame != frame) {
+            m_clipStartFrame = frame;
+            emit clipStartFrameChanged();
             updateClipActiveState();
             // Notify ECS of the change (Entity-Component Link)
-            Rina::Engine::Timeline::ECS::instance().updateClipState(1, m_layer, m_clipStartTime);
+            Rina::Engine::Timeline::ECS::instance().updateClipState(1, m_layer, m_clipStartFrame);
         }
     }
 
-    float TimelineController::clipDuration() const { return m_clipDuration; }
-    void TimelineController::setClipDuration(float duration) {
-        if (qAbs(m_clipDuration - duration) > 0.001f) {
-            m_clipDuration = duration;
-            emit clipDurationChanged();
+    int TimelineController::clipDurationFrames() const { return m_clipDurationFrames; }
+    void TimelineController::setClipDurationFrames(int frames) {
+        if (m_clipDurationFrames != frames) {
+            m_clipDurationFrames = frames;
+            emit clipDurationFramesChanged();
             updateClipActiveState();
         }
     }
@@ -131,7 +139,7 @@ namespace Rina::UI {
             m_layer = layer;
             emit layerChanged();
             // Notify ECS of the change
-            Rina::Engine::Timeline::ECS::instance().updateClipState(1, m_layer, m_clipStartTime);
+            Rina::Engine::Timeline::ECS::instance().updateClipState(1, m_layer, m_clipStartFrame);
         }
     }
 
@@ -139,20 +147,19 @@ namespace Rina::UI {
 
     void TimelineController::updateClipActiveState() {
         // シンプルな矩形判定: Start <= Current < Start + Duration
-        bool active = (m_currentTime >= m_clipStartTime) && (m_currentTime < m_clipStartTime + m_clipDuration);
+        bool active = (m_currentFrame >= m_clipStartFrame) && (m_currentFrame < m_clipStartFrame + m_clipDurationFrames);
         if (m_isClipActive != active) {
             m_isClipActive = active;
             emit isClipActiveChanged();
         }
 
         if (m_isClipActive) {
-            Rina::Engine::Timeline::ECS::instance().updateClipState(1, m_layer, m_currentTime - m_clipStartTime);
+            Rina::Engine::Timeline::ECS::instance().updateClipState(1, m_layer, m_currentFrame - m_clipStartFrame);
         }
     }
 
     void TimelineController::addKeyframe(int frame, float value) {
-        // Convert absolute frame to relative frame (Layer as Object)
-        int relFrame = frame - qRound(m_clipStartTime);
+        int relFrame = frame - m_clipStartFrame;
 
         // Check if keyframe exists at this frame
         auto it = std::find_if(m_keyframesX.begin(), m_keyframesX.end(), [relFrame](const Keyframe& k){
@@ -186,10 +193,11 @@ namespace Rina::UI {
 
     void TimelineController::updateObjectX() {
         if (m_keyframesX.empty()) return;
-        float newVal = calculateInterpolatedValue(m_currentTime);
+        float newVal = calculateInterpolatedValue(m_currentFrame);
         // Directly set member to avoid loop if we used setter, but emit signal
-        if (qAbs(m_objectX - newVal) > 0.001f) {
-            m_objectX = newVal;
+        int newX = qRound(newVal);
+        if (m_objectX != newX) {
+            m_objectX = newX;
             emit objectXChanged();
         }
     }
@@ -202,19 +210,19 @@ namespace Rina::UI {
         }
     }
 
-    float TimelineController::calculateInterpolatedValue(float time) {
+    float TimelineController::calculateInterpolatedValue(int frame) {
         if (m_keyframesX.empty()) return m_objectX;
         
-        float relTime = time - m_clipStartTime;
+        int relFrame = frame - m_clipStartFrame;
 
-        if (relTime <= m_keyframesX.front().frame) return m_keyframesX.front().value;
-        if (relTime >= m_keyframesX.back().frame) return m_keyframesX.back().value;
+        if (relFrame <= m_keyframesX.front().frame) return m_keyframesX.front().value;
+        if (relFrame >= m_keyframesX.back().frame) return m_keyframesX.back().value;
 
         for (size_t i = 0; i < m_keyframesX.size() - 1; ++i) {
             const auto& k1 = m_keyframesX[i];
             const auto& k2 = m_keyframesX[i+1];
-            if (relTime >= k1.frame && relTime < k2.frame) {
-                float t = (relTime - k1.frame) / (float)(k2.frame - k1.frame);
+            if (relFrame >= k1.frame && relFrame < k2.frame) {
+                float t = (relFrame - k1.frame) / (float)(k2.frame - k1.frame);
                 return k1.value + (k2.value - k1.value) * t;
             }
         }
@@ -244,21 +252,21 @@ namespace Rina::UI {
         ClipData newClip;
         newClip.id = m_nextClipId++;
         newClip.type = type;
-        newClip.start = (float)startFrame;
-        newClip.duration = 100.0f; // デフォルト長
+        newClip.startFrame = startFrame;
+        newClip.durationFrames = 100; // デフォルト100フレーム
         newClip.layer = layer;
         
         m_clips.append(newClip);
         emit clipsChanged();
 
         // 選択状態にする（既存の単一変数を「選択中のクリップ」として使う）
-        m_clipStartTime = newClip.start;
-        m_clipDuration = newClip.duration;
+        m_clipStartFrame = newClip.startFrame;
+        m_clipDurationFrames = newClip.durationFrames;
         m_layer = newClip.layer;
         m_activeObjectType = type;
         
-        emit clipStartTimeChanged();
-        emit clipDurationChanged();
+        emit clipStartFrameChanged();
+        emit clipDurationFramesChanged();
         emit layerChanged();
         emit activeObjectTypeChanged();
     }
@@ -269,8 +277,8 @@ namespace Rina::UI {
             QVariantMap map;
             map["id"] = clip.id;
             map["type"] = clip.type;
-            map["start"] = clip.start;
-            map["duration"] = clip.duration;
+            map["startFrame"] = clip.startFrame;
+            map["durationFrames"] = clip.durationFrames;
             map["layer"] = clip.layer;
             list.append(map);
         }

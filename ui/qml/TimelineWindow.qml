@@ -74,7 +74,9 @@ Common.RinaWindow {
                 // === Playhead (Current Time) ===
                 Rectangle {
                     id: playhead
-                    x: TimelineBridge ? TimelineBridge.currentTime : 0
+            property double scale: TimelineBridge ? TimelineBridge.timelineScale : 1.0
+            
+            x: TimelineBridge ? (TimelineBridge.currentFrame * scale) : 0
                     y: 0
                     width: 2
                     height: parent.height
@@ -91,7 +93,7 @@ Common.RinaWindow {
                         
                         onPositionChanged: {
                             if (drag.active && TimelineBridge) {
-                                TimelineBridge.currentTime = playhead.x
+                                TimelineBridge.currentFrame = Math.round(playhead.x / scale) // ピクセル座標をフレーム数に変換
                             }
                         }
                     }
@@ -106,8 +108,8 @@ Common.RinaWindow {
                     onClicked: (mouse) => {
                         if (mouse.button === Qt.RightButton) {
                             // クリック位置からフレームとレイヤーを計算
-                            // zoomLevelが未定義のため、一旦1.0fで計算
-                            var frame = Math.floor(mouse.x / 1.0) // TODO: timelineWindow.zoomLevel を使用
+                            var scale = TimelineBridge ? TimelineBridge.timelineScale : 1.0
+                            var frame = Math.floor(mouse.x / scale)
                             var layer = Math.floor(mouse.y / 30) // 30px per layer
                             
                             // メニューに情報を渡して表示
@@ -123,10 +125,12 @@ Common.RinaWindow {
                     model: TimelineBridge ? TimelineBridge.clips : []
                     delegate: Rectangle {
                         id: clipRect
+                        property double scale: TimelineBridge ? TimelineBridge.timelineScale : 1.0
+
                         // Layer 0 is at y=0. Each layer is 30px height.
                         y: modelData.layer * 30 
-                        x: modelData.start
-                        width: modelData.duration
+                        x: modelData.startFrame * scale
+                        width: modelData.durationFrames * scale
                         height: 28
                         color: "#66aa99"
                         border.color: "white"

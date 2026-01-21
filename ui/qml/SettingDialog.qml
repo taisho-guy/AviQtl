@@ -58,10 +58,8 @@ Window {
                 id: xSlider
                 Layout.fillWidth: true
                 from: -500; to: 500
-                // 初期値
-                value: TimelineBridge ? TimelineBridge.objectX : 0
-                // バインディング: スライダー -> C++
-                onMoved: if (TimelineBridge) TimelineBridge.objectX = value
+                value: TimelineBridge ? TimelineBridge.objectX : 0 // objectXはintだが、Sliderのvalueはfloatなのでそのままバインド
+                onMoved: if (TimelineBridge) TimelineBridge.objectX = Math.round(value) // Sliderのfloat値をintに丸めて設定
                 
                 // バインディング: C++ -> スライダー (外部要因で変わった場合)
                 Connections {
@@ -77,14 +75,14 @@ Window {
                 Layout.preferredWidth: 30
                 onClicked: {
                     if (TimelineBridge)
-                        TimelineBridge.addKeyframe(Math.round(TimelineBridge.currentTime), xSlider.value)
+                        TimelineBridge.addKeyframe(TimelineBridge.currentFrame, Math.round(xSlider.value)) // currentTime -> currentFrame, xSlider.valueはfloatなので丸める
                 }
             }
 
             TextField {
-                text: TimelineBridge ? Math.round(TimelineBridge.objectX) : "0"
+                text: TimelineBridge ? TimelineBridge.objectX.toFixed(0) : "0" // objectXはintなのでtoFixed(0)で表示
                 Layout.preferredWidth: 60
-                onEditingFinished: if (TimelineBridge) TimelineBridge.objectX = parseFloat(text)
+                onEditingFinished: if (TimelineBridge) TimelineBridge.objectX = parseInt(text) // objectXはintなのでparseIntで設定
             }
         }
         
@@ -95,8 +93,8 @@ Window {
                 id: ySlider
                 Layout.fillWidth: true
                 from: -500; to: 500
-                value: TimelineBridge ? TimelineBridge.objectY : 0
-                onMoved: if (TimelineBridge) TimelineBridge.objectY = value
+                value: TimelineBridge ? TimelineBridge.objectY : 0 // objectYはintだが、Sliderのvalueはfloatなのでそのままバインド
+                onMoved: if (TimelineBridge) TimelineBridge.objectY = Math.round(value) // Sliderのfloat値をintに丸めて設定
                 
                 Connections {
                     target: TimelineBridge
@@ -106,9 +104,9 @@ Window {
                 }
             }
             TextField {
-                text: TimelineBridge ? Math.round(TimelineBridge.objectY) : "0"
+                text: TimelineBridge ? TimelineBridge.objectY.toFixed(0) : "0" // objectYはintなのでtoFixed(0)で表示
                 Layout.preferredWidth: 60
-                onEditingFinished: if (TimelineBridge) TimelineBridge.objectY = parseFloat(text)
+                onEditingFinished: if (TimelineBridge) TimelineBridge.objectY = parseInt(text) // objectYはintなのでparseIntで設定
             }
         }
 
