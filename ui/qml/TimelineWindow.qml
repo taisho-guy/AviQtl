@@ -118,71 +118,35 @@ Common.RinaWindow {
                     }
                 }
 
-                // === 3D Box Object (Layer 1) ===
-                Rectangle {
-                    id: obj3dbox
-                    x: TimelineBridge ? TimelineBridge.clipStartTime : 0
-                    y: TimelineBridge ? TimelineBridge.layer * 30 : 0
-                    width: TimelineBridge ? TimelineBridge.clipDuration : 100
-                    height: 28
-                    color: "#6a9"
-                    border.color: "white"
-                    border.width: mouseArea.containsMouse ? 2 : 0
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: "3D Box [Standard Draw]"
-                        color: "white"
-                    }
-
-                    MouseArea {
-                        id: mouseArea
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        // ダブルクリックを検知
-                        onDoubleClicked: {
-                            openSettingDialog()
-                        }
+                // クリップ一覧表示 (Repeater)
+                Repeater {
+                    model: TimelineBridge ? TimelineBridge.clips : []
+                    delegate: Rectangle {
+                        id: clipRect
+                        // Layer 0 is at y=0. Each layer is 30px height.
+                        y: modelData.layer * 30 
+                        x: modelData.start
+                        width: modelData.duration
+                        height: 28
+                        color: "#66aa99"
+                        border.color: "white"
+                        border.width: 1
+                        opacity: 0.8
+                        radius: 4
                         
-                        // ドラッグ移動 (簡易実装)
-                        drag.target: obj3dbox
-                        drag.axis: Drag.XAndYAxis // Allow moving in both Time (X) and Layer (Y)
-                        drag.threshold: 0
-
-                        onPositionChanged: {
-                            if (drag.active && TimelineBridge) {
-                                // Grid Snapping Logic
-                                // X: Snap to nearest integer (assuming 1px = 1 frame)
-                                var snappedX = Math.round(obj3dbox.x)
-                                
-                                // Y: Snap to Layer grid (30px)
-                                var snappedLayer = Math.round(obj3dbox.y / 30)
-                                if (snappedLayer < 0) snappedLayer = 0
-                                
-                                TimelineBridge.clipStartTime = snappedX
-                                TimelineBridge.layer = snappedLayer
-                            }
-                        }
-
-                        onReleased: {
-                            if (TimelineBridge) {
-                                // Restore bindings and snap visually on release
-                                obj3dbox.x = Qt.binding(function() { return TimelineBridge.clipStartTime })
-                                obj3dbox.y = Qt.binding(function() { return TimelineBridge.layer * 30 })
-                            }
-                        }
-                    }
-
-                    // Keyframe Visualization
-                    Repeater {
-                        model: TimelineBridge ? TimelineBridge.keyframeList : []
-                        Rectangle {
-                            // Keyframe position (Relative to Clip)
-                            x: modelData.frame
-                            width: 2
-                            height: parent.height
+                        Text {
+                            anchors.centerIn: parent
+                            text: modelData.type
                             color: "white"
-                            opacity: 0.7
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: {
+                                console.log("Selected clip ID:", modelData.id)
+                                // TODO: Select clip in controller
+                            }
+                            onDoubleClicked: openSettingDialog()
                         }
                     }
                 }

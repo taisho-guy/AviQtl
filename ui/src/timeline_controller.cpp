@@ -240,15 +240,41 @@ namespace Rina::UI {
     void TimelineController::createObject(const QString& type, int startFrame, int layer) {
         qDebug() << "Creating Object:" << type << "at Frame:" << startFrame << "Layer:" << layer;
         
-        // プロトタイプなので、単一のオブジェクトの状態を切り替える実装にする
-        // 本来はECSでEntityを生成しリストに追加する
+        // 新規クリップ作成
+        ClipData newClip;
+        newClip.id = m_nextClipId++;
+        newClip.type = type;
+        newClip.start = (float)startFrame;
+        newClip.duration = 100.0f; // デフォルト長
+        newClip.layer = layer;
         
-        if (m_activeObjectType != type) {
-            m_activeObjectType = type;
-            emit activeObjectTypeChanged();
+        m_clips.append(newClip);
+        emit clipsChanged();
+
+        // 選択状態にする（既存の単一変数を「選択中のクリップ」として使う）
+        m_clipStartTime = newClip.start;
+        m_clipDuration = newClip.duration;
+        m_layer = newClip.layer;
+        m_activeObjectType = type;
+        
+        emit clipStartTimeChanged();
+        emit clipDurationChanged();
+        emit layerChanged();
+        emit activeObjectTypeChanged();
+    }
+
+    QVariantList TimelineController::clips() const {
+        QVariantList list;
+        for (const auto& clip : m_clips) {
+            QVariantMap map;
+            map["id"] = clip.id;
+            map["type"] = clip.type;
+            map["start"] = clip.start;
+            map["duration"] = clip.duration;
+            map["layer"] = clip.layer;
+            list.append(map);
         }
-        // TODO: startFrameとlayerを新しいオブジェクトに適用するロジックを追加
-        // 現状は既存のm_clipStartTimeとm_layerを更新する
+        return list;
     }
 
     void TimelineController::log(const QString& msg) {

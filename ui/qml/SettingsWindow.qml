@@ -76,7 +76,43 @@ Common.RinaWindow {
             validator: IntValidator { bottom: 1 }
         }
 
-        // 余白埋め（下詰め防止）
-        Item { Layout.fillHeight: true; Layout.columnSpan: 2 }
+        // 区切り線
+        Rectangle {
+            Layout.fillWidth: true
+            height: 1
+            color: "#444"
+            Layout.columnSpan: 2
+        }
+
+        // オブジェクトタイプに応じた設定
+        Loader {
+            Layout.columnSpan: 2
+            Layout.fillWidth: true
+            sourceComponent: {
+                if (!TimelineBridge) return null;
+                if (TimelineBridge.activeObjectType === "text") return textSettings;
+                return shapeSettings;
+            }
+        }
+
+        Component {
+            id: textSettings
+            GridLayout {
+                columns: 2
+                Label { text: "Text Content:"; color: palette.text }
+                TextField { 
+                    text: TimelineBridge.textString
+                    onEditingFinished: TimelineBridge.textString = text
+                    Layout.fillWidth: true
+                }
+            }
+        }
+
+        Component {
+            id: shapeSettings
+            Label { text: "Shape Settings (Placeholder)"; color: palette.text }
+        }
+        
+        Item { Layout.fillHeight: true; Layout.columnSpan: 2 } // Spacer
     }
 }

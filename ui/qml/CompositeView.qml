@@ -5,20 +5,39 @@ Item {
     id: root
     anchors.fill: parent
 
-    // 物理的な黒背景（View3D が透過したときの保険）
+    // 背景（余白部分）は黒
     Rectangle {
         anchors.fill: parent
-        color: "#0a0a0a"
-        z: -1
+        color: "black"
+        z: -2
     }
 
+    // プレビューコンテナ（アスペクト比維持）
     View3D {
         id: view
-        anchors.fill: parent
+        
+        // プロジェクト設定の解像度を取得（未設定時はFHD）
+        property int projW: TimelineBridge ? TimelineBridge.projectWidth : 1920
+        property int projH: TimelineBridge ? TimelineBridge.projectHeight : 1080
+        
+        // アスペクト比計算
+        property double aspect: projW / projH
+        
+        // 親に収まる最大サイズを計算 (Letterboxing)
+        width: Math.min(parent.width, parent.height * aspect)
+        height: Math.min(parent.height, parent.width / aspect)
+        anchors.centerIn: parent
 
         focus: true
         Keys.onSpacePressed: {
             if (TimelineBridge) TimelineBridge.togglePlay()
+        }
+
+        // プロジェクト領域の背景
+        Rectangle {
+            anchors.fill: parent
+            color: "#0a0a0a"
+            z: -1
         }
 
         // AviUtlライクな平行投影カメラ

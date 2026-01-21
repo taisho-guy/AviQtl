@@ -33,6 +33,7 @@ namespace Rina::UI {
         Q_PROPERTY(QVariantList keyframeList READ keyframeList NOTIFY keyframeListChanged)
         Q_PROPERTY(bool isPlaying READ isPlaying NOTIFY isPlayingChanged)
         Q_PROPERTY(QString activeObjectType READ activeObjectType NOTIFY activeObjectTypeChanged)
+    Q_PROPERTY(QVariantList clips READ clips NOTIFY clipsChanged) // 追加
 
     public:
         explicit TimelineController(QObject* parent = nullptr);
@@ -86,6 +87,7 @@ namespace Rina::UI {
         bool isPlaying() const;
 
         Q_INVOKABLE void log(const QString& msg);
+        QVariantList clips() const;
 
     signals:
         void projectWidthChanged();
@@ -104,6 +106,7 @@ namespace Rina::UI {
         void keyframeListChanged();
         void isPlayingChanged();
         void activeObjectTypeChanged();
+        void clipsChanged(); // 追加
 
     private:
     void onPlaybackStep();
@@ -111,6 +114,17 @@ namespace Rina::UI {
         void updateObjectX();
         void updateTimerInterval();
         float calculateInterpolatedValue(float time);
+
+        struct ClipData {
+            int id;
+            QString type;
+            float start;
+            float duration;
+            int layer;
+            // 簡易化のためプロパティは最小限
+        };
+        QList<ClipData> m_clips;
+        int m_nextClipId = 1;
 
         int m_projectWidth = 1920;
         int m_projectHeight = 1080;
