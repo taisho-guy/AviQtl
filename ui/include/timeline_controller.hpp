@@ -106,6 +106,7 @@ namespace Rina::UI {
         void activeObjectTypeChanged();
 
     private:
+    void onPlaybackStep();
         void updateClipActiveState();
         void updateObjectX();
         void updateTimerInterval();

@@ -15,10 +15,9 @@ namespace Rina::UI {
         , m_activeObjectType("rect") // デフォルトは図形
     {
         m_playbackTimer = new QTimer(this);
+        m_playbackTimer->setTimerType(Qt::PreciseTimer);
         updateTimerInterval(); // 初期FPSで設定
-        connect(m_playbackTimer, &QTimer::timeout, this, [this]() {
-            setCurrentTime(m_currentTime + 1.0f);
-        });
+        connect(m_playbackTimer, &QTimer::timeout, this, &TimelineController::onPlaybackStep);
         updateClipActiveState();
     }
 
@@ -135,6 +134,10 @@ namespace Rina::UI {
         if (m_isClipActive != active) {
             m_isClipActive = active;
             emit isClipActiveChanged();
+        }
+
+        if (m_isClipActive) {
+            Rina::Engine::Timeline::ECS::instance().updateClipState(1, m_layer, m_currentTime - m_clipStartTime);
         }
     }
 
