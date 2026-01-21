@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON) # QtのMOCを自動実行
 set(CMAKE_AUTORCC ON) # Qtのリソースコンパイラを自動実行
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick QuickControls2 WaylandClient Quick3D)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick QuickControls2 WaylandClient Quick3D Widgets)
 find_package(Vulkan REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LUAJIT REQUIRED luajit)
@@ -33,6 +33,7 @@ add_executable(Rina ${SOURCES} ui/resources.qrc)
 
 target_link_libraries(Rina PRIVATE
     Qt6::Core Qt6::Gui Qt6::Quick Qt6::QuickControls2 Qt6::WaylandClient Qt6::Quick3D
+    Qt6::Widgets
     Vulkan::Vulkan
     ${LUAJIT_LIBRARIES}
 )

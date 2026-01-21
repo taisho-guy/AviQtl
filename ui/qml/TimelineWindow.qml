@@ -152,7 +152,7 @@ Common.RinaWindow {
                             
                             // ドラッグ設定
                             drag.target: clipRect
-                            drag.axis: Drag.XAndY
+                            drag.axis: Drag.XAndYAxis
                             drag.minimumX: 0
                             drag.minimumY: 0
                             drag.smoothed: false

@@ -1,6 +1,8 @@
 #include "timeline_controller.hpp"
 #include "../../engine/timeline/ecs.hpp"
 #include <algorithm>
+#include <QFile>
+#include <QUrl>
 
 namespace Rina::UI {
     TimelineController::TimelineController(QObject* parent) 
@@ -412,6 +414,106 @@ namespace Rina::UI {
             emit activeClipsChanged();
             updateClipActiveState();
         }
+    }
+
+    bool TimelineController::saveProject(const QString& fileUrl) {
+        QString path = QUrl(fileUrl).toLocalFile();
+        if (path.isEmpty()) path = fileUrl; // URLでない場合はそのまま
+
+        QJsonObject root;
+        
+        // プロジェクト設定
+        QJsonObject settings;
+        settings["width"] = m_projectWidth;
+        settings["height"] = m_projectHeight;
+        settings["fps"] = m_projectFps;
+        settings["totalFrames"] = m_totalFrames;
+        root["settings"] = settings;
+
+        // クリップデータ
+        QJsonArray clipsArray;
+        for (const auto& clip : m_clips) {
+            QJsonObject clipObj;
+            clipObj["id"] = clip.id;
+            clipObj["type"] = clip.type;
+            clipObj["start"] = clip.startFrame;
+            clipObj["duration"] = clip.durationFrames;
+            clipObj["layer"] = clip.layer;
+            
+            // 動的プロパティ (QVariantMap -> QJsonObject)
+            clipObj["properties"] = QJsonObject::fromVariantMap(clip.properties);
+            
+            clipsArray.append(clipObj);
+        }
+        root["clips"] = clipsArray;
+
+        QFile file(path);
+        if (!file.open(QIODevice::WriteOnly)) {
+            qWarning() << "Failed to open file for saving:" << path;
+            return false;
+        }
+        
+        file.write(QJsonDocument(root).toJson());
+        return true;
+    }
+
+    bool TimelineController::loadProject(const QString& fileUrl) {
+        QString path = QUrl(fileUrl).toLocalFile();
+        if (path.isEmpty()) path = fileUrl;
+
+        QFile file(path);
+        if (!file.open(QIODevice::ReadOnly)) {
+            qWarning() << "Failed to open file for loading:" << path;
+            return false;
+        }
+
+        QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+        if (doc.isNull()) return false;
+
+        QJsonObject root = doc.object();
+        
+        // 設定復元
+        if (root.contains("settings")) {
+            QJsonObject s = root["settings"].toObject();
+            setProjectWidth(s["width"].toInt(1920));
+            setProjectHeight(s["height"].toInt(1080));
+            setProjectFps(s["fps"].toDouble(60.0));
+            setTotalFrames(s["totalFrames"].toInt(3600));
+        }
+
+        // クリップ復元
+        m_clips.clear();
+        m_selectedClipId = -1;
+        m_nextClipId = 1;
+
+        QJsonArray clipsArray = root["clips"].toArray();
+        for (const auto& val : clipsArray) {
+            QJsonObject c = val.toObject();
+            ClipData clip;
+            clip.id = c["id"].toInt();
+            if (clip.id >= m_nextClipId) m_nextClipId = clip.id + 1;
+            
+            clip.type = c["type"].toString();
+            clip.startFrame = c["start"].toInt();
+            clip.durationFrames = c["duration"].toInt();
+            clip.layer = c["layer"].toInt();
+            
+            // プロパティ復元
+            if (c.contains("properties")) {
+                clip.properties = c["properties"].toObject().toVariantMap();
+            } else {
+                // 旧形式などのフォールバック
+                if (m_prototypes.contains(clip.type)) clip.properties = m_prototypes[clip.type];
+            }
+
+            m_clips.append(clip);
+        }
+
+        emit clipsChanged();
+        emit activeClipsChanged();
+        emit selectedClipIdChanged();
+        
+        return true;
     }
 
     void TimelineController::selectClip(int id) {

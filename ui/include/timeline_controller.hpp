@@ -6,6 +6,9 @@
 #include <QVariant>
 #include <QTimer>
 #include <QColor>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
 
 namespace Rina::UI {
     struct Keyframe {
@@ -92,6 +95,10 @@ namespace Rina::UI {
 
         // クリップの配置・長さを更新（ID指定）
         Q_INVOKABLE void updateClip(int id, int layer, int startFrame, int duration);
+
+        // プロジェクト保存・読み込み
+        Q_INVOKABLE bool saveProject(const QString& fileUrl);
+        Q_INVOKABLE bool loadProject(const QString& fileUrl);
 
         int selectedClipId() const;
         Q_INVOKABLE void selectClip(int id);
