@@ -10,6 +10,7 @@ namespace Rina::UI {
         , m_clipStartFrame(100)
         , m_clipDurationFrames(200)
         , m_layer(0)
+        , m_selectedClipId(-1)
         , m_isClipActive(false)
         , m_isPlaying(false)
         , m_activeObjectType("rect") // デフォルトは図形
@@ -76,6 +77,17 @@ namespace Rina::UI {
         if (m_objectX != x) {
             m_objectX = x;
             emit objectXChanged();
+            
+            // 選択中のクリップがあればデータを更新
+            if (m_selectedClipId != -1) {
+                for (auto& clip : m_clips) {
+                    if (clip.id == m_selectedClipId) {
+                        clip.x = x;
+                        emit activeClipsChanged(); // プレビュー更新
+                        break;
+                    }
+                }
+            }
         }
     }
 
@@ -84,6 +96,16 @@ namespace Rina::UI {
         if (m_objectY != y) {
             m_objectY = y;
             emit objectYChanged();
+            
+            if (m_selectedClipId != -1) {
+                for (auto& clip : m_clips) {
+                    if (clip.id == m_selectedClipId) {
+                        clip.y = y;
+                        emit activeClipsChanged();
+                        break;
+                    }
+                }
+            }
         }
     }
 
@@ -92,6 +114,16 @@ namespace Rina::UI {
         if (m_textString != text) {
             m_textString = text;
             emit textStringChanged();
+            
+            if (m_selectedClipId != -1) {
+                for (auto& clip : m_clips) {
+                    if (clip.id == m_selectedClipId) {
+                        clip.text = text;
+                        emit activeClipsChanged();
+                        break;
+                    }
+                }
+            }
         }
     }
 
@@ -109,6 +141,7 @@ namespace Rina::UI {
             m_currentFrame = frame;
             emit currentFrameChanged();
             updateClipActiveState();
+            emit activeClipsChanged();
             updateObjectX();
         }
     }
@@ -255,6 +288,9 @@ namespace Rina::UI {
         newClip.startFrame = startFrame;
         newClip.durationFrames = 100; // デフォルト100フレーム
         newClip.layer = layer;
+        newClip.x = 0;
+        newClip.y = 0;
+        newClip.text = (type == "text") ? "Text" : "";
         
         m_clips.append(newClip);
         emit clipsChanged();
@@ -264,11 +300,20 @@ namespace Rina::UI {
         m_clipDurationFrames = newClip.durationFrames;
         m_layer = newClip.layer;
         m_activeObjectType = type;
+        m_selectedClipId = newClip.id;
+        m_objectX = newClip.x;
+        m_objectY = newClip.y;
+        m_textString = newClip.text;
         
         emit clipStartFrameChanged();
         emit clipDurationFramesChanged();
         emit layerChanged();
         emit activeObjectTypeChanged();
+        emit activeClipsChanged();
+        emit selectedClipIdChanged();
+        emit objectXChanged();
+        emit objectYChanged();
+        emit textStringChanged();
     }
 
     QVariantList TimelineController::clips() const {
@@ -280,6 +325,42 @@ namespace Rina::UI {
             map["startFrame"] = clip.startFrame;
             map["durationFrames"] = clip.durationFrames;
             map["layer"] = clip.layer;
+            map["x"] = clip.x;
+            map["y"] = clip.y;
+            map["text"] = clip.text;
+            
+            list.append(map);
+        }
+        return list;
+    }
+
+    QVariantList TimelineController::activeClips() const {
+        QVariantList list;
+        
+        // 現在フレームにあるクリップを抽出
+        QList<ClipData> active;
+        for (const auto& clip : m_clips) {
+            if (m_currentFrame >= clip.startFrame && 
+                m_currentFrame < clip.startFrame + clip.durationFrames) {
+                active.append(clip);
+            }
+        }
+        
+        // レイヤー順（昇順）にソート
+        std::sort(active.begin(), active.end(), [](const ClipData& a, const ClipData& b) {
+            return a.layer < b.layer;
+        });
+
+        for (const auto& clip : active) {
+            QVariantMap map;
+            map["id"] = clip.id;
+            map["type"] = clip.type;
+            map["startFrame"] = clip.startFrame;
+            map["durationFrames"] = clip.durationFrames;
+            map["layer"] = clip.layer;
+            map["x"] = clip.x;
+            map["y"] = clip.y;
+            map["text"] = clip.text;
             list.append(map);
         }
         return list;
@@ -287,5 +368,36 @@ namespace Rina::UI {
 
     void TimelineController::log(const QString& msg) {
         qDebug() << "[TimelineBridge] " << msg;
+    }
+
+    int TimelineController::selectedClipId() const {
+        return m_selectedClipId;
+    }
+
+    void TimelineController::selectClip(int id) {
+        if (m_selectedClipId == id) return;
+        
+        m_selectedClipId = id;
+        emit selectedClipIdChanged();
+
+        // 選択されたクリップの情報をプロパティにロード
+        for (const auto& clip : m_clips) {
+            if (clip.id == id) {
+                if (m_objectX != clip.x) { m_objectX = clip.x; emit objectXChanged(); }
+                if (m_objectY != clip.y) { m_objectY = clip.y; emit objectYChanged(); }
+                if (m_textString != clip.text) { m_textString = clip.text; emit textStringChanged(); }
+                
+                if (m_activeObjectType != clip.type) { m_activeObjectType = clip.type; emit activeObjectTypeChanged(); }
+                if (m_layer != clip.layer) { m_layer = clip.layer; emit layerChanged(); }
+                if (m_clipStartFrame != clip.startFrame) { m_clipStartFrame = clip.startFrame; emit clipStartFrameChanged(); }
+                if (m_clipDurationFrames != clip.durationFrames) { m_clipDurationFrames = clip.durationFrames; emit clipDurationFramesChanged(); }
+                
+                // 選択変更時にプレビュー更新（選択枠表示などのため）
+                emit activeClipsChanged();
+                return;
+            }
+        }
+        
+        // 見つからなかった場合（選択解除など）の処理は必要に応じて追加
     }
 }

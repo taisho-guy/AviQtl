@@ -5,11 +5,8 @@ Node {
     id: root
     
     // 外部から制御されるプロパティ
-    property vector3d positionValue: Qt.vector3d(0, 0, 0)
     property string textContent: "Text"
     property int textSize: 64
-
-    position: positionValue
 
     // 隠しテクスチャソース (インスタンスごとに独立させる必要がある)
     // ※パフォーマンス最適化のため、実際には共有リソースマネージャを使うべきだが、まずは独立させる
@@ -17,6 +14,7 @@ Node {
         id: textureSource
         width: 512; height: 512
         visible: false
+        layer.enabled: true
         Text {
             anchors.centerIn: parent
             text: root.textContent

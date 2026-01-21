@@ -147,8 +147,7 @@ Common.RinaWindow {
                         MouseArea {
                             anchors.fill: parent
                             onClicked: {
-                                console.log("Selected clip ID:", modelData.id)
-                                // TODO: Select clip in controller
+                                if (TimelineBridge) TimelineBridge.selectClip(modelData.id)
                             }
                             onDoubleClicked: openSettingDialog()
                         }

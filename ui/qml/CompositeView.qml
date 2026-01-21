@@ -1,5 +1,7 @@
 import QtQuick 2.15
 import QtQuick3D 6.0
+import QtQml 2.15
+import "objects"
 
 Item {
     id: root
@@ -15,6 +17,7 @@ Item {
     // プレビューコンテナ（アスペクト比維持）
     View3D {
         id: view
+        camera: mainCamera
         
         // プロジェクト設定の解像度を取得（未設定時はFHD）
         property int projW: TimelineBridge ? TimelineBridge.projectWidth : 1920
@@ -40,26 +43,25 @@ Item {
             z: -1
         }
 
-        // AviUtlライクな平行投影カメラ
-        OrthographicCamera {
-            id: camera
+        // カメラ設定 (必須)
+        PerspectiveCamera {
+            id: mainCamera
+            // 1080p を視野に収める距離: 540 / tan(30deg) ≈ 935.3
+            // クリップ範囲も調整
+            position: Qt.vector3d(0, 0, 936)
+            clipFar: 5000
+        }
+        DirectionalLight {
+            eulerRotation.x: -30
             z: 1000
         }
         
         environment: SceneEnvironment {
             id: sceneEnv
             backgroundMode: SceneEnvironment.Color
-            clearColor: "#1a1a1a" // 暗灰色（映像編集ソフトの標準）
+            clearColor: "blue" // デバッグ用: 画面が青くなれば View3D は動いている
             antialiasingMode: SceneEnvironment.MSAA
             antialiasingQuality: SceneEnvironment.High
-        }
-
-        // 照明 (2D的な見た目にするためアンビエント強め)
-        DirectionalLight {
-            eulerRotation.x: -30
-            eulerRotation.y: -70
-            brightness: 1.0
-            ambientColor: "#808080"
         }
 
         // プロジェクトの枠線（解像度ガイド）
@@ -81,34 +83,39 @@ Item {
             }
         }
 
-        // 動的オブジェクトローダー
-        Loader3D {
-            id: objectLoader
-            visible: TimelineBridge ? TimelineBridge.isClipActive : false
+        // Instantiator の親となるノード
+        Node {
+            id: sceneRoot
+        }
 
-            // TimelineBridgeの状態に応じて読み込むファイルを切り替える
-            source: {
-                if (!TimelineBridge) return ""
-                switch (TimelineBridge.activeObjectType) {
-                    case "text": return "qrc:/qml/objects/TextObject.qml"
-                    case "rect": return "qrc:/qml/objects/RectObject.qml"
-                    default: return ""
-                }
+        // 動的オブジェクト生成用
+        Instantiator {
+            model: TimelineBridge ? TimelineBridge.activeClips : []
+            
+            onObjectAdded: (index, object) => {
+                console.log("[CompositeView] Adding object to scene:", index)
+                object.parent = sceneRoot
+            }
+            onObjectRemoved: (index, object) => {
+                console.log("[CompositeView] Removing object from scene:", index)
+                object.parent = null
             }
 
-            // ロードされたアイテムに対してプロパティをバインドする
-            onLoaded: {
-                if (item) {
-                    // 共通プロパティのバインディング
-                    item.positionValue = Qt.binding(function() {
-                        return Qt.vector3d(TimelineBridge.objectX, TimelineBridge.objectY, 10)
-                    })
-                    
-                    // テキスト固有プロパティのバインディング (存在する場合のみ)
-                    if (TimelineBridge.activeObjectType === "text") {
-                        item.textContent = Qt.binding(function() { return TimelineBridge.textString })
-                        item.textSize = Qt.binding(function() { return TimelineBridge.textSize })
-                    }
+            delegate: Node {
+                // 座標変換修正: Y軸反転とオフセット
+                // 2D(0,0) -> 3D(-960, 540)
+                x: (modelData.x !== undefined ? modelData.x : 0) - 960
+                y: 540 - (modelData.y !== undefined ? modelData.y : 0)
+                z: modelData.layer * 50 // レイヤー間隔を広げる
+
+                RectObject {
+                    visible: modelData.type === "rect"
+                    // 必要ならサイズもバインド
+                }
+
+                TextObject {
+                    visible: modelData.type === "text"
+                    textContent: (modelData.text !== undefined) ? modelData.text : ""
                 }
             }
         }
