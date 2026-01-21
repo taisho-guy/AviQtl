@@ -19,6 +19,9 @@ namespace Rina::UI {
         
         // タイムライン
         spawnWindow(engine, "qrc:/qml/TimelineWindow.qml", "Timeline", 1280, 300, 100, 600);
+
+        // プロジェクト設定
+        spawnWindow(engine, "qrc:/qml/SettingsWindow.qml", "Project Settings", 400, 300, 800, 100);
     }
 
     void WindowManager::spawnWindow(QQmlEngine* engine, const QString& urlStr, const QString& title, int w, int h, int x, int y) {

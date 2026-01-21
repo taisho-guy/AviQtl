@@ -15,11 +15,44 @@ namespace Rina::UI {
         , m_activeObjectType("rect") // デフォルトは図形
     {
         m_playbackTimer = new QTimer(this);
-        m_playbackTimer->setInterval(33); // ~30fps
+        updateTimerInterval(); // 初期FPSで設定
         connect(m_playbackTimer, &QTimer::timeout, this, [this]() {
             setCurrentTime(m_currentTime + 1.0f);
         });
         updateClipActiveState();
+    }
+
+    int TimelineController::projectWidth() const { return m_projectWidth; }
+    void TimelineController::setProjectWidth(int w) {
+        if (m_projectWidth != w) {
+            m_projectWidth = w;
+            emit projectWidthChanged();
+        }
+    }
+    
+    int TimelineController::projectHeight() const { return m_projectHeight; }
+    void TimelineController::setProjectHeight(int h) {
+        if (m_projectHeight != h) {
+            m_projectHeight = h;
+            emit projectHeightChanged();
+        }
+    }
+
+    double TimelineController::projectFps() const { return m_projectFps; }
+    void TimelineController::setProjectFps(double fps) {
+        if (!qFuzzyCompare(m_projectFps, fps)) {
+            m_projectFps = fps;
+            updateTimerInterval(); // FPS変更時にタイマー間隔を更新
+            emit projectFpsChanged();
+        }
+    }
+
+    int TimelineController::totalFrames() const { return m_totalFrames; }
+    void TimelineController::setTotalFrames(int frames) {
+        if (m_totalFrames != frames) {
+            m_totalFrames = frames;
+            emit totalFramesChanged();
+        }
     }
 
     float TimelineController::objectX() const { return m_objectX; }
@@ -146,6 +179,14 @@ namespace Rina::UI {
         if (qAbs(m_objectX - newVal) > 0.001f) {
             m_objectX = newVal;
             emit objectXChanged();
+        }
+    }
+
+    void TimelineController::updateTimerInterval() {
+        if (m_playbackTimer && m_projectFps > 0) {
+            // 1000ms / FPS = 1フレームあたりのミリ秒数
+            int interval = static_cast<int>(1000.0 / m_projectFps);
+            m_playbackTimer->setInterval(interval);
         }
     }
 

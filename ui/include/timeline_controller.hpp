@@ -15,6 +15,12 @@ namespace Rina::UI {
 
     class TimelineController : public QObject {
         Q_OBJECT
+        // プロジェクト設定
+        Q_PROPERTY(int projectWidth READ projectWidth WRITE setProjectWidth NOTIFY projectWidthChanged)
+        Q_PROPERTY(int projectHeight READ projectHeight WRITE setProjectHeight NOTIFY projectHeightChanged)
+        Q_PROPERTY(double projectFps READ projectFps WRITE setProjectFps NOTIFY projectFpsChanged)
+        Q_PROPERTY(int totalFrames READ totalFrames WRITE setTotalFrames NOTIFY totalFramesChanged)
+
         Q_PROPERTY(float objectX READ objectX WRITE setObjectX NOTIFY objectXChanged)
         Q_PROPERTY(float objectY READ objectY WRITE setObjectY NOTIFY objectYChanged)
         Q_PROPERTY(QString textString READ textString WRITE setTextString NOTIFY textStringChanged)
@@ -30,6 +36,19 @@ namespace Rina::UI {
 
     public:
         explicit TimelineController(QObject* parent = nullptr);
+
+        // Getter / Setter
+        int projectWidth() const;
+        void setProjectWidth(int w);
+        
+        int projectHeight() const;
+        void setProjectHeight(int h);
+
+        double projectFps() const;
+        void setProjectFps(double fps);
+
+        int totalFrames() const;
+        void setTotalFrames(int frames);
 
         float objectX() const;
         void setObjectX(float x);
@@ -69,6 +88,10 @@ namespace Rina::UI {
         Q_INVOKABLE void log(const QString& msg);
 
     signals:
+        void projectWidthChanged();
+        void projectHeightChanged();
+        void projectFpsChanged();
+        void totalFramesChanged();
         void objectXChanged();
         void objectYChanged();
         void textStringChanged();
@@ -85,7 +108,13 @@ namespace Rina::UI {
     private:
         void updateClipActiveState();
         void updateObjectX();
+        void updateTimerInterval();
         float calculateInterpolatedValue(float time);
+
+        int m_projectWidth = 1920;
+        int m_projectHeight = 1080;
+        double m_projectFps = 60.0;
+        int m_totalFrames = 3000; // 50秒 @ 60fps
 
         float m_objectX = 0.0f;
         float m_objectY = 0.0f;

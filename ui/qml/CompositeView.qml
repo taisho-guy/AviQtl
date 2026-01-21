@@ -30,6 +30,25 @@ View3D {
         ambientColor: "#808080"
     }
 
+    // プロジェクトの枠線（解像度ガイド）
+    Node {
+        // 画面中央を (0,0) としたときの枠
+        Model {
+            source: "#Rectangle"
+            scale: Qt.vector3d(
+                TimelineBridge ? TimelineBridge.projectWidth / 100 : 19.2, 
+                TimelineBridge ? TimelineBridge.projectHeight / 100 : 10.8, 
+                1
+            )
+            materials: DefaultMaterial {
+                // 枠線だけ表示したいが、簡易的に半透明の黒背景として表示
+                diffuseColor: "#22000000" 
+            }
+            // 奥に配置
+            position: Qt.vector3d(0, 0, -10)
+        }
+    }
+
     // 動的オブジェクトローダー
     Loader3D {
         id: objectLoader
