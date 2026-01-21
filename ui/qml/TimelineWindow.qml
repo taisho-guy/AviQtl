@@ -144,41 +144,93 @@ Common.RinaWindow {
                             color: "white"
                         }
 
+                        // === 移動用 MouseArea (本体) ===
                         MouseArea {
+                            id: moveArea
                             anchors.fill: parent
+                            anchors.rightMargin: 10 // リサイズ用エリアを空ける
+                            
+                            // ドラッグ設定
+                            drag.target: clipRect
+                            drag.axis: Drag.XAndY
+                            drag.minimumX: 0
+                            drag.minimumY: 0
+                            drag.smoothed: false
+
+                            onPressed: {
+                                if (TimelineBridge) TimelineBridge.selectClip(modelData.id)
+                            }
+
                             onClicked: {
                                 if (TimelineBridge) TimelineBridge.selectClip(modelData.id)
                             }
-                            onDoubleClicked: openSettingDialog()
+
+                            onDoubleClicked: {
+                                if (WindowManager) WindowManager.raiseWindow("objectSettings")
+                            }
+
+                            onReleased: {
+                                if (TimelineBridge) {
+                                    var scale = TimelineBridge.timelineScale
+                                    // 座標からフレーム/レイヤーを計算
+                                    var newStart = Math.round(clipRect.x / scale)
+                                    var newLayer = Math.round(clipRect.y / 30)
+                                    
+                                    // バインディングを復元しつつ更新
+                                    TimelineBridge.updateClip(modelData.id, newLayer, newStart, modelData.durationFrames)
+                                }
+                            }
+                        }
+
+                        // === リサイズ用ハンドル (右端) ===
+                        Rectangle {
+                            width: 10
+                            height: parent.height
+                            anchors.right: parent.right
+                            color: "transparent"
+                            // 視覚的フィードバック（ホバー時に少し白くする等しても良い）
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.SizeHorCursor
+                                hoverEnabled: true // カーソル変更のために必要
+                                preventStealing: true // ドラッグを確実にする
+                                
+                                property int startX: 0
+                                property int startWidth: 0
+                                property bool resizing: false
+
+                                onPressed: {
+                                    startX = mouseX
+                                    startWidth = clipRect.width
+                                    resizing = true
+                                    if (TimelineBridge) TimelineBridge.selectClip(modelData.id)
+                                }
+
+                                onPositionChanged: {
+                                    if (resizing) {
+                                        // 単純な差分加算
+                                        var delta = mouseX - startX
+                                        var newW = startWidth + delta
+                                        if (newW < 5) newW = 5
+                                        clipRect.width = newW
+                                        // startWidth等は更新しない（累積誤差を防ぐため初期位置基準）
+                                    }
+                                }
+
+                                onReleased: {
+                                    resizing = false
+                                    if (TimelineBridge) {
+                                        var scale = TimelineBridge.timelineScale
+                                        var newDur = Math.round(clipRect.width / scale)
+                                        TimelineBridge.updateClip(modelData.id, modelData.layer, modelData.startFrame, newDur)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
-        }
-    }
-
-    // 設定ダイアログを開く関数
-    function openSettingDialog() {
-        // すでに開いていたら手前に持ってくる
-        if (settingDialog) {
-            settingDialog.raise()
-            settingDialog.requestActivate()
-            return
-        }
-
-        // 動的にコンポーネントを作成
-        // 同じディレクトリ(qrc:/qml/)にあるSettingDialog.qmlを読み込む
-        var component = Qt.createComponent("SettingDialog.qml")
-        if (component.status === Component.Ready) {
-            // ウィンドウを生成。親はnullにすることで独立したトップレベルウィンドウになる
-            settingDialog = component.createObject(null)
-            
-            // ウィンドウが閉じられたら参照を消す
-            settingDialog.closing.connect(function() {
-                settingDialog = null
-            })
-        } else {
-            console.error("Error loading component:", component.errorString())
         }
     }
 }

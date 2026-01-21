@@ -382,6 +382,38 @@ namespace Rina::UI {
         return m_selectedClipId;
     }
 
+    void TimelineController::updateClip(int id, int layer, int startFrame, int duration) {
+        if (startFrame < 0) startFrame = 0;
+        if (duration < 1) duration = 1;
+        if (layer < 0) layer = 0;
+
+        bool changed = false;
+        for (auto& clip : m_clips) {
+            if (clip.id == id) {
+                if (clip.layer != layer || clip.startFrame != startFrame || clip.durationFrames != duration) {
+                    clip.layer = layer;
+                    clip.startFrame = startFrame;
+                    clip.durationFrames = duration;
+                    changed = true;
+                    
+                    // 選択中のクリップならUIプロパティも更新
+                    if (m_selectedClipId == id) {
+                        m_layer = layer; emit layerChanged();
+                        m_clipStartFrame = startFrame; emit clipStartFrameChanged();
+                        m_clipDurationFrames = duration; emit clipDurationFramesChanged();
+                    }
+                }
+                break;
+            }
+        }
+
+        if (changed) {
+            emit clipsChanged();
+            emit activeClipsChanged();
+            updateClipActiveState();
+        }
+    }
+
     void TimelineController::selectClip(int id) {
         if (m_selectedClipId == id) return;
         

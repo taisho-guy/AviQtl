@@ -90,6 +90,9 @@ namespace Rina::UI {
         QVariantList clips() const;
         QVariantList activeClips() const;
 
+        // クリップの配置・長さを更新（ID指定）
+        Q_INVOKABLE void updateClip(int id, int layer, int startFrame, int duration);
+
         int selectedClipId() const;
         Q_INVOKABLE void selectClip(int id);
 
