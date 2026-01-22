@@ -48,6 +48,9 @@ cp $EXECUTABLE_NAME $OUTPUT_DIR/
 # effects ディレクトリの作成
 mkdir -p "$OUTPUT_DIR/effects"
 
+# ui/qml/effects 内のファイルをビルド出力へコピー
+cp "$SOURCE_DIR/ui/qml/effects/"* "$OUTPUT_DIR/effects/"
+
 # サンプルエフェクトがあればコピー (オプション)
 # if test -d "$SOURCE_DIR/examples/effects"
 #     cp -r "$SOURCE_DIR/examples/effects/"* "$OUTPUT_DIR/effects/"

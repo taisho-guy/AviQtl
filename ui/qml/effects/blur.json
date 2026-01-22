@@ -1,0 +1,8 @@
+{
+    "id": "blur",
+    "name": "ぼかし",
+    "qml": "Blur.qml",
+    "params": {
+        "size": 10
+    }
+}

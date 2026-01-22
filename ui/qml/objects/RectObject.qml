@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick3D
 import QtQuick.Effects
-import "../effects"
+import ".."
 
 Node {
     id: root
@@ -29,7 +29,7 @@ Node {
         property int padding: root.blurRadius > 0 ? Math.ceil(root.blurRadius * 3) : 0
         width: root.sizeW + padding * 2
         height: root.sizeH + padding * 2
-        visible: false 
+        visible: true
 
         Rectangle {
             anchors.centerIn: parent
@@ -45,7 +45,7 @@ Node {
         sourceItem: sourceItem
         effectModels: root.effectModels
         anchors.fill: sourceItem
-        visible: false
+        visible: true
     }
 
     Model {

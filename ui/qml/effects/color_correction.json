@@ -1,0 +1,10 @@
+{
+    "id": "color_correction",
+    "name": "色調補正",
+    "qml": "ColorCorrection.qml",
+    "params": {
+        "brightness": 100,
+        "contrast": 100,
+        "saturation": 100
+    }
+}

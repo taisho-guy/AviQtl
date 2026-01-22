@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick3D
 import QtQuick.Effects
-import "../effects"
+import ".."
 
 Node {
     id: root
@@ -28,7 +28,8 @@ Node {
         property int padding: root.blurPadding > 0 ? Math.ceil(root.blurPadding * 3) : 10
         width: textItem.implicitWidth + padding * 2
         height: textItem.implicitHeight + padding * 2
-        visible: false
+        // Node内のItemは3Dシーンに直接描画されないため、テクスチャ更新用にTrueにする
+        visible: true
 
         Text {
             id: textItem
@@ -50,7 +51,7 @@ Node {
         effectModels: root.effectModels
         width: sourceItem.width
         height: sourceItem.height
-        visible: false
+        visible: true
     }
 
     Model {
