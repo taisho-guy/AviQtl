@@ -8,5 +8,6 @@
         <file>qml/common/RinaWindow.qml</file>
         <file>qml/objects/TextObject.qml</file>
         <file>qml/objects/RectObject.qml</file>
+        <file>qml/effects/EffectChain.qml</file>
     </qresource>
 </RCC>

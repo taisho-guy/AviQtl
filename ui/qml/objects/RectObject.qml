@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick3D
 import QtQuick.Effects
+import "../effects"
 
 Node {
     id: root
@@ -38,19 +39,13 @@ Node {
         }
     }
 
-    // パイプライン統合: MultiEffectで単一パス描画
-    MultiEffect {
+    // 汎用エフェクトチェーン (MultiEffectを内包)
+    EffectChain {
         id: effector
-        source: sourceItem
+        sourceItem: sourceItem
+        effectModels: root.effectModels
         anchors.fill: sourceItem
-        
-        blurEnabled: root.blurRadius > 0
-        blur: root.blurRadius / 64.0 // 正規化パラメータ
-        blurMax: 64
-        
         visible: false
-        layer.enabled: true
-        layer.smooth: true
     }
 
     Model {
