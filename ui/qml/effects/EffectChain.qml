@@ -6,13 +6,13 @@ Item {
     property var effectModels: [] // C++から渡される EffectModel のリスト
     property Item sourceItem
 
+    width: root.sourceItem ? root.sourceItem.width : 0
+    height: root.sourceItem ? root.sourceItem.height : 0
+
     MultiEffect {
         id: effector
         source: root.sourceItem
-        // 外部のItemにはアンカーできないため、サイズをバインドする
-        width: root.sourceItem ? root.sourceItem.width : 0
-        height: root.sourceItem ? root.sourceItem.height : 0
-        anchors.centerIn: parent
+        anchors.fill: parent
         
         // 動的にパラメータを探してバインドするヘルパー関数
         function getParam(effectId, paramName, defaultVal) {
@@ -45,5 +45,31 @@ Item {
         shadowBlur: getParam("glow", "radius", 0) / 64.0
         shadowColor: getParam("glow", "color", "#ffffff")
         shadowOpacity: glowStrength / 100.0
+    }
+
+    // 外部エフェクトパイプライン
+    Repeater {
+        model: root.effectModels
+        delegate: Loader {
+            // qmlSourceがある場合のみロード
+            active: modelData.qmlSource !== "" && modelData.enabled
+            source: modelData.qmlSource
+            
+            onLoaded: {
+                if (item) {
+                    // パラメータの注入
+                    item.params = modelData.params
+                    
+                    // 入力ソースの連鎖
+                    // 簡易実装: 最初の外部エフェクトはMultiEffectの結果を受け取る
+                    // 2つ目以降も現状はMultiEffectの結果を受け取る（並列適用）
+                    // ※直列化にはInstantiatorによる高度なチェーン管理が必要
+                    item.source = effector
+                    
+                    item.width = Qt.binding(() => root.width)
+                    item.height = Qt.binding(() => root.height)
+                }
+            }
+        }
     }
 }

@@ -10,15 +10,17 @@ namespace Rina::UI {
         Q_PROPERTY(QString name READ name CONSTANT)
         Q_PROPERTY(bool enabled READ isEnabled WRITE setEnabled NOTIFY enabledChanged)
         Q_PROPERTY(QVariantMap params READ params NOTIFY paramsChanged)
+        Q_PROPERTY(QString qmlSource READ qmlSource CONSTANT)
 
     public:
-        explicit EffectModel(const QString& id, const QString& name, const QVariantMap& params = {}, QObject* parent = nullptr)
-            : QObject(parent), m_id(id), m_name(name), m_enabled(true), m_params(params) {}
+        explicit EffectModel(const QString& id, const QString& name, const QVariantMap& params = {}, const QString& qmlSource = "", QObject* parent = nullptr)
+            : QObject(parent), m_id(id), m_name(name), m_enabled(true), m_params(params), m_qmlSource(qmlSource) {}
 
         QString id() const { return m_id; }
         QString name() const { return m_name; }
         bool isEnabled() const { return m_enabled; }
         QVariantMap params() const { return m_params; }
+        QString qmlSource() const { return m_qmlSource; }
 
         void setEnabled(bool e) {
             if (m_enabled != e) {
@@ -45,5 +47,6 @@ namespace Rina::UI {
         QString m_name;
         bool m_enabled;
         QVariantMap m_params;
+        QString m_qmlSource;
     };
 }

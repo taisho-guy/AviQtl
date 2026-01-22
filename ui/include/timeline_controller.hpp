@@ -17,6 +17,7 @@ namespace Rina::UI {
     struct EffectData {
         QString id;
         QString name;
+        QString qmlSource;
         bool enabled = true;
         QVariantMap params;
     };

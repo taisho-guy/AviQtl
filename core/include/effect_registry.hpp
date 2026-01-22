@@ -42,6 +42,8 @@ public:
         return list;
     }
 
+    void loadEffectsFromDirectory(const QString& path);
+
 private:
     EffectRegistry() = default;
     QHash<QString, EffectMetadata> m_effects;

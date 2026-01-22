@@ -362,7 +362,7 @@ namespace Rina::UI {
         transform.params["rotationY"] = 0.0;
         transform.params["rotationZ"] = 0.0;
         transform.params["opacity"] = 1.0;
-        newClip.effects.append(new EffectModel(transform.id, transform.name, transform.params, this));
+        newClip.effects.append(new EffectModel(transform.id, transform.name, transform.params, "", this));
 
         // 2. Object Specific (オブジェクト本体)
         EffectData content;
@@ -377,7 +377,7 @@ namespace Rina::UI {
             content.params["textSize"] = 64;
             content.params["color"] = "#ffffff";
         }
-        newClip.effects.append(new EffectModel(content.id, content.name, content.params, this));
+        newClip.effects.append(new EffectModel(content.id, content.name, content.params, "", this));
 
         m_clips.append(newClip);
         emit clipsChanged();
@@ -666,7 +666,8 @@ namespace Rina::UI {
                     QString id = eo["id"].toString();
                     QString name = eo["name"].toString();
                     QVariantMap params = eo["params"].toObject().toVariantMap();
-                    auto* model = new EffectModel(id, name, params, this);
+                    auto meta = Rina::Core::EffectRegistry::instance().getEffect(id);
+                    auto* model = new EffectModel(id, name, params, meta.qmlSource, this);
                     model->setEnabled(eo["enabled"].toBool(true));
                     clip.effects.append(model);
                 }
@@ -736,6 +737,7 @@ namespace Rina::UI {
         const auto meta = Rina::Core::EffectRegistry::instance().getEffect(id);
         if (!meta.id.isEmpty()) {
             eff.name = meta.name;
+            eff.qmlSource = meta.qmlSource;
             eff.params = meta.defaultParams;
         } else {
             eff.name = id;
@@ -746,7 +748,7 @@ namespace Rina::UI {
     void TimelineController::addEffectInternal(int clipId, const EffectData& effectData) {
         for (auto& clip : m_clips) {
             if (clip.id == clipId) {
-                auto* model = new EffectModel(effectData.id, effectData.name, effectData.params, this);
+                auto* model = new EffectModel(effectData.id, effectData.name, effectData.params, effectData.qmlSource, this);
                 model->setEnabled(effectData.enabled);
                 clip.effects.append(model);
                 if (m_selectedClipId == clipId) emit selectedClipIdChanged();

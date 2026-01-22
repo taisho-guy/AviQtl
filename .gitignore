@@ -1,5 +1,6 @@
 # Builds
 build/
+.build_tmp/
 
 # Exports
 project_export.txt
