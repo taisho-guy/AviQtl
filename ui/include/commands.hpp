@@ -64,11 +64,11 @@ namespace Rina::UI {
         RemoveEffectCommand(TimelineController* controller, int clipId, int effectIndex);
         void undo() override;
         void redo() override;
-        void setRemovedEffect(const EffectInstance& effect) { m_removedEffect = effect; }
+        void setRemovedEffect(const EffectData& effect) { m_removedEffect = effect; }
     private:
         TimelineController* m_controller;
         int m_clipId;
         int m_effectIndex;
-        EffectInstance m_removedEffect;
+        EffectData m_removedEffect;
     };
 }

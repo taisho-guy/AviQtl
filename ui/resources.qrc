@@ -5,7 +5,6 @@
         <file>qml/TimelineWindow.qml</file>
         <file>qml/SettingDialog.qml</file>
         <file>qml/SettingsWindow.qml</file>
-        <!-- 新しいモジュール -->
         <file>qml/common/RinaWindow.qml</file>
         <file>qml/objects/TextObject.qml</file>
         <file>qml/objects/RectObject.qml</file>

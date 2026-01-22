@@ -147,6 +147,7 @@ Item {
                     textSize: (modelData.textSize !== undefined) ? modelData.textSize : 64
                     color: (modelData.color !== undefined) ? modelData.color : "#ffffff"
                     opacity: (modelData.opacity !== undefined) ? modelData.opacity : 1.0
+                    clipId: modelData.id
                 }
             }
         }

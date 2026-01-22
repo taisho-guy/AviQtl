@@ -66,7 +66,7 @@ namespace Rina::UI {
         m_controller->removeEffectInternal(m_clipId, -1); // Remove last
     }
     void AddEffectCommand::redo() {
-        EffectInstance eff = m_controller->createEffectInstance(m_effectId);
+        EffectData eff = m_controller->createEffectData(m_effectId);
         m_controller->addEffectInternal(m_clipId, eff);
     }
 
@@ -160,10 +160,10 @@ namespace Rina::UI {
             if (clip.id == m_selectedClipId) {
                 // 暫定対応: プロパティ名に応じて適切なエフェクトのパラメータを更新する
                 // 本来はUI側でエフェクトインデックスを指定すべき
-                for (int i = 0; i < clip.effects.size(); ++i) {
-                    if (clip.effects[i].params.contains(name)) {
-                        clip.effects[i].params[name] = value;
-                        
+                for (auto* eff : clip.effects) {
+                    if (eff->params().contains(name)) {
+                        eff->setParam(name, value);
+
                         // Update cache (flattened view for current UI)
                         m_selectedClipCache[name] = value;
                         emit selectedClipDataChanged();
@@ -349,7 +349,7 @@ namespace Rina::UI {
         
         // エフェクトスタック構築 (ExEdit概念の導入)
         // 1. Transform (基本効果 - 標準描画相当の座標管理)
-        EffectInstance transform;
+        EffectData transform;
         transform.id = "transform";
         transform.name = "座標";
         transform.params["x"] = 0;
@@ -361,10 +361,10 @@ namespace Rina::UI {
         transform.params["rotationY"] = 0.0;
         transform.params["rotationZ"] = 0.0;
         transform.params["opacity"] = 1.0;
-        newClip.effects.append(transform);
+        newClip.effects.append(new EffectModel(transform.id, transform.name, transform.params, this));
 
         // 2. Object Specific (オブジェクト本体)
-        EffectInstance content;
+        EffectData content;
         if (type == "rect") {
             content.id = "rect";
             content.name = "図形";
@@ -376,7 +376,7 @@ namespace Rina::UI {
             content.params["textSize"] = 64;
             content.params["color"] = "#ffffff";
         }
-        newClip.effects.append(content);
+        newClip.effects.append(new EffectModel(content.id, content.name, content.params, this));
 
         m_clips.append(newClip);
         emit clipsChanged();
@@ -391,7 +391,8 @@ namespace Rina::UI {
         // Update property cache
         m_selectedClipCache.clear();
         for(const auto& eff : newClip.effects) {
-            for(auto it = eff.params.begin(); it != eff.params.end(); ++it) 
+            QVariantMap params = eff->params();
+            for(auto it = params.begin(); it != params.end(); ++it) 
                 m_selectedClipCache.insert(it.key(), it.value());
         }
         
@@ -404,17 +405,12 @@ namespace Rina::UI {
         emit selectedClipDataChanged();
     }
 
-    QVariantList TimelineController::getClipEffects(int clipId) const {
-        QVariantList list;
+    QList<QObject*> TimelineController::getClipEffectsModel(int clipId) const {
+        QList<QObject*> list;
         for (const auto& clip : m_clips) {
             if (clip.id == clipId) {
-                for (const auto& eff : clip.effects) {
-                    QVariantMap m;
-                    m["id"] = eff.id;
-                    m["name"] = eff.name;
-                    m["enabled"] = eff.enabled;
-                    m["params"] = eff.params;
-                    list.append(m);
+                for (auto* eff : clip.effects) {
+                    list.append(eff);
                 }
                 break;
             }
@@ -426,7 +422,7 @@ namespace Rina::UI {
         QVariant oldValue;
         for(const auto& c : m_clips) {
             if(c.id == clipId && effectIndex < c.effects.size()) {
-                oldValue = c.effects[effectIndex].params[paramName];
+                oldValue = c.effects[effectIndex]->params().value(paramName);
                 break;
             }
         }
@@ -437,7 +433,7 @@ namespace Rina::UI {
         for (auto& clip : m_clips) {
             if (clip.id == clipId) {
                 if (effectIndex >= 0 && effectIndex < clip.effects.size()) {
-                    clip.effects[effectIndex].params[paramName] = value;
+                    clip.effects[effectIndex]->setParam(paramName, value);
                     // パラメータ変更を通知
                     emit activeClipsChanged(); // プレビュー更新
                 }
@@ -458,9 +454,10 @@ namespace Rina::UI {
             
             // Include some properties for list view if needed
             // 暫定: テキストエフェクトがあればそのテキストを表示
-            for(const auto& eff : clip.effects) {
-                if(eff.id == "text" && eff.params.contains("text")) {
-                    map["text"] = eff.params["text"];
+            for(auto* eff : clip.effects) {
+                if(eff->id() == "text") {
+                    QVariantMap params = eff->params();
+                    if(params.contains("text")) map["text"] = params["text"];
                     break;
                 }
             }
@@ -497,10 +494,24 @@ namespace Rina::UI {
             
             // Flatten dynamic properties into the map
             for (const auto& eff : clip.effects) {
-                for (auto it = eff.params.begin(); it != eff.params.end(); ++it) {
+                QVariantMap params = eff->params();
+                for (auto it = params.begin(); it != params.end(); ++it) {
                     map[it.key()] = it.value();
                 }
             }
+            
+            // Add structured effects list for QML iteration
+            // Note: For QML Instantiator, we might still need this or use getClipEffectsModel
+            QVariantList effectsList;
+            for (const auto& eff : clip.effects) {
+                QVariantMap em;
+                em["id"] = eff->id();
+                em["name"] = eff->name();
+                em["enabled"] = eff->isEnabled();
+                em["params"] = eff->params();
+                effectsList.append(em);
+            }
+            map["effects"] = effectsList;
 
             list.append(map);
         }
@@ -583,10 +594,10 @@ namespace Rina::UI {
             QJsonArray effArray;
             for (const auto& eff : clip.effects) {
                 QJsonObject eObj;
-                eObj["id"] = eff.id;
-                eObj["name"] = eff.name;
-                eObj["enabled"] = eff.enabled;
-                eObj["params"] = QJsonObject::fromVariantMap(eff.params);
+                eObj["id"] = eff->id();
+                eObj["name"] = eff->name();
+                eObj["enabled"] = eff->isEnabled();
+                eObj["params"] = QJsonObject::fromVariantMap(eff->params());
                 effArray.append(eObj);
             }
             clipObj["effects"] = effArray;
@@ -651,12 +662,12 @@ namespace Rina::UI {
                 QJsonArray effArr = c["effects"].toArray();
                 for (const auto& ev : effArr) {
                     QJsonObject eo = ev.toObject();
-                    EffectInstance eff;
-                    eff.id = eo["id"].toString();
-                    eff.name = eo["name"].toString();
-                    eff.enabled = eo["enabled"].toBool(true);
-                    eff.params = eo["params"].toObject().toVariantMap();
-                    clip.effects.append(eff);
+                    QString id = eo["id"].toString();
+                    QString name = eo["name"].toString();
+                    QVariantMap params = eo["params"].toObject().toVariantMap();
+                    auto* model = new EffectModel(id, name, params, this);
+                    model->setEnabled(eo["enabled"].toBool(true));
+                    clip.effects.append(model);
                 }
             }
 
@@ -681,8 +692,9 @@ namespace Rina::UI {
             if (clip.id == id) {
                 
                 m_selectedClipCache.clear();
-                for(const auto& eff : clip.effects) {
-                    for(auto it = eff.params.begin(); it != eff.params.end(); ++it) 
+                for(auto* eff : clip.effects) {
+                    QVariantMap params = eff->params();
+                    for(auto it = params.begin(); it != params.end(); ++it) 
                         m_selectedClipCache.insert(it.key(), it.value());
                 }
                 emit selectedClipDataChanged();
@@ -714,8 +726,8 @@ namespace Rina::UI {
         return list;
     }
 
-    EffectInstance TimelineController::createEffectInstance(const QString& id) {
-        EffectInstance eff;
+    EffectData TimelineController::createEffectData(const QString& id) {
+        EffectData eff;
         eff.id = id;
         eff.enabled = true;
         if (id == "blur") {
@@ -731,10 +743,12 @@ namespace Rina::UI {
         return eff;
     }
 
-    void TimelineController::addEffectInternal(int clipId, const EffectInstance& effect) {
+    void TimelineController::addEffectInternal(int clipId, const EffectData& effectData) {
         for (auto& clip : m_clips) {
             if (clip.id == clipId) {
-                clip.effects.append(effect);
+                auto* model = new EffectModel(effectData.id, effectData.name, effectData.params, this);
+                model->setEnabled(effectData.enabled);
+                clip.effects.append(model);
                 if (m_selectedClipId == clipId) emit selectedClipIdChanged();
                 break;
             }
@@ -748,9 +762,10 @@ namespace Rina::UI {
                 if (effectIndex == -1) effectIndex = clip.effects.size() - 1;
                 if (effectIndex >= 0 && effectIndex < clip.effects.size()) {
                     // Transform(0)の削除禁止等はここで行う
-                    if (effectIndex == 0 && clip.effects[0].id == "transform") return;
+                    if (effectIndex == 0 && clip.effects[0]->id() == "transform") return;
                     
-                    clip.effects.removeAt(effectIndex);
+                    EffectModel* eff = clip.effects.takeAt(effectIndex);
+                    eff->deleteLater(); // 安全に削除
                     if (m_selectedClipId == clipId) emit selectedClipIdChanged();
                 }
                 break;
@@ -766,13 +781,16 @@ namespace Rina::UI {
     void TimelineController::removeEffect(int clipId, int effectIndex) {
         // Undoのために削除されるEffectを保存する必要があるため
         // Command生成前にデータを取得するか、Command内で取得する
-        EffectInstance removed;
+        EffectData removed;
         bool found = false;
         for(const auto& c : m_clips) {
             if(c.id == clipId) {
                 int idx = (effectIndex == -1) ? c.effects.size() - 1 : effectIndex;
                 if(idx >= 0 && idx < c.effects.size()) {
-                    removed = c.effects[idx];
+                    removed.id = c.effects[idx]->id();
+                    removed.name = c.effects[idx]->name();
+                    removed.enabled = c.effects[idx]->isEnabled();
+                    removed.params = c.effects[idx]->params();
                     found = true;
                     break;
                 }

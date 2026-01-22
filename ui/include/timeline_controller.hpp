@@ -10,10 +10,11 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QUndoStack>
+#include "effect_model.hpp" // 念のため維持
 
 namespace Rina::UI {
-    // エフェクト（フィルタ）のインスタンス定義
-    struct EffectInstance {
+    // Value object for serialization and undo/redo
+    struct EffectData {
         QString id;
         QString name;
         bool enabled = true;
@@ -106,7 +107,7 @@ namespace Rina::UI {
         Q_INVOKABLE void updateClip(int id, int layer, int startFrame, int duration);
 
         // エフェクト操作
-        Q_INVOKABLE QVariantList getClipEffects(int clipId) const;
+        Q_INVOKABLE QList<QObject*> getClipEffectsModel(int clipId) const;
         Q_INVOKABLE void updateClipEffectParam(int clipId, int effectIndex, const QString& paramName, const QVariant& value);
         
         // エフェクト追加・削除
@@ -128,9 +129,9 @@ namespace Rina::UI {
         void updateClipInternal(int id, int layer, int startFrame, int duration);
         void updateClipEffectParamInternal(int clipId, int effectIndex, const QString& paramName, const QVariant& value);
         void createObjectInternal(const QString& type, int startFrame, int layer);
-        void addEffectInternal(int clipId, const EffectInstance& effect);
+        void addEffectInternal(int clipId, const EffectData& effectData);
         void removeEffectInternal(int clipId, int effectIndex);
-        EffectInstance createEffectInstance(const QString& id);
+        EffectData createEffectData(const QString& id);
 
     signals:
         void projectWidthChanged();
@@ -166,7 +167,7 @@ namespace Rina::UI {
             int layer;
             
             // エフェクトスタック
-            QList<EffectInstance> effects;
+            QList<EffectModel*> effects;
         };
         QList<ClipData> m_clips;
         int m_nextClipId = 1;

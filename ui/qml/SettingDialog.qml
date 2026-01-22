@@ -12,10 +12,12 @@ ApplicationWindow {
     width: 350
     height: 500
     title: "Object Settings"
-    color: "#333"
+    color: palette.window
     visible: true
     x: 500
     y: 200
+
+    SystemPalette { id: palette; colorGroup: SystemPalette.Active }
 
     property int targetClipId: TimelineBridge ? TimelineBridge.selectedClipId : -1
     property var effectsModel: []
@@ -36,7 +38,7 @@ ApplicationWindow {
         var id = TimelineBridge.selectedClipId
         targetClipId = id
         if (id >= 0) {
-            effectsModel = TimelineBridge.getClipEffects(id)
+            effectsModel = TimelineBridge.getClipEffectsModel(id)
         } else {
             effectsModel = []
         }
@@ -82,10 +84,10 @@ ApplicationWindow {
                     Rectangle {
                         Layout.fillWidth: true
                         height: 24
-                        color: "#444"
+                        color: palette.midlight
                         Label {
                             text: modelData.name
-                            color: "white"
+                            color: palette.windowText
                             font.bold: true
                             anchors.verticalCenter: parent.verticalCenter
                             anchors.left: parent.left
@@ -117,7 +119,7 @@ ApplicationWindow {
                             
                             Label { 
                                 text: key
-                                color: "#ccc"
+                                color: palette.text
                                 Layout.preferredWidth: 70 
                                 elide: Text.ElideRight
                             }

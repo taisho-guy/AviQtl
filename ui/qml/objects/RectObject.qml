@@ -1,19 +1,67 @@
-import QtQuick 2.15
-import QtQuick3D 6.0
+import QtQuick
+import QtQuick3D
+import QtQuick.Effects
 
 Node {
     id: root
-    // 親から受け取るサイズプロパティ (初期値100)
     property real sizeW: 100
     property real sizeH: 100
     property color color: "#66aa99"
     property real opacity: 1.0
 
+    // データモデル: C++のEffectModel(QObject)リストを受け取る
+    property list<QtObject> effectModels: TimelineBridge ? TimelineBridge.getClipEffectsModel(modelData.id) : []
+
+    // フィルタパラメータの抽出 (リアクティブ)
+    property var blurModel: {
+        for(let i=0; i<effectModels.length; i++) 
+            if(effectModels[i].id === "blur") return effectModels[i];
+        return null;
+    }
+    
+    // バインディング: 値が変われば即座に反映
+    property real blurRadius: (blurModel && blurModel.enabled) ? (blurModel.params.size || 0) : 0
+
+    Item {
+        id: sourceItem
+        // 自動パディング: ぼかし半径に応じてキャンバスを拡張しクリッピングを防ぐ
+        property int padding: root.blurRadius > 0 ? Math.ceil(root.blurRadius * 3) : 0
+        width: root.sizeW + padding * 2
+        height: root.sizeH + padding * 2
+        visible: false 
+
+        Rectangle {
+            anchors.centerIn: parent
+            width: root.sizeW
+            height: root.sizeH
+            color: root.color
+        }
+    }
+
+    // パイプライン統合: MultiEffectで単一パス描画
+    MultiEffect {
+        id: effector
+        source: sourceItem
+        anchors.fill: sourceItem
+        
+        blurEnabled: root.blurRadius > 0
+        blur: root.blurRadius / 64.0 // 正規化パラメータ
+        blurMax: 64
+        
+        visible: false
+        layer.enabled: true
+        layer.smooth: true
+    }
+
     Model {
         source: "#Rectangle"
-        // 100x100 のプリミティブを目的のピクセルサイズに合わせる
-        scale: Qt.vector3d(root.sizeW / 100, root.sizeH / 100, 1)
+        // 3Dモデルへのマッピング
+        scale: Qt.vector3d(effector.width / 100, effector.height / 100, 1)
         opacity: root.opacity
-        materials: DefaultMaterial { diffuseColor: root.color; lighting: DefaultMaterial.NoLighting }
+        materials: DefaultMaterial {
+            diffuseMap: Texture { sourceItem: effector }
+            lighting: DefaultMaterial.NoLighting
+            blendMode: DefaultMaterial.SourceOver
+        }
     }
 }
