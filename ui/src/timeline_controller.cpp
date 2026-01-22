@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <QFile>
 #include <QUrl>
+#include "effect_registry.hpp"
 
 namespace Rina::UI {
     // === Commands Implementation ===
@@ -717,12 +718,13 @@ namespace Rina::UI {
     
     QVariantList TimelineController::getAvailableEffects() const {
         QVariantList list;
-        auto add = [&](const QString& id, const QString& name) {
-            QVariantMap m; m["id"] = id; m["name"] = name; list.append(m);
-        };
-        add("blur", "ぼかし");
-        add("color_correction", "色調補正");
-        add("glow", "発光");
+        const auto effects = Rina::Core::EffectRegistry::instance().getAllEffects();
+        for (const auto& meta : effects) {
+            QVariantMap m;
+            m["id"] = meta.id;
+            m["name"] = meta.name;
+            list.append(m);
+        }
         return list;
     }
 
@@ -730,13 +732,11 @@ namespace Rina::UI {
         EffectData eff;
         eff.id = id;
         eff.enabled = true;
-        if (id == "blur") {
-            eff.name = "ぼかし"; eff.params["size"] = 10;
-        } else if (id == "color_correction") {
-            eff.name = "色調補正"; eff.params["brightness"] = 100; eff.params["contrast"] = 100;
-            eff.params["saturation"] = 100;
-        } else if (id == "glow") {
-            eff.name = "発光"; eff.params["strength"] = 50;
+        
+        const auto meta = Rina::Core::EffectRegistry::instance().getEffect(id);
+        if (!meta.id.isEmpty()) {
+            eff.name = meta.name;
+            eff.params = meta.defaultParams;
         } else {
             eff.name = id;
         }

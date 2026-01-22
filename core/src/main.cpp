@@ -6,6 +6,7 @@
 #include <QQuickStyle> // 追加
 #include "window_manager.hpp"
 #include "timeline_controller.hpp"
+#include "effect_registry.hpp"
 
 int main(int argc, char *argv[]) {
     // 1. アプリケーション初期化
@@ -14,6 +15,9 @@ int main(int argc, char *argv[]) {
 #endif
     QApplication app(argc, argv);
     app.setApplicationName("Rina");
+
+    // エフェクトレジストリの初期化
+    Rina::Core::initializeStandardEffects();
 
     // 1. スタイルの強制適用 (KDE Plasma Native)
     // これにより、システムの色設定（ダークモード等）が自動的にQMLに反映される
