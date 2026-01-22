@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick3D
 import QtQuick.Effects
+import "../effects"
 
 Node {
     id: root
@@ -12,15 +13,19 @@ Node {
 
     property list<QtObject> effectModels: TimelineBridge ? TimelineBridge.getClipEffectsModel(clipId) : []
     
-    property var blurModel: {
-        for(let i=0; i<effectModels.length; i++) if(effectModels[i].id === "blur") return effectModels[i];
-        return null;
+    function getBlurPadding() {
+        for(let i=0; i<effectModels.length; i++) {
+            if(effectModels[i].id === "blur" && effectModels[i].enabled) {
+                return (effectModels[i].params["size"] || 0);
+            }
+        }
+        return 0;
     }
-    property real blurRadius: (blurModel && blurModel.enabled) ? (blurModel.params.size || 0) : 0
+    property real blurPadding: getBlurPadding()
 
     Item {
         id: sourceItem
-        property int padding: root.blurRadius > 0 ? Math.ceil(root.blurRadius * 3) : 10
+        property int padding: root.blurPadding > 0 ? Math.ceil(root.blurPadding * 3) : 10
         width: textItem.implicitWidth + padding * 2
         height: textItem.implicitHeight + padding * 2
         visible: false
@@ -39,15 +44,13 @@ Node {
         }
     }
 
-    MultiEffect {
+    EffectChain {
         id: effector
-        source: sourceItem
-        anchors.fill: sourceItem
-        blurEnabled: root.blurRadius > 0
-        blur: root.blurRadius / 64.0
-        blurMax: 64
+        sourceItem: sourceItem
+        effectModels: root.effectModels
+        width: sourceItem.width
+        height: sourceItem.height
         visible: false
-        layer.enabled: true
     }
 
     Model {

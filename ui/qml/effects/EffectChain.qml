@@ -9,7 +9,10 @@ Item {
     MultiEffect {
         id: effector
         source: root.sourceItem
-        anchors.fill: root.sourceItem
+        // 外部のItemにはアンカーできないため、サイズをバインドする
+        width: root.sourceItem ? root.sourceItem.width : 0
+        height: root.sourceItem ? root.sourceItem.height : 0
+        anchors.centerIn: parent
         
         // 動的にパラメータを探してバインドするヘルパー関数
         function getParam(effectId, paramName, defaultVal) {
