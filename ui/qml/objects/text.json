@@ -1,0 +1,12 @@
+{
+    "id": "text",
+    "name": "テキスト",
+    "category": "object",
+    "qml": "TextObject.qml",
+    "params": {
+        "text": "テキスト",
+        "textSize": 64,
+        "color": "#ffffff",
+        "opacity": 1.0
+    }
+}

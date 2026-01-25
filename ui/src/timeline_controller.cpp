@@ -364,20 +364,20 @@ namespace Rina::UI {
         transform.params["opacity"] = 1.0;
         newClip.effects.append(new EffectModel(transform.id, transform.name, transform.params, "", this));
 
-        // 2. Object Specific (オブジェクト本体)
+        // 2. Object Specific (Dynamic Loading)
+        const auto meta = Rina::Core::EffectRegistry::instance().getEffect(type);
         EffectData content;
-        if (type == "rect") {
-            content.id = "rect";
-            content.name = "図形";
-            content.params["color"] = "#66aa99";
-        } else if (type == "text") {
-            content.id = "text";
-            content.name = "テキスト";
-            content.params["text"] = "Text";
-            content.params["textSize"] = 64;
-            content.params["color"] = "#ffffff";
+        if (!meta.id.isEmpty()) {
+            content.id = meta.id;
+            content.name = meta.name;
+            content.params = meta.defaultParams;
+            content.qmlSource = meta.qmlSource;
+        } else {
+            qWarning() << "Unknown object type requested:" << type;
+            content.id = "unknown";
+            content.name = "Unknown";
         }
-        newClip.effects.append(new EffectModel(content.id, content.name, content.params, "", this));
+        newClip.effects.append(new EffectModel(content.id, content.name, content.params, content.qmlSource, this));
 
         m_clips.append(newClip);
         emit clipsChanged();
@@ -721,6 +721,20 @@ namespace Rina::UI {
         QVariantList list;
         const auto effects = Rina::Core::EffectRegistry::instance().getAllEffects();
         for (const auto& meta : effects) {
+            if (meta.category != "filter") continue;
+            QVariantMap m;
+            m["id"] = meta.id;
+            m["name"] = meta.name;
+            list.append(m);
+        }
+        return list;
+    }
+
+    QVariantList TimelineController::getAvailableObjects() const {
+        QVariantList list;
+        const auto effects = Rina::Core::EffectRegistry::instance().getAllEffects();
+        for (const auto& meta : effects) {
+            if (meta.category != "object") continue;
             QVariantMap m;
             m["id"] = meta.id;
             m["name"] = meta.name;

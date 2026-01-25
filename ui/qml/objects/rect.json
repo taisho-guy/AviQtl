@@ -1,0 +1,12 @@
+{
+    "id": "rect",
+    "name": "図形",
+    "category": "object",
+    "qml": "RectObject.qml",
+    "params": {
+        "color": "#66aa99",
+        "sizeW": 100,
+        "sizeH": 100,
+        "opacity": 1.0
+    }
+}

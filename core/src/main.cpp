@@ -19,9 +19,14 @@ int main(int argc, char *argv[]) {
     // エフェクトレジストリの初期化
     Rina::Core::initializeStandardEffects();
 
-    // 外部エフェクトのロード (./effects)
+    // 外部リソースのロード
     QString appDir = QCoreApplication::applicationDirPath();
+    
+    // 1. Filters (./effects)
     Rina::Core::EffectRegistry::instance().loadEffectsFromDirectory(appDir + "/effects");
+    
+    // 2. Objects (./objects)
+    Rina::Core::EffectRegistry::instance().loadEffectsFromDirectory(appDir + "/objects");
 
     // 1. スタイルの強制適用 (KDE Plasma Native)
     // これにより、システムの色設定（ダークモード等）が自動的にQMLに反映される

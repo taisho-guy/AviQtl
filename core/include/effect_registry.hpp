@@ -10,6 +10,7 @@ namespace Rina::Core {
 struct EffectMetadata {
     QString id;
     QString name;
+    QString category;
     QString qmlSource; // 将来用: QML実装やシェーダーへのパス
     QVariantMap defaultParams;
     // 将来用: パラメータの型情報や範囲制限など

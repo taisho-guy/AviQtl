@@ -113,6 +113,7 @@ namespace Rina::UI {
         
         // エフェクト追加・削除
         Q_INVOKABLE QVariantList getAvailableEffects() const;
+        Q_INVOKABLE QVariantList getAvailableObjects() const;
         Q_INVOKABLE void addEffect(int clipId, const QString& effectId);
         Q_INVOKABLE void removeEffect(int clipId, int effectIndex);
 

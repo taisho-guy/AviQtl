@@ -7,63 +7,71 @@ set OUTPUT_DIR "$SOURCE_DIR/build"
 set EXECUTABLE_NAME "Rina"
 set BUILD_TYPE "Release"
 
-echo "=== Building Rina ($BUILD_TYPE) ==="
+echo "=== Rina ビルドプロセス開始 ($BUILD_TYPE) ==="
 
-# 1. 一時ビルドディレクトリの準備
-if test -d $TEMP_BUILD_DIR
-    rm -rf $TEMP_BUILD_DIR
+# 1. 一時ディレクトリの準備
+if test -d "$TEMP_BUILD_DIR"
+    echo "既存の一時ビルドディレクトリを削除中..."
+    rm -rf "$TEMP_BUILD_DIR"
 end
-mkdir -p $TEMP_BUILD_DIR
+mkdir -p "$TEMP_BUILD_DIR"
 
-# 2. CMake設定 & ビルド (一時ディレクトリで実行)
-cd $TEMP_BUILD_DIR
-echo "Configuring with CMake (Ninja) in temp dir..."
-cmake -GNinja -DCMAKE_BUILD_TYPE=$BUILD_TYPE $SOURCE_DIR
+# 2. CMake設定とコンパイル
+cd "$TEMP_BUILD_DIR"
+echo "CMake (Ninja) を使用して構成中..."
+cmake -G "Ninja" -DCMAKE_BUILD_TYPE=$BUILD_TYPE "$SOURCE_DIR"
+
 if test $status -ne 0
-    echo "=== Configuration Failed ==="
-    cd $SOURCE_DIR
+    echo "エラー: CMakeの設定に失敗しました。"
+    cd "$SOURCE_DIR"
     exit 1
 end
 
-echo "Compiling..."
+echo "コンパイル中..."
 ninja
+
 if test $status -ne 0
-    echo "=== Build Failed ==="
-    cd $SOURCE_DIR
+    echo "エラー: ビルドに失敗しました。"
+    cd "$SOURCE_DIR"
     exit 1
 end
 
-# 3. 成果物の抽出
-echo "Install/Extracting artifacts to $OUTPUT_DIR..."
+# 3. 成果物のデプロイ
+echo "成果物を $OUTPUT_DIR に展開中..."
 
-# 出力ディレクトリのリセット（クリーンインストール）
-if test -d $OUTPUT_DIR
-    rm -rf $OUTPUT_DIR
+if test -d "$OUTPUT_DIR"
+    rm -rf "$OUTPUT_DIR"
 end
-mkdir -p $OUTPUT_DIR
+mkdir -p "$OUTPUT_DIR"
 
 # 実行可能ファイルのコピー
-cp $EXECUTABLE_NAME $OUTPUT_DIR/
+cp "$EXECUTABLE_NAME" "$OUTPUT_DIR/"
 
-# effects ディレクトリの作成
+# エフェクトとオブジェクトのコピー
+echo "リソースファイルをコピー中..."
 mkdir -p "$OUTPUT_DIR/effects"
 
-# ui/qml/effects 内のファイルをビルド出力へコピー
-cp "$SOURCE_DIR/ui/qml/effects/"* "$OUTPUT_DIR/effects/"
+# エフェクト (Filters)
+if test -d "$SOURCE_DIR/ui/qml/effects"
+    cp -r "$SOURCE_DIR/ui/qml/effects/"* "$OUTPUT_DIR/effects/"
+else
+    echo "警告: ui/qml/effects ディレクトリが見つかりません。"
+end
 
-# サンプルエフェクトがあればコピー (オプション)
-# if test -d "$SOURCE_DIR/examples/effects"
-#     cp -r "$SOURCE_DIR/examples/effects/"* "$OUTPUT_DIR/effects/"
-# end
-
-# assetsなど実行に必要なリソースがあればここにコピー処理を追加
-# cp -r "$SOURCE_DIR/assets" "$OUTPUT_DIR/"
+# オブジェクト (Generators) -> build/objects (並列配置)
+mkdir -p "$OUTPUT_DIR/objects"
+if test -d "$SOURCE_DIR/ui/qml/objects"
+    cp -r "$SOURCE_DIR/ui/qml/objects/"* "$OUTPUT_DIR/objects/"
+else
+    echo "警告: ui/qml/objects ディレクトリが見つかりません。"
+end
 
 # 4. クリーンアップ
-echo "Cleaning up temporary build files..."
-cd $SOURCE_DIR
-rm -rf $TEMP_BUILD_DIR
+echo "一時ファイルを削除中..."
+cd "$SOURCE_DIR"
+rm -rf "$TEMP_BUILD_DIR"
 
-echo "=== Build Complete ==="
-echo "Artifacts are located in: $OUTPUT_DIR"
-echo "You can place custom effects in: $OUTPUT_DIR/effects"
+echo "=== ビルド完了 ==="
+echo "成果物は $OUTPUT_DIR にあります。"
+echo "カスタムエフェクトは $OUTPUT_DIR/effects に追加可能です。"
+echo "カスタムオブジェクトは $OUTPUT_DIR/objects に追加可能です。"
