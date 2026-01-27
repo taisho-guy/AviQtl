@@ -109,9 +109,10 @@ Common.RinaWindow {
                     // Mapを配列に変換してRepeaterに渡す
                     Repeater {
                         model: Object.keys(modelData.params).sort()
-                        delegate: RowLayout {
+                        delegate: ColumnLayout {
                             Layout.fillWidth: true
-                            Layout.margins: 4
+                            spacing: 0
+
                             property string key: modelData
                             property var effectModel: effectRoot.effectModel
                             
@@ -121,15 +122,60 @@ Common.RinaWindow {
                             property bool isNumber: typeof effVal === 'number'
                             
                             // トラック情報と補間状態の取得
+                            property int curRelFrame: TimelineBridge ? (TimelineBridge.currentFrame - TimelineBridge.clipStartFrame) : 0
+                            property int clipDur: TimelineBridge ? TimelineBridge.clipDurationFrames : 100
+
                             property var tracks: effectModel.keyframeTracks
                             property var track: tracks ? tracks[key] : undefined
-                            property bool hasKeyframes: track && track.length > 0
-                            property string interpType: (hasKeyframes && track[0].interp) ? track[0].interp : "constant"
-                            property bool isMoving: isNumber && interpType !== "constant" && hasKeyframes
+                            property var kfs: track || []
+                            property bool hasKeyframes: kfs.length > 0
+
+                            function findInterval(kfs, cur, totalDur) {
+                                let s = 0, e = totalDur
+                                if (!kfs || kfs.length === 0) return {start: s, end: e}
+                                
+                                let foundStart = false
+                                for (let i = kfs.length - 1; i >= 0; i--) {
+                                    if (kfs[i].frame <= cur) {
+                                        s = kfs[i].frame
+                                        foundStart = true
+                                        if (i + 1 < kfs.length) {
+                                            e = kfs[i+1].frame
+                                        } else {
+                                            e = totalDur
+                                        }
+                                        break
+                                    }
+                                }
+                                if (!foundStart) {
+                                    e = kfs[0].frame
+                                    s = 0
+                                }
+                                return {start: s, end: e}
+                            }
+
+                            property var interval: findInterval(kfs, curRelFrame, clipDur)
+                            property int startFrame: interval.start
+                            property int endFrame: interval.end
 
                             // 値の取得（始点・終点）
-                            property var startVal: isNumber ? effectModel.evaluatedParam(key, 0) : effVal
-                            property var endVal: isNumber ? effectModel.evaluatedParam(key, TimelineBridge.clipDurationFrames) : effVal
+                            // tracksを依存関係に含めて再評価をトリガー
+                            property var startVal: isNumber ? (tracks, effectModel.evaluatedParam(key, startFrame)) : effVal
+                            property var endVal: isNumber ? (tracks, effectModel.evaluatedParam(key, endFrame)) : effVal
+
+                            function getInterpAt(f) {
+                                if (!kfs) return "linear"
+                                for(var i=0; i<kfs.length; i++) {
+                                    if(kfs[i].frame === f) return kfs[i].interp || "linear"
+                                }
+                                return "linear"
+                            }
+                            property string interpType: hasKeyframes ? getInterpAt(startFrame) : "constant"
+                            property bool isMoving: isNumber && (hasKeyframes || interpType !== "constant")
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Layout.margins: 4
 
                             // --- Left Slider (Start) ---
                             Slider {
@@ -138,7 +184,7 @@ Common.RinaWindow {
                                 from: (key === "scale" || key === "opacity") ? 0 : -1000
                                 to: (key === "scale") ? 500 : (key === "opacity" ? 1.0 : 1000)
                                 value: Number(startVal) || 0
-                                onMoved: updateParam(0, value)
+                                onMoved: updateParam(startFrame, value)
                                 onPressedChanged: if (pressed) inputting = true; else inputting = false
                             }
 
@@ -148,7 +194,7 @@ Common.RinaWindow {
                                 Layout.preferredWidth: 60
                                 text: isNumber ? (Number(startVal) || 0).toFixed(2) : ""
                                 selectByMouse: true
-                                onEditingFinished: updateParam(0, Number(text))
+                                onEditingFinished: updateParam(startFrame, Number(text))
                             }
 
                             // --- Center Button (Param Name & Interp Menu) ---
@@ -188,11 +234,11 @@ Common.RinaWindow {
                                     MenuItem { text: "加減速移動"; onTriggered: setInterp("ease_in_out") }
 
                                     function setInterp(type) {
-                                        let dur = TimelineBridge.clipDurationFrames
                                         let val = startVal
-                                        effectModel.setKeyframe(key, 0, val, type)
-                                        let eVal = isMoving ? endVal : val
-                                        effectModel.setKeyframe(key, dur, eVal, "linear")
+                                        effectModel.setKeyframe(key, startFrame, val, type)
+                                        if (!hasKeyframes) {
+                                            effectModel.setKeyframe(key, clipDur, val, "linear")
+                                        }
                                     }
                                 }
                             }
@@ -204,7 +250,7 @@ Common.RinaWindow {
                                 Layout.preferredWidth: 60
                                 text: isNumber ? (Number(endVal) || 0).toFixed(2) : ""
                                 selectByMouse: true
-                                onEditingFinished: updateParam(TimelineBridge.clipDurationFrames, Number(text))
+                                onEditingFinished: updateParam(endFrame, Number(text))
                             }
 
                             // --- Right Slider (End) ---
@@ -214,7 +260,7 @@ Common.RinaWindow {
                                 from: (key === "scale" || key === "opacity") ? 0 : -1000
                                 to: (key === "scale") ? 500 : (key === "opacity" ? 1.0 : 1000)
                                 value: Number(endVal) || 0
-                                onMoved: updateParam(TimelineBridge.clipDurationFrames, value)
+                                onMoved: updateParam(endFrame, value)
                                 onPressedChanged: if (pressed) inputting = true; else inputting = false
                             }
 
@@ -226,15 +272,78 @@ Common.RinaWindow {
                                 selectByMouse: true
                                 onEditingFinished: TimelineBridge.updateClipEffectParam(targetClipId, effIdx, key, text)
                             }
+                            } // End RowLayout
 
                             function updateParam(frame, val) {
-                                // UIの表示更新のためにローカルプロパティを更新（バインディング遅延対策）
-                                if (frame === 0) startVal = val
-                                else endVal = val
-
-                                let type = (frame === 0) ? interpType : "linear"
+                                let type = "linear"
+                                if (frame === startFrame) type = interpType
+                                else type = getInterpAt(frame)
+                                
                                 if (type === "constant") type = "linear"
                                 effectModel.setKeyframe(key, frame, val, type)
+                            }
+
+                            // --- Mini Timeline Bar ---
+                            Item {
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: 10
+                                Layout.leftMargin: 4; Layout.rightMargin: 4
+                                visible: isNumber
+
+                                Rectangle {
+                                    anchors.centerIn: parent
+                                    width: parent.width
+                                    height: 2
+                                    color: "#555"
+                                    
+                                    // Highlight active interval
+                                    Rectangle {
+                                        height: 4
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        color: "#4a9eff"
+                                        opacity: 0.7
+                                        x: (startFrame / clipDur) * parent.width
+                                        width: Math.max(0, ((endFrame - startFrame) / clipDur) * parent.width)
+                                        visible: clipDur > 0
+                                    }
+                                }
+
+                                // Keyframes
+                                Repeater {
+                                    model: kfs
+                                    Rectangle {
+                                        width: 4; height: 4
+                                        radius: 2
+                                        color: "white"
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        x: (modelData.frame / clipDur) * parent.width - 2
+                                        
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            acceptedButtons: Qt.RightButton
+                                            onClicked: effectModel.removeKeyframe(key, modelData.frame)
+                                        }
+                                    }
+                                }
+
+                                // Cursor
+                                Rectangle {
+                                    width: 1
+                                    height: parent.height
+                                    color: "red"
+                                    x: (curRelFrame / clipDur) * parent.width
+                                    visible: clipDur > 0
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    acceptedButtons: Qt.LeftButton
+                                    onDoubleClicked: (mouse) => {
+                                        let f = Math.round((mouse.x / width) * clipDur)
+                                        let val = effectModel.evaluatedParam(key, f)
+                                        effectModel.setKeyframe(key, f, val, "linear")
+                                    }
+                                }
                             }
                         }
                     }
