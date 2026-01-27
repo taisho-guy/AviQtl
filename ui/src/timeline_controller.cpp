@@ -1,5 +1,6 @@
 #include "timeline_controller.hpp"
 #include "commands.hpp"
+#include <QtGlobal>
 #include "../../engine/timeline/ecs.hpp"
 #include <algorithm>
 #include <QFile>
@@ -37,14 +38,18 @@ namespace Rina::UI {
                 return list;
             }
             case ParamsRole: {
-                 // プロパティアクセスのためにMapを返す
-                 // QML側では model.params.x のようにアクセスする
-                 QVariantMap map;
-                 for (const auto& eff : clip->effects) {
-                    QVariantMap p = eff->params();
-                    for(auto it = p.begin(); it != p.end(); ++it) map.insert(it.key(), it.value());
-                 }
-                 return map;
+                // QML側では model.params.x のようにアクセスする
+                // ここで「現在フレーム」の値を評価して返す（中間点の核）
+                auto* ctrl = qobject_cast<TimelineController*>(parent());
+                const int currentFrame = ctrl ? ctrl->currentFrame() : 0;
+                const int relFrame = currentFrame - clip->startFrame;
+
+                QVariantMap map;
+                for (const auto& eff : clip->effects) {
+                    const QVariantMap p = eff->evaluatedParams(relFrame);
+                    for (auto it = p.begin(); it != p.end(); ++it) map.insert(it.key(), it.value());
+                }
+                return map;
             }
             default: {
                 return QVariant();
@@ -487,9 +492,18 @@ namespace Rina::UI {
         for (auto& clip : m_clips) {
             if (clip.id == clipId) {
                 if (effectIndex >= 0 && effectIndex < clip.effects.size()) {
-                    clip.effects[effectIndex]->setParam(paramName, value);
-                    // パラメータ変更を通知
-                    updateActiveClipsList(); // プレビュー更新
+                    auto* eff = clip.effects[effectIndex];
+                    eff->setParam(paramName, value);
+
+                    // 数値パラメータは「現在フレームに中間点を打つ」
+                    // frameはクリップ先頭からの相対フレーム
+                    const int relFrame = m_currentFrame - clip.startFrame;
+                    if (value.canConvert<double>()) {
+                        // 暫定: 線形。UIが整ったらinterpTypeを渡す
+                        eff->setKeyframe(paramName, relFrame, value, "linear");
+                    }
+
+                    updateActiveClipsList(); // プレビュー更新（ClipModelが再評価）
 
                     // UI同期のために選択クリップの変更通知を発行
                     if (clipId == m_selectedClipId) {
@@ -625,6 +639,7 @@ namespace Rina::UI {
                 eObj["name"] = eff->name();
                 eObj["enabled"] = eff->isEnabled();
                 eObj["params"] = QJsonObject::fromVariantMap(eff->params());
+                eObj["keyframes"] = QJsonObject::fromVariantMap(eff->keyframeTracks());
                 effArray.append(eObj);
             }
             clipObj["effects"] = effArray;
@@ -695,6 +710,9 @@ namespace Rina::UI {
                     auto meta = Rina::Core::EffectRegistry::instance().getEffect(id);
                     auto* model = new EffectModel(id, name, params, meta.qmlSource, this);
                     model->setEnabled(eo["enabled"].toBool(true));
+                    if (eo.contains("keyframes")) {
+                        model->setKeyframeTracks(eo["keyframes"].toObject().toVariantMap());
+                    }
                     clip.effects.append(model);
                 }
             }

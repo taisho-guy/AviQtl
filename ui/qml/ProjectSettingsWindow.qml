@@ -64,10 +64,10 @@ Common.RinaWindow {
                 highlighted: true
                 onClicked: {
                     if (TimelineBridge) {
-                        TimelineBridge.setProjectWidth(parseInt(widthField.text))
-                        TimelineBridge.setProjectHeight(parseInt(heightField.text))
-                        TimelineBridge.setProjectFps(parseFloat(fpsField.text))
-                        TimelineBridge.setTotalFrames(parseInt(framesField.text))
+                        TimelineBridge.projectWidth = parseInt(widthField.text)
+                        TimelineBridge.projectHeight = parseInt(heightField.text)
+                        TimelineBridge.projectFps = parseFloat(fpsField.text)
+                        TimelineBridge.totalFrames = parseInt(framesField.text)
                         root.hide()
                     }
                 }
