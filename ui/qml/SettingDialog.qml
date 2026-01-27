@@ -232,13 +232,13 @@ Common.RinaWindow {
                                     MenuItem { text: "加速移動"; onTriggered: setInterp("ease_in") }
                                     MenuItem { text: "減速移動"; onTriggered: setInterp("ease_out") }
                                     MenuItem { text: "加減速移動"; onTriggered: setInterp("ease_in_out") }
-
-                                    function setInterp(type) {
-                                        let val = startVal
-                                        effectModel.setKeyframe(key, startFrame, val, type)
-                                        if (!hasKeyframes) {
-                                            effectModel.setKeyframe(key, clipDur, val, "linear")
-                                        }
+                                }
+                                
+                                function setInterp(type) {
+                                    let val = startVal
+                                    effectModel.setKeyframe(key, startFrame, val, type)
+                                    if (!hasKeyframes) {
+                                        effectModel.setKeyframe(key, clipDur, val, "linear")
                                     }
                                 }
                             }

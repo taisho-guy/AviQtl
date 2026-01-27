@@ -10,7 +10,9 @@ Item {
         source: parent.source
         // 値の変更を強制的に検知させる
         // paramsオブジェクト自体が置換されない場合でもプロパティアクセスで値を取得
-        radius: (parent.params && typeof parent.params.size === 'number') ? parent.params.size : 0
+        // 修正: paramsプロパティへの依存を明示的に記述し、再評価をトリガー
+        property var p: parent.params
+        radius: (p && p.size !== undefined) ? p.size : 0
         transparentBorder: true
         cached: false
     }

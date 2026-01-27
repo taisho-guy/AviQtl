@@ -153,6 +153,9 @@ Item {
                 TextObject {
                     visible: model.type === "text"
                     textContent: (p.text !== undefined) ? p.text : ""
+                    textSize: (p.textSize !== undefined) ? p.textSize : 64
+                    color: (p.color !== undefined) ? p.color : "#ffffff"
+                    opacity: (p.opacity !== undefined) ? p.opacity : 1.0
                     // 追加: IDを渡す
                     clipId: model.id
                 }

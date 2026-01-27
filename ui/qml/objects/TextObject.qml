@@ -6,13 +6,18 @@ import ".."
 Node {
     id: root
     property string textContent: "Text"
+    
+    // CompositeView(model.params=evaluatedParams) から渡される前提に統一
     property int textSize: 64
-    property color color: "white"
+    property color color: "#ffffff"
     property real opacity: 1.0
     property int clipId: -1
 
-    property list<QtObject> rawEffectModels: TimelineBridge && clipId >= 0 ? TimelineBridge.getClipEffectsModel(clipId) : []
-
+    // 修正: TimelineBridge.clipsに依存させることで、クリップ変更時にリストを再取得
+    property list<QtObject> rawEffectModels: {
+        var _ = TimelineBridge ? TimelineBridge.clips : null // 依存関係トリガー
+        return TimelineBridge && clipId >= 0 ? TimelineBridge.getClipEffectsModel(clipId) : []
+    }
     // フィルタリング
     property var filterModels: {
         var list = [];
