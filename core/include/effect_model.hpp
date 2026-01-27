@@ -123,7 +123,10 @@ namespace Rina::UI {
         for (int i = 0; i < track.size() - 1; ++i) {
             const int f0 = getFrame(track[i]);
             const int f1 = getFrame(track[i + 1]);
-            if (frame < f0 || frame >= f1) continue;
+            // `frame == f1` の場合も区間内として処理するため、
+            // `frame >= f1` ではなく `frame > f1` で判定する。
+            // ループ内でreturnするため、重複処理はされない。
+            if (frame < f0 || frame > f1) continue;
 
             const QVariant v0 = getValue(track[i]);
             const QVariant v1 = getValue(track[i + 1]);

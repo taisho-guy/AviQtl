@@ -79,6 +79,7 @@ Common.RinaWindow {
                     // 親デリゲートでデータとインデックスを公開
                     property int effectIndex: index
                     property var currentParams: modelData.params
+                    property var effectModel: modelData
 
                     // エフェクトヘッダー
                     Rectangle {
@@ -112,67 +113,128 @@ Common.RinaWindow {
                             Layout.fillWidth: true
                             Layout.margins: 4
                             property string key: modelData
+                            property var effectModel: effectRoot.effectModel
                             
                             // 親のコンテキストからデータを取得
                             property int effIdx: effectRoot.effectIndex
                             property var effVal: effectRoot.currentParams[key]
+                            property bool isNumber: typeof effVal === 'number'
                             
-                            Label { 
-                                text: key
-                                color: palette.text
-                                Layout.preferredWidth: 70 
-                                elide: Text.ElideRight
+                            // トラック情報と補間状態の取得
+                            property var tracks: effectModel.keyframeTracks
+                            property var track: tracks ? tracks[key] : undefined
+                            property bool hasKeyframes: track && track.length > 0
+                            property string interpType: (hasKeyframes && track[0].interp) ? track[0].interp : "constant"
+                            property bool isMoving: isNumber && interpType !== "constant" && hasKeyframes
+
+                            // 値の取得（始点・終点）
+                            property var startVal: isNumber ? effectModel.evaluatedParam(key, 0) : effVal
+                            property var endVal: isNumber ? effectModel.evaluatedParam(key, TimelineBridge.clipDurationFrames) : effVal
+
+                            // --- Left Slider (Start) ---
+                            Slider {
+                                visible: isNumber
+                                Layout.fillWidth: true
+                                from: (key === "scale" || key === "opacity") ? 0 : -1000
+                                to: (key === "scale") ? 500 : (key === "opacity" ? 1.0 : 1000)
+                                value: Number(startVal) || 0
+                                onMoved: updateParam(0, value)
+                                onPressedChanged: if (pressed) inputting = true; else inputting = false
                             }
 
-                            // 数値の場合: スライダー + 入力欄
-                            // 文字列の場合: テキストエリア
-                            Loader {
+                            // --- Left Box (Start) ---
+                            TextField {
+                                visible: isNumber
+                                Layout.preferredWidth: 60
+                                text: isNumber ? (Number(startVal) || 0).toFixed(2) : ""
+                                selectByMouse: true
+                                onEditingFinished: updateParam(0, Number(text))
+                            }
+
+                            // --- Center Button (Param Name & Interp Menu) ---
+                            Button {
+                                id: interpBtn
+                                Layout.preferredWidth: 100
+                                Layout.fillWidth: !isNumber
+                                text: {
+                                    if (!isNumber) return key
+                                    switch(interpType) {
+                                        case "linear": return key + " (直)";
+                                        case "ease_in": return key + " (加)";
+                                        case "ease_out": return key + " (減)";
+                                        case "ease_in_out": return key + " (加減)";
+                                        default: return key
+                                    }
+                                }
+                                enabled: isNumber
+                                onClicked: interpMenu.open()
+
+                                Menu {
+                                    id: interpMenu
+                                    y: interpBtn.height
+                                    MenuItem { 
+                                        text: "移動なし"
+                                        onTriggered: {
+                                            let track = effectModel.keyframeTracks[key] || []
+                                            for (let i = 0; i < track.length; i++) {
+                                                effectModel.removeKeyframe(key, track[i].frame)
+                                            }
+                                        }
+                                    }
+                                    MenuSeparator {}
+                                    MenuItem { text: "直線移動"; onTriggered: setInterp("linear") }
+                                    MenuItem { text: "加速移動"; onTriggered: setInterp("ease_in") }
+                                    MenuItem { text: "減速移動"; onTriggered: setInterp("ease_out") }
+                                    MenuItem { text: "加減速移動"; onTriggered: setInterp("ease_in_out") }
+
+                                    function setInterp(type) {
+                                        let dur = TimelineBridge.clipDurationFrames
+                                        let val = startVal
+                                        effectModel.setKeyframe(key, 0, val, type)
+                                        let eVal = isMoving ? endVal : val
+                                        effectModel.setKeyframe(key, dur, eVal, "linear")
+                                    }
+                                }
+                            }
+
+                            // --- Right Box (End) ---
+                            TextField {
+                                // 常に表示するが、移動なしの時は無効化（グレーアウト）
+                                enabled: isMoving
+                                Layout.preferredWidth: 60
+                                text: isNumber ? (Number(endVal) || 0).toFixed(2) : ""
+                                selectByMouse: true
+                                onEditingFinished: updateParam(TimelineBridge.clipDurationFrames, Number(text))
+                            }
+
+                            // --- Right Slider (End) ---
+                            Slider {
+                                enabled: isMoving
                                 Layout.fillWidth: true
-                                sourceComponent: typeof effVal === 'number' ? numberEditor : textEditor
+                                from: (key === "scale" || key === "opacity") ? 0 : -1000
+                                to: (key === "scale") ? 500 : (key === "opacity" ? 1.0 : 1000)
+                                value: Number(endVal) || 0
+                                onMoved: updateParam(TimelineBridge.clipDurationFrames, value)
+                                onPressedChanged: if (pressed) inputting = true; else inputting = false
                             }
-                            
-                            Component {
-                                id: numberEditor
-                                RowLayout {
-                                    Slider {
-                                        Layout.fillWidth: true
-                                        // 簡易的な範囲設定（本来はメタデータが必要）
-                                        from: (key === "scale" || key === "opacity") ? 0 : -1000
-                                        to: (key === "scale") ? 500 : (key === "opacity" ? 1.0 : 1000)
-                                        value: typeof effVal === 'number' ? effVal : 0
-                                        
-                                        onPressedChanged: {
-                                            if (pressed) inputting = true
-                                            else inputting = false
-                                        }
-                                        onMoved: {
-                                            if (TimelineBridge)
-                                                TimelineBridge.updateClipEffectParam(targetClipId, effIdx, key, value)
-                                        }
-                                    }
-                                    TextField {
-                                        Layout.preferredWidth: 60
-                                        text: typeof effVal === 'number' ? effVal.toFixed(2) : String(effVal)
-                                        selectByMouse: true
-                                        onEditingFinished: {
-                                            if (TimelineBridge)
-                                                TimelineBridge.updateClipEffectParam(targetClipId, effIdx, key, Number(text))
-                                        }
-                                    }
-                                }
+
+                            // --- Text Editor (Non-numeric) ---
+                            TextField {
+                                visible: !isNumber
+                                Layout.fillWidth: true
+                                text: String(effVal)
+                                selectByMouse: true
+                                onEditingFinished: TimelineBridge.updateClipEffectParam(targetClipId, effIdx, key, text)
                             }
-                            
-                            Component {
-                                id: textEditor
-                                TextField {
-                                    Layout.fillWidth: true
-                                    text: String(effVal)
-                                    selectByMouse: true
-                                    onEditingFinished: {
-                                        if (TimelineBridge)
-                                            TimelineBridge.updateClipEffectParam(targetClipId, effIdx, key, text)
-                                    }
-                                }
+
+                            function updateParam(frame, val) {
+                                // UIの表示更新のためにローカルプロパティを更新（バインディング遅延対策）
+                                if (frame === 0) startVal = val
+                                else endVal = val
+
+                                let type = (frame === 0) ? interpType : "linear"
+                                if (type === "constant") type = "linear"
+                                effectModel.setKeyframe(key, frame, val, type)
                             }
                         }
                     }

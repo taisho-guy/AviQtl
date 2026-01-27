@@ -421,6 +421,7 @@ namespace Rina::UI {
         transform.params["rotationZ"] = 0.0;
         transform.params["opacity"] = 1.0;
         newClip.effects.append(new EffectModel(transform.id, transform.name, transform.params, "", this));
+        connect(newClip.effects.last(), &EffectModel::keyframeTracksChanged, this, &TimelineController::updateActiveClipsList);
 
         // 2. Object Specific (Dynamic Loading)
         const auto meta = Rina::Core::EffectRegistry::instance().getEffect(type);
@@ -436,6 +437,7 @@ namespace Rina::UI {
             content.name = "Unknown";
         }
         newClip.effects.append(new EffectModel(content.id, content.name, content.params, content.qmlSource, this));
+        connect(newClip.effects.last(), &EffectModel::keyframeTracksChanged, this, &TimelineController::updateActiveClipsList);
 
         m_clips.append(newClip);
         emit clipsChanged();
@@ -495,13 +497,8 @@ namespace Rina::UI {
                     auto* eff = clip.effects[effectIndex];
                     eff->setParam(paramName, value);
 
-                    // 数値パラメータは「現在フレームに中間点を打つ」
-                    // frameはクリップ先頭からの相対フレーム
-                    const int relFrame = m_currentFrame - clip.startFrame;
-                    if (value.canConvert<double>()) {
-                        // 暫定: 線形。UIが整ったらinterpTypeを渡す
-                        eff->setKeyframe(paramName, relFrame, value, "linear");
-                    }
+                    // 自動キーフレーム追加を削除。
+                    // キーフレームの操作はUI側(SettingDialog)が model->setKeyframe() で直接行う。
 
                     updateActiveClipsList(); // プレビュー更新（ClipModelが再評価）
 
@@ -713,6 +710,7 @@ namespace Rina::UI {
                     if (eo.contains("keyframes")) {
                         model->setKeyframeTracks(eo["keyframes"].toObject().toVariantMap());
                     }
+                    connect(model, &EffectModel::keyframeTracksChanged, this, &TimelineController::updateActiveClipsList);
                     clip.effects.append(model);
                 }
             }
@@ -808,6 +806,7 @@ namespace Rina::UI {
             if (clip.id == clipId) {
                 auto* model = new EffectModel(effectData.id, effectData.name, effectData.params, effectData.qmlSource, this);
                 model->setEnabled(effectData.enabled);
+                connect(model, &EffectModel::keyframeTracksChanged, this, &TimelineController::updateActiveClipsList);
                 clip.effects.append(model);
                 if (m_selectedClipId == clipId) emit selectedClipIdChanged();
                 break;
