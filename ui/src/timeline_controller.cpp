@@ -7,6 +7,58 @@
 #include "effect_registry.hpp"
 
 namespace Rina::UI {
+
+    // === ClipModel Implementation ===
+    QHash<int, QByteArray> ClipModel::roleNames() const {
+        QHash<int, QByteArray> roles;
+        roles[IdRole] = "id";
+        roles[TypeRole] = "type";
+        roles[StartFrameRole] = "startFrame";
+        roles[DurationRole] = "durationFrames";
+        roles[LayerRole] = "layer";
+        roles[ParamsRole] = "params"; // Dynamic params access
+        roles[EffectsRole] = "effectModels";
+        return roles;
+    }
+
+    QVariant ClipModel::data(const QModelIndex& index, int role) const {
+        if (!index.isValid() || index.row() >= m_activeClips.size()) return QVariant();
+        const ClipData* clip = m_activeClips[index.row()];
+
+        switch (role) {
+            case IdRole: return clip->id;
+            case TypeRole: return clip->type;
+            case StartFrameRole: return clip->startFrame;
+            case DurationRole: return clip->durationFrames;
+            case LayerRole: return clip->layer;
+            case EffectsRole: {
+                QVariantList list;
+                for(auto* eff : clip->effects) list.append(QVariant::fromValue(eff));
+                return list;
+            }
+            case ParamsRole: {
+                 // プロパティアクセスのためにMapを返す
+                 // QML側では model.params.x のようにアクセスする
+                 QVariantMap map;
+                 for (const auto& eff : clip->effects) {
+                    QVariantMap p = eff->params();
+                    for(auto it = p.begin(); it != p.end(); ++it) map.insert(it.key(), it.value());
+                 }
+                 return map;
+            }
+            default: {
+                return QVariant();
+            }
+        }
+    }
+
+    void ClipModel::updateClips(const QList<ClipData*>& newClips) {
+        // 最適化: 差分検出ロジックを本来ここに書く
+        beginResetModel();
+        m_activeClips = newClips;
+        endResetModel();
+    }
+
     // === Commands Implementation ===
 
     AddClipCommand::AddClipCommand(TimelineController* controller, const QString& type, int startFrame, int layer)
@@ -92,6 +144,7 @@ namespace Rina::UI {
         , m_isPlaying(false)
         , m_activeObjectType("rect") // デフォルトは図形
     {
+        m_clipModel = new ClipModel(this);
         m_playbackTimer = new QTimer(this);
         m_playbackTimer->setTimerType(Qt::PreciseTimer);
         updateTimerInterval(); // 初期FPSで設定
@@ -170,7 +223,7 @@ namespace Rina::UI {
                         emit selectedClipDataChanged();
                         
                         // Update preview
-                        emit activeClipsChanged();
+                        updateActiveClipsList();
                         
                         // Trigger keyframe logic if needed
                         if (name == "x") updateObjectX(); 
@@ -199,7 +252,7 @@ namespace Rina::UI {
             m_currentFrame = frame;
             emit currentFrameChanged();
             updateClipActiveState();
-            emit activeClipsChanged();
+            updateActiveClipsList();
             updateObjectX();
         }
     }
@@ -401,7 +454,7 @@ namespace Rina::UI {
         emit clipDurationFramesChanged();
         emit layerChanged();
         emit activeObjectTypeChanged();
-        emit activeClipsChanged();
+        updateActiveClipsList();
         emit selectedClipIdChanged();
         emit selectedClipDataChanged();
     }
@@ -436,7 +489,7 @@ namespace Rina::UI {
                 if (effectIndex >= 0 && effectIndex < clip.effects.size()) {
                     clip.effects[effectIndex]->setParam(paramName, value);
                     // パラメータ変更を通知
-                    emit activeClipsChanged(); // プレビュー更新
+                    updateActiveClipsList(); // プレビュー更新
                 }
                 break;
             }
@@ -468,55 +521,23 @@ namespace Rina::UI {
         return list;
     }
 
-    QVariantList TimelineController::activeClips() const {
-        QVariantList list;
-        
+    void TimelineController::updateActiveClipsList() {
         // 現在フレームにあるクリップを抽出
-        QList<ClipData> active;
-        for (const auto& clip : m_clips) {
+        QList<ClipData*> active;
+        for (auto& clip : m_clips) {
             if (m_currentFrame >= clip.startFrame && 
                 m_currentFrame < clip.startFrame + clip.durationFrames) {
-                active.append(clip);
+                
+                active.append(&clip);
             }
         }
         
         // レイヤー順（昇順）にソート
-        std::sort(active.begin(), active.end(), [](const ClipData& a, const ClipData& b) {
-            return a.layer < b.layer;
+        std::sort(active.begin(), active.end(), [](const ClipData* a, const ClipData* b) {
+            return a->layer < b->layer;
         });
 
-        for (const auto& clip : active) {
-            QVariantMap map;
-            map["id"] = clip.id;
-            map["type"] = clip.type;
-            map["startFrame"] = clip.startFrame;
-            map["durationFrames"] = clip.durationFrames;
-            map["layer"] = clip.layer;
-            
-            // Flatten dynamic properties into the map
-            for (const auto& eff : clip.effects) {
-                QVariantMap params = eff->params();
-                for (auto it = params.begin(); it != params.end(); ++it) {
-                    map[it.key()] = it.value();
-                }
-            }
-            
-            // Add structured effects list for QML iteration
-            // Note: For QML Instantiator, we might still need this or use getClipEffectsModel
-            QVariantList effectsList;
-            for (const auto& eff : clip.effects) {
-                QVariantMap em;
-                em["id"] = eff->id();
-                em["name"] = eff->name();
-                em["enabled"] = eff->isEnabled();
-                em["params"] = eff->params();
-                effectsList.append(em);
-            }
-            map["effects"] = effectsList;
-
-            list.append(map);
-        }
-        return list;
+        m_clipModel->updateClips(active);
     }
 
     void TimelineController::log(const QString& msg) {
@@ -562,7 +583,7 @@ namespace Rina::UI {
 
         if (changed) {
             emit clipsChanged();
-            emit activeClipsChanged();
+            updateActiveClipsList();
             updateClipActiveState();
         }
     }
@@ -677,7 +698,7 @@ namespace Rina::UI {
         }
 
         emit clipsChanged();
-        emit activeClipsChanged();
+        updateActiveClipsList();
         emit selectedClipIdChanged();
         
         return true;
@@ -707,7 +728,7 @@ namespace Rina::UI {
                 if (m_clipDurationFrames != clip.durationFrames) { m_clipDurationFrames = clip.durationFrames; emit clipDurationFramesChanged(); }
                 
                 // 選択変更時にプレビュー更新（選択枠表示などのため）
-                emit activeClipsChanged();
+                updateActiveClipsList();
                 return;
             }
         }

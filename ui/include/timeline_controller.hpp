@@ -10,6 +10,7 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QUndoStack>
+#include <QAbstractListModel>
 #include "effect_model.hpp" // 念のため維持
 
 namespace Rina::UI {
@@ -26,6 +27,46 @@ namespace Rina::UI {
         int frame;
         float value;
         int interpolationType; // 0: Linear
+    };
+
+    // Moved out of TimelineController for ClipModel access
+    struct ClipData {
+        int id;
+        QString type;
+        int startFrame;
+        int durationFrames;
+        int layer;
+        
+        // エフェクトスタック
+        QList<EffectModel*> effects;
+    };
+
+    class ClipModel : public QAbstractListModel {
+        Q_OBJECT
+    public:
+        enum Roles {
+            IdRole = Qt::UserRole + 1,
+            TypeRole,
+            StartFrameRole,
+            DurationRole,
+            LayerRole,
+            ParamsRole, // Flattened params
+            EffectsRole // QList<QObject*> for effect models
+        };
+
+        explicit ClipModel(QObject* parent = nullptr) : QAbstractListModel(parent) {}
+
+        int rowCount(const QModelIndex& parent = QModelIndex()) const override {
+            return m_activeClips.size();
+        }
+
+        QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
+        QHash<int, QByteArray> roleNames() const override;
+
+        void updateClips(const QList<ClipData*>& newClips);
+
+    private:
+        QList<ClipData*> m_activeClips;
     };
 
     class TimelineController : public QObject {
@@ -50,7 +91,7 @@ namespace Rina::UI {
         Q_PROPERTY(bool isPlaying READ isPlaying NOTIFY isPlayingChanged)
         Q_PROPERTY(QString activeObjectType READ activeObjectType NOTIFY activeObjectTypeChanged)
         Q_PROPERTY(QVariantList clips READ clips NOTIFY clipsChanged)
-        Q_PROPERTY(QVariantList activeClips READ activeClips NOTIFY activeClipsChanged)
+        Q_PROPERTY(Rina::UI::ClipModel* clipModel READ clipModel CONSTANT)
         Q_PROPERTY(int selectedClipId READ selectedClipId NOTIFY selectedClipIdChanged)
 
     public:
@@ -102,7 +143,7 @@ namespace Rina::UI {
 
         Q_INVOKABLE void log(const QString& msg);
         QVariantList clips() const;
-        QVariantList activeClips() const;
+        ClipModel* clipModel() const { return m_clipModel; }
 
         // クリップの配置・長さを更新（ID指定）
         Q_INVOKABLE void updateClip(int id, int layer, int startFrame, int duration);
@@ -134,6 +175,7 @@ namespace Rina::UI {
         void addEffectInternal(int clipId, const EffectData& effectData);
         void removeEffectInternal(int clipId, int effectIndex);
         EffectData createEffectData(const QString& id);
+        void updateActiveClipsList();
 
     signals:
         void projectWidthChanged();
@@ -151,7 +193,6 @@ namespace Rina::UI {
         void isPlayingChanged();
         void activeObjectTypeChanged();
         void clipsChanged(); // 追加
-        void activeClipsChanged();
         void selectedClipIdChanged();
 
     private:
@@ -161,17 +202,8 @@ namespace Rina::UI {
         void updateTimerInterval();
     float calculateInterpolatedValue(int frame);
 
-        struct ClipData {
-            int id;
-            QString type;
-            int startFrame;
-            int durationFrames;
-            int layer;
-            
-            // エフェクトスタック
-            QList<EffectModel*> effects;
-        };
         QList<ClipData> m_clips;
+        ClipModel* m_clipModel;
         int m_nextClipId = 1;
 
         QUndoStack* m_undoStack;

@@ -26,6 +26,11 @@ Item {
         // アスペクト比計算
         property double aspect: projW / projH
         
+        // 現在のクリップ内での相対時間 (0.0 ~ 1.0)
+        // 他のコンポーネントから参照される可能性を考慮して定義
+        property double currentClipTimeRatio: TimelineBridge ? 
+            Math.max(0.0, Math.min(1.0, (TimelineBridge.currentFrame - TimelineBridge.clipStartFrame) / TimelineBridge.clipDurationFrames)) : 0.0
+
         // 親に収まる最大サイズを計算 (Letterboxing)
         width: Math.min(parent.width, parent.height * aspect)
         height: Math.min(parent.height, parent.width / aspect)
@@ -91,39 +96,41 @@ Item {
 
         // 動的オブジェクト生成用
         Instantiator {
-            model: TimelineBridge ? TimelineBridge.activeClips : []
+            // QVariantListではなく、C++のAbstractListModelを使用
+            model: TimelineBridge ? TimelineBridge.clipModel : null
             
             onObjectAdded: (index, object) => {
-                console.log("[CompositeView] Adding object to scene:", index)
                 object.parent = sceneRoot
             }
             onObjectRemoved: (index, object) => {
-                console.log("[CompositeView] Removing object from scene:", index)
                 object.parent = null
             }
 
             delegate: Node {
+                // モデルロールから直接値を取得
+                property var p: model.params 
+
                 // 座標変換: 中心(0,0)、Y軸下プラス(AviUtl互換)
                 // Qt3DはY上がプラスなので、入力を反転させる
-                x: (modelData.x !== undefined) ? modelData.x : 0
-                y: (modelData.y !== undefined) ? -modelData.y : 0
-                z: ((modelData.z !== undefined) ? modelData.z : 0) + (modelData.layer * 50)
+                x: (p.x !== undefined) ? p.x : 0
+                y: (p.y !== undefined) ? -p.y : 0
+                z: ((p.z !== undefined) ? p.z : 0) + (model.layer * 5)
                 
                 // 中心座標 (Pivot)
                 pivot: Qt.vector3d(
-                    (modelData.anchorX !== undefined) ? modelData.anchorX : 0,
-                    (modelData.anchorY !== undefined) ? -modelData.anchorY : 0,
-                    (modelData.anchorZ !== undefined) ? modelData.anchorZ : 0
+                    (p.anchorX !== undefined) ? p.anchorX : 0,
+                    (p.anchorY !== undefined) ? -p.anchorY : 0,
+                    (p.anchorZ !== undefined) ? p.anchorZ : 0
                 )
 
                 // 3軸回転
-                eulerRotation.x: (modelData.rotationX !== undefined) ? modelData.rotationX : 0
-                eulerRotation.y: (modelData.rotationY !== undefined) ? -modelData.rotationY : 0
-                eulerRotation.z: (modelData.rotationZ !== undefined) ? -modelData.rotationZ : 0
+                eulerRotation.x: (p.rotationX !== undefined) ? p.rotationX : 0
+                eulerRotation.y: (p.rotationY !== undefined) ? -p.rotationY : 0
+                eulerRotation.z: (p.rotationZ !== undefined) ? -p.rotationZ : 0
 
                 // 拡大率と縦横比
-                property real baseScale: (modelData.scale !== undefined) ? modelData.scale / 100.0 : 1.0
-                property real asp: (modelData.aspect !== undefined) ? modelData.aspect : 0.0
+                property real baseScale: (p.scale !== undefined) ? p.scale / 100.0 : 1.0
+                property real asp: (p.aspect !== undefined) ? p.aspect : 0.0
                 scale: Qt.vector3d(
                     baseScale * (asp >= 0 ? (1.0 + asp) : 1.0),
                     baseScale * (asp < 0 ? (1.0 - asp) : 1.0),
@@ -131,23 +138,21 @@ Item {
                 )
 
                 // 不透明度 (全体)
-                opacity: (modelData.opacity !== undefined) ? modelData.opacity : 1.0
+                opacity: (p.opacity !== undefined) ? p.opacity : 1.0
 
                 RectObject {
-                    visible: modelData.type === "rect"
-                    sizeW: (modelData.width !== undefined) ? modelData.width : 100
-                    sizeH: (modelData.height !== undefined) ? modelData.height : 100
-                    color: (modelData.color !== undefined) ? modelData.color : "#ffffff"
-                    opacity: (modelData.opacity !== undefined) ? modelData.opacity : 1.0
+                    visible: model.type === "rect"
+                    sizeW: (p.sizeW !== undefined) ? p.sizeW : 100
+                    sizeH: (p.sizeH !== undefined) ? p.sizeH : 100
+                    color: (p.color !== undefined) ? p.color : "#ffffff"
+                    opacity: (p.opacity !== undefined) ? p.opacity : 1.0
                 }
 
                 TextObject {
-                    visible: modelData.type === "text"
-                    textContent: (modelData.text !== undefined) ? modelData.text : ""
-                    textSize: (modelData.textSize !== undefined) ? modelData.textSize : 64
-                    color: (modelData.color !== undefined) ? modelData.color : "#ffffff"
-                    opacity: (modelData.opacity !== undefined) ? modelData.opacity : 1.0
-                    clipId: modelData.id
+                    visible: model.type === "text"
+                    textContent: (p.text !== undefined) ? p.text : ""
+                    // QList<QObject*>として取得したeffectModelsを渡す
+                    effectModels: model.effectModels
                 }
             }
         }

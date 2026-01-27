@@ -28,7 +28,7 @@ ApplicationWindow {
         target: TimelineBridge
         function onSelectedClipIdChanged() { reload() }
         // パラメータ変更時の反映用（入力中はリロードしない）
-        function onActiveClipsChanged() { if(!inputting) reload() }
+        function onSelectedClipDataChanged() { if(!inputting) reload() }
     }
 
     Component.onCompleted: reload()
