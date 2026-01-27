@@ -9,9 +9,11 @@ Node {
     property real sizeH: 100
     property color color: "#66aa99"
     property real opacity: 1.0
+    // 追加: 親からIDを受け取る
+    property int clipId: -1
 
-    // データモデル: C++のEffectModel(QObject)リストを受け取る
-    property list<QtObject> effectModels: TimelineBridge ? TimelineBridge.getClipEffectsModel(modelData.id) : []
+    // 修正: modelData.id ではなく、渡された clipId を使用
+    property list<QtObject> effectModels: TimelineBridge && clipId >= 0 ? TimelineBridge.getClipEffectsModel(clipId) : []
 
     // フィルタパラメータの抽出 (リアクティブ)
     property var blurModel: {

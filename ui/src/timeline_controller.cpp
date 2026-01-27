@@ -490,6 +490,11 @@ namespace Rina::UI {
                     clip.effects[effectIndex]->setParam(paramName, value);
                     // パラメータ変更を通知
                     updateActiveClipsList(); // プレビュー更新
+
+                    // UI同期のために選択クリップの変更通知を発行
+                    if (clipId == m_selectedClipId) {
+                        emit selectedClipDataChanged();
+                    }
                 }
                 break;
             }
@@ -837,6 +842,7 @@ namespace Rina::UI {
             // コマンド生成時に削除対象エフェクトを渡すなどの拡張が必要だが、
             // ここではシンプルに index ベースで処理する
             auto* cmd = new RemoveEffectCommand(this, clipId, effectIndex);
+            cmd->setRemovedEffect(removed);
             m_undoStack->push(cmd);
         }
     }

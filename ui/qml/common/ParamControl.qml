@@ -22,6 +22,17 @@ RowLayout {
     
     property bool isRangeMode: Math.abs(startValue - endValue) > 0.001
     
+    // 関数をrootレベルに移動
+    function getInterpolationLabel() {
+        switch(root.interpolationType) {
+            case "linear": return "━━"
+            case "ease_in": return "╱━"
+            case "ease_out": return "━╲"
+            case "ease_in_out": return "╱╲"
+            default: return "━━"
+        }
+    }
+
     SystemPalette { id: palette; colorGroup: SystemPalette.Active }
     
     // 左側スライダー（開始値）
@@ -105,16 +116,6 @@ RowLayout {
         }
         
         onClicked: root.paramButtonClicked()
-        
-        function getInterpolationLabel() {
-            switch(root.interpolationType) {
-                case "linear": return "━━"
-                case "ease_in": return "╱━"
-                case "ease_out": return "━╲"
-                case "ease_in_out": return "╱╲"
-                default: return "━━"
-            }
-        }
     }
     
     // 右側数値ボックス

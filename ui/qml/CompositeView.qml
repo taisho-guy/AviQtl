@@ -146,6 +146,8 @@ Item {
                     sizeH: (p.sizeH !== undefined) ? p.sizeH : 100
                     color: (p.color !== undefined) ? p.color : "#ffffff"
                     opacity: (p.opacity !== undefined) ? p.opacity : 1.0
+                    // 追加: IDを渡す
+                    clipId: model.id
                 }
 
                 TextObject {
