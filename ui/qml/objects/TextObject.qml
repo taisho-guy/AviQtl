@@ -11,12 +11,24 @@ Node {
     property real opacity: 1.0
     property int clipId: -1
 
-    property list<QtObject> effectModels: TimelineBridge ? TimelineBridge.getClipEffectsModel(clipId) : []
+    property list<QtObject> rawEffectModels: TimelineBridge && clipId >= 0 ? TimelineBridge.getClipEffectsModel(clipId) : []
+
+    // フィルタリング
+    property var filterModels: {
+        var list = [];
+        for(var i=0; i<rawEffectModels.length; i++) {
+            var eff = rawEffectModels[i];
+            if (eff.id !== "rect" && eff.id !== "text" && eff.id !== "transform") {
+                list.push(eff);
+            }
+        }
+        return list;
+    }
     
     function getBlurPadding() {
-        for(let i=0; i<effectModels.length; i++) {
-            if(effectModels[i].id === "blur" && effectModels[i].enabled) {
-                return (effectModels[i].params["size"] || 0);
+        for(let i=0; i<rawEffectModels.length; i++) {
+            if(rawEffectModels[i].id === "blur" && rawEffectModels[i].enabled) {
+                return (rawEffectModels[i].params["size"] || 0);
             }
         }
         return 0;
@@ -48,7 +60,7 @@ Node {
     EffectChain {
         id: effector
         sourceItem: sourceItem
-        effectModels: root.effectModels
+        effectModels: root.filterModels
         width: sourceItem.width
         height: sourceItem.height
         visible: true

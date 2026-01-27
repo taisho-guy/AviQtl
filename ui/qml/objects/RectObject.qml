@@ -12,13 +12,26 @@ Node {
     // 追加: 親からIDを受け取る
     property int clipId: -1
 
-    // 修正: modelData.id ではなく、渡された clipId を使用
-    property list<QtObject> effectModels: TimelineBridge && clipId >= 0 ? TimelineBridge.getClipEffectsModel(clipId) : []
+    // 生のデータモデルを取得
+    property list<QtObject> rawEffectModels: TimelineBridge && clipId >= 0 ? TimelineBridge.getClipEffectsModel(clipId) : []
+
+    // エフェクトチェーン用に、オブジェクト定義(rect)やTransformを除外したリストを生成
+    property var filterModels: {
+        var list = [];
+        for(var i=0; i<rawEffectModels.length; i++) {
+            var eff = rawEffectModels[i];
+            // "rect", "text", "transform" は描画フィルタではないため除外
+            if (eff.id !== "rect" && eff.id !== "text" && eff.id !== "transform") {
+                list.push(eff);
+            }
+        }
+        return list;
+    }
 
     // フィルタパラメータの抽出 (リアクティブ)
     property var blurModel: {
-        for(let i=0; i<effectModels.length; i++) 
-            if(effectModels[i].id === "blur") return effectModels[i];
+        for(let i=0; i<rawEffectModels.length; i++) 
+            if(rawEffectModels[i].id === "blur") return rawEffectModels[i];
         return null;
     }
     
@@ -45,7 +58,7 @@ Node {
     EffectChain {
         id: effector
         sourceItem: sourceItem
-        effectModels: root.effectModels
+        effectModels: root.filterModels
         anchors.fill: sourceItem
         visible: true
     }

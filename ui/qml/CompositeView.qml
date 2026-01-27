@@ -153,8 +153,8 @@ Item {
                 TextObject {
                     visible: model.type === "text"
                     textContent: (p.text !== undefined) ? p.text : ""
-                    // QList<QObject*>として取得したeffectModelsを渡す
-                    effectModels: model.effectModels
+                    // 追加: IDを渡す
+                    clipId: model.id
                 }
             }
         }
