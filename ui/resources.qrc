@@ -4,7 +4,7 @@
         <file>qml/MainWindow.qml</file>
         <file>qml/TimelineWindow.qml</file>
         <file>qml/SettingDialog.qml</file>
-        <file>qml/SettingsWindow.qml</file>
+        <file>qml/ProjectSettingsWindow.qml</file>
         <file>qml/common/RinaWindow.qml</file>
         <file>qml/common/ParamControl.qml</file>
         <file>qml/objects/TextObject.qml</file>

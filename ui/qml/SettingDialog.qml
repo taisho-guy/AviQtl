@@ -7,11 +7,11 @@ import Qt.labs.qmlmodels 1.0
 import Qt.labs.qmlmodels 1.0
 import QtQml 2.15
 
-ApplicationWindow {
+Common.RinaWindow {
     id: root
     width: 350
     height: 500
-    title: "Object Settings"
+    title: "設定ダイアログ"
     color: palette.window
     visible: true
     x: 500

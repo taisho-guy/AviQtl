@@ -24,7 +24,7 @@ namespace Rina::UI {
         spawnWindow(engine, "timeline", "qrc:/qml/TimelineWindow.qml", "Timeline", 1280, 300, 100, 600, true);
 
         // プロジェクト設定
-        spawnWindow(engine, "projectSettings", "qrc:/qml/SettingsWindow.qml", "Project Settings", 450, 250, 800, 100, true);
+        spawnWindow(engine, "projectSettings", "qrc:/qml/ProjectSettingsWindow.qml", "Project Settings", 450, 250, 800, 100, true);
 
         // オブジェクト設定（AviUtl風の設定ダイアログ相当）：初期は非表示で生成だけしておく
         spawnWindow(engine, "objectSettings", "qrc:/qml/SettingDialog.qml", "Object Settings", 400, 600, 800, 420, false);

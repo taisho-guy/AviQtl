@@ -58,13 +58,13 @@ ApplicationWindow {
                 onTriggered: if (WindowManager) WindowManager.timelineVisible = checked
             }
             MenuItem {
-                text: "Project Settings"
+                text: "Project Settings..."
                 checkable: true
                 checked: WindowManager ? WindowManager.projectSettingsVisible : false
                 onTriggered: if (WindowManager) WindowManager.projectSettingsVisible = checked
             }
             MenuItem {
-                text: "Object Settings"
+                text: "Setting Dialog"
                 checkable: true
                 checked: WindowManager ? WindowManager.objectSettingsVisible : false
                 onTriggered: if (WindowManager) WindowManager.objectSettingsVisible = checked
