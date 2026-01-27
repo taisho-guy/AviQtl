@@ -6,6 +6,7 @@
         <file>qml/SettingDialog.qml</file>
         <file>qml/SettingsWindow.qml</file>
         <file>qml/common/RinaWindow.qml</file>
+        <file>qml/common/ParamControl.qml</file>
         <file>qml/objects/TextObject.qml</file>
         <file>qml/objects/RectObject.qml</file>
         <file>qml/EffectChain.qml</file>

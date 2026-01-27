@@ -3,6 +3,7 @@ import QtQuick.Window 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 import "common" as Common
+import "common" // ParamControl用
 
 Common.RinaWindow {
     id: root
@@ -88,31 +89,100 @@ Common.RinaWindow {
         Loader {
             Layout.columnSpan: 2
             Layout.fillWidth: true
+            Layout.fillHeight: true
             sourceComponent: {
                 if (!TimelineBridge) return null;
                 if (TimelineBridge.activeObjectType === "text") return textSettings;
                 return shapeSettings;
             }
         }
-
-        Component {
-            id: textSettings
-            GridLayout {
-                columns: 2
-                Label { text: "Text Content:"; color: palette.text }
-                TextField { 
-                    text: (TimelineBridge.selectedClipData.text !== undefined) ? TimelineBridge.selectedClipData.text : ""
-                    onEditingFinished: TimelineBridge.setClipProperty("text", text)
-                    Layout.fillWidth: true
+    }
+    
+    // テキストオブジェクト用設定
+    Component {
+        id: textSettings
+        ScrollView {
+            clip: true
+            
+            ColumnLayout {
+                width: parent.width
+                spacing: 10
+                
+                Label { 
+                    text: "テキスト設定"
+                    color: palette.text
+                    font.bold: true
                 }
+                
+                // テキスト内容（中間点非対応）
+                RowLayout {
+                    Layout.fillWidth: true
+                    Label { 
+                        text: "テキスト:"
+                        color: palette.text
+                        Layout.preferredWidth: 80
+                    }
+                    TextField {
+                        Layout.fillWidth: true
+                        text: TimelineBridge.selectedClipData.text !== undefined ? TimelineBridge.selectedClipData.text : ""
+                        onEditingFinished: TimelineBridge.setClipProperty("text", text)
+                    }
+                }
+                
+                // X座標（中間点対応）
+                ParamControl {
+                    Layout.fillWidth: true
+                    paramName: "X"
+                    minValue: -1920
+                    maxValue: 3840
+                    decimals: 0
+                    startValue: TimelineBridge.selectedClipData.x !== undefined ? TimelineBridge.selectedClipData.x : 0
+                    endValue: TimelineBridge.selectedClipData.x !== undefined ? TimelineBridge.selectedClipData.x : 0
+                    onStartValueModified: (value) => TimelineBridge.setClipProperty("x", value)
+                    onEndValueModified: (value) => TimelineBridge.setClipProperty("x", value)
+                }
+                
+                // Y座標（中間点対応）
+                ParamControl {
+                    Layout.fillWidth: true
+                    paramName: "Y"
+                    minValue: -1080
+                    maxValue: 2160
+                    decimals: 0
+                    startValue: TimelineBridge.selectedClipData.y !== undefined ? TimelineBridge.selectedClipData.y : 0
+                    endValue: TimelineBridge.selectedClipData.y !== undefined ? TimelineBridge.selectedClipData.y : 0
+                    onStartValueModified: (value) => TimelineBridge.setClipProperty("y", value)
+                    onEndValueModified: (value) => TimelineBridge.setClipProperty("y", value)
+                }
+                
+                // 拡大率（中間点対応）
+                ParamControl {
+                    Layout.fillWidth: true
+                    paramName: "拡大率"
+                    minValue: 0
+                    maxValue: 800
+                    decimals: 1
+                    startValue: TimelineBridge.selectedClipData.scale !== undefined ? TimelineBridge.selectedClipData.scale : 100
+                    endValue: TimelineBridge.selectedClipData.scale !== undefined ? TimelineBridge.selectedClipData.scale : 100
+                    onStartValueModified: (value) => TimelineBridge.setClipProperty("scale", value)
+                    onEndValueModified: (value) => TimelineBridge.setClipProperty("scale", value)
+                }
+                
+                Item { Layout.fillHeight: true }  // Spacer
             }
         }
-
-        Component {
-            id: shapeSettings
-            Label { text: "Shape Settings (Placeholder)"; color: palette.text }
-        }
-        
-        Item { Layout.fillHeight: true; Layout.columnSpan: 2 } // Spacer
     }
+    
+    // 図形オブジェクト用設定
+    Component {
+        id: shapeSettings
+        ColumnLayout {
+            Label { 
+                text: "図形設定（未実装）"
+                color: palette.text
+            }
+            Item { Layout.fillHeight: true }
+        }
+    }
+
 }
