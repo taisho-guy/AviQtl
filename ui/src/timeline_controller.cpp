@@ -17,6 +17,7 @@ namespace Rina::UI {
         roles[StartFrameRole] = "startFrame";
         roles[DurationRole] = "durationFrames";
         roles[LayerRole] = "layer";
+        roles[Qt::UserRole + 100] = "qmlSource"; // 新しいロールを追加
         roles[ParamsRole] = "params"; // Dynamic params access
         roles[EffectsRole] = "effectModels";
         return roles;
@@ -32,6 +33,10 @@ namespace Rina::UI {
             case StartFrameRole: return clip->startFrame;
             case DurationRole: return clip->durationFrames;
             case LayerRole: return clip->layer;
+            case Qt::UserRole + 100: {
+                auto meta = Rina::Core::EffectRegistry::instance().getEffect(clip->type);
+                return meta.qmlSource;
+            }
             case EffectsRole: {
                 QVariantList list;
                 for(auto* eff : clip->effects) list.append(QVariant::fromValue(eff));
@@ -521,6 +526,17 @@ namespace Rina::UI {
             map["startFrame"] = clip.startFrame;
             map["durationFrames"] = clip.durationFrames;
             map["layer"] = clip.layer;
+            
+            // オブジェクトのQMLパスを取得して追加
+            auto meta = Rina::Core::EffectRegistry::instance().getEffect(clip.type);
+            if (!meta.qmlSource.isEmpty()) {
+                map["qmlSource"] = meta.qmlSource;
+            } else {
+                // 見つからない場合のフォールバック
+                // 実行時のカレントディレクトリ基準になるので注意が必要
+                if(clip.type == "text") map["qmlSource"] = "file:objects/TextObject.qml";
+                else if(clip.type == "rect") map["qmlSource"] = "file:objects/RectObject.qml";
+            }
             
             // Include some properties for list view if needed
             // 暫定: テキストエフェクトがあればそのテキストを表示

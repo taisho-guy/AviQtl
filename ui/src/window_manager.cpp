@@ -18,16 +18,16 @@ namespace Rina::UI {
 
     void WindowManager::spawnInitialWindows(QQmlEngine* engine) {
         // メインビュー: Windowルート(MainWindow)を開く（CompositeViewはItemルートのため）
-        spawnWindow(engine, "main", "qrc:/qml/MainWindow.qml", "Rina Main Preview", 640, 480, 100, 100, true);
+        spawnWindow(engine, "main", "qrc:/qt/qml/Rina/ui/qml/MainWindow.qml", "Rina Main Preview", 640, 480, 100, 100, true);
         
         // タイムライン
-        spawnWindow(engine, "timeline", "qrc:/qml/TimelineWindow.qml", "Timeline", 1280, 300, 100, 600, true);
+        spawnWindow(engine, "timeline", "qrc:/qt/qml/Rina/ui/qml/TimelineWindow.qml", "Timeline", 1280, 300, 100, 600, true);
 
         // プロジェクト設定
-        spawnWindow(engine, "projectSettings", "qrc:/qml/ProjectSettingsWindow.qml", "Project Settings", 450, 250, 800, 100, true);
+        spawnWindow(engine, "projectSettings", "qrc:/qt/qml/Rina/ui/qml/ProjectSettingsWindow.qml", "Project Settings", 450, 250, 800, 100, true);
 
         // オブジェクト設定（AviUtl風の設定ダイアログ相当）：初期は非表示で生成だけしておく
-        spawnWindow(engine, "objectSettings", "qrc:/qml/SettingDialog.qml", "Object Settings", 400, 600, 800, 420, false);
+        spawnWindow(engine, "objectSettings", "qrc:/qt/qml/Rina/ui/qml/SettingDialog.qml", "Object Settings", 400, 600, 800, 420, false);
     }
 
     void WindowManager::spawnWindow(QQmlEngine* engine,

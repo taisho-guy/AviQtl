@@ -1,7 +1,7 @@
 import QtQuick 2.15
 import QtQuick3D 6.0
 import QtQml 2.15
-import "objects"
+// import "objects"
 
 Item {
     id: root
@@ -140,24 +140,37 @@ Item {
                 // 不透明度 (全体)
                 opacity: (p.opacity !== undefined) ? p.opacity : 1.0
 
-                RectObject {
-                    visible: model.type === "rect"
-                    sizeW: (p.sizeW !== undefined) ? p.sizeW : 100
-                    sizeH: (p.sizeH !== undefined) ? p.sizeH : 100
-                    color: (p.color !== undefined) ? p.color : "#ffffff"
-                    opacity: (p.opacity !== undefined) ? p.opacity : 1.0
-                    // 追加: IDを渡す
-                    clipId: model.id
-                }
+                // Loader (2D) は 3D シーン内では機能しないため、
+                // Qt.createComponent を使用して Node 派生クラスを動的に生成する
+                Node {
+                    id: objectContainer
+                    
+                    property string sourceUrl: model.qmlSource || ""
+                    property var createdObject: null
 
-                TextObject {
-                    visible: model.type === "text"
-                    textContent: (p.text !== undefined) ? p.text : ""
-                    textSize: (p.textSize !== undefined) ? p.textSize : 64
-                    color: (p.color !== undefined) ? p.color : "#ffffff"
-                    opacity: (p.opacity !== undefined) ? p.opacity : 1.0
-                    // 追加: IDを渡す
-                    clipId: model.id
+                    onSourceUrlChanged: reload()
+                    Component.onCompleted: reload()
+
+                    function reload() {
+                        if (createdObject) {
+                            createdObject.destroy()
+                            createdObject = null
+                        }
+
+                        if (sourceUrl === "") return
+
+                        var component = Qt.createComponent(sourceUrl)
+                        if (component.status === Component.Ready) {
+                            createdObject = component.createObject(objectContainer, {
+                                "opacity": (p.opacity !== undefined) ? p.opacity : 1.0,
+                                "clipId": model.id
+                            })
+                        } else {
+                            console.warn("Error loading component:", component.errorString())
+                            // 非同期ロードが必要な場合のハンドリング（今回は簡易実装）
+                            component.statusChanged.connect(reload)
+                        }
+                    }
                 }
             }
         }

@@ -1,63 +1,72 @@
 import QtQuick
-import QtQml
+import QtQuick.Effects
 
 Item {
     id: root
-    property var sourceItem: null
+    property Item sourceItem
     property var effectModels: []
 
-    ShaderEffectSource {
-        id: sourceProxy
-        sourceItem: root.sourceItem
-        visible: false
-        live: true
-        recursive: false
+    // 外部参照用プロパティ
+    readonly property Item outputItem: {
+        var lastIdx = lastActiveIndex();
+        if (lastIdx < 0) return root.sourceItem;
+        var loader = pipeline.objectAt(lastIdx);
+        return loader ? loader.item : root.sourceItem;
     }
 
+    // このItem自体のサイズはソースに合わせる
+    implicitWidth: sourceItem ? sourceItem.width : 0
+    implicitHeight: sourceItem ? sourceItem.height : 0
+
+    // パイプライン構築
     Instantiator {
         id: pipeline
         model: root.effectModels
-        
+
         delegate: Loader {
             id: stageLoader
-            property var inputSource: index === 0 ? sourceProxy : pipeline.objectAt(index - 1).outputTexture
+            // 親をrootにすることでサイズ追従を簡単にする
+            // parent: root // Instantiatorのdelegate内なので自動的に管理されるが、明示的な配置が必要なら anchors.fill: parent
+            anchors.fill: parent
             
-            active: modelData.qmlSource !== "" && modelData.enabled
-            source: modelData.qmlSource
-            
-            property var outputTexture: stageOutput
-            
-            ShaderEffectSource {
-                id: stageOutput
-                sourceItem: stageLoader.item
-                live: true
-                hideSource: true
+            // ソースの連鎖ロジック
+            // index 0: root.sourceItem を参照
+            // index N: 前のステージの item を参照
+            property Item inputSource: {
+                if (index === 0) return root.sourceItem;
+                var prevLoader = pipeline.objectAt(index - 1);
+                return prevLoader ? prevLoader.item : null;
             }
             
+            active: modelData && modelData.enabled && modelData.qmlSource !== ""
+            source: modelData.qmlSource
+
             onLoaded: {
-                // コンテナではなく、実態のあるItemとして管理（hideSourceが隠してくれる）
-                item.parent = root
-                item.width = Qt.binding(() => root.width)
-                item.height = Qt.binding(() => root.height)
-                item.params = modelData.params
+                // パラメータ伝達
+                item.params = modelData.params;
                 if (item.hasOwnProperty("source")) {
-                    item.source = Qt.binding(() => stageLoader.inputSource)
+                    item.source = Qt.binding(() => stageLoader.inputSource);
                 }
-                // Loader直下のItemはvisible=trueである必要がある（ShaderEffectSourceがキャプチャするため）
-                item.visible = true
+                
+                // 【重要】レンダリングパイプライン維持のため常に表示する
+                item.visible = true;
             }
         }
     }
-    
-    ShaderEffectSource {
-        id: finalOutput
-        anchors.fill: parent
-        sourceItem: {
-            if (pipeline.count === 0) return sourceProxy
-            var lastStage = pipeline.objectAt(pipeline.count - 1)
-            return lastStage ? lastStage.outputTexture : sourceProxy
+
+    function lastActiveIndex() {
+        if (!effectModels) return -1;
+        for (var i = effectModels.length - 1; i >= 0; i--) {
+            var m = effectModels[i];
+            if (m && m.enabled && m.qmlSource) return i;
         }
-        visible: true
-        live: true
+        return -1;
+    }
+
+    // エフェクトなし時のパススルー
+    MultiEffect {
+        anchors.fill: parent
+        source: root.sourceItem
+        visible: root.lastActiveIndex() < 0
     }
 }

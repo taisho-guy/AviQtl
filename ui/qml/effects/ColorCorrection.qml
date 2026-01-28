@@ -1,15 +1,21 @@
-import QtQuick 2.15
-import Qt5Compat.GraphicalEffects
+import QtQuick
+import QtQuick.Effects
 
 Item {
+    id: root
     property var params: ({})
-    property variant source
+    property Item source
 
-    Colorize {
+    MultiEffect {
         anchors.fill: parent
-        source: parent.source
-        hue: 0
-        saturation: (parent.params.saturation !== undefined ? parent.params.saturation : 100) / 100.0
-        lightness: ((parent.params.brightness !== undefined ? parent.params.brightness : 100) - 100) / 100.0
+        source: root.source
+        
+        property real p_bright: (root.params.brightness !== undefined ? root.params.brightness : 100)
+        property real p_sat: (root.params.saturation !== undefined ? root.params.saturation : 100)
+        property real p_cont: (root.params.contrast !== undefined ? root.params.contrast : 100)
+
+        brightness: (p_bright - 100) / 100.0
+        saturation: (p_sat - 100) / 100.0
+        contrast: (p_cont - 100) / 100.0
     }
 }
