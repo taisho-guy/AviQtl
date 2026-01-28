@@ -6,11 +6,14 @@ Item {
     property Item sourceItem
     property var effectModels: []
 
+    // キャッシュされたアクティブインデックス
+    property int _cachedLastActive: -1
+    onEffectModelsChanged: _cachedLastActive = _computeLastActive()
+
     // 外部参照用プロパティ
     readonly property Item outputItem: {
-        var lastIdx = lastActiveIndex();
-        if (lastIdx < 0) return root.sourceItem;
-        var loader = pipeline.objectAt(lastIdx);
+        if (_cachedLastActive < 0) return root.sourceItem;
+        var loader = pipeline.objectAt(_cachedLastActive);
         return loader ? loader.item : root.sourceItem;
     }
 
@@ -51,10 +54,18 @@ Item {
                 // 【重要】レンダリングパイプライン維持のため常に表示する
                 item.visible = true;
             }
+
+            // エフェクト有効化状態変更時にキャッシュ更新
+            Connections {
+                target: modelData
+                function onEnabledChanged() {
+                    root._cachedLastActive = root._computeLastActive()
+                }
+            }
         }
     }
 
-    function lastActiveIndex() {
+    function _computeLastActive() {
         if (!effectModels) return -1;
         for (var i = effectModels.length - 1; i >= 0; i--) {
             var m = effectModels[i];
@@ -62,11 +73,15 @@ Item {
         }
         return -1;
     }
+    
+    Component.onCompleted: {
+        _cachedLastActive = _computeLastActive()
+    }
 
-    // エフェクトなし時のパススルー
+    // エフェクトなし時のパススルー描画
     MultiEffect {
         anchors.fill: parent
         source: root.sourceItem
-        visible: root.lastActiveIndex() < 0
+        visible: root._cachedLastActive < 0
     }
 }

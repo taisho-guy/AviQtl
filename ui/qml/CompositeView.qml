@@ -51,9 +51,10 @@ Item {
         // カメラ設定 (必須)
         PerspectiveCamera {
             id: mainCamera
-            // 1080p を視野に収める距離: 540 / tan(30deg) ≈ 935.3
-            // クリップ範囲も調整
-            position: Qt.vector3d(0, 0, 936)
+            // 動的カメラ距離計算: projH/2 / tan(fieldOfView/2)
+            fieldOfView: 30
+            property real distance: view.projH / (2 * Math.tan(fieldOfView * Math.PI / 360))
+            position: Qt.vector3d(0, 0, distance)
             clipFar: 5000
         }
         DirectionalLight {
@@ -107,38 +108,51 @@ Item {
             }
 
             delegate: Node {
+                id: clipNode
+
                 // モデルロールから直接値を取得
-                property var p: model.params 
+                // パラメータを一度だけ取得してキャッシュ (undefinedチェックのオーバーヘッド削減)
+                readonly property var p: model.params || {}
+                
+                readonly property real px: p.x || 0
+                readonly property real py: p.y || 0
+                readonly property real pz: p.z || 0
+                readonly property real pRotX: p.rotationX || 0
+                readonly property real pRotY: p.rotationY || 0
+                readonly property real pRotZ: p.rotationZ || 0
+                readonly property real pScale: p.scale || 100.0
+                readonly property real pAspect: p.aspect || 0.0
+                readonly property real pOpacity: p.opacity || 1.0
 
                 // 座標変換: 中心(0,0)、Y軸下プラス(AviUtl互換)
                 // Qt3DはY上がプラスなので、入力を反転させる
-                x: (p.x !== undefined) ? p.x : 0
-                y: (p.y !== undefined) ? -p.y : 0
-                z: ((p.z !== undefined) ? p.z : 0) + (model.layer * 5)
+                x: px
+                y: -py
+                z: pz + (model.layer * 5)
                 
                 // 中心座標 (Pivot)
                 pivot: Qt.vector3d(
-                    (p.anchorX !== undefined) ? p.anchorX : 0,
-                    (p.anchorY !== undefined) ? -p.anchorY : 0,
-                    (p.anchorZ !== undefined) ? p.anchorZ : 0
+                    p.anchorX || 0,
+                    -(p.anchorY || 0),
+                    p.anchorZ || 0
                 )
 
                 // 3軸回転
-                eulerRotation.x: (p.rotationX !== undefined) ? p.rotationX : 0
-                eulerRotation.y: (p.rotationY !== undefined) ? -p.rotationY : 0
-                eulerRotation.z: (p.rotationZ !== undefined) ? -p.rotationZ : 0
+                eulerRotation.x: pRotX
+                eulerRotation.y: -pRotY
+                eulerRotation.z: -pRotZ
 
                 // 拡大率と縦横比
-                property real baseScale: (p.scale !== undefined) ? p.scale / 100.0 : 1.0
-                property real asp: (p.aspect !== undefined) ? p.aspect : 0.0
-                scale: Qt.vector3d(
-                    baseScale * (asp >= 0 ? (1.0 + asp) : 1.0),
-                    baseScale * (asp < 0 ? (1.0 - asp) : 1.0),
-                    baseScale
-                )
+                readonly property real baseScale: pScale * 0.01
+                readonly property real aspectX: pAspect >= 0 ? (1.0 + pAspect) : 1.0
+                readonly property real aspectY: pAspect < 0 ? (1.0 - pAspect) : 1.0
+                
+                scale.x: baseScale * aspectX
+                scale.y: baseScale * aspectY
+                scale.z: baseScale
 
                 // 不透明度 (全体)
-                opacity: (p.opacity !== undefined) ? p.opacity : 1.0
+                opacity: pOpacity
 
                 // Loader (2D) は 3D シーン内では機能しないため、
                 // Qt.createComponent を使用して Node 派生クラスを動的に生成する
@@ -147,9 +161,16 @@ Item {
                     
                     property string sourceUrl: model.qmlSource || ""
                     property var createdObject: null
+                    property var componentCache: null
 
                     onSourceUrlChanged: reload()
                     Component.onCompleted: reload()
+                    Component.onDestruction: {
+                        if (createdObject) createdObject.destroy()
+                        if (componentCache && componentCache.statusChanged) {
+                            componentCache.statusChanged.disconnect(reload)
+                        }
+                    }
 
                     function reload() {
                         if (createdObject) {
@@ -159,17 +180,28 @@ Item {
 
                         if (sourceUrl === "") return
 
-                        var component = Qt.createComponent(sourceUrl)
+                        // 非同期ロード（Qt.Asynchronous）
+                        var component = Qt.createComponent(sourceUrl, Component.Asynchronous)
+                        componentCache = component
+                        
                         if (component.status === Component.Ready) {
-                            createdObject = component.createObject(objectContainer, {
-                                "opacity": (p.opacity !== undefined) ? p.opacity : 1.0,
-                                "clipId": model.id
-                            })
+                            _instantiate(component)
                         } else {
-                            console.warn("Error loading component:", component.errorString())
-                            // 非同期ロードが必要な場合のハンドリング（今回は簡易実装）
-                            component.statusChanged.connect(reload)
+                            component.statusChanged.connect(function() {
+                                if (component.status === Component.Ready) {
+                                    _instantiate(component)
+                                } else if (component.status === Component.Error) {
+                                    console.error("Component load failed:", component.errorString())
+                                }
+                            })
                         }
+                    }
+                    
+                    function _instantiate(component) {
+                        createdObject = component.createObject(objectContainer, {
+                            "opacity": clipNode.pOpacity,
+                            "clipId": model.id
+                        })
                     }
                 }
             }
