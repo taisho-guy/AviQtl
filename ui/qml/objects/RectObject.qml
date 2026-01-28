@@ -5,10 +5,57 @@ import Rina
 
 Node {
     id: root
-    property real sizeW: 100
-    property real sizeH: 100
-    property color color: "#66aa99"
-    property real opacity: 1.0
+    
+    property int currentFrame: TimelineBridge ? TimelineBridge.currentFrame : 0
+
+    property real sizeW: {
+        var _ = currentFrame;
+        var _2 = TimelineBridge ? TimelineBridge.selectedClipData : null;
+        for(let i=0; i<rawEffectModels.length; i++) {
+            let eff = rawEffectModels[i];
+            if (eff.id === "rect" && eff.enabled) {
+                return eff.evaluatedParam ? eff.evaluatedParam("sizeW", currentFrame) : eff.params["sizeW"];
+            }
+        }
+        return 100;
+    }
+
+    property real sizeH: {
+        var _ = currentFrame;
+        var _2 = TimelineBridge ? TimelineBridge.selectedClipData : null;
+        for(let i=0; i<rawEffectModels.length; i++) {
+            let eff = rawEffectModels[i];
+            if (eff.id === "rect" && eff.enabled) {
+                return eff.evaluatedParam ? eff.evaluatedParam("sizeH", currentFrame) : eff.params["sizeH"];
+            }
+        }
+        return 100;
+    }
+
+    property color color: {
+        var _ = currentFrame;
+        var _2 = TimelineBridge ? TimelineBridge.selectedClipData : null;
+        for(let i=0; i<rawEffectModels.length; i++) {
+            let eff = rawEffectModels[i];
+            if (eff.id === "rect" && eff.enabled) {
+                return eff.evaluatedParam ? eff.evaluatedParam("color", currentFrame) : eff.params["color"];
+            }
+        }
+        return "#66aa99";
+    }
+
+    property real opacity: {
+        var _ = currentFrame;
+        var _2 = TimelineBridge ? TimelineBridge.selectedClipData : null;
+        for(let i=0; i<rawEffectModels.length; i++) {
+            let eff = rawEffectModels[i];
+            if (eff.id === "rect" && eff.enabled) {
+                return eff.evaluatedParam ? eff.evaluatedParam("opacity", currentFrame) : eff.params["opacity"];
+            }
+        }
+        return 1.0;
+    }
+
     // 追加: 親からIDを受け取る
     property int clipId: -1
 
@@ -37,25 +84,6 @@ Node {
     
     // バインディング: 値が変われば即座に反映
     property real blurRadius: (blurModel && blurModel.enabled) ? (blurModel.params.size || 0) : 0
-
-    // エフェクトパラメータの適用
-    function updateParams() {
-        for(let i=0; i<rawEffectModels.length; i++) {
-            let eff = rawEffectModels[i];
-            if (eff.id === "rect" && eff.enabled) {
-                if (eff.params["color"] !== undefined) root.color = eff.params["color"];
-                if (eff.params["sizeW"] !== undefined) root.sizeW = eff.params["sizeW"];
-                if (eff.params["sizeH"] !== undefined) root.sizeH = eff.params["sizeH"];
-                if (eff.params["opacity"] !== undefined) root.opacity = eff.params["opacity"];
-            }
-        }
-    }
-    
-    Connections {
-        target: TimelineBridge
-        function onSelectedClipDataChanged() { updateParams(); }
-    }
-    Component.onCompleted: updateParams()
 
     // --- テクスチャ生成パイプライン ---
     resources: [
