@@ -113,9 +113,20 @@ Node {
             visible: true
         },
 
+        // エフェクトパラメータ変更監視
+        Repeater {
+            model: root.rawEffectModels
+            Item {
+                Connections {
+                    target: modelData
+                    function onParamsChanged() { root.updateTexture() }
+                }
+            }
+        },
+
         ShaderEffectSource {
             id: textureSource
-            sourceItem: effector
+            sourceItem: effector.outputItem
             hideSource: true
             live: false
             visible: true

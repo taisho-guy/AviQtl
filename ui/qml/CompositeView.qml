@@ -163,6 +163,13 @@ Item {
                     property var createdObject: null
                     property var componentCache: null
 
+                function _instantiate(component) {
+                    createdObject = component.createObject(objectContainer, {
+                        "opacity": clipNode.pOpacity,
+                        "clipId": model.id
+                    })
+                }
+
                     onSourceUrlChanged: reload()
                     Component.onCompleted: reload()
                     Component.onDestruction: {
@@ -195,13 +202,6 @@ Item {
                                 }
                             })
                         }
-                    }
-                    
-                    function _instantiate(component) {
-                        createdObject = component.createObject(objectContainer, {
-                            "opacity": clipNode.pOpacity,
-                            "clipId": model.id
-                        })
                     }
                 }
             }

@@ -160,11 +160,24 @@ Node {
             visible: true 
         },
 
+        // エフェクトパラメータ変更監視
+        // 各EffectModelのparamsChangedシグナルをリッスンして、
+        // テクスチャを更新する
+        Repeater {
+            model: root.rawEffectModels
+            Item {
+                Connections {
+                    target: modelData
+                    function onParamsChanged() { root.updateTexture() }
+                }
+            }
+        },
+
         // 2. テクスチャ化プロキシ
         // effectorをレンダリングし、結果を保持するが画面には表示しない
         ShaderEffectSource {
             id: textureSource
-            sourceItem: effector
+            sourceItem: effector.outputItem
             hideSource: true // ソースを画面から隠す
             live: false      // 自動更新を切る (スレッドエラー回避)
             visible: true    // カリング回避のため visible: true (hideSourceがあるので画面には出ない)
