@@ -13,7 +13,7 @@ Item {
         blurEnabled: true
         blurMax: 100
         blur: (root.params && root.params.size !== undefined) ? (root.params.size / 100.0) : 0.0
-        
-        paddingRect: Qt.rect(-blurMax, -blurMax, width + blurMax*2, height + blurMax*2)
+        // paddingRect is handled by the container (RectObject) padding logic.
+        // Setting it here with negative offsets shifts the render origin causing clipping.
     }
 }

@@ -6,6 +6,9 @@ import Rina
 Node {
     id: root
     
+    readonly property bool dbgEnabled: Qt.application.arguments.indexOf("--rina-debug") !== -1
+    function dbg(msg){ if (!dbgEnabled) return; console.log("[TextObject][clipId=" + clipId + "] " + msg); if (TimelineBridge && TimelineBridge.log) TimelineBridge.log("[TextObject][clipId=" + clipId + "] " + msg) }
+
     // 現在フレーム（依存関係の起点）
     property int currentFrame: TimelineBridge ? TimelineBridge.currentFrame : 0
 
@@ -115,6 +118,7 @@ Node {
 
     // 更新関数
     function updateTexture() {
+        dbg("updateTexture: blurPadding=" + blurPadding + " filterModels.len=" + (filterModels ? filterModels.length : "null"))
         textureSource.scheduleUpdate();
     }
 
@@ -151,13 +155,37 @@ Node {
             }
         },
 
-        EffectChain {
-            id: effector
-            sourceItem: sourceItem
-            effectModels: root.filterModels
-            width: sourceItem.width
-            height: sourceItem.height
-            visible: true 
+        // 3. MultiEffect (QQEM代替)
+        //    数珠繋ぎ廃止。単一のシェーダーで全エフェクトを処理。
+        MultiEffect {
+            id: multiEffect
+            source: sourceItem
+            anchors.fill: sourceItem
+            visible: true
+
+            // --- パラメータバインディング ---
+            
+            // Blur
+            property var blurModel: {
+                for(var i=0; i<root.rawEffectModels.length; i++){
+                    if(root.rawEffectModels[i].id === "blur" && root.rawEffectModels[i].enabled) return root.rawEffectModels[i];
+                }
+                return null;
+            }
+            blurEnabled: !!blurModel
+            blurMax: 64 // 上限
+            blur: blurModel ? (blurModel.params.size || 0) / 64.0 : 0.0
+
+            // Color Correction (Brightness/Contrast/Saturation)
+            property var colorModel: {
+                for(var i=0; i<root.rawEffectModels.length; i++){
+                    if(root.rawEffectModels[i].id === "color_correction" && root.rawEffectModels[i].enabled) return root.rawEffectModels[i];
+                }
+                return null;
+            }
+            brightness: colorModel ? ((colorModel.params.brightness || 100) - 100) / 100.0 : 0.0
+            contrast:   colorModel ? ((colorModel.params.contrast   || 100) - 100) / 100.0 : 0.0
+            saturation: colorModel ? ((colorModel.params.saturation || 100) - 100) / 100.0 : 0.0
         },
 
         // エフェクトパラメータ変更監視
@@ -168,7 +196,15 @@ Node {
             Item {
                 Connections {
                     target: modelData
-                    function onParamsChanged() { root.updateTexture() }
+                    function onParamsChanged() {
+                        // パラメータ変更時にパディングを再計算
+                        root.blurPadding = root.getBlurPadding()
+                        root.updateTexture()
+                    }
+                    function onEnabledChanged() {
+                        root.blurPadding = root.getBlurPadding()
+                        root.updateTexture()
+                    }
                 }
             }
         },
@@ -177,14 +213,13 @@ Node {
         // effectorをレンダリングし、結果を保持するが画面には表示しない
         ShaderEffectSource {
             id: textureSource
-            sourceItem: effector.outputItem
+            sourceItem: multiEffect
             hideSource: true // ソースを画面から隠す
             live: false      // 自動更新を切る (スレッドエラー回避)
             visible: true    // カリング回避のため visible: true (hideSourceがあるので画面には出ない)
-            recursive: true  // 入れ子のエフェクトを許可
-            
-            // サイズ変更時にテクスチャバッファも追従させる
-            textureSize: Qt.size(sourceItem.width, sourceItem.height)
+            recursive: false
+            Component.onCompleted: root.dbg("ShaderEffectSource completed, sourceItem=" + (sourceItem ? "ok" : "null"))
+            onSourceItemChanged: root.dbg("ShaderEffectSource sourceItem changed -> " + (sourceItem ? "ok" : "null"))
         }
     ]
 

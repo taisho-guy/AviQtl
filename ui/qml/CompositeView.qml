@@ -110,6 +110,14 @@ Item {
             delegate: Node {
                 id: clipNode
 
+                // コマンドライン `--rina-debug` で有効化
+                readonly property bool dbgEnabled: Qt.application.arguments.indexOf("--rina-debug") !== -1
+                function dbg(msg) {
+                    if (!dbgEnabled) return;
+                    console.log("[CompositeView][clipId=" + model.id + "][type=" + model.type + "] " + msg)
+                    if (TimelineBridge && TimelineBridge.log) TimelineBridge.log("[CompositeView][clipId=" + model.id + "] " + msg)
+                }
+
                 // モデルロールから直接値を取得
                 // パラメータを一度だけ取得してキャッシュ (undefinedチェックのオーバーヘッド削減)
                 readonly property var p: model.params || {}
@@ -162,46 +170,72 @@ Item {
                     property string sourceUrl: model.qmlSource || ""
                     property var createdObject: null
                     property var componentCache: null
+                    property var _statusHandler: null
+
+                    function _disconnectStatusHandler() {
+                        if (componentCache && _statusHandler) {
+                            try {
+                                componentCache.statusChanged.disconnect(_statusHandler)
+                            } catch (e) { }
+                        }
+                        _statusHandler = null
+                    }
 
                 function _instantiate(component) {
+                    clipNode.dbg("instantiate begin, status=" + component.status + ", url=" + sourceUrl)
                     createdObject = component.createObject(objectContainer, {
                         "opacity": clipNode.pOpacity,
                         "clipId": model.id
                     })
+                    clipNode.dbg("instantiate end, createdObject=" + (createdObject ? "ok" : "null"))
                 }
 
                     onSourceUrlChanged: reload()
-                    Component.onCompleted: reload()
+                    Component.onCompleted: {
+                        clipNode.dbg("objectContainer completed, sourceUrl=" + sourceUrl)
+                        clipNode.dbg("reload onCompleted")
+                        reload()
+                    }
                     Component.onDestruction: {
+                        clipNode.dbg("objectContainer destruction")
+                        _disconnectStatusHandler()
                         if (createdObject) createdObject.destroy()
-                        if (componentCache && componentCache.statusChanged) {
-                            componentCache.statusChanged.disconnect(reload)
-                        }
                     }
 
                     function reload() {
+                        clipNode.dbg("reload begin, sourceUrl=" + sourceUrl)
                         if (createdObject) {
                             createdObject.destroy()
                             createdObject = null
                         }
+                        _disconnectStatusHandler()
 
                         if (sourceUrl === "") return
+                        clipNode.dbg("Qt.createComponent async: " + sourceUrl)
 
                         // 非同期ロード（Qt.Asynchronous）
                         var component = Qt.createComponent(sourceUrl, Component.Asynchronous)
                         componentCache = component
+                        var self = objectContainer
                         
                         if (component.status === Component.Ready) {
                             _instantiate(component)
                         } else {
-                            component.statusChanged.connect(function() {
+                            _statusHandler = function() {
+                                clipNode.dbg("statusChanged: status=" + component.status + " (" + sourceUrl + ")")
+                                if (!self || self.componentCache !== component) return
                                 if (component.status === Component.Ready) {
-                                    _instantiate(component)
+                                    self._disconnectStatusHandler()
+                                    self._instantiate(component)
                                 } else if (component.status === Component.Error) {
+                                    self._disconnectStatusHandler()
                                     console.error("Component load failed:", component.errorString())
+                                    clipNode.dbg("Component.Error: " + component.errorString())
                                 }
-                            })
+                            }
+                            component.statusChanged.connect(_statusHandler)
                         }
+                        clipNode.dbg("reload end")
                     }
                 }
             }

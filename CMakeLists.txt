@@ -54,7 +54,6 @@ qt_add_qml_module(Rina
         ui/qml/ProjectSettingsWindow.qml
         ui/qml/SettingDialog.qml
         ui/qml/CompositeView.qml
-        ui/qml/EffectChain.qml
         
         ui/qml/common/RinaWindow.qml
         ui/qml/common/ParamControl.qml

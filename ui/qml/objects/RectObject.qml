@@ -105,12 +105,35 @@ Node {
         },
 
         // 汎用エフェクトチェーン (MultiEffectを内包)
-        EffectChain {
-            id: effector
-            sourceItem: sourceItem
-            effectModels: root.filterModels
+        MultiEffect {
+            id: multiEffect
+            source: sourceItem
             anchors.fill: sourceItem
             visible: true
+
+            // --- パラメータバインディング ---
+            
+            // Blur
+            property var blurModel: {
+                for(var i=0; i<root.rawEffectModels.length; i++){
+                    if(root.rawEffectModels[i].id === "blur" && root.rawEffectModels[i].enabled) return root.rawEffectModels[i];
+                }
+                return null;
+            }
+            blurEnabled: !!blurModel
+            blurMax: 64 // 上限
+            blur: blurModel ? (blurModel.params.size || 0) / 64.0 : 0.0
+
+            // Color Correction
+            property var colorModel: {
+                for(var i=0; i<root.rawEffectModels.length; i++){
+                    if(root.rawEffectModels[i].id === "color_correction" && root.rawEffectModels[i].enabled) return root.rawEffectModels[i];
+                }
+                return null;
+            }
+            brightness: colorModel ? ((colorModel.params.brightness || 100) - 100) / 100.0 : 0.0
+            contrast:   colorModel ? ((colorModel.params.contrast   || 100) - 100) / 100.0 : 0.0
+            saturation: colorModel ? ((colorModel.params.saturation || 100) - 100) / 100.0 : 0.0
         },
 
         // エフェクトパラメータ変更監視
@@ -126,7 +149,7 @@ Node {
 
         ShaderEffectSource {
             id: textureSource
-            sourceItem: effector.outputItem
+            sourceItem: multiEffect
             hideSource: true
             live: false
             visible: true
