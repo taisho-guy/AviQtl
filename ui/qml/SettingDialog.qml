@@ -160,8 +160,9 @@ Common.RinaWindow {
 
                             // 値の取得（始点・終点）
                             // tracksを依存関係に含めて再評価をトリガー
-                            property var startVal: isNumber ? (tracks, effectModel.evaluatedParam(key, startFrame)) : effVal
-                            property var endVal: isNumber ? (tracks, effectModel.evaluatedParam(key, endFrame)) : effVal
+                            // effVal (currentParams) を依存関係に含めることで、Undo/Redo時のベース値変更にも追従させる
+                            property var startVal: isNumber ? (tracks, effVal, effectModel.evaluatedParam(key, startFrame)) : effVal
+                            property var endVal: isNumber ? (tracks, effVal, effectModel.evaluatedParam(key, endFrame)) : effVal
 
                             function getInterpAt(f) {
                                 if (!kfs) return "linear"

@@ -57,6 +57,7 @@ qt_add_qml_module(Rina
         
         ui/qml/common/RinaWindow.qml
         ui/qml/common/ParamControl.qml
+        ui/qml/common/ObjectRenderer.qml
         
         # 拡張オブジェクト・エフェクトは外部ロードするため除外
     

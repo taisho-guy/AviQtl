@@ -509,7 +509,9 @@ namespace Rina::UI {
 
                     // UI同期のために選択クリップの変更通知を発行
                     if (clipId == m_selectedClipId) {
-                        emit selectedClipDataChanged();
+                        // 【修正】キャッシュも更新しないと、UIが古い値を読み込んで巻き戻ってしまう
+                        m_selectedClipCache[paramName] = value;
+                        // emit selectedClipDataChanged();
                     }
                 }
                 break;

@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick3D
 import QtQuick.Effects
 import Rina
+import "qrc:/qt/qml/Rina/ui/qml/common" as Common
 
 Node {
     id: root
@@ -106,41 +107,29 @@ Node {
         return list;
     }
 
+    // パディング計算（暫定）: エフェクトが増えてもここでcanvasを広げておく
     function getBlurPadding() {
         for(let i=0; i<rawEffectModels.length; i++) {
-            if(rawEffectModels[i].id === "blur" && rawEffectModels[i].enabled) {
-                return (rawEffectModels[i].params["size"] || 0);
-            }
+            if(rawEffectModels[i].id === "blur") return (rawEffectModels[i].params["size"] || 0);
         }
         return 0;
     }
-    property real blurPadding: getBlurPadding()
-
-    // 更新関数
-    function updateTexture() {
-        dbg("updateTexture: blurPadding=" + blurPadding + " filterModels.len=" + (filterModels ? filterModels.length : "null"))
-        textureSource.scheduleUpdate();
-    }
+    property real padding: getBlurPadding()
 
     // --- テクスチャ生成パイプライン ---
     
     resources: [
         // 1. ソースコンテンツ (生のテキスト)
+        // これが「オリジナルの映像」であり、エフェクトチェーンの始点となる
         Item {
-            id: sourceItem
+            id: originalSource
             visible: true
             
-            // Textのレイアウト計算を待たずにサイズを確保するための工夫
-            property int targetW: textItem.implicitWidth + padding * 2
-            property int targetH: textItem.implicitHeight + padding * 2
-            property int padding: root.blurPadding > 0 ? Math.ceil(root.blurPadding * 3) : 10
+            // エフェクトによる拡張はエフェクト側でやるべきだが、
+            // 便宜上、最低限のキャンバスサイズは確保する
+            width: textItem.implicitWidth + (root.padding * 4)
+            height: textItem.implicitHeight + (root.padding * 4)
             
-            // 重要: サイズが変わったら通知
-            onTargetWChanged: root.updateTexture()
-            onTargetHChanged: root.updateTexture()
-            width: targetW
-            height: targetH
-
             Text {
                 id: textItem
                 anchors.centerIn: parent
@@ -155,85 +144,24 @@ Node {
             }
         },
 
-        // 3. MultiEffect (QQEM代替)
-        //    数珠繋ぎ廃止。単一のシェーダーで全エフェクトを処理。
-        MultiEffect {
-            id: multiEffect
-            source: sourceItem
-            anchors.fill: sourceItem
-            visible: true
-
-            // --- パラメータバインディング ---
-            
-            // Blur
-            property var blurModel: {
-                for(var i=0; i<root.rawEffectModels.length; i++){
-                    if(root.rawEffectModels[i].id === "blur" && root.rawEffectModels[i].enabled) return root.rawEffectModels[i];
-                }
-                return null;
-            }
-            blurEnabled: !!blurModel
-            blurMax: 64 // 上限
-            blur: blurModel ? (blurModel.params.size || 0) / 64.0 : 0.0
-
-            // Color Correction (Brightness/Contrast/Saturation)
-            property var colorModel: {
-                for(var i=0; i<root.rawEffectModels.length; i++){
-                    if(root.rawEffectModels[i].id === "color_correction" && root.rawEffectModels[i].enabled) return root.rawEffectModels[i];
-                }
-                return null;
-            }
-            brightness: colorModel ? ((colorModel.params.brightness || 100) - 100) / 100.0 : 0.0
-            contrast:   colorModel ? ((colorModel.params.contrast   || 100) - 100) / 100.0 : 0.0
-            saturation: colorModel ? ((colorModel.params.saturation || 100) - 100) / 100.0 : 0.0
-        },
-
-        // エフェクトパラメータ変更監視
-        // 各EffectModelのparamsChangedシグナルをリッスンして、
-        // テクスチャを更新する
-        Repeater {
-            model: root.rawEffectModels
-            Item {
-                Connections {
-                    target: modelData
-                    function onParamsChanged() {
-                        // パラメータ変更時にパディングを再計算
-                        root.blurPadding = root.getBlurPadding()
-                        root.updateTexture()
-                    }
-                    function onEnabledChanged() {
-                        root.blurPadding = root.getBlurPadding()
-                        root.updateTexture()
-                    }
-                }
-            }
-        },
-
-        // 2. テクスチャ化プロキシ
-        // effectorをレンダリングし、結果を保持するが画面には表示しない
-        ShaderEffectSource {
-            id: textureSource
-            sourceItem: multiEffect
-            hideSource: true // ソースを画面から隠す
-            live: false      // 自動更新を切る (スレッドエラー回避)
-            visible: true    // カリング回避のため visible: true (hideSourceがあるので画面には出ない)
-            recursive: false
-            Component.onCompleted: root.dbg("ShaderEffectSource completed, sourceItem=" + (sourceItem ? "ok" : "null"))
-            onSourceItemChanged: root.dbg("ShaderEffectSource sourceItem changed -> " + (sourceItem ? "ok" : "null"))
+        // 2. 共通レンダラーへの委譲
+        Common.ObjectRenderer {
+            id: renderer
+            originalSource: originalSource
+            effectModels: root.filterModels
         }
     ]
 
-    FrameAnimation {
-        running: true
-        onTriggered: root.updateTexture()
-    }
-
     Model {
         source: "#Rectangle"
-        scale: Qt.vector3d(sourceItem.width / 100, sourceItem.height / 100, 1)
+        scale: Qt.vector3d(
+            ((renderer.output.sourceItem ? renderer.output.sourceItem.width  : originalSource.width)  / 100),
+            ((renderer.output.sourceItem ? renderer.output.sourceItem.height : originalSource.height) / 100),
+            1
+        )
         opacity: root.opacity
         materials: DefaultMaterial {
-            diffuseMap: Texture { sourceItem: textureSource }
+            diffuseMap: Texture { sourceItem: renderer.output }
             lighting: DefaultMaterial.NoLighting
             blendMode: DefaultMaterial.SourceOver
         }
