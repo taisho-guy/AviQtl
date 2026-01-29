@@ -185,7 +185,9 @@ Item {
                     clipNode.dbg("instantiate begin, status=" + component.status + ", url=" + sourceUrl)
                     createdObject = component.createObject(objectContainer, {
                         "opacity": clipNode.pOpacity,
-                        "clipId": model.id
+                        "clipId": model.id,
+                        "clipStartFrame": model.startFrame,
+                        "clipDurationFrames": model.durationFrames
                     })
                     clipNode.dbg("instantiate end, createdObject=" + (createdObject ? "ok" : "null"))
                 }

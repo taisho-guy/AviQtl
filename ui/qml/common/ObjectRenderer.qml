@@ -8,7 +8,8 @@ Item {
     required property Item originalSource
     
     // 入力: 適用するエフェクトのリスト (filterModels)
-    required property var effectModels
+    required property list<QtObject> effectModels
+    required property int relFrame
 
     // 出力: 最終的にレンダリングされたテクスチャソース（Modelで使用）
     property alias output: textureSource
@@ -36,6 +37,9 @@ Item {
             // 【重要】宣言的Bindingによる堅牢な同期
             Binding { target: effectLoader.item; property: "source"; value: effectLoader.inputSource; when: effectLoader.status === Loader.Ready }
             Binding { target: effectLoader.item; property: "params"; value: modelData.params; when: effectLoader.status === Loader.Ready }
+            Binding { target: effectLoader.item; property: "effectModel"; value: modelData; when: effectLoader.status === Loader.Ready }
+            // キーフレーム評価用（全エフェクト共通）
+            Binding { target: effectLoader.item; property: "frame"; value: renderer.relFrame; when: effectLoader.status === Loader.Ready }
             
             // サイズ同期: 前段のサイズを引き継ぐ（エフェクト側で拡張も可能）
             Binding { target: effectLoader.item; property: "width"; value: effectLoader.inputSource.width; when: effectLoader.status === Loader.Ready }

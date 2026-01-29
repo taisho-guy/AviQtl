@@ -90,6 +90,11 @@ Node {
 
     property int clipId: -1
 
+    // CompositeView から注入される
+    property int clipStartFrame: 0
+    property int clipDurationFrames: 0
+    property int relFrame: TimelineBridge ? (TimelineBridge.currentFrame - clipStartFrame) : 0
+
     // 修正: TimelineBridge.clipsに依存させることで、クリップ変更時にリストを再取得
     property list<QtObject> rawEffectModels: {
         var _ = TimelineBridge ? TimelineBridge.clips : null // 依存関係トリガー
@@ -110,7 +115,10 @@ Node {
     // パディング計算（暫定）: エフェクトが増えてもここでcanvasを広げておく
     function getBlurPadding() {
         for(let i=0; i<rawEffectModels.length; i++) {
-            if(rawEffectModels[i].id === "blur") return (rawEffectModels[i].params["size"] || 0);
+            if(rawEffectModels[i].id === "blur") {
+                var v = rawEffectModels[i].evaluatedParam ? rawEffectModels[i].evaluatedParam("size", relFrame) : undefined;
+                return Number(v !== undefined ? v : (rawEffectModels[i].params["size"] || 0));
+            }
         }
         return 0;
     }
@@ -149,6 +157,7 @@ Node {
             id: renderer
             originalSource: originalSource
             effectModels: root.filterModels
+            relFrame: root.relFrame
         }
     ]
 

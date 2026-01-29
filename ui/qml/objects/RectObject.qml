@@ -83,7 +83,7 @@ Node {
     }
     
     // バインディング: 値が変われば即座に反映
-    property real blurRadius: (blurModel && blurModel.enabled) ? (blurModel.params.size || 0) : 0
+    property real blurRadius: (blurModel && blurModel.enabled) ? (blurModel.params["size"] || 0) : 0
 
     // --- テクスチャ生成パイプライン ---
     resources: [
@@ -122,7 +122,7 @@ Node {
             }
             blurEnabled: !!blurModel
             blurMax: 64 // 上限
-            blur: blurModel ? (blurModel.params.size || 0) / 64.0 : 0.0
+            blur: blurModel ? (blurModel.params["size"] || 0) / 64.0 : 0.0
 
             // Color Correction
             property var colorModel: {
@@ -131,9 +131,9 @@ Node {
                 }
                 return null;
             }
-            brightness: colorModel ? ((colorModel.params.brightness || 100) - 100) / 100.0 : 0.0
-            contrast:   colorModel ? ((colorModel.params.contrast   || 100) - 100) / 100.0 : 0.0
-            saturation: colorModel ? ((colorModel.params.saturation || 100) - 100) / 100.0 : 0.0
+            brightness: colorModel ? ((colorModel.params["brightness"] || 100) - 100) / 100.0 : 0.0
+            contrast:   colorModel ? ((colorModel.params["contrast"]   || 100) - 100) / 100.0 : 0.0
+            saturation: colorModel ? ((colorModel.params["saturation"] || 100) - 100) / 100.0 : 0.0
         },
 
         // エフェクトパラメータ変更監視
