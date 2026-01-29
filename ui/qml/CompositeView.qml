@@ -8,11 +8,15 @@ Item {
 
     // 2Dレンダー（sourceItem/effects/ShaderEffectSource）を必ずQQuickWindow配下に置くためのホスト
     // visible:false でもWindow配下に居ればSceneGraph/Timerが正常に動く
+    // 重要:
+    // visible:false は SceneGraph から外れる → ShaderEffectSource の更新が止まりやすい。
+    // 表示を消したいだけなら visible:true のまま opacity:0 に寄せる。
     Item {
         id: offscreenRenderHost
         anchors.fill: parent
-        visible: false
+        visible: true
         opacity: 0.0
+        enabled: false
         z: -9999
     }
 

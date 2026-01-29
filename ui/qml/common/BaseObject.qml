@@ -7,31 +7,37 @@ Node {
 
     // CompositeView 側から渡される「Window配下のItem」。ここに2D系を寄せる
     property Item renderHost: null
-    property var __owned2D: []
+    property var owned2D: []
 
-    function __adopt2D(item) {
+    function adopt2D(item) {
         if (!item || !renderHost) return
         if (item.parent === renderHost) return
         item.parent = renderHost
-        // sourceItem/renderer は 3D のテクスチャ用途なので 2D 描画は不要
-        if (item.visible !== undefined) item.visible = false
-        __owned2D.push(item)
+        // visible を落とすと SceneGraph から外れてテクスチャ更新が止まり得るので触らない。
+        // 表示は CompositeView 側の host opacity と ShaderEffectSource.hideSource に任せる。
+        owned2D.push(item)
+    }
+
+    // renderHost が後からセットされても確実に移送する
+    onRenderHostChanged: {
+        adopt2D(sourceItem)
+        adopt2D(rendererInstance)
     }
 
     Component.onCompleted: {
         // 各オブジェクト(TextObject/RectObject)が set してくる sourceItem を移す
-        __adopt2D(base.sourceItem)
+        adopt2D(base.sourceItem)
         // ObjectRenderer(= ShaderEffectSource/effectsチェーン)も移す
-        __adopt2D(rendererInstance)
+        adopt2D(rendererInstance)
     }
 
     Component.onDestruction: {
-        for (var i = 0; i < __owned2D.length; i++) {
+        for (var i = 0; i < owned2D.length; i++) {
             try {
-                if (__owned2D[i]) __owned2D[i].destroy()
+                if (owned2D[i]) owned2D[i].destroy()
             } catch (e) {}
         }
-        __owned2D = []
+        owned2D = []
     }
 
     // CompositeView から自動注入されるプロパティ
