@@ -46,7 +46,7 @@ Node {
     property int clipDurationFrames: 0
     
     // 自動計算プロパティ
-    readonly property int currentFrame: TimelineBridge ? TimelineBridge.currentFrame : 0
+    readonly property int currentFrame: (TimelineBridge && TimelineBridge.transport) ? TimelineBridge.transport.currentFrame : 0
     readonly property int relFrame: currentFrame - clipStartFrame
     readonly property list<QtObject> rawEffectModels: (TimelineBridge && clipId > 0) 
         ? TimelineBridge.getClipEffectsModel(clipId) : []

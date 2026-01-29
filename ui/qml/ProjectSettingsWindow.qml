@@ -11,11 +11,11 @@ Common.RinaWindow {
     
     // ウィンドウが表示されたときに現在の値をUIに反映
     onVisibleChanged: {
-        if (visible && TimelineBridge) {
-            widthField.text = TimelineBridge.projectWidth
-            heightField.text = TimelineBridge.projectHeight
-            fpsField.text = TimelineBridge.projectFps
-            framesField.text = TimelineBridge.totalFrames
+        if (visible && TimelineBridge && TimelineBridge.project) {
+            widthField.text = TimelineBridge.project.width
+            heightField.text = TimelineBridge.project.height
+            fpsField.text = TimelineBridge.project.fps
+            framesField.text = TimelineBridge.project.totalFrames
         }
     }
 
@@ -63,11 +63,11 @@ Common.RinaWindow {
                 text: "Apply"
                 highlighted: true
                 onClicked: {
-                    if (TimelineBridge) {
-                        TimelineBridge.projectWidth = parseInt(widthField.text)
-                        TimelineBridge.projectHeight = parseInt(heightField.text)
-                        TimelineBridge.projectFps = parseFloat(fpsField.text)
-                        TimelineBridge.totalFrames = parseInt(framesField.text)
+                    if (TimelineBridge && TimelineBridge.project) {
+                        TimelineBridge.project.width = parseInt(widthField.text)
+                        TimelineBridge.project.height = parseInt(heightField.text)
+                        TimelineBridge.project.fps = parseFloat(fpsField.text)
+                        TimelineBridge.project.totalFrames = parseInt(framesField.text)
                         root.hide()
                     }
                 }

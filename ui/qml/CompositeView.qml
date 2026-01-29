@@ -33,16 +33,16 @@ Item {
         camera: mainCamera
         
         // プロジェクト設定の解像度を取得（未設定時はFHD）
-        property int projW: TimelineBridge ? TimelineBridge.projectWidth : 1920
-        property int projH: TimelineBridge ? TimelineBridge.projectHeight : 1080
+        property int projW: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.width : 1920
+        property int projH: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.height : 1080
         
         // アスペクト比計算
         property double aspect: projW / projH
         
         // 現在のクリップ内での相対時間 (0.0 ~ 1.0)
         // 他のコンポーネントから参照される可能性を考慮して定義
-        property double currentClipTimeRatio: TimelineBridge ? 
-            Math.max(0.0, Math.min(1.0, (TimelineBridge.currentFrame - TimelineBridge.clipStartFrame) / TimelineBridge.clipDurationFrames)) : 0.0
+        property double currentClipTimeRatio: (TimelineBridge && TimelineBridge.transport) ? 
+            Math.max(0.0, Math.min(1.0, (TimelineBridge.transport.currentFrame - TimelineBridge.clipStartFrame) / TimelineBridge.clipDurationFrames)) : 0.0
 
         // 親に収まる最大サイズを計算 (Letterboxing)
         width: Math.min(parent.width, parent.height * aspect)
@@ -51,7 +51,7 @@ Item {
 
         focus: true
         Keys.onSpacePressed: {
-            if (TimelineBridge) TimelineBridge.togglePlay()
+            if (TimelineBridge && TimelineBridge.transport) TimelineBridge.transport.togglePlay()
         }
 
         // プロジェクト領域の背景
@@ -89,8 +89,8 @@ Item {
             Model {
                 source: "#Rectangle"
                 scale: Qt.vector3d(
-                    TimelineBridge ? TimelineBridge.projectWidth / 100 : 19.2, 
-                    TimelineBridge ? TimelineBridge.projectHeight / 100 : 10.8, 
+                    (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.width / 100 : 19.2, 
+                    (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.height / 100 : 10.8, 
                     1
                 )
                 materials: DefaultMaterial {

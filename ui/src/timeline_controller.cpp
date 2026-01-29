@@ -46,7 +46,7 @@ namespace Rina::UI {
                 // QML側では model.params.x のようにアクセスする
                 // ここで「現在フレーム」の値を評価して返す（中間点の核）
                 auto* ctrl = qobject_cast<TimelineController*>(parent());
-                const int currentFrame = ctrl ? ctrl->currentFrame() : 0;
+                const int currentFrame = ctrl ? ctrl->transport()->currentFrame() : 0;
                 const int relFrame = currentFrame - clip->startFrame;
 
                 QVariantMap map;
@@ -146,68 +146,42 @@ namespace Rina::UI {
         : QObject(parent)
         , m_undoStack(new QUndoStack(this))
         , m_clipboard(nullptr)
-        , m_currentFrame(0)
         , m_clipStartFrame(100)
         , m_clipDurationFrames(200)
         , m_layer(0)
-        , m_selectedClipId(-1)
         , m_isClipActive(false)
-        , m_isPlaying(false)
         , m_activeObjectType("rect") // デフォルトは図形
     {
-        m_clipModel = new ClipModel(this);
-        m_playbackTimer = new QTimer(this);
-        m_playbackTimer->setTimerType(Qt::PreciseTimer);
-        updateTimerInterval(); // 初期FPSで設定
-        connect(m_playbackTimer, &QTimer::timeout, this, &TimelineController::onPlaybackStep);
-        updateClipActiveState();
+        // サービスの初期化
+        m_project = new ProjectService(this);
+        m_transport = new TransportService(this);
+        m_selection = new SelectionService(this);
 
+        m_clipModel = new ClipModel(this);
+
+        // サービス間の連携
+        connect(m_project, &ProjectService::fpsChanged, [this](){
+            m_transport->updateTimerInterval(m_project->fps());
+        });
+        m_transport->updateTimerInterval(m_project->fps());
+
+        // 再生位置が変わったらプレビュー更新
+        connect(m_transport, &TransportService::currentFrameChanged, this, [this](){
+            int nextFrame = m_transport->currentFrame();
+            // ループ再生ロジック
+            if (nextFrame > m_project->totalFrames()) {
+                m_transport->setCurrentFrame(0);
+            }
+            updateClipActiveState();
+            updateActiveClipsList();
+            updateObjectX();
+        });
+
+        updateClipActiveState();
     }
 
     void TimelineController::undo() { m_undoStack->undo(); }
     void TimelineController::redo() { m_undoStack->redo(); }
-
-    int TimelineController::projectWidth() const { return m_projectWidth; }
-    void TimelineController::setProjectWidth(int w) {
-        if (m_projectWidth != w) {
-            m_projectWidth = w;
-            emit projectWidthChanged();
-        }
-    }
-    
-    void TimelineController::onPlaybackStep() {
-        int nextFrame = m_currentFrame + 1;
-        // ループ再生
-        if (nextFrame > m_totalFrames) {
-            nextFrame = 0;
-        }
-        setCurrentFrame(nextFrame);
-    }
-
-    int TimelineController::projectHeight() const { return m_projectHeight; }
-    void TimelineController::setProjectHeight(int h) {
-        if (m_projectHeight != h) {
-            m_projectHeight = h;
-            emit projectHeightChanged();
-        }
-    }
-
-    double TimelineController::projectFps() const { return m_projectFps; }
-    void TimelineController::setProjectFps(double fps) {
-        if (!qFuzzyCompare(m_projectFps, fps)) {
-            m_projectFps = fps;
-            updateTimerInterval(); // FPS変更時にタイマー間隔を更新
-            emit projectFpsChanged();
-        }
-    }
-
-    int TimelineController::totalFrames() const { return m_totalFrames; }
-    void TimelineController::setTotalFrames(int frames) {
-        if (m_totalFrames != frames) {
-            m_totalFrames = frames;
-            emit totalFramesChanged();
-        }
-    }
 
     double TimelineController::timelineScale() const { return m_timelineScale; }
     void TimelineController::setTimelineScale(double scale) {
@@ -219,10 +193,11 @@ namespace Rina::UI {
 
     // --- Generic Property Accessors ---
     void TimelineController::setClipProperty(const QString& name, const QVariant& value) {
-        if (m_selectedClipId == -1) return;
+        int id = m_selection->selectedClipId();
+        if (id == -1) return;
         
         for (auto& clip : m_clips) {
-            if (clip.id == m_selectedClipId) {
+            if (clip.id == id) {
                 // 暫定対応: プロパティ名に応じて適切なエフェクトのパラメータを更新する
                 // 本来はUI側でエフェクトインデックスを指定すべき
                 for (auto* eff : clip.effects) {
@@ -230,8 +205,9 @@ namespace Rina::UI {
                         eff->setParam(name, value);
 
                         // Update cache (flattened view for current UI)
-                        m_selectedClipCache[name] = value;
-                        emit selectedClipDataChanged();
+                        QVariantMap data = m_selection->selectedClipData();
+                        data[name] = value;
+                        m_selection->select(id, data);
                         
                         // Update preview
                         updateActiveClipsList();
@@ -247,25 +223,7 @@ namespace Rina::UI {
     }
 
     QVariant TimelineController::getClipProperty(const QString& name) const {
-        if (m_selectedClipId != -1) {
-            return m_selectedClipCache.value(name);
-        }
-        return QVariant();
-    }
-
-    QVariantMap TimelineController::selectedClipData() const {
-        return m_selectedClipCache;
-    }
-
-    int TimelineController::currentFrame() const { return m_currentFrame; }
-    void TimelineController::setCurrentFrame(int frame) {
-        if (m_currentFrame != frame) {
-            m_currentFrame = frame;
-            emit currentFrameChanged();
-            updateClipActiveState();
-            updateActiveClipsList();
-            updateObjectX();
-        }
+        return m_selection->selectedClipData().value(name);
     }
 
     int TimelineController::clipStartFrame() const { return m_clipStartFrame; }
@@ -301,15 +259,16 @@ namespace Rina::UI {
     bool TimelineController::isClipActive() const { return m_isClipActive; }
 
     void TimelineController::updateClipActiveState() {
+        int current = m_transport->currentFrame();
         // シンプルな矩形判定: Start <= Current < Start + Duration
-        bool active = (m_currentFrame >= m_clipStartFrame) && (m_currentFrame < m_clipStartFrame + m_clipDurationFrames);
+        bool active = (current >= m_clipStartFrame) && (current < m_clipStartFrame + m_clipDurationFrames);
         if (m_isClipActive != active) {
             m_isClipActive = active;
             emit isClipActiveChanged();
         }
 
         if (m_isClipActive) {
-            Rina::Engine::Timeline::ECS::instance().updateClipState(1, m_layer, m_currentFrame - m_clipStartFrame);
+            Rina::Engine::Timeline::ECS::instance().updateClipState(1, m_layer, current - m_clipStartFrame);
         }
     }
 
@@ -348,22 +307,14 @@ namespace Rina::UI {
 
     void TimelineController::updateObjectX() {
         if (m_keyframesX.empty()) return;
-        float newVal = calculateInterpolatedValue(m_currentFrame);
+        float newVal = calculateInterpolatedValue(m_transport->currentFrame());
         int newX = qRound(newVal);
         // Update property via generic setter
         setClipProperty("x", newX);
     }
 
-    void TimelineController::updateTimerInterval() {
-        if (m_playbackTimer && m_projectFps > 0) {
-            // 1000ms / FPS = 1フレームあたりのミリ秒数
-            int interval = static_cast<int>(1000.0 / m_projectFps);
-            m_playbackTimer->setInterval(interval);
-        }
-    }
-
     float TimelineController::calculateInterpolatedValue(int frame) {
-        if (m_keyframesX.empty()) return m_selectedClipCache.value("x", 0).toFloat();
+        if (m_keyframesX.empty()) return m_selection->selectedClipData().value("x", 0).toFloat();
         
         int relFrame = frame - m_clipStartFrame;
 
@@ -379,18 +330,6 @@ namespace Rina::UI {
             }
         }
         return m_keyframesX.back().value;
-    }
-
-    bool TimelineController::isPlaying() const { return m_isPlaying; }
-
-    void TimelineController::togglePlay() {
-        m_isPlaying = !m_isPlaying;
-        if (m_isPlaying) {
-            m_playbackTimer->start();
-        } else {
-            m_playbackTimer->stop();
-        }
-        emit isPlayingChanged();
     }
 
     QString TimelineController::activeObjectType() const {
@@ -453,23 +392,21 @@ namespace Rina::UI {
         m_clipDurationFrames = newClip.durationFrames;
         m_layer = newClip.layer;
         m_activeObjectType = type;
-        m_selectedClipId = newClip.id;
         
         // Update property cache
-        m_selectedClipCache.clear();
+        QVariantMap cache;
         for(const auto& eff : newClip.effects) {
             QVariantMap params = eff->params();
             for(auto it = params.begin(); it != params.end(); ++it) 
-                m_selectedClipCache.insert(it.key(), it.value());
+                cache.insert(it.key(), it.value());
         }
+        m_selection->select(newClip.id, cache);
         
         emit clipStartFrameChanged();
         emit clipDurationFramesChanged();
         emit layerChanged();
         emit activeObjectTypeChanged();
         updateActiveClipsList();
-        emit selectedClipIdChanged();
-        emit selectedClipDataChanged();
     }
 
     QList<QObject*> TimelineController::getClipEffectsModel(int clipId) const {
@@ -509,10 +446,11 @@ namespace Rina::UI {
                     updateActiveClipsList(); // プレビュー更新（ClipModelが再評価）
 
                     // UI同期のために選択クリップの変更通知を発行
-                    if (clipId == m_selectedClipId) {
+                    if (clipId == m_selection->selectedClipId()) {
                         // 【修正】キャッシュも更新しないと、UIが古い値を読み込んで巻き戻ってしまう
-                        m_selectedClipCache[paramName] = value;
-                        // emit selectedClipDataChanged();
+                        QVariantMap data = m_selection->selectedClipData();
+                        data[paramName] = value;
+                        m_selection->select(clipId, data);
                     }
                 }
                 break;
@@ -558,10 +496,11 @@ namespace Rina::UI {
 
     void TimelineController::updateActiveClipsList() {
         // 現在フレームにあるクリップを抽出
+        int current = m_transport->currentFrame();
         QList<ClipData*> active;
         for (auto& clip : m_clips) {
-            if (m_currentFrame >= clip.startFrame && 
-                m_currentFrame < clip.startFrame + clip.durationFrames) {
+            if (current >= clip.startFrame && 
+                current < clip.startFrame + clip.durationFrames) {
                 
                 active.append(&clip);
             }
@@ -577,10 +516,6 @@ namespace Rina::UI {
 
     void TimelineController::log(const QString& msg) {
         qDebug() << "[TimelineBridge] " << msg;
-    }
-
-    int TimelineController::selectedClipId() const {
-        return m_selectedClipId;
     }
 
     void TimelineController::updateClip(int id, int layer, int startFrame, int duration) {
@@ -606,7 +541,7 @@ namespace Rina::UI {
                     changed = true;
                     
                     // 選択中のクリップならUIプロパティも更新
-                    if (m_selectedClipId == id) {
+                    if (m_selection->selectedClipId() == id) {
                         m_layer = layer; emit layerChanged();
                         m_clipStartFrame = startFrame; emit clipStartFrameChanged();
                         m_clipDurationFrames = duration; emit clipDurationFramesChanged();
@@ -631,10 +566,10 @@ namespace Rina::UI {
         
         // プロジェクト設定
         QJsonObject settings;
-        settings["width"] = m_projectWidth;
-        settings["height"] = m_projectHeight;
-        settings["fps"] = m_projectFps;
-        settings["totalFrames"] = m_totalFrames;
+        settings["width"] = m_project->width();
+        settings["height"] = m_project->height();
+        settings["fps"] = m_project->fps();
+        settings["totalFrames"] = m_project->totalFrames();
         root["settings"] = settings;
 
         // クリップデータ
@@ -692,15 +627,15 @@ namespace Rina::UI {
         // 設定復元
         if (root.contains("settings")) {
             QJsonObject s = root["settings"].toObject();
-            setProjectWidth(s["width"].toInt(1920));
-            setProjectHeight(s["height"].toInt(1080));
-            setProjectFps(s["fps"].toDouble(60.0));
-            setTotalFrames(s["totalFrames"].toInt(3600));
+            m_project->setWidth(s["width"].toInt(1920));
+            m_project->setHeight(s["height"].toInt(1080));
+            m_project->setFps(s["fps"].toDouble(60.0));
+            m_project->setTotalFrames(s["totalFrames"].toInt(3600));
         }
 
         // クリップ復元
         m_clips.clear();
-        m_selectedClipId = -1;
+        m_selection->select(-1, {});
         m_nextClipId = 1;
 
         QJsonArray clipsArray = root["clips"].toArray();
@@ -739,28 +674,25 @@ namespace Rina::UI {
 
         emit clipsChanged();
         updateActiveClipsList();
-        emit selectedClipIdChanged();
         
         return true;
     }
 
     void TimelineController::selectClip(int id) {
-        if (m_selectedClipId == id) return;
-        
-        m_selectedClipId = id;
-        emit selectedClipIdChanged();
+        if (m_selection->selectedClipId() == id) return;
 
         // 選択されたクリップの情報をプロパティにロード
         for (const auto& clip : m_clips) {
             if (clip.id == id) {
                 
-                m_selectedClipCache.clear();
+                QVariantMap cache;
                 for(auto* eff : clip.effects) {
                     QVariantMap params = eff->params();
                     for(auto it = params.begin(); it != params.end(); ++it) 
-                        m_selectedClipCache.insert(it.key(), it.value());
+                        cache.insert(it.key(), it.value());
                 }
-                emit selectedClipDataChanged();
+                
+                m_selection->select(id, cache);
                 
                 if (m_activeObjectType != clip.type) { m_activeObjectType = clip.type; emit activeObjectTypeChanged(); }
                 if (m_layer != clip.layer) { m_layer = clip.layer; emit layerChanged(); }
@@ -774,6 +706,7 @@ namespace Rina::UI {
         }
         
         // 見つからなかった場合（選択解除など）の処理は必要に応じて追加
+        m_selection->select(-1, {});
     }
 
     // === エフェクト操作 (Internal実装) ===
@@ -827,7 +760,19 @@ namespace Rina::UI {
                 model->setEnabled(effectData.enabled);
                 connect(model, &EffectModel::keyframeTracksChanged, this, &TimelineController::updateActiveClipsList);
                 clip.effects.append(model);
-                if (m_selectedClipId == clipId) emit selectedClipIdChanged();
+                
+                updateActiveClipsList();
+                emit clipEffectsChanged(clipId);
+
+                if (m_selection->selectedClipId() == clipId) {
+                    QVariantMap cache;
+                    for(auto* eff : clip.effects) {
+                        QVariantMap params = eff->params();
+                        for(auto it = params.begin(); it != params.end(); ++it) 
+                            cache.insert(it.key(), it.value());
+                    }
+                    m_selection->select(clipId, cache);
+                }
                 break;
             }
         }
@@ -844,7 +789,19 @@ namespace Rina::UI {
                     
                     EffectModel* eff = clip.effects.takeAt(effectIndex);
                     eff->deleteLater(); // 安全に削除
-                    if (m_selectedClipId == clipId) emit selectedClipIdChanged();
+                    
+                    updateActiveClipsList();
+                    emit clipEffectsChanged(clipId);
+
+                    if (m_selection->selectedClipId() == clipId) {
+                        QVariantMap cache;
+                        for(auto* eff : clip.effects) {
+                            QVariantMap params = eff->params();
+                            for(auto it = params.begin(); it != params.end(); ++it) 
+                                cache.insert(it.key(), it.value());
+                        }
+                        m_selection->select(clipId, cache);
+                    }
                 }
                 break;
             }
@@ -917,7 +874,7 @@ namespace Rina::UI {
             emit clipsChanged();
             updateActiveClipsList();
 
-            if (m_selectedClipId == clipId) {
+            if (m_selection->selectedClipId() == clipId) {
                 selectClip(-1); // Deselect
             }
         }

@@ -155,7 +155,7 @@ Common.RinaWindow {
                     id: playhead
             property double scale: TimelineBridge ? TimelineBridge.timelineScale : 1.0
             
-            x: TimelineBridge ? (TimelineBridge.currentFrame * scale) : 0
+            x: (TimelineBridge && TimelineBridge.transport) ? (TimelineBridge.transport.currentFrame * scale) : 0
                     y: 0
                     width: 2
                     height: parent.height
@@ -171,8 +171,8 @@ Common.RinaWindow {
                         drag.minimumX: 0
                         
                         onPositionChanged: {
-                            if (drag.active && TimelineBridge) {
-                                TimelineBridge.currentFrame = Math.round(playhead.x / scale) // ピクセル座標をフレーム数に変換
+                            if (drag.active && TimelineBridge && TimelineBridge.transport) {
+                                TimelineBridge.transport.currentFrame = Math.round(playhead.x / scale) // ピクセル座標をフレーム数に変換
                             }
                         }
                     }

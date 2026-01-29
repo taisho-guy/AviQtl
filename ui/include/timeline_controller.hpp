@@ -13,34 +13,10 @@
 #include <QUndoStack>
 #include <QAbstractListModel>
 #include "effect_model.hpp" // 念のため維持
+#include "timeline_types.hpp"
+#include "timeline_services.hpp"
 
 namespace Rina::UI {
-    // Value object for serialization and undo/redo
-    struct EffectData {
-        QString id;
-        QString name;
-        QString qmlSource;
-        bool enabled = true;
-        QVariantMap params;
-    };
-
-    struct Keyframe {
-        int frame;
-        float value;
-        int interpolationType; // 0: Linear
-    };
-
-    // Moved out of TimelineController for ClipModel access
-    struct ClipData {
-        int id;
-        QString type;
-        int startFrame;
-        int durationFrames;
-        int layer;
-        
-        // エフェクトスタック
-        QList<EffectModel*> effects;
-    };
 
     class ClipModel : public QAbstractListModel {
         Q_OBJECT
@@ -72,44 +48,30 @@ namespace Rina::UI {
 
     class TimelineController : public QObject {
         Q_OBJECT
-        // プロジェクト設定
-        Q_PROPERTY(int projectWidth READ projectWidth WRITE setProjectWidth NOTIFY projectWidthChanged)
-        Q_PROPERTY(int projectHeight READ projectHeight WRITE setProjectHeight NOTIFY projectHeightChanged)
-        Q_PROPERTY(double projectFps READ projectFps WRITE setProjectFps NOTIFY projectFpsChanged)
-        Q_PROPERTY(int totalFrames READ totalFrames WRITE setTotalFrames NOTIFY totalFramesChanged)
+        
+        // === Services (Sub-Controllers) ===
+        Q_PROPERTY(Rina::UI::ProjectService* project READ project CONSTANT)
+        Q_PROPERTY(Rina::UI::TransportService* transport READ transport CONSTANT)
+        Q_PROPERTY(Rina::UI::SelectionService* selection READ selection CONSTANT)
+
+        // === Legacy / Facade Properties ===
         Q_PROPERTY(double timelineScale READ timelineScale WRITE setTimelineScale NOTIFY timelineScaleChanged)
-
-        // Generic property access for the selected clip
-        Q_PROPERTY(QVariantMap selectedClipData READ selectedClipData NOTIFY selectedClipDataChanged)
-
-        // フレーム数ベースに変更
-        Q_PROPERTY(int currentFrame READ currentFrame WRITE setCurrentFrame NOTIFY currentFrameChanged)
         Q_PROPERTY(int clipStartFrame READ clipStartFrame WRITE setClipStartFrame NOTIFY clipStartFrameChanged)
         Q_PROPERTY(int clipDurationFrames READ clipDurationFrames WRITE setClipDurationFrames NOTIFY clipDurationFramesChanged)
         Q_PROPERTY(int layer READ layer WRITE setLayer NOTIFY layerChanged)
         Q_PROPERTY(bool isClipActive READ isClipActive NOTIFY isClipActiveChanged)
         Q_PROPERTY(QVariantList keyframeList READ keyframeList NOTIFY keyframeListChanged)
-        Q_PROPERTY(bool isPlaying READ isPlaying NOTIFY isPlayingChanged)
         Q_PROPERTY(QString activeObjectType READ activeObjectType NOTIFY activeObjectTypeChanged)
         Q_PROPERTY(QVariantList clips READ clips NOTIFY clipsChanged)
         Q_PROPERTY(Rina::UI::ClipModel* clipModel READ clipModel CONSTANT)
-        Q_PROPERTY(int selectedClipId READ selectedClipId NOTIFY selectedClipIdChanged)
 
     public:
         explicit TimelineController(QObject* parent = nullptr);
 
-        // Getter / Setter
-        int projectWidth() const;
-        void setProjectWidth(int w);
-        
-        int projectHeight() const;
-        void setProjectHeight(int h);
-
-        double projectFps() const;
-        void setProjectFps(double fps);
-
-        int totalFrames() const;
-        void setTotalFrames(int frames);
+        // Service Accessors
+        ProjectService* project() const { return m_project; }
+        TransportService* transport() const { return m_transport; }
+        SelectionService* selection() const { return m_selection; }
 
         double timelineScale() const;
         void setTimelineScale(double scale);
@@ -117,10 +79,6 @@ namespace Rina::UI {
         // Generic Property Operations
         Q_INVOKABLE void setClipProperty(const QString& name, const QVariant& value);
         Q_INVOKABLE QVariant getClipProperty(const QString& name) const;
-        QVariantMap selectedClipData() const;
-
-        int currentFrame() const;
-        void setCurrentFrame(int frame);
 
         int clipStartFrame() const;
         void setClipStartFrame(int frame);
@@ -138,9 +96,6 @@ namespace Rina::UI {
 
         Q_INVOKABLE void createObject(const QString& type, int startFrame, int layer);
         QString activeObjectType() const;
-
-        Q_INVOKABLE void togglePlay();
-        bool isPlaying() const;
 
         Q_INVOKABLE void log(const QString& msg);
         QVariantList clips() const;
@@ -163,7 +118,6 @@ namespace Rina::UI {
         Q_INVOKABLE bool saveProject(const QString& fileUrl);
         Q_INVOKABLE bool loadProject(const QString& fileUrl);
 
-        int selectedClipId() const;
         Q_INVOKABLE void selectClip(int id);
 
         Q_INVOKABLE void undo();
@@ -187,28 +141,19 @@ namespace Rina::UI {
         void updateActiveClipsList();
 
     signals:
-        void projectWidthChanged();
-        void projectHeightChanged();
-        void projectFpsChanged();
-        void totalFramesChanged();
         void timelineScaleChanged();
-        void selectedClipDataChanged();
-        void currentFrameChanged();
         void clipStartFrameChanged();
         void clipDurationFramesChanged();
         void layerChanged();
         void isClipActiveChanged();
         void keyframeListChanged();
-        void isPlayingChanged();
         void activeObjectTypeChanged();
         void clipsChanged(); // 追加
-        void selectedClipIdChanged();
+        void clipEffectsChanged(int clipId);
 
     private:
-    void onPlaybackStep();
         void updateClipActiveState();
         void updateObjectX();
-        void updateTimerInterval();
     float calculateInterpolatedValue(int frame);
 
         QList<ClipData> m_clips;
@@ -217,25 +162,21 @@ namespace Rina::UI {
 
         QUndoStack* m_undoStack;
         std::unique_ptr<ClipData> m_clipboard;
-        int m_projectWidth = 1920;
-        int m_projectHeight = 1080;
-        double m_projectFps = 60.0;
-        int m_totalFrames = 3600;
         double m_timelineScale = 1.0; // 1 frame = 1 pixel (default)
-        int m_selectedClipId = -1;
-        QVariantMap m_selectedClipCache; // Cache for UI binding
 
-        int m_currentFrame = 0;
         int m_clipStartFrame = 100;
         int m_clipDurationFrames = 200;
         int m_layer = 0;
         bool m_isClipActive = false;
         std::vector<Keyframe> m_keyframesX;
-        QTimer* m_playbackTimer;
-        bool m_isPlaying = false;
         QString m_activeObjectType = "rect"; // デフォルトは図形
 
         // Prototype Definitions (Type -> Default Properties)
         QMap<QString, QVariantMap> m_prototypes;
+
+        // Services
+        ProjectService* m_project;
+        TransportService* m_transport;
+        SelectionService* m_selection;
     };
 }

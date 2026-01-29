@@ -19,23 +19,28 @@ Common.RinaWindow {
 
     SystemPalette { id: palette; colorGroup: SystemPalette.Active }
 
-    property int targetClipId: TimelineBridge ? TimelineBridge.selectedClipId : -1
+    property int targetClipId: (TimelineBridge && TimelineBridge.selection) ? TimelineBridge.selection.selectedClipId : -1
     property var effectsModel: []
     property bool inputting: false // 入力中フラグ（バインディングループ防止用）
 
     // 選択変更やデータ更新を監視してモデルをリロード
     Connections {
-        target: TimelineBridge
+        target: TimelineBridge ? TimelineBridge.selection : null
         function onSelectedClipIdChanged() { reload() }
         // パラメータ変更時の反映用（入力中はリロードしない）
         function onSelectedClipDataChanged() { if(!inputting) reload() }
     }
 
+    Connections {
+        target: TimelineBridge
+        function onClipEffectsChanged(clipId) { if (clipId === targetClipId) reload() }
+    }
+
     Component.onCompleted: reload()
 
     function reload() {
-        if (!TimelineBridge) return
-        var id = TimelineBridge.selectedClipId
+        if (!TimelineBridge || !TimelineBridge.selection) return
+        var id = TimelineBridge.selection.selectedClipId
         targetClipId = id
         if (id >= 0) {
             effectsModel = TimelineBridge.getClipEffectsModel(id)
@@ -53,7 +58,10 @@ Common.RinaWindow {
                 MenuItem {
                     text: modelData.name
                     onTriggered: {
-                        if(TimelineBridge) TimelineBridge.addEffect(targetClipId, modelData.id)
+                        if(TimelineBridge) {
+                            TimelineBridge.addEffect(targetClipId, modelData.id)
+                            reload()
+                        }
                     }
                 }
             }
@@ -122,7 +130,7 @@ Common.RinaWindow {
                             property bool isNumber: typeof effVal === 'number'
                             
                             // トラック情報と補間状態の取得
-                            property int curRelFrame: TimelineBridge ? (TimelineBridge.currentFrame - TimelineBridge.clipStartFrame) : 0
+                            property int curRelFrame: (TimelineBridge && TimelineBridge.transport) ? (TimelineBridge.transport.currentFrame - TimelineBridge.clipStartFrame) : 0
                             property int clipDur: TimelineBridge ? TimelineBridge.clipDurationFrames : 100
 
                             property var tracks: effectModel.keyframeTracks
