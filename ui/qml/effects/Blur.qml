@@ -1,16 +1,18 @@
-import QtQuick
-import QtQuick.Effects
+import QtQuick 2.15
+import Qt5Compat.GraphicalEffects 1.0
 import "qrc:/qt/qml/Rina/ui/qml/common" as Common
 
 Common.BaseEffect {
     id: root
-    MultiEffect {
-        // anchors ではなく明示的サイズ（親 Item のサイズを継承）
-        width: root.width
-        height: root.height
+
+    // QtQuick.Effects MultiEffect を捨てる（blurSrc* 警告＆ゴースト経路を遮断）
+    FastBlur {
+        anchors.fill: parent
         source: root.source
-        blurEnabled: true
-        blurMax: 64
-        blur: root.evalNumber("size", 0) / 64.0
+
+        // 既存パラメータ(size)をそのまま radius に割当（必要なら後でスケール調整）
+        radius: Math.max(0, root.evalNumber("size", 10))
+        transparentBorder: true
+        visible: root.source !== null && root.width > 0 && root.height > 0
     }
 }

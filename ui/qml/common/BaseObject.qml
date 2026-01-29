@@ -61,6 +61,8 @@ Node {
     // 子クラスがオーバーライドするプロパティ
     property Item sourceItem: Item {
         // デフォルトはダミー（visible: falseは子側で設定）
+        width: 1
+        height: 1
     }
     
     // sourceItem は常に非表示（renderer.output のみ表示）

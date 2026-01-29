@@ -9,9 +9,13 @@ Item {
     property QtObject effectModel
     property int frame: 0
     
-    // 明示的にサイズを設定（子の MultiEffect が参照）
-    width: source ? source.width : 0
-    height: source ? source.height : 0
+    // implicitSize を使用（子要素が自動的に参照）
+    implicitWidth: source ? source.width : 1
+    implicitHeight: source ? source.height : 1
+    
+    // 明示的サイズも設定
+    width: implicitWidth > 0 ? implicitWidth : 1
+    height: implicitHeight > 0 ? implicitHeight : 1
     
     // 【統一API】キーフレーム優先評価
     function evalParam(key, fallback) {

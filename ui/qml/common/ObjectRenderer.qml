@@ -11,10 +11,16 @@ Item {
     required property list<QtObject> effectModels
     required property int relFrame
 
-    // フォールバック用ダミー
+    // フォールバック用ダミー（確実に有効な Item）
+    width: originalSource ? originalSource.width : 1
+    height: originalSource ? originalSource.height : 1
+
     Item {
         id: fallbackItem
-        visible: false
+        width: 1
+        height: 1
+        visible: true   // テクスチャ化のために可視である必要がある
+        opacity: 0.0    // ただし見えないようにする
     }
 
     // 出力: 最終的にレンダリングされたテクスチャソース（Modelで使用）
@@ -46,6 +52,10 @@ Item {
             Binding { target: effectLoader.item; property: "effectModel"; value: modelData; when: effectLoader.status === Loader.Ready }
             // キーフレーム評価用（全エフェクト共通）
             Binding { target: effectLoader.item; property: "frame"; value: renderer.relFrame; when: effectLoader.status === Loader.Ready }
+            
+            // サイズ同期: 前段のサイズを引き継ぐ（エフェクト側で拡張も可能）
+            Binding { target: effectLoader.item; property: "width"; value: effectLoader.inputSource.width; when: effectLoader.status === Loader.Ready }
+            Binding { target: effectLoader.item; property: "height"; value: effectLoader.inputSource.height; when: effectLoader.status === Loader.Ready }
         }
     }
 
@@ -54,22 +64,24 @@ Item {
         id: textureSource
         
         sourceItem: {
-            if (!renderer.originalSource) return fallbackItem;
-            if (effectChain.count > 0) return findFinalOutput();
+            // originalSource が無効な場合は fallbackItem を使用
+            if (!renderer.originalSource || renderer.originalSource.width <= 0 || renderer.originalSource.height <= 0) 
+                return fallbackItem;
+            if (effectChain.count > 0) return findFinalOutput(renderer.originalSource);
             return renderer.originalSource;
         }
         
-        function findFinalOutput() {
+        function findFinalOutput(defaultSource) {
             var count = effectChain.count;
             for (var i = count - 1; i >= 0; i--) {
                 var loader = effectChain.itemAt(i);
                 if (loader) {
-                    if (loader.status === Loader.Ready && loader.active && loader.item !== null) {
+                    if (loader.status === Loader.Ready && loader.active && loader.item && loader.item.width > 0 && loader.item.height > 0) {
                         return loader.item;
                     }
                 }
             }
-            return renderer.originalSource ? renderer.originalSource : fallbackItem;
+            return defaultSource;
         }
 
         hideSource: true
