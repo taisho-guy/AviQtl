@@ -1,11 +1,20 @@
 import QtQuick 2.15
 import QtQuick3D 6.0
 import QtQml 2.15
-// import "objects"
 
 Item {
     id: root
     anchors.fill: parent
+
+    // 2Dレンダー（sourceItem/effects/ShaderEffectSource）を必ずQQuickWindow配下に置くためのホスト
+    // visible:false でもWindow配下に居ればSceneGraph/Timerが正常に動く
+    Item {
+        id: offscreenRenderHost
+        anchors.fill: parent
+        visible: false
+        opacity: 0.0
+        z: -9999
+    }
 
     // 背景（余白部分）は黒
     Rectangle {
@@ -182,14 +191,16 @@ Item {
                     }
 
                 function _instantiate(component) {
-                    clipNode.dbg("instantiate begin, status=" + component.status + ", url=" + sourceUrl)
+                    // clipNode.dbg("instantiate begin, status=" + component.status + ", url=" + sourceUrl)
                     createdObject = component.createObject(objectContainer, {
                         "opacity": clipNode.pOpacity,
                         "clipId": model.id,
                         "clipStartFrame": model.startFrame,
-                        "clipDurationFrames": model.durationFrames
+                        "clipDurationFrames": model.durationFrames,
+                        // BaseObject 側で sourceItem/renderer をこのホストへ移す
+                        "renderHost": offscreenRenderHost
                     })
-                    clipNode.dbg("instantiate end, createdObject=" + (createdObject ? "ok" : "null"))
+                    // clipNode.dbg("instantiate end, createdObject=" + (createdObject ? "ok" : "null"))
                 }
 
                     onSourceUrlChanged: reload()

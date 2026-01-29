@@ -62,7 +62,6 @@ Item {
     // 最終段の出力
     ShaderEffectSource {
         id: textureSource
-        
         sourceItem: {
             // originalSource が無効な場合は fallbackItem を使用
             if (!renderer.originalSource || renderer.originalSource.width <= 0 || renderer.originalSource.height <= 0) 
@@ -70,7 +69,10 @@ Item {
             if (effectChain.count > 0) return findFinalOutput(renderer.originalSource);
             return renderer.originalSource;
         }
-        
+
+        // 2D側への描画を確実に止める（3DのTexture.sourceItemとしては機能する）
+        visible: false
+
         function findFinalOutput(defaultSource) {
             var count = effectChain.count;
             for (var i = count - 1; i >= 0; i--) {
@@ -84,9 +86,9 @@ Item {
             return defaultSource;
         }
 
+        // 念のため：出力更新を止めない（既定でtrueだが明示）
+        live: true
         hideSource: true
-        live: true // チェーン処理には live: true が必要
-        visible: true 
         recursive: false
     }
 }

@@ -4,7 +4,36 @@ import "." as Common
 
 Node {
     id: base
-    
+
+    // CompositeView 側から渡される「Window配下のItem」。ここに2D系を寄せる
+    property Item renderHost: null
+    property var __owned2D: []
+
+    function __adopt2D(item) {
+        if (!item || !renderHost) return
+        if (item.parent === renderHost) return
+        item.parent = renderHost
+        // sourceItem/renderer は 3D のテクスチャ用途なので 2D 描画は不要
+        if (item.visible !== undefined) item.visible = false
+        __owned2D.push(item)
+    }
+
+    Component.onCompleted: {
+        // 各オブジェクト(TextObject/RectObject)が set してくる sourceItem を移す
+        __adopt2D(base.sourceItem)
+        // ObjectRenderer(= ShaderEffectSource/effectsチェーン)も移す
+        __adopt2D(rendererInstance)
+    }
+
+    Component.onDestruction: {
+        for (var i = 0; i < __owned2D.length; i++) {
+            try {
+                if (__owned2D[i]) __owned2D[i].destroy()
+            } catch (e) {}
+        }
+        __owned2D = []
+    }
+
     // CompositeView から自動注入されるプロパティ
     property int clipId: -1
     property int clipStartFrame: 0
@@ -68,7 +97,6 @@ Node {
     // sourceItem は常に非表示（renderer.output のみ表示）
     onSourceItemChanged: if (sourceItem) sourceItem.visible = false
     property alias renderer: rendererInstance
-    
     // レンダラー自動配置
     Common.ObjectRenderer {
         id: rendererInstance
