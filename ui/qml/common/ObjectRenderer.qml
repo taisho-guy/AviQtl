@@ -11,6 +11,12 @@ Item {
     required property list<QtObject> effectModels
     required property int relFrame
 
+    // フォールバック用ダミー
+    Item {
+        id: fallbackItem
+        visible: false
+    }
+
     // 出力: 最終的にレンダリングされたテクスチャソース（Modelで使用）
     property alias output: textureSource
 
@@ -40,10 +46,6 @@ Item {
             Binding { target: effectLoader.item; property: "effectModel"; value: modelData; when: effectLoader.status === Loader.Ready }
             // キーフレーム評価用（全エフェクト共通）
             Binding { target: effectLoader.item; property: "frame"; value: renderer.relFrame; when: effectLoader.status === Loader.Ready }
-            
-            // サイズ同期: 前段のサイズを引き継ぐ（エフェクト側で拡張も可能）
-            Binding { target: effectLoader.item; property: "width"; value: effectLoader.inputSource.width; when: effectLoader.status === Loader.Ready }
-            Binding { target: effectLoader.item; property: "height"; value: effectLoader.inputSource.height; when: effectLoader.status === Loader.Ready }
         }
     }
 
@@ -51,16 +53,23 @@ Item {
     ShaderEffectSource {
         id: textureSource
         
-        // チェーンの末尾を探す
         sourceItem: {
+            if (!renderer.originalSource) return fallbackItem;
+            if (effectChain.count > 0) return findFinalOutput();
+            return renderer.originalSource;
+        }
+        
+        function findFinalOutput() {
             var count = effectChain.count;
             for (var i = count - 1; i >= 0; i--) {
                 var loader = effectChain.itemAt(i);
-                if (loader && loader.status === Loader.Ready && loader.active) {
-                    return loader.item;
+                if (loader) {
+                    if (loader.status === Loader.Ready && loader.active && loader.item !== null) {
+                        return loader.item;
+                    }
                 }
             }
-            return renderer.originalSource;
+            return renderer.originalSource ? renderer.originalSource : fallbackItem;
         }
 
         hideSource: true
