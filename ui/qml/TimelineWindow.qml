@@ -14,25 +14,104 @@ Common.RinaWindow {
     // コンテキストメニューの定義
     Menu {
         id: contextMenu
-        
-        // メニューが開かれたときのマウス位置（タイムライン上の座標）を保持
+
+        // Context payload
+        property string contextType: "timeline_background" // timeline_background | clip | layer_header | scene_header
         property int clickFrame: 0
         property int clickLayer: 0
+        property int clickClipId: -1
+        property var menuModel: []
 
-        MenuItem {
-            text: "Add Text Object"
-            onTriggered: {
-                // C++側に生成リクエストを送る
-                if (TimelineBridge) {
-                    TimelineBridge.createObject("text", contextMenu.clickFrame, contextMenu.clickLayer)
-                }
+        function openAt(x, y, ctxType, frame, layer, clipId) {
+            contextType = ctxType
+            clickFrame = frame
+            clickLayer = layer
+            clickClipId = clipId
+            menuModel = buildMenuModel()
+            popup(x, y)
+        }
+
+        function buildMenuModel() {
+            // 最初はQML側で定義（後でC++に移してもよい）
+            if (contextType === "clip") {
+                return [
+                    { type: "item", text: "Cut",     cmd: "clip.cut",     enabled: (clickClipId >= 0) },
+                    { type: "item", text: "Copy",    cmd: "clip.copy",    enabled: (clickClipId >= 0) },
+                    { type: "item", text: "Delete",  cmd: "clip.delete",  enabled: (clickClipId >= 0) },
+                    { type: "sep" },
+                    { type: "item", text: "Split",   cmd: "clip.split",   enabled: (clickClipId >= 0) },
+                    { type: "item", text: "Group",   cmd: "clip.group",   enabled: false },
+                    { type: "item", text: "Ungroup", cmd: "clip.ungroup", enabled: false }
+                ]
+            }
+
+            // timeline_background
+            return [
+                { type: "item", text: "Add Text Object",  cmd: "add.text", enabled: true },
+                { type: "item", text: "Add Rect Object",  cmd: "add.rect", enabled: true },
+                { type: "sep" },
+                { type: "item", text: "Paste",            cmd: "edit.paste", enabled: false },
+                { type: "sep" },
+                { type: "item", text: "Undo",             cmd: "edit.undo", enabled: true },
+                { type: "item", text: "Redo",             cmd: "edit.redo", enabled: true }
+            ]
+        }
+
+        Repeater {
+            model: contextMenu.menuModel
+            delegate: Loader {
+                active: true
+                // 重要: modelDataをLoaderのプロパティとして保存し、子からアクセス可能にする
+                property var menuData: modelData
+                sourceComponent: (modelData.type === "sep") ? sepComp : itemComp
             }
         }
-        MenuItem {
-            text: "Add Shape Object (Rectangle)"
-            onTriggered: {
-                if (TimelineBridge) {
-                    TimelineBridge.createObject("rect", contextMenu.clickFrame, contextMenu.clickLayer)
+
+        Component {
+            id: sepComp
+            MenuSeparator { }
+        }
+        Component {
+            id: itemComp
+            MenuItem {
+                // Loader(parent)のプロパティ経由でデータにアクセス
+                text: parent.menuData.text
+                enabled: (parent.menuData.enabled !== undefined) ? parent.menuData.enabled : true
+                onTriggered: {
+                    if (!TimelineBridge) return
+                    switch (parent.menuData.cmd) {
+                    case "add.text":
+                        TimelineBridge.createObject("text", contextMenu.clickFrame, contextMenu.clickLayer)
+                        break
+                    case "add.rect":
+                        TimelineBridge.createObject("rect", contextMenu.clickFrame, contextMenu.clickLayer)
+                        break
+                    case "edit.undo":
+                        TimelineBridge.undo()
+                        break
+                    case "edit.redo":
+                        TimelineBridge.redo()
+                        break
+                    case "clip.delete":
+                        // clickClipIdはContextMenuのプロパティなのでそのままアクセス可
+                        TimelineBridge.deleteClip(contextMenu.clickClipId)
+                        break
+                    case "clip.split":
+                        TimelineBridge.splitClip(contextMenu.clickClipId, contextMenu.clickFrame)
+                        break
+                    case "clip.cut":
+                        TimelineBridge.cutClip(contextMenu.clickClipId)
+                        break
+                    case "clip.copy":
+                        TimelineBridge.copyClip(contextMenu.clickClipId)
+                        break
+                    case "edit.paste":
+                        TimelineBridge.pasteClip(contextMenu.clickFrame, contextMenu.clickLayer)
+                        break
+                    default:
+                        TimelineBridge.log("Unknown cmd: " + parent.menuData.cmd)
+                        break
+                    }
                 }
             }
         }
@@ -106,17 +185,11 @@ Common.RinaWindow {
                     z: -1 // オブジェクトより奥に配置
 
                     onClicked: (mouse) => {
-                        if (mouse.button === Qt.RightButton) {
-                            // クリック位置からフレームとレイヤーを計算
-                            var scale = TimelineBridge ? TimelineBridge.timelineScale : 1.0
-                            var frame = Math.floor(mouse.x / scale)
-                            var layer = Math.floor(mouse.y / 30) // 30px per layer
-                            
-                            // メニューに情報を渡して表示
-                            contextMenu.clickFrame = frame
-                            contextMenu.clickLayer = layer
-                            contextMenu.popup()
-                        }
+                        if (mouse.button !== Qt.RightButton) return
+                        var scale = TimelineBridge ? TimelineBridge.timelineScale : 1.0
+                        var frame = Math.floor(mouse.x / scale)
+                        var layer = Math.floor(mouse.y / 30) // 30px per layer
+                        contextMenu.openAt(mouse.x, mouse.y, "timeline_background", frame, layer, -1)
                     }
                 }
 
@@ -142,6 +215,23 @@ Common.RinaWindow {
                             anchors.centerIn: parent
                             text: modelData.type
                             color: "white"
+                        }
+
+                        // 右クリックは“クリップ上”として別系統で開く（背景Menuと混ざらない）
+                        MouseArea {
+                            anchors.fill: parent
+                            acceptedButtons: Qt.RightButton
+                            propagateComposedEvents: true
+                            onPressed: (mouse) => {
+                                if (!TimelineBridge) return
+                                TimelineBridge.selectClip(modelData.id)
+                            }
+                            onClicked: (mouse) => {
+                                var scale = TimelineBridge ? TimelineBridge.timelineScale : 1.0
+                                // 相対座標ではなく、グローバル座標から計算するため mouse.x を使う
+                                var frame = Math.floor(clipRect.x + mouse.x / scale)
+                                contextMenu.openAt(mouse.x, mouse.y, "clip", frame, modelData.layer, modelData.id)
+                            }
                         }
 
                         // === 移動用 MouseArea (本体) ===

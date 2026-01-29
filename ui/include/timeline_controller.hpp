@@ -9,6 +9,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <memory>
 #include <QUndoStack>
 #include <QAbstractListModel>
 #include "effect_model.hpp" // 念のため維持
@@ -168,6 +169,13 @@ namespace Rina::UI {
         Q_INVOKABLE void undo();
         Q_INVOKABLE void redo();
 
+        // Clip manipulation commands for context menu
+        Q_INVOKABLE void deleteClip(int clipId);
+        Q_INVOKABLE void splitClip(int clipId, int frame);
+        Q_INVOKABLE void copyClip(int clipId);
+        Q_INVOKABLE void cutClip(int clipId);
+        Q_INVOKABLE void pasteClip(int frame, int layer);
+
         // Internal methods called by Commands
         void updateClipInternal(int id, int layer, int startFrame, int duration);
         void updateClipEffectParamInternal(int clipId, int effectIndex, const QString& paramName, const QVariant& value);
@@ -175,6 +183,7 @@ namespace Rina::UI {
         void addEffectInternal(int clipId, const EffectData& effectData);
         void removeEffectInternal(int clipId, int effectIndex);
         EffectData createEffectData(const QString& id);
+        ClipData deepCopyClip(const ClipData& source);
         void updateActiveClipsList();
 
     signals:
@@ -207,6 +216,7 @@ namespace Rina::UI {
         int m_nextClipId = 1;
 
         QUndoStack* m_undoStack;
+        std::unique_ptr<ClipData> m_clipboard;
         int m_projectWidth = 1920;
         int m_projectHeight = 1080;
         double m_projectFps = 60.0;

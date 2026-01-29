@@ -145,6 +145,7 @@ namespace Rina::UI {
     TimelineController::TimelineController(QObject* parent) 
         : QObject(parent)
         , m_undoStack(new QUndoStack(this))
+        , m_clipboard(nullptr)
         , m_currentFrame(0)
         , m_clipStartFrame(100)
         , m_clipDurationFrames(200)
@@ -880,5 +881,149 @@ namespace Rina::UI {
             cmd->setRemovedEffect(removed);
             m_undoStack->push(cmd);
         }
+    }
+
+    ClipData TimelineController::deepCopyClip(const ClipData& source) {
+        ClipData newClip;
+        newClip.id = -1; // ID should be set by the caller
+        newClip.type = source.type;
+        newClip.startFrame = source.startFrame;
+        newClip.durationFrames = source.durationFrames;
+        newClip.layer = source.layer;
+
+        for (const auto* oldEffect : source.effects) {
+            auto* newEffect = new EffectModel(oldEffect->id(), oldEffect->name(), oldEffect->params(), oldEffect->qmlSource(), this);
+            newEffect->setEnabled(oldEffect->isEnabled());
+            newEffect->setKeyframeTracks(oldEffect->keyframeTracks()); // QVariantMap is deep-copied
+            connect(newEffect, &EffectModel::keyframeTracksChanged, this, &TimelineController::updateActiveClipsList);
+            newClip.effects.append(newEffect);
+        }
+        return newClip;
+    }
+
+    void TimelineController::deleteClip(int clipId) {
+        // This is a simplified implementation. For full Undo/Redo, a DeleteClipCommand is needed.
+        auto it = std::find_if(m_clips.begin(), m_clips.end(), [clipId](const ClipData& clip){
+            return clip.id == clipId;
+        });
+
+        if (it != m_clips.end()) {
+            // Clean up heap-allocated EffectModels
+            for (auto* eff : it->effects) {
+                eff->deleteLater();
+            }
+            m_clips.erase(it);
+
+            emit clipsChanged();
+            updateActiveClipsList();
+
+            if (m_selectedClipId == clipId) {
+                selectClip(-1); // Deselect
+            }
+        }
+    }
+
+    void TimelineController::splitClip(int clipId, int frame) {
+        auto it = std::find_if(m_clips.begin(), m_clips.end(), [clipId](const ClipData& clip){
+            return clip.id == clipId;
+        });
+
+        if (it == m_clips.end()) return;
+
+        ClipData& original = *it;
+
+        // Check if the split point is within the clip's bounds (exclusive of start/end frames)
+        if (frame <= original.startFrame || frame >= original.startFrame + original.durationFrames) {
+            log("Split frame is out of clip range or on its edge.");
+            return;
+        }
+
+        // Create the second part of the clip by deep-copying
+        ClipData secondPart = deepCopyClip(original);
+        secondPart.id = m_nextClipId++;
+
+        int splitPointInClip = frame - original.startFrame;
+
+        // Adjust timings
+        secondPart.startFrame = frame;
+        secondPart.durationFrames = original.durationFrames - splitPointInClip;
+        original.durationFrames = splitPointInClip;
+
+        // Adjust keyframes for the second part (move and re-base)
+        for (auto* effect : secondPart.effects) {
+            QVariantMap oldTracks = effect->keyframeTracks();
+            QVariantMap newTracks;
+            for (auto trackIt = oldTracks.begin(); trackIt != oldTracks.end(); ++trackIt) {
+                QVariantList oldKeyframes = trackIt.value().toList();
+                QVariantList newKeyframes;
+                for (const QVariant& kfVar : oldKeyframes) {
+                    QVariantMap kf = kfVar.toMap();
+                    int kfFrame = kf["frame"].toInt();
+                    if (kfFrame >= splitPointInClip) {
+                        kf["frame"] = kfFrame - splitPointInClip; // Re-base frame number
+                        newKeyframes.append(kf);
+                    }
+                }
+                if (!newKeyframes.isEmpty()) newTracks.insert(trackIt.key(), newKeyframes);
+            }
+            effect->setKeyframeTracks(newTracks);
+        }
+        
+        // Adjust keyframes for the first part (remove those that are now out of bounds)
+        for (auto* effect : original.effects) {
+            QVariantMap oldTracks = effect->keyframeTracks();
+            QVariantMap newTracks;
+            for (auto trackIt = oldTracks.begin(); trackIt != oldTracks.end(); ++trackIt) {
+                QVariantList oldKeyframes = trackIt.value().toList();
+                QVariantList newKeyframes;
+                for (const QVariant& kfVar : oldKeyframes) {
+                    if (kfVar.toMap()["frame"].toInt() < splitPointInClip) newKeyframes.append(kfVar);
+                }
+                if (!newKeyframes.isEmpty()) newTracks.insert(trackIt.key(), newKeyframes);
+                else newTracks.remove(trackIt.key());
+            }
+            effect->setKeyframeTracks(newTracks);
+        }
+
+        m_clips.append(secondPart);
+
+        emit clipsChanged();
+        updateActiveClipsList();
+        log(QString("Split clip %1 at %2").arg(clipId).arg(frame));
+    }
+
+    void TimelineController::copyClip(int clipId) {
+        auto it = std::find_if(m_clips.begin(), m_clips.end(), [clipId](const ClipData& clip){
+            return clip.id == clipId;
+        });
+
+        if (it != m_clips.end()) {
+            m_clipboard = std::make_unique<ClipData>(deepCopyClip(*it));
+            log(QString("Copied clip %1 to clipboard.").arg(clipId));
+        }
+    }
+
+    void TimelineController::cutClip(int clipId) {
+        copyClip(clipId);
+        deleteClip(clipId);
+    }
+
+    void TimelineController::pasteClip(int frame, int layer) {
+        if (!m_clipboard) {
+            log("Clipboard is empty.");
+            return;
+        }
+
+        ClipData newClip = deepCopyClip(*m_clipboard);
+        newClip.id = m_nextClipId++;
+        newClip.startFrame = frame;
+        newClip.layer = layer;
+
+        m_clips.append(newClip);
+
+        emit clipsChanged();
+        updateActiveClipsList();
+        selectClip(newClip.id);
+        log(QString("Pasted clip to frame %1, layer %2").arg(frame).arg(layer));
     }
 }
