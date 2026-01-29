@@ -2,65 +2,42 @@ import QtQuick
 import QtQuick3D
 import QtQuick.Effects
 import Rina
+import "qrc:/qt/qml/Rina/ui/qml/common" as Common
 
 Node {
     id: root
     
     property int currentFrame: TimelineBridge ? TimelineBridge.currentFrame : 0
 
-    property real sizeW: {
-        var _ = currentFrame;
-        var _2 = TimelineBridge ? TimelineBridge.selectedClipData : null;
-        for(let i=0; i<rawEffectModels.length; i++) {
-            let eff = rawEffectModels[i];
-            if (eff.id === "rect" && eff.enabled) {
-                return eff.evaluatedParam ? eff.evaluatedParam("sizeW", currentFrame) : eff.params["sizeW"];
-            }
-        }
-        return 100;
-    }
-
-    property real sizeH: {
-        var _ = currentFrame;
-        var _2 = TimelineBridge ? TimelineBridge.selectedClipData : null;
-        for(let i=0; i<rawEffectModels.length; i++) {
-            let eff = rawEffectModels[i];
-            if (eff.id === "rect" && eff.enabled) {
-                return eff.evaluatedParam ? eff.evaluatedParam("sizeH", currentFrame) : eff.params["sizeH"];
-            }
-        }
-        return 100;
-    }
-
-    property color color: {
-        var _ = currentFrame;
-        var _2 = TimelineBridge ? TimelineBridge.selectedClipData : null;
-        for(let i=0; i<rawEffectModels.length; i++) {
-            let eff = rawEffectModels[i];
-            if (eff.id === "rect" && eff.enabled) {
-                return eff.evaluatedParam ? eff.evaluatedParam("color", currentFrame) : eff.params["color"];
-            }
-        }
-        return "#66aa99";
-    }
-
-    property real opacity: {
-        var _ = currentFrame;
-        var _2 = TimelineBridge ? TimelineBridge.selectedClipData : null;
-        for(let i=0; i<rawEffectModels.length; i++) {
-            let eff = rawEffectModels[i];
-            if (eff.id === "rect" && eff.enabled) {
-                return eff.evaluatedParam ? eff.evaluatedParam("opacity", currentFrame) : eff.params["opacity"];
-            }
-        }
-        return 1.0;
-    }
-
     // 追加: 親からIDを受け取る
     property int clipId: -1
+    property int clipStartFrame: 0
+    property int clipDurationFrames: 0
+    property int relFrame: TimelineBridge ? (TimelineBridge.currentFrame - clipStartFrame) : 0
 
     // 生のデータモデルを取得
     property list<QtObject> rawEffectModels: TimelineBridge && clipId >= 0 ? TimelineBridge.getClipEffectsModel(clipId) : []
+
+    // ヘルパー関数：キーフレーム優先で評価
+    function evalParam(effectId, paramName, fallback) {
+        for(let i=0; i<rawEffectModels.length; i++) {
+            let eff = rawEffectModels[i];
+            if (eff.id === effectId && eff.enabled) {
+                if (eff.evaluatedParam) {
+                    var v = eff.evaluatedParam(paramName, relFrame);
+                    if (v !== undefined && v !== null) return v;
+                }
+                return eff.params[paramName] !== undefined ? eff.params[paramName] : fallback;
+            }
+        }
+        return fallback;
+    }
+
+    // キーフレーム対応プロパティ（rect エフェクトから取得）
+    property real sizeW: evalParam("rect", "sizeW", 100)
+    property real sizeH: evalParam("rect", "sizeH", 100)
+    property color color: evalParam("rect", "color", "#66aa99")
+    property real opacity: evalParam("rect", "opacity", 1.0)
 
     // エフェクトチェーン用に、オブジェクト定義(rect)やTransformを除外したリストを生成
     property var filterModels: {
@@ -75,26 +52,25 @@ Node {
         return list;
     }
 
-    // フィルタパラメータの抽出 (リアクティブ)
-    property var blurModel: {
-        for(let i=0; i<rawEffectModels.length; i++) 
-            if(rawEffectModels[i].id === "blur") return rawEffectModels[i];
-        return null;
+    function getBlurPadding() {
+        for(let i=0; i<rawEffectModels.length; i++) {
+            if(rawEffectModels[i].id === "blur" && rawEffectModels[i].enabled) {
+                var v = rawEffectModels[i].evaluatedParam ? rawEffectModels[i].evaluatedParam("size", relFrame) : undefined;
+                if (v === undefined || v === null) v = rawEffectModels[i].params["size"];
+                return Number(v || 0);
+            }
+        }
+        return 0;
     }
-    
-    // バインディング: 値が変われば即座に反映
-    property real blurRadius: (blurModel && blurModel.enabled) ? (blurModel.params["size"] || 0) : 0
+    property real padding: getBlurPadding()
 
     // --- テクスチャ生成パイプライン ---
     resources: [
-        // sourceRoot階層を削除
         Item {
             id: sourceItem
             visible: true // hideSourceで隠れるのでtrueでOK
-            // 自動パディング: ぼかし半径に応じてキャンバスを拡張しクリッピングを防ぐ
-            property int padding: root.blurRadius > 0 ? Math.ceil(root.blurRadius * 3) : 0
-            width: root.sizeW + padding * 2
-            height: root.sizeH + padding * 2
+            width: root.sizeW + root.padding * 2
+            height: root.sizeH + root.padding * 2
 
             Rectangle {
                 anchors.centerIn: parent
@@ -104,70 +80,25 @@ Node {
             }
         },
 
-        // 汎用エフェクトチェーン (MultiEffectを内包)
-        MultiEffect {
-            id: multiEffect
-            source: sourceItem
-            anchors.fill: sourceItem
-            visible: true
-
-            // --- パラメータバインディング ---
-            
-            // Blur
-            property var blurModel: {
-                for(var i=0; i<root.rawEffectModels.length; i++){
-                    if(root.rawEffectModels[i].id === "blur" && root.rawEffectModels[i].enabled) return root.rawEffectModels[i];
-                }
-                return null;
-            }
-            blurEnabled: !!blurModel
-            blurMax: 64 // 上限
-            blur: blurModel ? (blurModel.params["size"] || 0) / 64.0 : 0.0
-
-            // Color Correction
-            property var colorModel: {
-                for(var i=0; i<root.rawEffectModels.length; i++){
-                    if(root.rawEffectModels[i].id === "color_correction" && root.rawEffectModels[i].enabled) return root.rawEffectModels[i];
-                }
-                return null;
-            }
-            brightness: colorModel ? ((colorModel.params["brightness"] || 100) - 100) / 100.0 : 0.0
-            contrast:   colorModel ? ((colorModel.params["contrast"]   || 100) - 100) / 100.0 : 0.0
-            saturation: colorModel ? ((colorModel.params["saturation"] || 100) - 100) / 100.0 : 0.0
-        },
-
-        // エフェクトパラメータ変更監視
-        Repeater {
-            model: root.rawEffectModels
-            Item {
-                Connections {
-                    target: modelData
-                    function onParamsChanged() { root.updateTexture() }
-                }
-            }
-        },
-
-        ShaderEffectSource {
-            id: textureSource
-            sourceItem: multiEffect
-            hideSource: true
-            live: false
-            visible: true
-            recursive: true
-            FrameAnimation {
-                running: true
-                onTriggered: textureSource.scheduleUpdate()
-            }
+        Common.ObjectRenderer {
+            id: renderer
+            originalSource: sourceItem
+            effectModels: root.filterModels
+            relFrame: root.relFrame
         }
     ]
 
     Model {
         source: "#Rectangle"
         // 3Dモデルへのマッピング
-        scale: Qt.vector3d(sourceItem.width / 100, sourceItem.height / 100, 1)
+        scale: Qt.vector3d(
+            ((renderer.output.sourceItem ? renderer.output.sourceItem.width  : sourceItem.width)  / 100),
+            ((renderer.output.sourceItem ? renderer.output.sourceItem.height : sourceItem.height) / 100),
+            1
+        )
         opacity: root.opacity
         materials: DefaultMaterial {
-            diffuseMap: Texture { sourceItem: textureSource }
+            diffuseMap: Texture { sourceItem: renderer.output }
             lighting: DefaultMaterial.NoLighting
             blendMode: DefaultMaterial.SourceOver
         }
