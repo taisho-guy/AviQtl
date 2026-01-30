@@ -53,6 +53,19 @@ namespace Rina::UI {
     }
 
     void TimelineService::createClipInternal(const QString& type, int startFrame, int layer) {
+        if (startFrame < 0) startFrame = 0;
+        if (layer < 0) layer = 0;
+
+        auto overlaps = [](int s1, int d1, int s2, int d2) {
+            return (s1 < (s2 + d2)) && (s2 < (s1 + d1));
+        };
+        for (const auto& c : m_clips) {
+            if (c.layer == layer && overlaps(startFrame, 100, c.startFrame, c.durationFrames)) {
+                qWarning() << "Denied createClip: collision at layer/start" << layer << startFrame;
+                return;
+            }
+        }
+
         ClipData newClip;
         newClip.id = m_nextClipId++;
         newClip.type = type;
@@ -94,6 +107,18 @@ namespace Rina::UI {
         if (startFrame < 0) startFrame = 0;
         if (duration < 1) duration = 1;
         if (layer < 0) layer = 0;
+
+        auto overlaps = [](int s1, int d1, int s2, int d2) {
+            return (s1 < (s2 + d2)) && (s2 < (s1 + d1));
+        };
+        for (const auto& c : m_clips) {
+            if (c.id == id) continue;
+            if (c.layer == layer && overlaps(startFrame, duration, c.startFrame, c.durationFrames)) {
+                qWarning() << "Denied updateClip: collision for clipId" << id;
+                return;
+            }
+        }
+
         for (auto& clip : m_clips) {
             if (clip.id == id) {
                 if (clip.layer != layer || clip.startFrame != startFrame || clip.durationFrames != duration) {
@@ -274,6 +299,20 @@ namespace Rina::UI {
 
     void TimelineService::pasteClip(int frame, int layer) {
         if (!m_clipboard) return;
+
+        if (frame < 0) frame = 0;
+        if (layer < 0) layer = 0;
+
+        auto overlaps = [](int s1, int d1, int s2, int d2) {
+            return (s1 < (s2 + d2)) && (s2 < (s1 + d1));
+        };
+        for (const auto& c : m_clips) {
+            if (c.layer == layer && overlaps(frame, m_clipboard->durationFrames, c.startFrame, c.durationFrames)) {
+                qWarning() << "Denied pasteClip: collision at layer/start" << layer << frame;
+                return;
+            }
+        }
+
         ClipData newClip = deepCopyClip(*m_clipboard);
         newClip.id = m_nextClipId++;
         newClip.startFrame = frame;

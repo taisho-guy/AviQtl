@@ -51,7 +51,7 @@ Common.RinaWindow {
 
     menuBar: MenuBar {
         Menu {
-            title: "Filter"
+            title: "フィルタ"
             
             Repeater {
                 model: TimelineBridge ? TimelineBridge.getAvailableEffects() : []

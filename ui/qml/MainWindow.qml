@@ -19,64 +19,64 @@ ApplicationWindow {
     // アクション定義 (ショートカット用)
     Action {
         id: saveAction
-        text: "Save Project..."
+        text: "プロジェクトを保存..."
         shortcut: "Ctrl+S"
         onTriggered: saveDialog.open()
     }
     Action {
         id: loadAction
-        text: "Load Project..."
+        text: "プロジェクトを開く..."
         shortcut: "Ctrl+O"
         onTriggered: loadDialog.open()
     }
     Action {
         id: quitAction
-        text: "Quit"
+        text: "終了"
         shortcut: "Ctrl+Q"
         onTriggered: if (WindowManager) WindowManager.requestQuit()
     }
     Action {
         id: undoAction
-        text: "Undo"
+        text: "元に戻す"
         shortcut: "Ctrl+Z"
         onTriggered: if (TimelineBridge) TimelineBridge.undo()
     }
     Action {
         id: redoAction
-        text: "Redo"
+        text: "やり直す"
         shortcut: "Ctrl+Shift+Z"
         onTriggered: if (TimelineBridge) TimelineBridge.redo()
     }
 
     menuBar: MenuBar {
         Menu {
-            title: "Window"
+            title: "ウィンドウ"
             MenuItem {
-                text: "Timeline"
+                text: "タイムライン"
                 checkable: true
                 checked: WindowManager ? WindowManager.timelineVisible : false
                 onTriggered: if (WindowManager) WindowManager.timelineVisible = checked
             }
             MenuItem {
-                text: "Project Settings..."
+                text: "プロジェクト設定..."
                 checkable: true
                 checked: WindowManager ? WindowManager.projectSettingsVisible : false
                 onTriggered: if (WindowManager) WindowManager.projectSettingsVisible = checked
             }
             MenuItem {
-                text: "Setting Dialog"
+                text: "設定ダイアログ"
                 checkable: true
                 checked: WindowManager ? WindowManager.objectSettingsVisible : false
                 onTriggered: if (WindowManager) WindowManager.objectSettingsVisible = checked
             }
         }
         Menu {
-            title: "Edit"
+            title: "編集"
             MenuItem { action: undoAction }
             MenuItem { action: redoAction }
         }
         Menu {
-            title: "File"
+            title: "ファイル"
             MenuItem { action: saveAction }
             MenuItem { action: loadAction }
             MenuItem { action: quitAction }

@@ -8,7 +8,7 @@ Common.RinaWindow {
     width: 1280
     height: 300
     // x: 100; y: 500 // Waylandでは無視されることが多い
-    title: "Timeline [Layer 1-100]"
+    title: "タイムライン [レイヤー 1-100]"
     visible: true
 
     // コンテキストメニューの定義
@@ -35,25 +35,25 @@ Common.RinaWindow {
             // 最初はQML側で定義（後でC++に移してもよい）
             if (contextType === "clip") {
                 return [
-                    { type: "item", text: "Cut",     cmd: "clip.cut",     enabled: (clickClipId >= 0) },
-                    { type: "item", text: "Copy",    cmd: "clip.copy",    enabled: (clickClipId >= 0) },
-                    { type: "item", text: "Delete",  cmd: "clip.delete",  enabled: (clickClipId >= 0) },
+                    { type: "item", text: "切り取り",   cmd: "clip.cut",     enabled: (clickClipId >= 0) },
+                    { type: "item", text: "コピー",     cmd: "clip.copy",    enabled: (clickClipId >= 0) },
+                    { type: "item", text: "削除",       cmd: "clip.delete",  enabled: (clickClipId >= 0) },
                     { type: "sep" },
-                    { type: "item", text: "Split",   cmd: "clip.split",   enabled: (clickClipId >= 0) },
-                    { type: "item", text: "Group",   cmd: "clip.group",   enabled: false },
-                    { type: "item", text: "Ungroup", cmd: "clip.ungroup", enabled: false }
+                    { type: "item", text: "分割",       cmd: "clip.split",   enabled: (clickClipId >= 0) },
+                    { type: "item", text: "グループ化", cmd: "clip.group",   enabled: false },
+                    { type: "item", text: "グループ解除", cmd: "clip.ungroup", enabled: false }
                 ]
             }
 
             // timeline_background
             return [
-                { type: "item", text: "Add Text Object",  cmd: "add.text", enabled: true },
-                { type: "item", text: "Add Rect Object",  cmd: "add.rect", enabled: true },
+                { type: "item", text: "テキストを追加",    cmd: "add.text", enabled: true },
+                { type: "item", text: "図形を追加",        cmd: "add.rect", enabled: true },
                 { type: "sep" },
-                { type: "item", text: "Paste",            cmd: "edit.paste", enabled: false },
+                { type: "item", text: "貼り付け",          cmd: "edit.paste", enabled: false },
                 { type: "sep" },
-                { type: "item", text: "Undo",             cmd: "edit.undo", enabled: true },
-                { type: "item", text: "Redo",             cmd: "edit.redo", enabled: true }
+                { type: "item", text: "元に戻す",          cmd: "edit.undo", enabled: true },
+                { type: "item", text: "やり直す",          cmd: "edit.redo", enabled: true }
             ]
         }
 
@@ -112,6 +112,7 @@ Common.RinaWindow {
                         TimelineBridge.log("Unknown cmd: " + parent.menuData.cmd)
                         break
                     }
+                    contextMenu.close()
                 }
             }
         }

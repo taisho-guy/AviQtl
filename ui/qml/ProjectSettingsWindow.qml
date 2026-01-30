@@ -7,7 +7,7 @@ Common.RinaWindow {
     id: root
     width: 450
     height: 250
-    title: "Project Settings"
+    title: "プロジェクト設定"
     
     // ウィンドウが表示されたときに現在の値をUIに反映
     onVisibleChanged: {
@@ -28,14 +28,14 @@ Common.RinaWindow {
             rowSpacing: 10
             columnSpacing: 10
 
-            Label { text: "Width:" }
+            Label { text: "幅:" }
             TextField { 
                 id: widthField
                 validator: IntValidator{ bottom: 1; top: 8000 }
                 selectByMouse: true
             }
 
-            Label { text: "Height:" }
+            Label { text: "高さ:" }
             TextField { 
                 id: heightField
                 validator: IntValidator{ bottom: 1; top: 8000 }
@@ -49,7 +49,7 @@ Common.RinaWindow {
                 selectByMouse: true
             }
             
-            Label { text: "Total Frames:" }
+            Label { text: "総フレーム数:" }
             TextField { 
                 id: framesField
                 validator: IntValidator{ bottom: 1; top: 1000000 }
@@ -60,7 +60,7 @@ Common.RinaWindow {
         RowLayout {
             Layout.alignment: Qt.AlignHCenter
             Button {
-                text: "Apply"
+                text: "適用"
                 highlighted: true
                 onClicked: {
                     if (TimelineBridge && TimelineBridge.project) {
@@ -73,7 +73,7 @@ Common.RinaWindow {
                 }
             }
             Button {
-                text: "Cancel"
+                text: "キャンセル"
                 onClicked: root.hide()
             }
         }
