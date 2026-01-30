@@ -3,10 +3,6 @@ import os
 import argparse
 from datetime import datetime
 
-# =============================================================================
-# Configuration: Project Structure & Exclusion Rules
-# =============================================================================
-
 # Files/Directories to always exclude (even if they match include patterns)
 EXCLUDE_DIRS = {
     ".git", "__pycache__", "build", "dist", "node_modules",
@@ -15,10 +11,9 @@ EXCLUDE_DIRS = {
 }
 
 EXCLUDE_FILES = {
-    ".DS_Store", "Thumbs.db", "package-lock.json", "yarn.lock"
+    ".DS_Store", "Thumbs.db", "package-lock.json", "yarn.lock", "LICENSE"
 }
 
-# File extensions to include in the export
 INCLUDE_EXTENSIONS = {
     # C/C++
     ".cpp", ".hpp", ".c", ".h", ".cc", ".hh", ".cxx", ".hxx",
@@ -27,14 +22,13 @@ INCLUDE_EXTENSIONS = {
     # Build Systems
     ".cmake", "CMakeLists.txt", "Makefile",
     # Scripts
-    ".sh", ".bash", ".py", ".lua",
+    ".sh", ".bash", ".py", ".lua", ".fish"
     # Config/Data
     ".json", ".xml", ".yaml", ".yml", ".toml", ".ini", ".conf",
     # Documentation
     ".md", ".txt", ".rst"
 }
 
-# Specific filenames to always include (regardless of extension)
 INCLUDE_FILENAMES = {
     "CMakeLists.txt", "Dockerfile", "Vagrantfile", ".gitignore", "LICENSE", "README"
 }

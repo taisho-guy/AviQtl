@@ -43,7 +43,7 @@ namespace Rina::UI {
     // === TimelineService Implementation ===
 
     TimelineService::TimelineService(SelectionService* selection, QObject* parent)
-        : QObject(parent), m_selection(selection), m_undoStack(new QUndoStack(this)) {}
+        : QObject(parent), m_undoStack(new QUndoStack(this)), m_selection(selection) {}
 
     void TimelineService::undo() { m_undoStack->undo(); }
     void TimelineService::redo() { m_undoStack->redo(); }

@@ -15,7 +15,7 @@ namespace Rina::Scripting {
 
     class LuaHost {
         lua_State* L;
-        ObjState* currentObj; // 現在処理中のオブジェクトへのポインタ
+        // ObjState* currentObj; // unused-private-field warning: Removed unused pointer
 
     public:
         LuaHost() {

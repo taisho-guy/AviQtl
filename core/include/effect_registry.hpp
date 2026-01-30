@@ -24,11 +24,11 @@ public:
     }
 
     void registerEffect(const EffectMetadata& meta) {
-        m_effects[meta.id] = meta;
-        // UI表示順序を維持するためにリストにも保持
-        bool found = false;
-        for(const auto& id : m_orderedIds) if(id == meta.id) found = true;
-        if(!found) m_orderedIds.push_back(meta.id);
+        // Legacy Fix: O(N) linear search replaced with O(1) hash lookup
+        if (!m_effects.contains(meta.id)) {
+            m_orderedIds.push_back(meta.id);
+        }
+        m_effects.insert(meta.id, meta);
     }
 
     EffectMetadata getEffect(const QString& id) const {

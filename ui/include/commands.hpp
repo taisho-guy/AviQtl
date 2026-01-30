@@ -14,7 +14,6 @@ namespace Rina::UI {
         QString m_type;
         int m_startFrame;
         int m_layer;
-        int m_generatedId = -1;
     };
 
     class MoveClipCommand : public QUndoCommand {

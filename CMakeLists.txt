@@ -7,6 +7,23 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
+# Compiler Optimization for Clang
+if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+    add_compile_options(
+        -Wall -Wextra -Wpedantic
+        -Wno-unused-parameter
+        -fcolor-diagnostics
+    )
+    # Use LLD or Mold linker if available for faster linking
+    execute_process(COMMAND ${CMAKE_CXX_COMPILER} -fuse-ld=mold -Wl,--version OUTPUT_VARIABLE MOLD_CHECK ERROR_QUIET)
+    if ("${MOLD_CHECK}" MATCHES "mold")
+        add_link_options("-fuse-ld=mold")
+        message(STATUS "Using mold linker")
+    else()
+        add_link_options("-fuse-ld=lld")
+    endif()
+endif()
+
 # Qtの標準最適化を有効化
 set(QT_QML_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/qml)
 

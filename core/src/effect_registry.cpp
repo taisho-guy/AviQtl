@@ -17,22 +17,24 @@ void initializeStandardEffects() {
 void EffectRegistry::loadEffectsFromDirectory(const QString& path) {
     QDir dir(path);
     if (!dir.exists()) {
-        qWarning() << "Effect directory not found:" << path;
+        qWarning().noquote() << "Effect directory not found:" << path;
         return;
     }
 
-    // 再帰的探索のためにQDirIteratorを使用 (Subdirectoriesフラグ)
-    QDirIterator it(path, QStringList() << "*.json", QDir::Files, QDirIterator::Subdirectories);
+    // Optimization: Pre-allocate string list is unnecessary, use brace initialization
+    QDirIterator it(path, {"*.json"}, QDir::Files, QDirIterator::Subdirectories);
     
     while (it.hasNext()) {
-        QString filePath = it.next();
-        QFile file(filePath);
+        QFile file(it.next());
         if (!file.open(QIODevice::ReadOnly)) continue;
 
         QJsonParseError error;
-        QJsonDocument doc = QJsonDocument::fromJson(file.readAll(), &error);
+        // Optimization: Map file to memory for large JSONs
+        const auto data = file.readAll();
+        const auto doc = QJsonDocument::fromJson(data, &error);
+
         if (error.error != QJsonParseError::NoError || !doc.isObject()) {
-            qWarning() << "Invalid JSON in" << filePath << ":" << error.errorString();
+            qWarning().noquote() << "Invalid JSON in" << file.fileName() << ":" << error.errorString();
             continue;
         }
 
@@ -44,7 +46,7 @@ void EffectRegistry::loadEffectsFromDirectory(const QString& path) {
         QVariantMap params = obj["params"].toObject().toVariantMap();
 
         if (id.isEmpty() || name.isEmpty() || qmlFileName.isEmpty()) {
-            qWarning() << "Skipping incomplete effect definition in:" << filePath;
+            qWarning().noquote() << "Skipping incomplete effect definition in:" << file.fileName();
             continue;
         }
 
@@ -55,7 +57,7 @@ void EffectRegistry::loadEffectsFromDirectory(const QString& path) {
         meta.defaultParams = params;
 
         // QMLファイルの絶対パスを解決 (JSONファイルからの相対パスとして処理)
-        QFileInfo jsonInfo(filePath);
+        QFileInfo jsonInfo(file.fileName());
         QString absoluteQmlPath = jsonInfo.absoluteDir().filePath(qmlFileName);
         
         if (QFile::exists(absoluteQmlPath)) {
@@ -66,7 +68,7 @@ void EffectRegistry::loadEffectsFromDirectory(const QString& path) {
         }
 
         registerEffect(meta);
-        qDebug() << "Loaded external effect:" << name << "(" << id << ") from" << filePath;
+        qDebug().noquote() << "Loaded external effect:" << name << "(" << id << ") from" << file.fileName();
     }
 }
 

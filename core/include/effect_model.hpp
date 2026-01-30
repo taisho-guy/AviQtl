@@ -86,8 +86,11 @@ namespace Rina::UI {
             const auto m = v.toMap();
             if (m.value("frame").toInt() != frame) next.append(v);
         }
-        if (next.isEmpty()) m_keyframeTracks.remove(paramName);
-        else m_keyframeTracks[paramName] = next;
+        if (next.isEmpty()) {
+            m_keyframeTracks.remove(paramName);
+        } else {
+            m_keyframeTracks[paramName] = next;
+        }
         emit keyframeTracksChanged();
     }
 

@@ -1,68 +1,73 @@
 #!/usr/bin/env fish
 
+# 1. コンパイラ設定: Clangを明示的に指定
+set -x CC clang
+set -x CXX clang++
+
 # 設定
 set SOURCE_DIR (pwd)
-# CMakeが生成する一時ビルドディレクトリ
+# ビルド作業用ディレクトリ（インクリメンタルビルド用に保持）
 set TEMP_BUILD_DIR "$SOURCE_DIR/.build_tmp"
-# 最終的な成果物を置くディレクトリ
+# 最終成果物ディレクトリ（常にクリーンな状態にする）
 set OUTPUT_DIR "$SOURCE_DIR/build"
 set EXECUTABLE_NAME "Rina"
 set BUILD_TYPE "Release"
 
-echo "=== Rina ビルドプロセス開始 ($BUILD_TYPE) ==="
+echo "=== Rina ビルドプロセス開始 ($BUILD_TYPE) with Clang ==="
 
-# 1. 一時ディレクトリの準備
-if test -d "$TEMP_BUILD_DIR"
-    echo "既存の一時ビルドディレクトリを削除中..."
-    rm -rf "$TEMP_BUILD_DIR"
-end
-mkdir -p "$TEMP_BUILD_DIR"
+# ---------------------------------------------------------
+# Phase 1: コンパイル (作業場 .build_tmp での処理)
+# ---------------------------------------------------------
 
-# 2. CMake設定とコンパイル
-cd "$TEMP_BUILD_DIR"
-echo "CMake (Ninja) を使用して構成中..."
-
-# CMakeの設定
-cmake -G "Ninja" -DCMAKE_BUILD_TYPE=$BUILD_TYPE "$SOURCE_DIR"
-if test $status -ne 0
-    echo "エラー: CMakeの設定に失敗しました。"
-    cd "$SOURCE_DIR"
-    exit 1
+# 作業ディレクトリの作成
+if not test -d "$TEMP_BUILD_DIR"
+    mkdir -p "$TEMP_BUILD_DIR"
 end
 
-echo "コンパイル中..."
-ninja
-if test $status -ne 0
-    echo "エラー: ビルドに失敗しました。"
-    cd "$SOURCE_DIR"
-    exit 1
+# CMake構成 (必要な場合のみ再実行)
+if not test -f "$TEMP_BUILD_DIR/build.ninja"
+    echo "⚙️  CMake (Ninja) を構成中..."
+    cmake -B "$TEMP_BUILD_DIR" -G "Ninja" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -S "$SOURCE_DIR"
+    if test $status -ne 0; echo "❌ CMake構成失敗"; exit 1; end
 end
 
-# 3. 成果物の配置 (簡易版)
-# CMakeのPOST_BUILDコマンドが既にリソースを .build_tmp 内にコピーしているはずなので、
-# それらをまとめて最終出力ディレクトリに移動する。
+# コンパイル実行
+echo "🔨 コンパイル中..."
+cmake --build "$TEMP_BUILD_DIR"
+if test $status -ne 0; echo "❌ ビルド失敗"; exit 1; end
 
-echo "成果物を $OUTPUT_DIR に展開中..."
+# ---------------------------------------------------------
+# Phase 2: デプロイ (ショーケース build への配置)
+# ---------------------------------------------------------
+
+echo "📦 成果物を $OUTPUT_DIR に配置中..."
+
+# 1. 出力ディレクトリを完全にリセット (要件: 余計なファイルを置かない)
 if test -d "$OUTPUT_DIR"
     rm -rf "$OUTPUT_DIR"
 end
 mkdir -p "$OUTPUT_DIR"
 
-# バイナリのコピー
-cp "$EXECUTABLE_NAME" "$OUTPUT_DIR/"
+# 2. 必要なファイルのみをコピー (要件: Rina, objects, effects のみ)
 
-# CMakeが生成したリソースディレクトリがあればコピー
-if test -d "effects"
-    cp -r "effects" "$OUTPUT_DIR/"
+# 実行バイナリ
+if test -f "$TEMP_BUILD_DIR/$EXECUTABLE_NAME"
+    cp "$TEMP_BUILD_DIR/$EXECUTABLE_NAME" "$OUTPUT_DIR/"
+else
+    echo "❌ 実行ファイルが見つかりません"
+    exit 1
 end
-if test -d "objects"
-    cp -r "objects" "$OUTPUT_DIR/"
+
+# エフェクトディレクトリ
+if test -d "$TEMP_BUILD_DIR/effects"
+    cp -r "$TEMP_BUILD_DIR/effects" "$OUTPUT_DIR/"
 end
 
-# 4. クリーンアップ
-echo "一時ファイルを削除中..."
-cd "$SOURCE_DIR"
-rm -rf "$TEMP_BUILD_DIR"
+# オブジェクトディレクトリ
+if test -d "$TEMP_BUILD_DIR/objects"
+    cp -r "$TEMP_BUILD_DIR/objects" "$OUTPUT_DIR/"
+end
 
-echo "=== ビルド完了 ==="
-echo "成果物は $OUTPUT_DIR にあります。"
+echo "=== ✅ ビルド完了 ==="
+echo "ディレクトリ構成:"
+ls -F "$OUTPUT_DIR"

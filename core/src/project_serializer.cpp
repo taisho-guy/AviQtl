@@ -87,7 +87,7 @@ namespace Rina::Core {
             
             if (c.contains("effects")) {
                 QJsonArray effArr = c["effects"].toArray();
-                for (const auto& ev : effArr) {
+                for ([[maybe_unused]] const auto& ev : effArr) {
                     // (省略: エフェクト復元ロジック。TimelineService::createEffectData等を利用して実装)
                 }
             }
