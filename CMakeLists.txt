@@ -27,7 +27,7 @@ endif()
 # Qtの標準最適化を有効化
 set(QT_QML_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/qml)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick QuickControls2 WaylandClient Quick3D Widgets Core5Compat Sql)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick QuickControls2 WaylandClient Quick3D Widgets Core5Compat Sql Svg)
 find_package(Vulkan REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LUAJIT REQUIRED luajit)
@@ -87,9 +87,6 @@ qt_add_qml_module(Rina
         ui/qml/common/BaseEffect.qml
         
         # 拡張オブジェクト・エフェクトは外部ロードするため除外
-    
-    RESOURCES
-        assets/icon.png
 )
 
 # 拡張リソース（エフェクト、オブジェクト）を出力ディレクトリへコピー
@@ -110,6 +107,7 @@ add_custom_command(TARGET Rina POST_BUILD
 target_link_libraries(Rina PRIVATE
     Qt6::Core Qt6::Gui Qt6::Quick Qt6::QuickControls2 Qt6::WaylandClient Qt6::Quick3D
     Qt6::Widgets
+    Qt6::Svg
     Qt6::Core5Compat
     Vulkan::Vulkan
     ${LUAJIT_LIBRARIES}
