@@ -358,9 +358,8 @@ Common.RinaWindow {
         
         Component.onCompleted: {
             Qt.callLater(function() {
-                var sv = parent.children[1]
-                if (sv && sv.contentItem) {
-                    rulerArea.targetFlickable = sv.contentItem
+                if (typeof timelineFlickable !== "undefined") {
+                    rulerArea.targetFlickable = timelineFlickable
                     rulerArea.targetFlickable.contentXChanged.connect(function() {
                         rulerCanvas.requestPaint()
                     })
@@ -369,24 +368,102 @@ Common.RinaWindow {
         }
     }
 
+    // メインエリア（左：レイヤーヘッダー、右：タイムライン）
+    RowLayout {
+        Layout.fillWidth: true
+        Layout.fillHeight: true
+        spacing: 0
 
+        // === 左側: レイヤーヘッダー (Layer 0-127) ===
+        Rectangle {
+            Layout.preferredWidth: 60
+            Layout.fillHeight: true
+            color: "#2a2a2a"
+            z: 20 // タイムラインより手前に表示
 
+            // 右側のタイムラインと縦スクロールを同期
+            Flickable {
+                id: layerHeaderFlickable
+                anchors.fill: parent
+                contentHeight: 128 * 30 // 128レイヤー * 30px
+                contentY: timelineFlickable.contentY // 一方向バインディング（右→左）
+                interactive: false // スクロール操作は右側に任せる
+                clip: true
+
+                Column {
+                    Repeater {
+                        model: 128 // Layer 0 to 127
+                        
+                        Rectangle {
+                            width: 60
+                            height: 30
+                            color: index % 2 === 0 ? "#2a2a2a" : "#252525"
+                            border.color: "#111"
+                            border.width: 1
+                            
+                            property bool isHidden: false // 仮の状態管理
+                            
+                            Text {
+                                anchors.centerIn: parent
+                                text: "Layer " + (index + 1)
+                                color: parent.isHidden ? "#555" : "#ddd"
+                                font.pixelSize: 10
+                            }
+                            
+                            // 状態表示アイコン（仮）
+                            Rectangle {
+                                width: 4
+                                height: 4
+                                radius: 2
+                                color: parent.isHidden ? "transparent" : "#00ff00"
+                                anchors.right: parent.right
+                                anchors.rightMargin: 4
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    parent.isHidden = !parent.isHidden
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // 境界線
+            Rectangle {
+                anchors.right: parent.right
+                width: 1
+                height: parent.height
+                color: "#444"
+            }
+        }
+
+        // === 右側: タイムライン本体 ===
         ScrollView {
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
             
             Flickable {
+                id: timelineFlickable
                 contentWidth: 2000
-                contentHeight: 3000
+                contentHeight: 128 * 30
                 interactive: true
+                
+                // contentYが変更されたらヘッダーも同期
+                onContentYChanged: {
+                    layerHeaderFlickable.contentY = contentY
+                }
 
                 // レイヤー区切り線
                 Repeater {
-                    model: 20
+                    model: 128
                     Rectangle {
                         y: index * 30
-                        width: parent.width
+                        width: Math.max(parent.width, 2000)
                         height: 1
                         color: "#333"
                     }
@@ -571,4 +648,5 @@ Common.RinaWindow {
             }
         }
     }
+}
 }
