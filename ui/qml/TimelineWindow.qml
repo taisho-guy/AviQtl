@@ -10,6 +10,8 @@ Common.RinaWindow {
     height: 300
     // x: 100; y: 500 // Waylandでは無視されることが多い
     title: "タイムライン [レイヤー 1-100]"
+    property double fps: TimelineBridge && TimelineBridge.project ? TimelineBridge.project.fps : 60.0
+    property int selectedLayer: TimelineBridge ? TimelineBridge.selectedLayer : 0
     visible: true
 
     // コンテキストメニューの定義
@@ -36,7 +38,9 @@ Common.RinaWindow {
             while (contextMenu.count > 0) {
                 var item = contextMenu.itemAt(0)
                 contextMenu.removeItem(item)
-                item.destroy()
+                if (item && typeof item.destroy === 'function') {
+                    try { item.destroy() } catch(e) { console.log("Failed to destroy menu item: " + e) }
+                }
             }
             
             // コンテキストに応じて項目を追加
@@ -198,7 +202,174 @@ Common.RinaWindow {
         anchors.fill: parent
         spacing: 0
 
-        // ツールバー等は省略し、直接タイムラインエリアへ
+    // ========================================
+    // タイムライン定規（AviUtl風）
+    // ========================================
+    Rectangle {
+        id: rulerArea
+        Layout.fillWidth: true
+        Layout.preferredHeight: 32
+        color: "#252525"
+        z: 10
+        
+        property var targetFlickable: null
+        
+        Item {
+            id: rulerContent
+            anchors.fill: parent
+            clip: true
+            
+            Canvas {
+                id: rulerCanvas
+                anchors.fill: parent
+                
+                property double scale: TimelineBridge ? TimelineBridge.timelineScale : 1.0
+                property double offsetX: rulerArea.targetFlickable ? rulerArea.targetFlickable.contentX : 0
+                property int fps: 30
+                
+                onScaleChanged: requestPaint()
+                onOffsetXChanged: requestPaint()
+                
+                onPaint: {
+                    var ctx = getContext("2d")
+                    ctx.clearRect(0, 0, width, height)
+                    
+                    if (!TimelineBridge) return
+                    
+                    var scale = TimelineBridge.timelineScale
+                    var viewWidth = width
+                    var viewOffsetX = offsetX
+                    
+                    var minSpacing = 80
+                    var frameInterval = 1
+                    var intervals = [1, 5, 10, fps, fps*2, fps*5, fps*10, fps*20, fps*60, fps*300]
+                    
+                    for (var i = 0; i < intervals.length; i++) {
+                        if (intervals[i] * scale >= minSpacing) {
+                            frameInterval = intervals[i]
+                            break
+                        }
+                    }
+                    
+                    var startFrame = Math.floor(viewOffsetX / scale)
+                    var endFrame = Math.ceil((viewOffsetX + viewWidth) / scale)
+                    var alignedStart = Math.floor(startFrame / frameInterval) * frameInterval
+                    
+                    ctx.font = "10px sans-serif"
+                    
+                    for (var f = alignedStart; f <= endFrame; f += frameInterval) {
+                        if (f < 0) continue
+                        
+                        var pixelX = f * scale - viewOffsetX
+                        var isSecond = (f % fps === 0)
+                        
+                        ctx.strokeStyle = isSecond ? "#ffffff" : "#666666"
+                        ctx.lineWidth = 1
+                        ctx.beginPath()
+                        ctx.moveTo(pixelX, height - (isSecond ? 12 : 6))
+                        ctx.lineTo(pixelX, height)
+                        ctx.stroke()
+                        
+                        if (isSecond) {
+                            var totalSeconds = f / fps
+                            var hours = Math.floor(totalSeconds / 3600)
+                            var minutes = Math.floor((totalSeconds % 3600) / 60)
+                            var seconds = Math.floor(totalSeconds % 60)
+                            
+                            var timeLabel = ""
+                            if (hours > 0) {
+                                timeLabel = hours + ":" + ("0" + minutes).slice(-2) + ":" + ("0" + seconds).slice(-2)
+                            } else if (minutes > 0) {
+                                timeLabel = minutes + ":" + ("0" + seconds).slice(-2)
+                            } else {
+                                timeLabel = seconds + "s"
+                            }
+                            
+                            ctx.fillStyle = "#dddddd"
+                            ctx.fillText(timeLabel, pixelX + 3, 12)
+                            
+                            ctx.font = "8px sans-serif"
+                            ctx.fillStyle = "#888888"
+                            ctx.fillText(f + "f", pixelX + 3, 24)
+                            ctx.font = "10px sans-serif"
+                        }
+                    }
+                }
+            }
+            
+            Rectangle {
+                anchors.left: parent.left
+                anchors.top: parent.top
+                width: 70
+                height: parent.height
+                color: "#1a1a1a"
+                border.color: "#444444"
+                border.width: 1
+                z: 100
+                
+                Text {
+                    anchors.centerIn: parent
+                    text: (TimelineBridge && TimelineBridge.transport) ? 
+                          TimelineBridge.transport.currentFrame + "f" : "0f"
+                    font.pixelSize: 11
+                    font.bold: true
+                    color: "#ff4444"
+                }
+            }
+        }
+        
+        MouseArea {
+            anchors.fill: parent
+            anchors.leftMargin: 70
+            
+            onPressed: function(mouse) {
+                if (TimelineBridge && TimelineBridge.transport && rulerArea.targetFlickable) {
+                    var clickX = mouse.x + 70 + rulerArea.targetFlickable.contentX
+                    var scale = TimelineBridge.timelineScale
+                    var targetFrame = Math.max(0, Math.round(clickX / scale))
+                    TimelineBridge.transport.currentFrame = targetFrame
+                }
+            }
+            
+            onPositionChanged: function(mouse) {
+                if (pressed && TimelineBridge && TimelineBridge.transport && rulerArea.targetFlickable) {
+                    var clickX = mouse.x + 70 + rulerArea.targetFlickable.contentX
+                    var scale = TimelineBridge.timelineScale
+                    var targetFrame = Math.max(0, Math.round(clickX / scale))
+                    TimelineBridge.transport.currentFrame = targetFrame
+                }
+            }
+            
+            // ホイールでタイムライン縮尺を変更
+            onWheel: function(wheel) {
+                if (!TimelineBridge) return
+                
+                var currentScale = TimelineBridge.timelineScale
+                var delta = wheel.angleDelta.y / 120.0
+                var zoomFactor = 1.0 + (delta * 0.1)
+                
+                var newScale = currentScale * zoomFactor
+                newScale = Math.max(0.1, Math.min(20.0, newScale))
+                
+                TimelineBridge.timelineScale = newScale
+                wheel.accepted = true
+            }
+        }
+        
+        Component.onCompleted: {
+            Qt.callLater(function() {
+                var sv = parent.children[1]
+                if (sv && sv.contentItem) {
+                    rulerArea.targetFlickable = sv.contentItem
+                    rulerArea.targetFlickable.contentXChanged.connect(function() {
+                        rulerCanvas.requestPaint()
+                    })
+                }
+            })
+        }
+    }
+
+
 
         ScrollView {
             Layout.fillWidth: true
@@ -261,6 +432,12 @@ Common.RinaWindow {
                         var frame = Math.floor(mouse.x / scale)
                         var layer = Math.floor(mouse.y / 30) // 30px per layer
                         contextMenu.openAt(mouse.x, mouse.y, "timeline_background", frame, layer, -1)
+                        
+                        if (mouse.button === Qt.LeftButton) {
+                            if (TimelineBridge) {
+                                TimelineBridge.selectedLayer = layer
+                            }
+                        }
                     }
                 }
 

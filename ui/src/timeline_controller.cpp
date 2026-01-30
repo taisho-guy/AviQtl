@@ -138,6 +138,13 @@ namespace Rina::UI {
         m_timeline->updateClip(id, layer, clipStartFrame(), clipDurationFrames());
     }
 
+    void TimelineController::setSelectedLayer(int layer) {
+        if (m_selectedLayer != layer) {
+            m_selectedLayer = layer;
+            emit selectedLayerChanged();
+        }
+    }
+
     bool TimelineController::isClipActive() const { return m_isClipActive; }
 
     void TimelineController::updateClipActiveState() {

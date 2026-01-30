@@ -39,6 +39,7 @@ namespace Rina::UI {
         Q_PROPERTY(QString activeObjectType READ activeObjectType NOTIFY activeObjectTypeChanged)
         Q_PROPERTY(QVariantList clips READ clips NOTIFY clipsChanged)
         Q_PROPERTY(Rina::UI::ClipModel* clipModel READ clipModel CONSTANT)
+        Q_PROPERTY(int selectedLayer READ selectedLayer WRITE setSelectedLayer NOTIFY selectedLayerChanged)
 
     public:
         explicit TimelineController(QObject* parent = nullptr);
@@ -63,6 +64,9 @@ namespace Rina::UI {
 
         int layer() const;
         void setLayer(int layer);
+
+        int selectedLayer() const { return m_selectedLayer; }
+        void setSelectedLayer(int layer);
 
         bool isClipActive() const;
 
@@ -115,6 +119,7 @@ namespace Rina::UI {
         void activeObjectTypeChanged();
         void clipsChanged(); // 追加
         void clipEffectsChanged(int clipId);
+        void selectedLayerChanged();
 
     private:
         void updateClipActiveState();
@@ -123,6 +128,7 @@ namespace Rina::UI {
         double m_timelineScale = 1.0; // 1 frame = 1 pixel (default)
 
         bool m_isClipActive = false;
+        int m_selectedLayer = 0;
 
         // Services
         ProjectService* m_project;
