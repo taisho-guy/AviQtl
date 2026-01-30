@@ -98,7 +98,7 @@ Common.RinaWindow {
 
         function createMenuItem(label, command, enabledFlag) {
             var enabled = (enabledFlag !== undefined) ? enabledFlag : true
-            var item = menuItemComp.createObject(contextMenu, {
+            var item = menuItemComp.createObject(null, {
                 text: label,
                 enabled: enabled
             })
@@ -111,14 +111,14 @@ Common.RinaWindow {
         }
 
         function createSubMenu(label) {
-            var menu = subMenuComp.createObject(contextMenu, {
+            var menu = subMenuComp.createObject(null, {
                 title: label
             })
             return menu
         }
 
         function addSeparator() {
-            var sep = menuSeparatorComp.createObject(contextMenu)
+            var sep = menuSeparatorComp.createObject(null)
             contextMenu.addItem(sep)
         }
 
