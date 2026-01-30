@@ -40,6 +40,9 @@ qt_add_executable(Rina
     ui/src/project_service.cpp
     ui/src/transport_service.cpp
     ui/src/selection_service.cpp
+    ui/src/clip_model.cpp
+    ui/src/timeline_service.cpp
+    core/src/project_serializer.cpp
 )
 
 # Qt Policy設定: QMLモジュールのディレクトリ構造に関する警告を抑制・解決

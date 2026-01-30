@@ -15,37 +15,12 @@
 #include "project_service.hpp"
 #include "transport_service.hpp"
 #include "selection_service.hpp"
+#include "timeline_service.hpp"
+#include "clip_model.hpp"
 
 class QUndoStack;
 
 namespace Rina::UI {
-    class ClipModel : public QAbstractListModel {
-        Q_OBJECT
-    public:
-        enum Roles {
-            IdRole = Qt::UserRole + 1,
-            TypeRole,
-            StartFrameRole,
-            DurationRole,
-            LayerRole,
-            ParamsRole, // Flattened params
-            EffectsRole // QList<QObject*> for effect models
-        };
-
-        explicit ClipModel(QObject* parent = nullptr) : QAbstractListModel(parent) {}
-
-        int rowCount(const QModelIndex& parent = QModelIndex()) const override {
-            return m_activeClips.size();
-        }
-
-        QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
-        QHash<int, QByteArray> roleNames() const override;
-
-        void updateClips(const QList<ClipData*>& newClips);
-
-    private:
-        QList<ClipData*> m_activeClips;
-    };
 
     class TimelineController : public QObject {
         Q_OBJECT
@@ -131,14 +106,6 @@ namespace Rina::UI {
         Q_INVOKABLE void cutClip(int clipId);
         Q_INVOKABLE void pasteClip(int frame, int layer);
 
-        // Internal methods called by Commands
-        void updateClipInternal(int id, int layer, int startFrame, int duration);
-        void updateClipEffectParamInternal(int clipId, int effectIndex, const QString& paramName, const QVariant& value);
-        void createObjectInternal(const QString& type, int startFrame, int layer);
-        void addEffectInternal(int clipId, const EffectData& effectData);
-        void removeEffectInternal(int clipId, int effectIndex);
-        EffectData createEffectData(const QString& id);
-        ClipData deepCopyClip(const ClipData& source);
         void updateActiveClipsList();
 
     signals:
@@ -155,14 +122,9 @@ namespace Rina::UI {
     private:
         void updateClipActiveState();
         void updateObjectX();
-    float calculateInterpolatedValue(int frame);
+        float calculateInterpolatedValue(int frame);
 
-        QList<ClipData> m_clips;
         ClipModel* m_clipModel;
-        int m_nextClipId = 1;
-
-        QUndoStack* m_undoStack;
-        std::unique_ptr<ClipData> m_clipboard;
         double m_timelineScale = 1.0; // 1 frame = 1 pixel (default)
 
         int m_clipStartFrame = 100;
@@ -179,5 +141,6 @@ namespace Rina::UI {
         ProjectService* m_project;
         TransportService* m_transport;
         SelectionService* m_selection;
+        TimelineService* m_timeline;
     };
 }
