@@ -61,13 +61,25 @@ Common.RinaWindow {
             } else {
                 // timeline_background
                 var mediaMenu = createSubMenu("メディアオブジェクトを追加")
-                mediaMenu.addItem(createMenuItem("テキスト", "add.text"))
-                mediaMenu.addItem(createMenuItem("図形", "add.rect"))
-                mediaMenu.addItem(createMenuItem("画像", "add.image", false))
-                mediaMenu.addItem(createMenuItem("動画", "add.video", false))
+                
+                // 動的生成: category="object"
+                if (TimelineBridge) {
+                    var objects = TimelineBridge.getAvailableObjects("object")
+                    for (var i = 0; i < objects.length; i++) {
+                        var obj = objects[i]
+                        mediaMenu.addItem(createMenuItem(obj.name, "add." + obj.id))
+                    }
+                }
+                
+                // フォールバック
+                if (mediaMenu.count === 0) {
+                    mediaMenu.addItem(createMenuItem("テキスト", "add.text"))
+                    mediaMenu.addItem(createMenuItem("図形", "add.rect"))
+                }
                 contextMenu.addMenu(mediaMenu)
                 
-                var effectMenu = createSubMenu("エフェクトオブジェクトを追加")
+                var effectMenu = createSubMenu("フィルタオブジェクトを追加")
+                // 現状はハードコードのまま維持（必要に応じて動的化）
                 effectMenu.addItem(createMenuItem("シーンチェンジ", "add.scene_change", false))
                 effectMenu.addItem(createMenuItem("カメラ制御", "add.camera_control", false))
                 contextMenu.addMenu(effectMenu)
@@ -124,13 +136,15 @@ Common.RinaWindow {
 
         function handleCommand(cmd) {
             if (!TimelineBridge) return
+            
+            // 動的コマンドの処理 "add.xxx"
+            if (cmd.startsWith("add.")) {
+                var type = cmd.substring(4)
+                TimelineBridge.createObject(type, clickFrame, clickLayer)
+                return
+            }
+
             switch (cmd) {
-                case "add.text":
-                    TimelineBridge.createObject("text", clickFrame, clickLayer)
-                    break
-                case "add.rect":
-                    TimelineBridge.createObject("rect", clickFrame, clickLayer)
-                    break
                 case "edit.undo":
                     TimelineBridge.undo()
                     break

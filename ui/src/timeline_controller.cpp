@@ -286,6 +286,21 @@ namespace Rina::UI {
         return list;
     }
 
+    QVariantList TimelineController::getAvailableObjects(const QString& category) const {
+        QVariantList list;
+        const auto effects = Rina::Core::EffectRegistry::instance().getAllEffects();
+        
+        for (const auto& meta : effects) {
+            if (meta.category == category) {
+                QVariantMap map;
+                map["id"] = meta.id;
+                map["name"] = meta.name;
+                list.append(map);
+            }
+        }
+        return list;
+    }
+
     void TimelineController::addEffect(int clipId, const QString& effectId) {
         m_timeline->addEffect(clipId, effectId);
     }
