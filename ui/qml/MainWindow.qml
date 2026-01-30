@@ -18,6 +18,12 @@ ApplicationWindow {
 
     // アクション定義 (ショートカット用)
     Action {
+        id: newAction
+        text: "新規作成"
+        shortcut: "Ctrl+N"
+        onTriggered: console.log("New Project")
+    }
+    Action {
         id: saveAction
         text: "プロジェクトを保存..."
         shortcut: "Ctrl+S"
@@ -50,36 +56,60 @@ ApplicationWindow {
 
     menuBar: MenuBar {
         Menu {
-            title: "ウィンドウ"
-            MenuItem {
-                text: "タイムライン"
-                checkable: true
-                checked: WindowManager ? WindowManager.timelineVisible : false
-                onTriggered: if (WindowManager) WindowManager.timelineVisible = checked
-            }
-            MenuItem {
-                text: "プロジェクト設定..."
-                checkable: true
-                checked: WindowManager ? WindowManager.projectSettingsVisible : false
-                onTriggered: if (WindowManager) WindowManager.projectSettingsVisible = checked
-            }
-            MenuItem {
-                text: "設定ダイアログ"
-                checkable: true
-                checked: WindowManager ? WindowManager.objectSettingsVisible : false
-                onTriggered: if (WindowManager) WindowManager.objectSettingsVisible = checked
-            }
+            title: "ファイル"
+            MenuItem { text: "編集プロジェクトを新規作成"; action: newAction }
+            MenuItem { text: "編集プロジェクトを開く"; action: loadAction }
+            MenuSeparator { }
+            MenuItem { text: "編集プロジェクトの保存"; action: saveAction }
+            MenuItem { text: "編集プロジェクトの上書き"; action: saveAction }
+            MenuSeparator { }
+            MenuItem { text: "メディア書き出し..."; enabled: false }
+            MenuItem { text: "拡張編集AVI/BMP出力 (RGBA)"; enabled: false }
+            MenuSeparator { }
+            MenuItem { text: "環境設定"; onTriggered: if (WindowManager) WindowManager.projectSettingsVisible = true }
+            MenuSeparator { }
+            MenuItem { text: "終了"; action: quitAction }
+        }
+        Menu {
+            title: "フィルタ"
+            MenuItem { text: "エフェクトの追加..."; enabled: false }
+            MenuSeparator { }
+            MenuItem { text: "全てのエフェクトをOFFにする"; enabled: false }
+        }
+        Menu {
+            title: "設定"
+            MenuItem { text: "サイズの変更"; onTriggered: if (WindowManager) WindowManager.projectSettingsVisible = true }
+            MenuItem { text: "フレームレートの変更"; onTriggered: if (WindowManager) WindowManager.projectSettingsVisible = true }
+            MenuSeparator { }
+            MenuItem { text: "環境設定"; onTriggered: if (WindowManager) WindowManager.projectSettingsVisible = true }
         }
         Menu {
             title: "編集"
             MenuItem { action: undoAction }
             MenuItem { action: redoAction }
+            MenuSeparator { }
+            MenuItem { text: "すべてのフレームを選択"; enabled: false }
+            MenuItem { text: "選択範囲のフレームを削除"; enabled: false }
+            MenuSeparator { }
+            MenuItem { text: "再生速度の情報を変更"; enabled: false }
         }
         Menu {
-            title: "ファイル"
-            MenuItem { action: saveAction }
-            MenuItem { action: loadAction }
-            MenuItem { action: quitAction }
+            title: "表示"
+            Menu {
+                title: "拡大表示"
+                MenuItem { text: "WindowSize"; onTriggered: {} }
+                MenuItem { text: "100%"; onTriggered: {} }
+            }
+            MenuSeparator { }
+            MenuItem { text: "再生ウィンドウの表示"; onTriggered: mainWin.requestActivate() }
+            MenuItem { text: "タイムラインの表示"; onTriggered: if (WindowManager) WindowManager.timelineVisible = true }
+            MenuItem { text: "設定ダイアログの表示"; onTriggered: if (WindowManager) WindowManager.objectSettingsVisible = true }
+        }
+        Menu {
+            title: "その他"
+            MenuItem { text: "バージョン情報"; onTriggered: console.log("Rina version 0.1") }
+            MenuSeparator { }
+            MenuItem { text: "未実装機能の非表示"; checkable: true; checked: true }
         }
     }
 
