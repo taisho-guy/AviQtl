@@ -88,15 +88,14 @@ namespace Rina::UI {
         for (auto& clip : m_timeline->clipsMutable()) {
             if (clip.id == id) {
                 // 暫定対応: プロパティ名に応じて適切なエフェクトのパラメータを更新する
-                // 本来はUI側でエフェクトインデックスを指定すべき
-                for (auto* eff : clip.effects) {
-                    if (eff->params().contains(name)) {
-                        eff->setParam(name, value);
+                // POD化に伴い、直接書き込みではなくService経由で更新する
+                for (int i = 0; i < clip.effects.size(); ++i) {
+                    if (clip.effects[i]->params().contains(name)) {
+                        // コマンド経由で更新 (Undo/Redo対応)
+                        updateClipEffectParam(id, i, name, value);
 
                         // Update cache (flattened view for current UI)
-                        QVariantMap data = m_selection->selectedClipData();
-                        data[name] = value;
-                        m_selection->select(id, data);
+                        // updateClipEffectParam内でSelection更新も行われるため削除
                         
                         // Update preview
                         updateActiveClipsList();

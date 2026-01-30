@@ -6,13 +6,10 @@
 
 namespace Rina::UI {
 
-    struct EffectData {
-        QString id;
-        QString name;
-        QString qmlSource;
-        bool enabled = true;
-        QVariantMap params;
-    };
+    // 最適化: ClipIDを導入
+    using ClipID = int;
+
+    class EffectModel; // 前方宣言
 
     struct Keyframe {
         int frame;
@@ -27,7 +24,7 @@ namespace Rina::UI {
         int durationFrames;
         int layer;
         
-        // エフェクトスタック
+        // ハイブリッド設計: エフェクトスタックのみポインタで保持 (振る舞いを持つため)
         QList<EffectModel*> effects;
     };
 }

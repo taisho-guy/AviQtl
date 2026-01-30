@@ -48,7 +48,8 @@ namespace Rina::UI {
                 const int currentFrame = m_transport ? m_transport->currentFrame() : 0;
                 const int relFrame = currentFrame - clip->startFrame;
                 QVariantMap map;
-                for (const auto& eff : clip->effects) {
+                for (auto* eff : clip->effects) {
+                    if (!eff->isEnabled()) continue;
                     const QVariantMap p = eff->evaluatedParams(relFrame);
                     for (auto it = p.begin(); it != p.end(); ++it) map.insert(it.key(), it.value());
                 }

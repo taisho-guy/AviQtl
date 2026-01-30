@@ -33,7 +33,7 @@ namespace Rina::Core {
             clipObj["layer"] = clip.layer;
             
             QJsonArray effArray;
-            for (const auto& eff : clip.effects) {
+            for (const auto* eff : clip.effects) {
                 QJsonObject eObj;
                 eObj["id"] = eff->id();
                 eObj["name"] = eff->name();

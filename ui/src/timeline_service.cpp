@@ -33,12 +33,12 @@ namespace Rina::UI {
     AddEffectCommand::AddEffectCommand(TimelineService* service, int clipId, const QString& effectId)
         : m_service(service), m_clipId(clipId), m_effectId(effectId) { setText("Add Effect"); }
     void AddEffectCommand::undo() { m_service->removeEffectInternal(m_clipId, -1); }
-    void AddEffectCommand::redo() { m_service->addEffectInternal(m_clipId, m_service->createEffectData(m_effectId)); }
+    void AddEffectCommand::redo() { m_service->addEffectInternal(m_clipId, m_effectId); }
 
     RemoveEffectCommand::RemoveEffectCommand(TimelineService* service, int clipId, int effectIndex)
         : m_service(service), m_clipId(clipId), m_effectIndex(effectIndex) { setText("Remove Effect"); }
     void RemoveEffectCommand::redo() { m_service->removeEffectInternal(m_clipId, m_effectIndex); }
-    void RemoveEffectCommand::undo() { m_service->addEffectInternal(m_clipId, m_removedEffect); }
+    void RemoveEffectCommand::undo() { m_service->restoreEffectInternal(m_clipId, m_removedEffectData); }
 
     // === TimelineService Implementation ===
 
@@ -74,21 +74,17 @@ namespace Rina::UI {
         newClip.layer = layer;
 
         // Transform
-        EffectData transform;
-        transform.id = "transform"; transform.name = "座標";
-        transform.params = {{"x",0},{"y",0},{"z",0},{"scale",100.0},{"aspect",0.0},{"rotationX",0.0},{"rotationY",0.0},{"rotationZ",0.0},{"opacity",1.0}};
-        auto* tm = new EffectModel(transform.id, transform.name, transform.params, "", this);
+        auto* tm = new EffectModel("transform", "座標", 
+            {{"x",0},{"y",0},{"z",0},{"scale",100.0},{"aspect",0.0},{"rotationX",0.0},{"rotationY",0.0},{"rotationZ",0.0},{"opacity",1.0}}, 
+            "", this);
         connect(tm, &EffectModel::keyframeTracksChanged, this, &TimelineService::clipsChanged);
         newClip.effects.append(tm);
 
         // Object
         auto meta = Rina::Core::EffectRegistry::instance().getEffect(type);
-        EffectData content;
-        content.id = meta.id.isEmpty() ? "unknown" : meta.id;
-        content.name = meta.name.isEmpty() ? "Unknown" : meta.name;
-        content.params = meta.defaultParams;
-        content.qmlSource = meta.qmlSource;
-        auto* cm = new EffectModel(content.id, content.name, content.params, content.qmlSource, this);
+        auto* cm = new EffectModel(meta.id.isEmpty() ? "unknown" : meta.id, 
+                                   meta.name.isEmpty() ? "Unknown" : meta.name, 
+                                   meta.defaultParams, meta.qmlSource, this);
         connect(cm, &EffectModel::keyframeTracksChanged, this, &TimelineService::clipsChanged);
         newClip.effects.append(cm);
 
@@ -176,11 +172,26 @@ namespace Rina::UI {
         m_undoStack->push(new AddEffectCommand(this, clipId, effectId));
     }
 
-    void TimelineService::addEffectInternal(int clipId, const EffectData& effectData) {
+    void TimelineService::addEffectInternal(int clipId, const QString& effectId) {
         for (auto& clip : m_clips) {
             if (clip.id == clipId) {
-                auto* model = new EffectModel(effectData.id, effectData.name, effectData.params, effectData.qmlSource, this);
-                model->setEnabled(effectData.enabled);
+                auto meta = Rina::Core::EffectRegistry::instance().getEffect(effectId);
+                auto* model = new EffectModel(meta.id, meta.name, meta.defaultParams, meta.qmlSource, this);
+                connect(model, &EffectModel::keyframeTracksChanged, this, &TimelineService::clipsChanged);
+                clip.effects.append(model);
+                emit clipsChanged();
+                emit clipEffectsChanged(clipId);
+                break;
+            }
+        }
+    }
+    
+    void TimelineService::restoreEffectInternal(int clipId, const QVariantMap& data) {
+        for (auto& clip : m_clips) {
+            if (clip.id == clipId) {
+                auto* model = new EffectModel(data["id"].toString(), data["name"].toString(), data["params"].toMap(), data["qmlSource"].toString(), this);
+                model->setEnabled(data["enabled"].toBool());
+                model->setKeyframeTracks(data["keyframes"].toMap());
                 connect(model, &EffectModel::keyframeTracksChanged, this, &TimelineService::clipsChanged);
                 clip.effects.append(model);
                 emit clipsChanged();
@@ -191,16 +202,19 @@ namespace Rina::UI {
     }
 
     void TimelineService::removeEffect(int clipId, int effectIndex) {
-        EffectData removed;
+        QVariantMap removedData;
         bool found = false;
         for(const auto& c : m_clips) {
             if(c.id == clipId) {
                 int idx = (effectIndex == -1) ? c.effects.size() - 1 : effectIndex;
                 if(idx >= 0 && idx < c.effects.size()) {
-                    removed.id = c.effects[idx]->id();
-                    removed.name = c.effects[idx]->name();
-                    removed.enabled = c.effects[idx]->isEnabled();
-                    removed.params = c.effects[idx]->params();
+                    auto* eff = c.effects[idx];
+                    removedData["id"] = eff->id();
+                    removedData["name"] = eff->name();
+                    removedData["enabled"] = eff->isEnabled();
+                    removedData["params"] = eff->params();
+                    removedData["qmlSource"] = eff->qmlSource();
+                    removedData["keyframes"] = eff->keyframeTracks();
                     found = true;
                     break;
                 }
@@ -208,7 +222,7 @@ namespace Rina::UI {
         }
         if(found) {
             auto* cmd = new RemoveEffectCommand(this, clipId, effectIndex);
-            cmd->setRemovedEffect(removed);
+            cmd->setRemovedEffect(removedData);
             m_undoStack->push(cmd);
         }
     }
@@ -219,7 +233,7 @@ namespace Rina::UI {
                 if (effectIndex == -1) effectIndex = clip.effects.size() - 1;
                 if (effectIndex >= 0 && effectIndex < clip.effects.size()) {
                     if (effectIndex == 0 && clip.effects[0]->id() == "transform") return;
-                    EffectModel* eff = clip.effects.takeAt(effectIndex);
+                    auto* eff = clip.effects.takeAt(effectIndex);
                     eff->deleteLater();
                     emit clipsChanged();
                     emit clipEffectsChanged(clipId);
@@ -257,19 +271,6 @@ namespace Rina::UI {
         }
     }
 
-    EffectData TimelineService::createEffectData(const QString& id) {
-        EffectData eff;
-        eff.id = id;
-        eff.enabled = true;
-        const auto meta = Rina::Core::EffectRegistry::instance().getEffect(id);
-        if (!meta.id.isEmpty()) {
-            eff.name = meta.name;
-            eff.qmlSource = meta.qmlSource;
-            eff.params = meta.defaultParams;
-        } else { eff.name = id; }
-        return eff;
-    }
-
     ClipData TimelineService::deepCopyClip(const ClipData& source) {
         ClipData newClip;
         newClip.id = -1;
@@ -277,6 +278,7 @@ namespace Rina::UI {
         newClip.startFrame = source.startFrame;
         newClip.durationFrames = source.durationFrames;
         newClip.layer = source.layer;
+        
         for (const auto* oldEffect : source.effects) {
             auto* newEffect = new EffectModel(oldEffect->id(), oldEffect->name(), oldEffect->params(), oldEffect->qmlSource(), this);
             newEffect->setEnabled(oldEffect->isEnabled());

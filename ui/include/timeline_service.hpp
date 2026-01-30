@@ -39,12 +39,12 @@ namespace Rina::UI {
         // Internal (for Commands)
         void createClipInternal(const QString& type, int startFrame, int layer);
         void updateClipInternal(int id, int layer, int startFrame, int duration);
-        void addEffectInternal(int clipId, const EffectData& effectData);
+        void addEffectInternal(int clipId, const QString& effectId);
+        void restoreEffectInternal(int clipId, const QVariantMap& data);
         void removeEffectInternal(int clipId, int effectIndex);
         void updateEffectParamInternal(int clipId, int effectIndex, const QString& paramName, const QVariant& value);
         
         // Helpers
-        EffectData createEffectData(const QString& id);
         ClipData deepCopyClip(const ClipData& source);
 
         // State Management

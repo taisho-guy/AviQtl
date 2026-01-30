@@ -63,11 +63,11 @@ namespace Rina::UI {
         RemoveEffectCommand(TimelineService* service, int clipId, int effectIndex);
         void undo() override;
         void redo() override;
-        void setRemovedEffect(const EffectData& effect) { m_removedEffect = effect; }
+        void setRemovedEffect(const QVariantMap& effectData) { m_removedEffectData = effectData; }
     private:
         TimelineService* m_service;
         int m_clipId;
         int m_effectIndex;
-        EffectData m_removedEffect;
+        QVariantMap m_removedEffectData;
     };
 }
