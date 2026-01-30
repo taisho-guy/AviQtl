@@ -54,6 +54,7 @@ file(GLOB_RECURSE CPP_SOURCES
 qt_add_executable(Rina
     ${CPP_SOURCES}
     ui/resources.qrc
+    core/src/settings_manager.cpp
     ui/src/project_service.cpp
     ui/src/transport_service.cpp
     ui/src/selection_service.cpp
@@ -76,6 +77,7 @@ qt_add_qml_module(Rina
         ui/qml/TimelineWindow.qml
         ui/qml/ProjectSettingsWindow.qml
         ui/qml/SettingDialog.qml
+        ui/qml/SystemSettingsWindow.qml
         ui/qml/CompositeView.qml
         
         ui/qml/common/RinaWindow.qml

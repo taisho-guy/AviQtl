@@ -7,6 +7,7 @@
 #include "window_manager.hpp"
 #include "timeline_controller.hpp"
 #include "effect_registry.hpp"
+#include "settings_manager.hpp"
 
 int main(int argc, char *argv[]) {
     // 1. アプリケーション初期化
@@ -44,6 +45,9 @@ int main(int argc, char *argv[]) {
 
     // WindowManager をQMLから触れるように公開
     engine.rootContext()->setContextProperty("WindowManager", static_cast<QObject*>(&Rina::UI::WindowManager::instance()));
+
+    // SettingsManager をQMLから触れるように公開
+    engine.rootContext()->setContextProperty("SettingsManager", &Rina::Core::SettingsManager::instance());
 
     // ウィンドウ生成
     Rina::UI::WindowManager::instance().spawnInitialWindows(&engine);

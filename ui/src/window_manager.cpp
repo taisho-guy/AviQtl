@@ -28,6 +28,9 @@ namespace Rina::UI {
 
         // オブジェクト設定（AviUtl風の設定ダイアログ相当）：初期は非表示で生成だけしておく
         spawnWindow(engine, "objectSettings", "qrc:/qt/qml/Rina/ui/qml/SettingDialog.qml", "Object Settings", 400, 600, 800, 420, false);
+
+        // システム設定（環境設定）
+        spawnWindow(engine, "systemSettings", "qrc:/qt/qml/Rina/ui/qml/SystemSettingsWindow.qml", "System Settings", 600, 500, 200, 200, false);
     }
 
     void WindowManager::spawnWindow(QQmlEngine* engine,
@@ -99,6 +102,7 @@ namespace Rina::UI {
         if (id == "timeline") emit timelineVisibleChanged();
         if (id == "projectSettings") emit projectSettingsVisibleChanged();
         if (id == "objectSettings") emit objectSettingsVisibleChanged();
+        if (id == "systemSettings") emit systemSettingsVisibleChanged();
     }
 
     bool WindowManager::isVisible(const QString& id) const {
@@ -134,4 +138,6 @@ namespace Rina::UI {
     void WindowManager::setProjectSettingsVisible(bool v) { setVisible("projectSettings", v); }
     bool WindowManager::objectSettingsVisible() const { return isVisible("objectSettings"); }
     void WindowManager::setObjectSettingsVisible(bool v) { setVisible("objectSettings", v); }
+    bool WindowManager::systemSettingsVisible() const { return isVisible("systemSettings"); }
+    void WindowManager::setSystemSettingsVisible(bool v) { setVisible("systemSettings", v); }
 }

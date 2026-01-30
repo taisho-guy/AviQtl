@@ -66,7 +66,7 @@ ApplicationWindow {
             MenuItem { text: "メディア書き出し..."; enabled: false }
             MenuItem { text: "拡張編集AVI/BMP出力 (RGBA)"; enabled: false }
             MenuSeparator { }
-            MenuItem { text: "環境設定"; onTriggered: if (WindowManager) WindowManager.projectSettingsVisible = true }
+            MenuItem { text: "環境設定"; onTriggered: if (WindowManager) WindowManager.systemSettingsVisible = true }
             MenuSeparator { }
             MenuItem { text: "終了"; action: quitAction }
         }
@@ -81,7 +81,7 @@ ApplicationWindow {
             MenuItem { text: "サイズの変更"; onTriggered: if (WindowManager) WindowManager.projectSettingsVisible = true }
             MenuItem { text: "フレームレートの変更"; onTriggered: if (WindowManager) WindowManager.projectSettingsVisible = true }
             MenuSeparator { }
-            MenuItem { text: "環境設定"; onTriggered: if (WindowManager) WindowManager.projectSettingsVisible = true }
+            MenuItem { text: "環境設定"; onTriggered: if (WindowManager) WindowManager.systemSettingsVisible = true }
         }
         Menu {
             title: "編集"

@@ -11,6 +11,7 @@ namespace Rina::UI {
         Q_PROPERTY(bool timelineVisible READ timelineVisible WRITE setTimelineVisible NOTIFY timelineVisibleChanged)
         Q_PROPERTY(bool projectSettingsVisible READ projectSettingsVisible WRITE setProjectSettingsVisible NOTIFY projectSettingsVisibleChanged)
         Q_PROPERTY(bool objectSettingsVisible READ objectSettingsVisible WRITE setObjectSettingsVisible NOTIFY objectSettingsVisibleChanged)
+        Q_PROPERTY(bool systemSettingsVisible READ systemSettingsVisible WRITE setSystemSettingsVisible NOTIFY systemSettingsVisibleChanged)
 
     public:
         static WindowManager& instance();
@@ -29,11 +30,14 @@ namespace Rina::UI {
         void setProjectSettingsVisible(bool v);
         bool objectSettingsVisible() const;
         void setObjectSettingsVisible(bool v);
+        bool systemSettingsVisible() const;
+        void setSystemSettingsVisible(bool v);
 
     signals:
         void timelineVisibleChanged();
         void projectSettingsVisibleChanged();
         void objectSettingsVisibleChanged();
+        void systemSettingsVisibleChanged();
         
     private:
         explicit WindowManager(QObject* parent = nullptr);
