@@ -1,6 +1,7 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import QtQml 2.15
 import "common" as Common
 
 Common.RinaWindow {
@@ -16,105 +17,160 @@ Common.RinaWindow {
         id: contextMenu
 
         // Context payload
-        property string contextType: "timeline_background" // timeline_background | clip | layer_header | scene_header
+        property string contextType: "timeline_background"
         property int clickFrame: 0
         property int clickLayer: 0
         property int clickClipId: -1
-        property var menuModel: []
 
         function openAt(x, y, ctxType, frame, layer, clipId) {
             contextType = ctxType
             clickFrame = frame
             clickLayer = layer
             clickClipId = clipId
-            menuModel = buildMenuModel()
+            rebuildMenu()
             popup(x, y)
         }
 
-        function buildMenuModel() {
-            // 最初はQML側で定義（後でC++に移してもよい）
+        function rebuildMenu() {
+            // 既存の項目をすべてクリア
+            while (contextMenu.count > 0) {
+                var item = contextMenu.itemAt(0)
+                contextMenu.removeItem(item)
+                item.destroy()
+            }
+            
+            // コンテキストに応じて項目を追加
             if (contextType === "clip") {
-                return [
-                    { type: "item", text: "切り取り",   cmd: "clip.cut",     enabled: (clickClipId >= 0) },
-                    { type: "item", text: "コピー",     cmd: "clip.copy",    enabled: (clickClipId >= 0) },
-                    { type: "item", text: "削除",       cmd: "clip.delete",  enabled: (clickClipId >= 0) },
-                    { type: "sep" },
-                    { type: "item", text: "分割",       cmd: "clip.split",   enabled: (clickClipId >= 0) },
-                    { type: "item", text: "グループ化", cmd: "clip.group",   enabled: false },
-                    { type: "item", text: "グループ解除", cmd: "clip.ungroup", enabled: false }
-                ]
+                contextMenu.addItem(createMenuItem("コピー", "clip.copy"))
+                contextMenu.addItem(createMenuItem("貼り付け", "edit.paste"))
+                contextMenu.addItem(createMenuItem("切り取り", "clip.cut"))
+                contextMenu.addItem(createMenuItem("分割", "clip.split"))
+                addSeparator()
+                contextMenu.addItem(createMenuItem("削除", "clip.delete"))
+                addSeparator()
+                contextMenu.addItem(createMenuItem("グループ化", "clip.group", false))
+                contextMenu.addItem(createMenuItem("グループ化解除", "clip.ungroup", false))
+                addSeparator()
+                contextMenu.addItem(createMenuItem("上のオブジェクトでクリッピング", "clip.clip_above", false))
+                contextMenu.addItem(createMenuItem("下のオブジェクトをクリッピング", "clip.clip_below", false))
+                addSeparator()
+                var cameraItem = createMenuItem("カメラ制御の対象", "clip.camera_target")
+                cameraItem.checkable = true
+                cameraItem.checked = false
+                contextMenu.addItem(cameraItem)
+            } else {
+                // timeline_background
+                var mediaMenu = createSubMenu("メディアオブジェクトを追加")
+                mediaMenu.addItem(createMenuItem("テキスト", "add.text"))
+                mediaMenu.addItem(createMenuItem("図形", "add.rect"))
+                mediaMenu.addItem(createMenuItem("画像", "add.image", false))
+                mediaMenu.addItem(createMenuItem("動画", "add.video", false))
+                contextMenu.addMenu(mediaMenu)
+                
+                var effectMenu = createSubMenu("エフェクトオブジェクトを追加")
+                effectMenu.addItem(createMenuItem("シーンチェンジ", "add.scene_change", false))
+                effectMenu.addItem(createMenuItem("カメラ制御", "add.camera_control", false))
+                contextMenu.addMenu(effectMenu)
+                
+                addSeparator()
+                contextMenu.addItem(createMenuItem("貼り付け", "edit.paste"))
+                contextMenu.addItem(createMenuItem("元に戻す", "edit.undo"))
+                addSeparator()
+                
+                var bpmGrid = createMenuItem("BPMグリッドを表示", "view.bpm_grid")
+                bpmGrid.checkable = true
+                bpmGrid.checked = false
+                contextMenu.addItem(bpmGrid)
+                
+                var xyGrid = createMenuItem("XY軸グリッドを表示", "view.xy_grid")
+                xyGrid.checkable = true
+                xyGrid.checked = false
+                contextMenu.addItem(xyGrid)
+                
+                var camGrid = createMenuItem("カメラ制御グリッドを表示", "view.cam_grid")
+                camGrid.checkable = true
+                camGrid.checked = false
+                contextMenu.addItem(camGrid)
+                
+                contextMenu.addItem(createMenuItem("グリッドの設定", "view.grid_settings"))
             }
-
-            // timeline_background
-            return [
-                { type: "item", text: "テキストを追加",    cmd: "add.text", enabled: true },
-                { type: "item", text: "図形を追加",        cmd: "add.rect", enabled: true },
-                { type: "sep" },
-                { type: "item", text: "貼り付け",          cmd: "edit.paste", enabled: false },
-                { type: "sep" },
-                { type: "item", text: "元に戻す",          cmd: "edit.undo", enabled: true },
-                { type: "item", text: "やり直す",          cmd: "edit.redo", enabled: true }
-            ]
         }
 
-        Repeater {
-            model: contextMenu.menuModel
-            delegate: Loader {
-                active: true
-                // 重要: modelDataをLoaderのプロパティとして保存し、子からアクセス可能にする
-                property var menuData: modelData
-                sourceComponent: (modelData.type === "sep") ? sepComp : itemComp
+        function createMenuItem(label, command, enabledFlag) {
+            var enabled = (enabledFlag !== undefined) ? enabledFlag : true
+            var item = menuItemComp.createObject(contextMenu, {
+                text: label,
+                enabled: enabled
+            })
+            if (command) {
+                item.triggered.connect(function() {
+                    handleCommand(command)
+                })
+            }
+            return item
+        }
+
+        function createSubMenu(label) {
+            var menu = subMenuComp.createObject(contextMenu, {
+                title: label
+            })
+            return menu
+        }
+
+        function addSeparator() {
+            var sep = menuSeparatorComp.createObject(contextMenu)
+            contextMenu.addItem(sep)
+        }
+
+        function handleCommand(cmd) {
+            if (!TimelineBridge) return
+            switch (cmd) {
+                case "add.text":
+                    TimelineBridge.createObject("text", clickFrame, clickLayer)
+                    break
+                case "add.rect":
+                    TimelineBridge.createObject("rect", clickFrame, clickLayer)
+                    break
+                case "edit.undo":
+                    TimelineBridge.undo()
+                    break
+                case "edit.redo":
+                    TimelineBridge.redo()
+                    break
+                case "clip.delete":
+                    TimelineBridge.deleteClip(clickClipId)
+                    break
+                case "clip.split":
+                    TimelineBridge.splitClip(clickClipId, clickFrame)
+                    break
+                case "clip.cut":
+                    TimelineBridge.cutClip(clickClipId)
+                    break
+                case "clip.copy":
+                    TimelineBridge.copyClip(clickClipId)
+                    break
+                case "edit.paste":
+                    TimelineBridge.pasteClip(clickFrame, clickLayer)
+                    break
+                default:
+                    console.log("Unknown cmd:", cmd)
+                    break
             }
         }
 
         Component {
-            id: sepComp
-            MenuSeparator { }
+            id: menuItemComp
+            MenuItem {}
         }
+
         Component {
-            id: itemComp
-            MenuItem {
-                // Loader(parent)のプロパティ経由でデータにアクセス
-                text: parent.menuData.text
-                enabled: (parent.menuData.enabled !== undefined) ? parent.menuData.enabled : true
-                onTriggered: {
-                    if (!TimelineBridge) return
-                    switch (parent.menuData.cmd) {
-                    case "add.text":
-                        TimelineBridge.createObject("text", contextMenu.clickFrame, contextMenu.clickLayer)
-                        break
-                    case "add.rect":
-                        TimelineBridge.createObject("rect", contextMenu.clickFrame, contextMenu.clickLayer)
-                        break
-                    case "edit.undo":
-                        TimelineBridge.undo()
-                        break
-                    case "edit.redo":
-                        TimelineBridge.redo()
-                        break
-                    case "clip.delete":
-                        // clickClipIdはContextMenuのプロパティなのでそのままアクセス可
-                        TimelineBridge.deleteClip(contextMenu.clickClipId)
-                        break
-                    case "clip.split":
-                        TimelineBridge.splitClip(contextMenu.clickClipId, contextMenu.clickFrame)
-                        break
-                    case "clip.cut":
-                        TimelineBridge.cutClip(contextMenu.clickClipId)
-                        break
-                    case "clip.copy":
-                        TimelineBridge.copyClip(contextMenu.clickClipId)
-                        break
-                    case "edit.paste":
-                        TimelineBridge.pasteClip(contextMenu.clickFrame, contextMenu.clickLayer)
-                        break
-                    default:
-                        TimelineBridge.log("Unknown cmd: " + parent.menuData.cmd)
-                        break
-                    }
-                    contextMenu.close()
-                }
-            }
+            id: subMenuComp
+            Menu {}
+        }
+
+        Component {
+            id: menuSeparatorComp
+            MenuSeparator {}
         }
     }
 
