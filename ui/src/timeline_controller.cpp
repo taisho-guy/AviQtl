@@ -6,6 +6,9 @@
 #include <QFile>
 #include <QUrl>
 #include "effect_registry.hpp"
+#include "project_service.hpp"
+#include "transport_service.hpp"
+#include "selection_service.hpp"
 
 namespace Rina::UI {
 

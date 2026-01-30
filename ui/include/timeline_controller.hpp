@@ -4,20 +4,21 @@
 #include <QtMath>
 #include <vector>
 #include <QVariant>
-#include <QTimer>
 #include <QColor>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
 #include <memory>
-#include <QUndoStack>
 #include <QAbstractListModel>
 #include "effect_model.hpp" // 念のため維持
 #include "timeline_types.hpp"
-#include "timeline_services.hpp"
+#include "project_service.hpp"
+#include "transport_service.hpp"
+#include "selection_service.hpp"
+
+class QUndoStack;
 
 namespace Rina::UI {
-
     class ClipModel : public QAbstractListModel {
         Q_OBJECT
     public:
