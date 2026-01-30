@@ -17,17 +17,15 @@ namespace Rina::UI {
 
     TimelineController::TimelineController(QObject* parent) 
         : QObject(parent)
-        , m_clipStartFrame(100)
-        , m_clipDurationFrames(200)
-        , m_layer(0)
-        , m_isClipActive(false)
-        , m_activeObjectType("rect") // デフォルトは図形
     {
         // サービスの初期化
         m_project = new ProjectService(this);
         m_transport = new TransportService(this);
         m_selection = new SelectionService(this);
         m_timeline = new TimelineService(m_selection, this);
+
+        // Phase 1: 初期状態の明示的設定
+        m_selection->select(-1, QVariantMap());
 
         m_clipModel = new ClipModel(m_transport, this);
 
@@ -37,6 +35,15 @@ namespace Rina::UI {
             updateActiveClipsList();
         });
         connect(m_timeline, &TimelineService::clipEffectsChanged, this, &TimelineController::clipEffectsChanged);
+        
+        // SelectionService signals
+        connect(m_selection, &SelectionService::selectedClipDataChanged, this, [this](){
+            emit clipStartFrameChanged();
+            emit clipDurationFramesChanged();
+            emit layerChanged();
+            emit activeObjectTypeChanged();
+            updateClipActiveState();
+        });
 
         // サービス間の連携
         connect(m_project, &ProjectService::fpsChanged, [this](){
@@ -53,10 +60,13 @@ namespace Rina::UI {
             }
             updateClipActiveState();
             updateActiveClipsList();
-            updateObjectX();
         });
 
         updateClipActiveState();
+    }
+
+    void TimelineController::togglePlay() {
+        if (m_transport) m_transport->togglePlay();
     }
 
     void TimelineController::undo() { m_timeline->undo(); }
@@ -90,9 +100,6 @@ namespace Rina::UI {
                         
                         // Update preview
                         updateActiveClipsList();
-                        
-                        // Trigger keyframe logic if needed
-                        if (name == "x") updateObjectX(); 
                         break; // 最初に見つかったパラメータを更新
                     }
                 }
@@ -105,114 +112,53 @@ namespace Rina::UI {
         return m_selection->selectedClipData().value(name);
     }
 
-    int TimelineController::clipStartFrame() const { return m_clipStartFrame; }
+    int TimelineController::clipStartFrame() const { 
+        return m_selection->selectedClipData().value("startFrame", 0).toInt(); 
+    }
     void TimelineController::setClipStartFrame(int frame) {
-        if (m_clipStartFrame != frame) {
-            m_clipStartFrame = frame;
-            emit clipStartFrameChanged();
-            updateClipActiveState();
-            // Notify ECS of the change (Entity-Component Link)
-            Rina::Engine::Timeline::ECS::instance().updateClipState(1, m_layer, m_clipStartFrame);
-        }
+        int id = m_selection->selectedClipId();
+        if (id < 0) return;
+        m_timeline->updateClip(id, layer(), frame, clipDurationFrames());
     }
 
-    int TimelineController::clipDurationFrames() const { return m_clipDurationFrames; }
+    int TimelineController::clipDurationFrames() const { 
+        return m_selection->selectedClipData().value("durationFrames", 100).toInt(); 
+    }
     void TimelineController::setClipDurationFrames(int frames) {
-        if (m_clipDurationFrames != frames) {
-            m_clipDurationFrames = frames;
-            emit clipDurationFramesChanged();
-            updateClipActiveState();
-        }
+        int id = m_selection->selectedClipId();
+        if (id < 0) return;
+        m_timeline->updateClip(id, layer(), clipStartFrame(), frames);
     }
 
-    int TimelineController::layer() const { return m_layer; }
+    int TimelineController::layer() const { 
+        return m_selection->selectedClipData().value("layer", 0).toInt(); 
+    }
     void TimelineController::setLayer(int layer) {
-        if (m_layer != layer) {
-            m_layer = layer;
-            emit layerChanged();
-            // Notify ECS of the change
-            Rina::Engine::Timeline::ECS::instance().updateClipState(1, m_layer, m_clipStartFrame);
-        }
+        int id = m_selection->selectedClipId();
+        if (id < 0) return;
+        m_timeline->updateClip(id, layer, clipStartFrame(), clipDurationFrames());
     }
 
     bool TimelineController::isClipActive() const { return m_isClipActive; }
 
     void TimelineController::updateClipActiveState() {
         int current = m_transport->currentFrame();
+        int start = clipStartFrame();
+        int duration = clipDurationFrames();
         // シンプルな矩形判定: Start <= Current < Start + Duration
-        bool active = (current >= m_clipStartFrame) && (current < m_clipStartFrame + m_clipDurationFrames);
+        bool active = (current >= start) && (current < start + duration);
         if (m_isClipActive != active) {
             m_isClipActive = active;
             emit isClipActiveChanged();
         }
 
         if (m_isClipActive) {
-            Rina::Engine::Timeline::ECS::instance().updateClipState(1, m_layer, current - m_clipStartFrame);
+            Rina::Engine::Timeline::ECS::instance().updateClipState(1, layer(), current - start);
         }
-    }
-
-    void TimelineController::addKeyframe(int frame, float value) {
-        int relFrame = frame - m_clipStartFrame;
-
-        // Check if keyframe exists at this frame
-        auto it = std::find_if(m_keyframesX.begin(), m_keyframesX.end(), [relFrame](const Keyframe& k){
-            return k.frame == relFrame;
-        });
-
-        if (it != m_keyframesX.end()) {
-            it->value = value;
-        } else {
-            m_keyframesX.push_back({relFrame, value, 0});
-            // Keep sorted by frame
-            std::sort(m_keyframesX.begin(), m_keyframesX.end(), [](const Keyframe& a, const Keyframe& b){
-                return a.frame < b.frame;
-            });
-        }
-        
-        emit keyframeListChanged();
-        updateObjectX();
-    }
-
-    QVariantList TimelineController::keyframeList() const {
-        QVariantList list;
-        for (const auto& k : m_keyframesX) {
-            QVariantMap map;
-            map["frame"] = k.frame;
-            map["value"] = k.value;
-            list.append(map);
-        }
-        return list;
-    }
-
-    void TimelineController::updateObjectX() {
-        if (m_keyframesX.empty()) return;
-        float newVal = calculateInterpolatedValue(m_transport->currentFrame());
-        int newX = qRound(newVal);
-        // Update property via generic setter
-        setClipProperty("x", newX);
-    }
-
-    float TimelineController::calculateInterpolatedValue(int frame) {
-        if (m_keyframesX.empty()) return m_selection->selectedClipData().value("x", 0).toFloat();
-        
-        int relFrame = frame - m_clipStartFrame;
-
-        if (relFrame <= m_keyframesX.front().frame) return m_keyframesX.front().value;
-        if (relFrame >= m_keyframesX.back().frame) return m_keyframesX.back().value;
-
-        for (size_t i = 0; i < m_keyframesX.size() - 1; ++i) {
-            const auto& k1 = m_keyframesX[i];
-            const auto& k2 = m_keyframesX[i+1];
-            if (relFrame >= k1.frame && relFrame < k2.frame) {
-                float t = (relFrame - k1.frame) / (float)(k2.frame - k1.frame);
-                return k1.value + (k2.value - k1.value) * t;
-            }
-        }
-        return m_keyframesX.back().value;
     }
 
     QString TimelineController::activeObjectType() const {
-        return m_activeObjectType;
+        return m_selection->selectedClipData().value("type", "rect").toString();
     }
 
     void TimelineController::createObject(const QString& type, int startFrame, int layer) {
@@ -309,34 +255,7 @@ namespace Rina::UI {
     }
 
     void TimelineController::selectClip(int id) {
-        if (m_selection->selectedClipId() == id) return;
-
-        // 選択されたクリップの情報をプロパティにロード
-        for (const auto& clip : m_timeline->clips()) {
-            if (clip.id == id) {
-                
-                QVariantMap cache;
-                for(auto* eff : clip.effects) {
-                    QVariantMap params = eff->params();
-                    for(auto it = params.begin(); it != params.end(); ++it) 
-                        cache.insert(it.key(), it.value());
-                }
-                
-                m_selection->select(id, cache);
-                
-                if (m_activeObjectType != clip.type) { m_activeObjectType = clip.type; emit activeObjectTypeChanged(); }
-                if (m_layer != clip.layer) { m_layer = clip.layer; emit layerChanged(); }
-                if (m_clipStartFrame != clip.startFrame) { m_clipStartFrame = clip.startFrame; emit clipStartFrameChanged(); }
-                if (m_clipDurationFrames != clip.durationFrames) { m_clipDurationFrames = clip.durationFrames; emit clipDurationFramesChanged(); }
-                
-                // 選択変更時にプレビュー更新（選択枠表示などのため）
-                updateActiveClipsList();
-                return;
-            }
-        }
-        
-        // 見つからなかった場合（選択解除など）の処理は必要に応じて追加
-        m_selection->select(-1, {});
+        if (m_timeline) m_timeline->selectClip(id);
     }
 
     // === エフェクト操作 (Internal実装) ===

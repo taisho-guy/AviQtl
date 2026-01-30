@@ -36,7 +36,6 @@ namespace Rina::UI {
         Q_PROPERTY(int clipDurationFrames READ clipDurationFrames WRITE setClipDurationFrames NOTIFY clipDurationFramesChanged)
         Q_PROPERTY(int layer READ layer WRITE setLayer NOTIFY layerChanged)
         Q_PROPERTY(bool isClipActive READ isClipActive NOTIFY isClipActiveChanged)
-        Q_PROPERTY(QVariantList keyframeList READ keyframeList NOTIFY keyframeListChanged)
         Q_PROPERTY(QString activeObjectType READ activeObjectType NOTIFY activeObjectTypeChanged)
         Q_PROPERTY(QVariantList clips READ clips NOTIFY clipsChanged)
         Q_PROPERTY(Rina::UI::ClipModel* clipModel READ clipModel CONSTANT)
@@ -67,9 +66,6 @@ namespace Rina::UI {
 
         bool isClipActive() const;
 
-        Q_INVOKABLE void addKeyframe(int frame, float value);
-        QVariantList keyframeList() const;
-
         Q_INVOKABLE void createObject(const QString& type, int startFrame, int layer);
         QString activeObjectType() const;
 
@@ -96,6 +92,7 @@ namespace Rina::UI {
 
         Q_INVOKABLE void selectClip(int id);
 
+        Q_INVOKABLE void togglePlay();
         Q_INVOKABLE void undo();
         Q_INVOKABLE void redo();
 
@@ -114,28 +111,17 @@ namespace Rina::UI {
         void clipDurationFramesChanged();
         void layerChanged();
         void isClipActiveChanged();
-        void keyframeListChanged();
         void activeObjectTypeChanged();
         void clipsChanged(); // 追加
         void clipEffectsChanged(int clipId);
 
     private:
         void updateClipActiveState();
-        void updateObjectX();
-        float calculateInterpolatedValue(int frame);
 
         ClipModel* m_clipModel;
         double m_timelineScale = 1.0; // 1 frame = 1 pixel (default)
 
-        int m_clipStartFrame = 100;
-        int m_clipDurationFrames = 200;
-        int m_layer = 0;
         bool m_isClipActive = false;
-        std::vector<Keyframe> m_keyframesX;
-        QString m_activeObjectType = "rect"; // デフォルトは図形
-
-        // Prototype Definitions (Type -> Default Properties)
-        QMap<QString, QVariantMap> m_prototypes;
 
         // Services
         ProjectService* m_project;

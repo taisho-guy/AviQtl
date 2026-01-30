@@ -24,6 +24,7 @@ namespace Rina::UI {
         void deleteClip(int clipId);
         void updateClip(int id, int layer, int startFrame, int duration);
         void splitClip(int clipId, int frame);
+        void selectClip(int id);
         
         // Effects
         void addEffect(int clipId, const QString& effectId);

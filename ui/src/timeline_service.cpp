@@ -102,12 +102,40 @@ namespace Rina::UI {
                     // 選択中の場合、SelectionServiceの更新はController側でシグナルを受けて行うか、
                     // ここでSelectionServiceを叩く。今回はServiceにSelectionServiceを持たせているので更新する。
                     if (m_selection->selectedClipId() == id) {
-                        // プロパティ更新通知はControllerがSelectionServiceを監視して行う
+                        QVariantMap data = m_selection->selectedClipData();
+                        data["layer"] = layer;
+                        data["startFrame"] = startFrame;
+                        data["durationFrames"] = duration;
+                        m_selection->select(id, data);
                     }
                 }
                 break;
             }
         }
+    }
+
+    void TimelineService::selectClip(int id) {
+        if (m_selection->selectedClipId() == id) return;
+
+        for (const auto& clip : m_clips) {
+            if (clip.id == id) {
+                QVariantMap cache;
+                for(auto* eff : clip.effects) {
+                    QVariantMap params = eff->params();
+                    for(auto it = params.begin(); it != params.end(); ++it) 
+                        cache.insert(it.key(), it.value());
+                }
+                
+                cache["startFrame"] = clip.startFrame;
+                cache["durationFrames"] = clip.durationFrames;
+                cache["layer"] = clip.layer;
+                cache["type"] = clip.type;
+                
+                m_selection->select(id, cache);
+                return;
+            }
+        }
+        m_selection->select(-1, {});
     }
 
     void TimelineService::deleteClip(int clipId) {
