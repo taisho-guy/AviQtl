@@ -75,6 +75,7 @@ qt_add_qml_module(Rina
     QML_FILES
         ui/qml/MainWindow.qml
         ui/qml/TimelineWindow.qml
+        ui/qml/ProjectLauncherWindow.qml
         ui/qml/ProjectSettingsWindow.qml
         ui/qml/SettingDialog.qml
         ui/qml/SystemSettingsWindow.qml

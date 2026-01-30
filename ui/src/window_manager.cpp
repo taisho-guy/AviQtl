@@ -4,6 +4,8 @@
 #include <QQuickItem>
 #include <QDebug>
 #include <QCoreApplication>
+#include <QtQml>
+#include <QQmlContext>
 
 namespace Rina::UI {
 
@@ -17,20 +19,67 @@ namespace Rina::UI {
     }
 
     void WindowManager::spawnInitialWindows(QQmlEngine* engine) {
-        // メインビュー: Windowルート(MainWindow)を開く（CompositeViewはItemルートのため）
-        spawnWindow(engine, "main", "qrc:/qt/qml/Rina/ui/qml/MainWindow.qml", "Rina Main Preview", 640, 480, 100, 100, true);
+        m_engine = engine;
+
+        // プロジェクトランチャーのみを表示
+        QQmlComponent component(engine, QUrl("qrc:/qt/qml/Rina/ui/qml/ProjectLauncherWindow.qml"));
+        QObject* obj = component.create();
         
-        // タイムライン
-        spawnWindow(engine, "timeline", "qrc:/qt/qml/Rina/ui/qml/TimelineWindow.qml", "Timeline", 1280, 300, 100, 600, true);
+        if (component.status() != QQmlComponent::Ready) {
+            qWarning() << "Failed to create ProjectLauncherWindow:" << component.errorString();
+            // フォールバック: 従来通りすぐに編集画面を開く
+            spawnWindow(engine, "main", "qrc:/qt/qml/Rina/ui/qml/MainWindow.qml", "Rina Main Preview", 640, 480, 100, 100, true);
+            spawnWindow(engine, "timeline", "qrc:/qt/qml/Rina/ui/qml/TimelineWindow.qml", "Timeline", 1280, 300, 100, 600, true);
+            spawnWindow(engine, "objectSettings", "qrc:/qt/qml/Rina/ui/qml/SettingDialog.qml", "Object Settings", 400, 600, 800, 420, false);
+            return;
+        }
+        
+        QQuickWindow* launcher = qobject_cast<QQuickWindow*>(obj);
+        if (launcher) {
+            // プロジェクトが選択されたら、メインウィンドウを開く
+            QObject::connect(launcher, SIGNAL(projectSelected(QString,int,int,double,int)),
+                           this, SLOT(onProjectSelected(QString,int,int,double,int)));
+            registerWindow("launcher", launcher);
+            launcher->show();
+        } else {
+            qWarning() << "ProjectLauncherWindow is not a QQuickWindow";
+        }
+    }
 
-        // プロジェクト設定
-        spawnWindow(engine, "projectSettings", "qrc:/qt/qml/Rina/ui/qml/ProjectSettingsWindow.qml", "Project Settings", 450, 250, 800, 100, true);
+    void WindowManager::onProjectSelected(const QString& path, int w, int h, double fps, int frames) {
+        if (!m_engine) {
+            qWarning() << "Engine not available in onProjectSelected";
+            return;
+        }
 
-        // オブジェクト設定（AviUtl風の設定ダイアログ相当）：初期は非表示で生成だけしておく
-        spawnWindow(engine, "objectSettings", "qrc:/qt/qml/Rina/ui/qml/SettingDialog.qml", "Object Settings", 400, 600, 800, 420, false);
+        // ランチャーを閉じる
+        QPointer<QQuickWindow> launcher = m_windows.value("launcher");
+        if (launcher) {
+            launcher->close();
+        }
 
-        // システム設定（環境設定）
-        spawnWindow(engine, "systemSettings", "qrc:/qt/qml/Rina/ui/qml/SystemSettingsWindow.qml", "System Settings", 600, 500, 200, 200, false);
+        // プロジェクト設定を反映してメインウィンドウを開く
+        spawnWindow(m_engine, "main", "qrc:/qt/qml/Rina/ui/qml/MainWindow.qml", "Rina Main Preview", 640, 480, 100, 100, true);
+        spawnWindow(m_engine, "timeline", "qrc:/qt/qml/Rina/ui/qml/TimelineWindow.qml", "Timeline", 1280, 300, 100, 600, true);
+        spawnWindow(m_engine, "projectSettings", "qrc:/qt/qml/Rina/ui/qml/ProjectSettingsWindow.qml", "Project Settings", 450, 250, 800, 100, false);
+        spawnWindow(m_engine, "objectSettings", "qrc:/qt/qml/Rina/ui/qml/SettingDialog.qml", "Object Settings", 400, 600, 800, 420, false);
+        spawnWindow(m_engine, "systemSettings", "qrc:/qt/qml/Rina/ui/qml/SystemSettingsWindow.qml", "System Settings", 600, 500, 200, 200, false);
+
+        // 設定の反映
+        QObject* bridge = m_engine->rootContext()->contextProperty("TimelineBridge").value<QObject*>();
+        if (bridge) {
+            if (!path.isEmpty()) {
+                QMetaObject::invokeMethod(bridge, "loadProject", Q_ARG(QString, path));
+            } else {
+                QObject* project = bridge->property("project").value<QObject*>();
+                if (project) {
+                    project->setProperty("width", w);
+                    project->setProperty("height", h);
+                    project->setProperty("fps", fps);
+                    project->setProperty("totalFrames", frames);
+                }
+            }
+        }
     }
 
     void WindowManager::spawnWindow(QQmlEngine* engine,
@@ -106,18 +155,18 @@ namespace Rina::UI {
     }
 
     bool WindowManager::isVisible(const QString& id) const {
-        auto w = m_windows.value(id, nullptr);
+        QPointer<QQuickWindow> w = m_windows.value(id);
         return w ? w->isVisible() : false;
     }
     void WindowManager::setVisible(const QString& id, bool visible) {
-        auto w = m_windows.value(id, nullptr);
+        QPointer<QQuickWindow> w = m_windows.value(id);
         if (!w) return;
         if (visible) w->show(); else w->hide();
         if (visible) { w->raise(); w->requestActivate(); }
     }
     void WindowManager::toggleVisible(const QString& id) { setVisible(id, !isVisible(id)); }
     void WindowManager::raiseWindow(const QString& id) {
-        auto w = m_windows.value(id, nullptr);
+        QPointer<QQuickWindow> w = m_windows.value(id);
         if (!w) return;
         w->show();
         w->raise();
