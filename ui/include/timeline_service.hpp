@@ -7,15 +7,36 @@
 namespace Rina::UI {
 class SelectionService;
 
+struct SceneData {
+    int id;
+    QString name;
+    int width;
+    int height;
+    QList<ClipData> clips;
+    QUndoStack *undoStack; // シーンごとにUndo履歴を持つ
+};
+
 class TimelineService : public QObject {
     Q_OBJECT
+    Q_PROPERTY(int currentSceneId READ currentSceneId NOTIFY currentSceneIdChanged)
+    Q_PROPERTY(QVariantList scenes READ scenes NOTIFY scenesChanged)
+
   public:
     explicit TimelineService(SelectionService *selection, QObject *parent = nullptr);
 
     // Data Access
-    const QList<ClipData> &clips() const { return m_clips; }
-    QList<ClipData> &clipsMutable() { return m_clips; } // For serializer
-    QUndoStack *undoStack() const { return m_undoStack; }
+    const QList<ClipData> &clips() const;
+    QList<ClipData> &clipsMutable(); // For serializer (Current Scene)
+    QUndoStack *undoStack() const;
+
+    // Scene Management
+    Q_INVOKABLE int createScene(const QString &name);
+    Q_INVOKABLE void removeScene(int sceneId);
+    Q_INVOKABLE void switchScene(int sceneId);
+    
+    int currentSceneId() const { return m_currentSceneId; }
+    QVariantList scenes() const;
+    SceneData *getCurrentScene() const;
 
     // Operations (Public API)
     void undo();
@@ -54,13 +75,16 @@ class TimelineService : public QObject {
 
   signals:
     void clipsChanged();
+    void scenesChanged();
+    void currentSceneIdChanged();
     void clipEffectsChanged(int clipId);
     void clipCreated(int id, int layer, int startFrame, int duration, const QString &type);
 
   private:
-    QList<ClipData> m_clips;
+    QList<std::shared_ptr<SceneData>> m_scenes;
+    int m_currentSceneId = 0;
+    
     int m_nextClipId = 1;
-    QUndoStack *m_undoStack;
     std::unique_ptr<ClipData> m_clipboard;
     SelectionService *m_selection;
 };

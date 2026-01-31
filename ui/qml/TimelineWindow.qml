@@ -225,6 +225,67 @@ Common.RinaWindow {
         spacing: 0
 
         // ========================================
+        // シーンタブバー
+        // ========================================
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 28
+            color: palette.window
+            z: 50
+            
+            ListView {
+                id: sceneTabs
+                anchors.fill: parent
+                orientation: ListView.Horizontal
+                model: TimelineBridge ? TimelineBridge.scenes : []
+                
+                delegate: Rectangle {
+                    width: Math.max(100, tabText.implicitWidth + 30)
+                    height: parent.height
+                    color: (TimelineBridge && TimelineBridge.currentSceneId === modelData.id) 
+                           ? palette.base : palette.button
+                    border.color: palette.mid
+                    border.width: 1
+                    
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: 4
+                        Text {
+                            id: tabText
+                            text: modelData.name
+                            color: palette.text
+                            Layout.fillWidth: true
+                            elide: Text.ElideRight
+                        }
+                        Text {
+                            text: "×"
+                            color: palette.text
+                            visible: modelData.id !== 0 // Rootは削除不可
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: TimelineBridge.removeScene(modelData.id)
+                            }
+                        }
+                    }
+                    
+                    MouseArea {
+                        anchors.fill: parent
+                        z: -1
+                        onClicked: TimelineBridge.switchScene(modelData.id)
+                    }
+                }
+                
+                footer: Button {
+                    text: "+"
+                    width: 30
+                    height: 28
+                    flat: true
+                    onClicked: TimelineBridge.createScene("Scene " + (sceneTabs.count + 1))
+                }
+            }
+        }
+
+        // ========================================
         // タイムライン定規（AviUtl風）
         // ========================================
         Rectangle {
