@@ -16,6 +16,21 @@ Common.RinaWindow {
     readonly property int layerHeight: 30
     readonly property int clipHeight: 28
 
+    function snapFrame(frame) {
+        // SettingsManager.settings.enableSnap を尊重（未設定/未ロードでも安全に）
+        var s = (SettingsManager && SettingsManager.settings) ? SettingsManager.settings : ({})
+        if (s.enableSnap === false)
+            return frame
+        // 最小の実装：整数フレームに吸着（将来ここをグリッド/秒/拍に拡張）
+        return Math.max(0, Math.round(frame))
+    }
+
+    function pxToFrame(px, contentX) {
+        var scale = (TimelineBridge ? TimelineBridge.timelineScale : 1)
+        var x = px + (contentX || 0)
+        return snapFrame(x / scale)
+    }
+
     width: 1280
     height: 300
     // x: 100; y: 500 // Waylandでは無視されることが多い
@@ -219,7 +234,7 @@ Common.RinaWindow {
 
             Layout.fillWidth: true
             Layout.preferredHeight: 32
-            color: "#252525"
+            color: palette.window
             z: 10
             Component.onCompleted: {
                 Qt.callLater(function() {
@@ -276,7 +291,7 @@ Common.RinaWindow {
 
                             var pixelX = f * scale - viewOffsetX;
                             var isSecond = (f % fps === 0);
-                            ctx.strokeStyle = isSecond ? "#ffffff" : "#666666";
+                            ctx.strokeStyle = isSecond ? palette.text : palette.mid;
                             ctx.lineWidth = 1;
                             ctx.beginPath();
                             ctx.moveTo(pixelX, height - (isSecond ? 12 : 6));
@@ -294,10 +309,10 @@ Common.RinaWindow {
                                     timeLabel = minutes + ":" + ("0" + seconds).slice(-2);
                                 else
                                     timeLabel = seconds + "s";
-                                ctx.fillStyle = "#dddddd";
+                                ctx.fillStyle = palette.text;
                                 ctx.fillText(timeLabel, pixelX + 3, 12);
                                 ctx.font = "8px sans-serif";
-                                ctx.fillStyle = "#888888";
+                                ctx.fillStyle = palette.mid;
                                 ctx.fillText(f + "f", pixelX + 3, 24);
                                 ctx.font = "10px sans-serif";
                             }
@@ -310,8 +325,8 @@ Common.RinaWindow {
                     anchors.top: parent.top
                     width: 70
                     height: parent.height
-                    color: "#1a1a1a"
-                    border.color: "#444444"
+                    color: palette.base
+                    border.color: palette.mid
                     border.width: 1
                     z: 100
 
@@ -320,7 +335,7 @@ Common.RinaWindow {
                         text: (TimelineBridge && TimelineBridge.transport) ? TimelineBridge.transport.currentFrame + "f" : "0f"
                         font.pixelSize: 11
                         font.bold: true
-                        color: "#ff4444"
+                        color: palette.highlight
                     }
 
                 }
@@ -332,18 +347,12 @@ Common.RinaWindow {
                 anchors.leftMargin: 70
                 onPressed: function(mouse) {
                     if (TimelineBridge && TimelineBridge.transport && rulerArea.targetFlickable) {
-                        var clickX = mouse.x + 70 + rulerArea.targetFlickable.contentX;
-                        var scale = TimelineBridge.timelineScale;
-                        var targetFrame = Math.max(0, Math.round(clickX / scale));
-                        TimelineBridge.transport.currentFrame = targetFrame;
+                        TimelineBridge.transport.currentFrame = pxToFrame(mouse.x + 70, rulerArea.targetFlickable.contentX);
                     }
                 }
                 onPositionChanged: function(mouse) {
                     if (pressed && TimelineBridge && TimelineBridge.transport && rulerArea.targetFlickable) {
-                        var clickX = mouse.x + 70 + rulerArea.targetFlickable.contentX;
-                        var scale = TimelineBridge.timelineScale;
-                        var targetFrame = Math.max(0, Math.round(clickX / scale));
-                        TimelineBridge.transport.currentFrame = targetFrame;
+                        TimelineBridge.transport.currentFrame = pxToFrame(mouse.x + 70, rulerArea.targetFlickable.contentX);
                     }
                 }
                 // ホイールでタイムライン縮尺を変更
@@ -373,7 +382,7 @@ Common.RinaWindow {
             Rectangle {
                 Layout.preferredWidth: 60
                 Layout.fillHeight: true
-                color: "#2a2a2a"
+                color: palette.window
                 z: 20 // タイムラインより手前に表示
 
                 // 右側のタイムラインと縦スクロールを同期
@@ -395,14 +404,14 @@ Common.RinaWindow {
 
                                 width: 60
                                 height: layerHeight
-                                color: index % 2 === 0 ? "#2a2a2a" : "#252525"
-                                border.color: "#111"
+                                color: index % 2 === 0 ? palette.window : Qt.darker(palette.window, 1.1)
+                                border.color: palette.shadow
                                 border.width: 1
 
                                 Text {
                                     anchors.centerIn: parent
                                     text: "Layer " + (index + 1)
-                                    color: parent.isHidden ? "#555" : "#ddd"
+                                    color: parent.isHidden ? palette.mid : palette.text
                                     font.pixelSize: 10
                                 }
 
@@ -467,7 +476,7 @@ Common.RinaWindow {
                             y: index * layerHeight
                             width: Math.max(parent.width, 2000)
                             height: 1
-                            color: "#333"
+                            color: palette.shadow
                         }
 
                     }
@@ -512,8 +521,7 @@ Common.RinaWindow {
                             if (mouse.button !== Qt.RightButton)
                                 return ;
 
-                            var scale = TimelineBridge ? TimelineBridge.timelineScale : 1;
-                            var frame = Math.floor(mouse.x / scale);
+                            var frame = snapFrame(mouse.x / (TimelineBridge ? TimelineBridge.timelineScale : 1));
                             var layer = Math.floor(mouse.y / layerHeight);
                             contextMenu.openAt(mouse.x, mouse.y, "timeline_background", frame, layer, -1);
                             if (mouse.button === Qt.LeftButton) {
@@ -564,7 +572,7 @@ Common.RinaWindow {
                                 onClicked: (mouse) => {
                                     var scale = TimelineBridge ? TimelineBridge.timelineScale : 1;
                                     // 相対座標ではなく、グローバル座標から計算するため mouse.x を使う
-                                    var frame = Math.floor(clipRect.x + mouse.x / scale);
+                                    var frame = snapFrame((clipRect.x + mouse.x) / scale);
                                     contextMenu.openAt(mouse.x, mouse.y, "clip", frame, modelData.layer, modelData.id);
                                 }
                             }
@@ -600,7 +608,7 @@ Common.RinaWindow {
                                     if (TimelineBridge) {
                                         var scale = TimelineBridge.timelineScale;
                                         // 座標からフレーム/レイヤーを計算
-                                        var newStart = Math.round(clipRect.x / scale);
+                                        var newStart = snapFrame(clipRect.x / scale);
                                         var newLayer = Math.round(clipRect.y / layerHeight);
                                         // バインディングを復元しつつ更新
                                         TimelineBridge.updateClip(modelData.id, newLayer, newStart, modelData.durationFrames);

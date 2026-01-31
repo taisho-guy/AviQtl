@@ -35,12 +35,6 @@ Common.RinaWindow {
     y: 200
     Component.onCompleted: reload()
 
-    SystemPalette {
-        id: palette
-
-        colorGroup: SystemPalette.Active
-    }
-
     // 選択変更やデータ更新を監視してモデルをリロード
     Connections {
         function onSelectedClipIdChanged() {
@@ -98,7 +92,7 @@ Common.RinaWindow {
 
                         Label {
                             text: modelData.name
-                            color: palette.windowText
+                            color: palette.text
                             font.bold: true
                             anchors.verticalCenter: parent.verticalCenter
                             anchors.left: parent.left

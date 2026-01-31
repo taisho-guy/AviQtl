@@ -65,12 +65,12 @@ RowLayout {
             width: leftSlider.availableWidth
             height: 4
             radius: 2
-            color: "#3a3a3a"
+            color: palette.midlight
 
             Rectangle {
                 width: leftSlider.visualPosition * parent.width
                 height: parent.height
-                color: root.isRangeMode ? "#4a9eff" : "#888888"
+                color: root.isRangeMode ? palette.highlight : palette.button
                 radius: 2
             }
 
@@ -116,7 +116,7 @@ RowLayout {
 
             Text {
                 text: paramButton.text
-                color: paramButton.enabled ? palette.buttonText : palette.mid
+                color: paramButton.enabled ? palette.text : palette.mid
                 horizontalAlignment: Text.AlignHCenter
                 anchors.horizontalCenter: parent.horizontalCenter
                 font.pointSize: 10
@@ -180,12 +180,12 @@ RowLayout {
             width: rightSlider.availableWidth
             height: 4
             radius: 2
-            color: "#3a3a3a"
+            color: palette.midlight
 
             Rectangle {
                 width: rightSlider.visualPosition * parent.width
                 height: parent.height
-                color: root.isRangeMode ? "#4a9eff" : "#888888"
+                color: root.isRangeMode ? palette.highlight : palette.button
                 radius: 2
             }
 
