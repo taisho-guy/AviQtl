@@ -127,7 +127,7 @@ bool ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
                     eff->setEnabled(eObj["enabled"].toBool(true));
                     if (eObj.contains("keyframes"))
                         eff->setKeyframeTracks(eObj["keyframes"].toObject().toVariantMap());
-                    
+
                     clip.effects.append(eff);
                 }
             }

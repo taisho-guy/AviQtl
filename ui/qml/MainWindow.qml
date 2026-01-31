@@ -84,16 +84,18 @@ ApplicationWindow {
 
     Platform.MessageDialog {
         id: errorDialog
+
         title: "エラー"
         buttons: Platform.MessageDialog.Ok
     }
 
     Connections {
-        target: TimelineBridge
         function onErrorOccurred(message) {
-            errorDialog.text = message
-            errorDialog.open()
+            errorDialog.text = message;
+            errorDialog.open();
         }
+
+        target: TimelineBridge
     }
 
     Platform.FileDialog {

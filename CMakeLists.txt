@@ -95,9 +95,11 @@ file(GLOB_RECURSE EFFECT_FILES "ui/qml/effects/*")
 file(GLOB_RECURSE OBJECT_FILES "ui/qml/objects/*")
 
 add_custom_command(TARGET Rina POST_BUILD
+    # Effectsディレクトリ
     COMMAND ${CMAKE_COMMAND} -E rm -rf $<TARGET_FILE_DIR:Rina>/effects
     COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:Rina>/effects
     COMMAND ${CMAKE_COMMAND} -E copy ${EFFECT_FILES} $<TARGET_FILE_DIR:Rina>/effects
+    # Objectsディレクトリ（QMLとJSON両方をコピー）
     COMMAND ${CMAKE_COMMAND} -E rm -rf $<TARGET_FILE_DIR:Rina>/objects
     COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:Rina>/objects
     COMMAND ${CMAKE_COMMAND} -E copy ${OBJECT_FILES} $<TARGET_FILE_DIR:Rina>/objects

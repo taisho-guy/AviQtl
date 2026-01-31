@@ -44,6 +44,7 @@ Node {
     property int clipId: -1
     property int clipStartFrame: 0
     property int clipDurationFrames: 0
+    property var clipParams: ({})
     
     // 自動計算プロパティ
     readonly property int currentFrame: (TimelineBridge && TimelineBridge.transport) ? TimelineBridge.transport.currentFrame : 0
@@ -65,15 +66,9 @@ Node {
     
     // 【統一API】キーフレーム優先評価（全オブジェクトで使用可能）
     function evalParam(effectId, paramName, fallback) {
-        for(let i=0; i<rawEffectModels.length; i++) {
-            let eff = rawEffectModels[i];
-            if (eff.id === effectId && eff.enabled) {
-                if (eff.evaluatedParam) {
-                    var v = eff.evaluatedParam(paramName, relFrame);
-                    if (v !== undefined && v !== null) return v;
-                }
-                return eff.params[paramName] !== undefined ? eff.params[paramName] : fallback;
-            }
+        // clipParamsはClipModelから渡されるフラットなパラメータマップ
+        if (clipParams && clipParams[paramName] !== undefined) {
+            return clipParams[paramName];
         }
         return fallback;
     }

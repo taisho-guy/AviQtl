@@ -11,7 +11,6 @@ Common.RinaWindow {
     property int selectedLayer: TimelineBridge ? TimelineBridge.selectedLayer : 0
     // 設定ウィンドウの参照を保持するプロパティ
     property var settingDialog: null
-
     // Constants
     readonly property int layerCount: 128
     readonly property int layerHeight: 30

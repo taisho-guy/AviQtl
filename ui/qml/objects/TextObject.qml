@@ -8,7 +8,6 @@ Common.BaseObject {
     id: root
 
     readonly property bool dbgEnabled: Qt.application.arguments.indexOf("--rina-debug") !== -1
-    // パラメータ評価
     property string textContent: String(evalParam("text", "text", "Text"))
     property int textSize: Number(evalParam("text", "textSize", 64))
     property color color: evalParam("text", "color", "#ffffff")

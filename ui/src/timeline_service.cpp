@@ -47,10 +47,7 @@ RemoveEffectCommand::RemoveEffectCommand(TimelineService *service, int clipId, i
 void RemoveEffectCommand::redo() { m_service->removeEffectInternal(m_clipId, m_effectIndex); }
 void RemoveEffectCommand::undo() { m_service->restoreEffectInternal(m_clipId, m_removedEffectData); }
 
-SplitClipCommand::SplitClipCommand(TimelineService *service, int clipId, int frame)
-    : m_service(service), m_originalClipId(clipId), m_newClipId(-1), m_splitFrame(frame), m_originalDuration(0) {
-    setText("Split Clip");
-}
+SplitClipCommand::SplitClipCommand(TimelineService *service, int clipId, int frame) : m_service(service), m_originalClipId(clipId), m_newClipId(-1), m_splitFrame(frame), m_originalDuration(0) { setText("Split Clip"); }
 
 void SplitClipCommand::undo() {
     m_service->deleteClip(m_newClipId);

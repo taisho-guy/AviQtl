@@ -6,7 +6,6 @@
     "params": {
         "text": "テキスト",
         "textSize": 64,
-        "color": "#ffffff",
-        "opacity": 1.0
+        "color": "#ffffff"
     }
 }

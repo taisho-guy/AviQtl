@@ -5,9 +5,21 @@ import QtQuick3D 6.0
 Item {
     id: root
 
-    anchors.fill: parent
-
     readonly property int hiddenZ: -9999
+    // Component cache to prevent redundant Qt.createComponent calls
+    property var _componentCache: ({
+    })
+
+    function getCachedComponent(url) {
+        if (_componentCache[url])
+            return _componentCache[url];
+
+        var c = Qt.createComponent(url, Component.Asynchronous);
+        _componentCache[url] = c;
+        return c;
+    }
+
+    anchors.fill: parent
 
     // 2Dレンダー（sourceItem/effects/ShaderEffectSource）を必ずQQuickWindow配下に置くためのホスト
     // visible:false でもWindow配下に居ればSceneGraph/Timerが正常に動く
@@ -197,6 +209,12 @@ Item {
                             "clipDurationFrames": model.durationFrames,
                             "renderHost": offscreenRenderHost
                         });
+                        if (createdObject)
+                            createdObject.clipParams = Qt.binding(function() {
+                                return model.params || {
+                                };
+                            });
+
                     }
 
                     function reload() {
@@ -209,9 +227,9 @@ Item {
                         if (sourceUrl === "")
                             return ;
 
-                        clipNode.dbg("Qt.createComponent async: " + sourceUrl);
-                        // 非同期ロード（Qt.Asynchronous）
-                        var component = Qt.createComponent(sourceUrl, Component.Asynchronous);
+                        clipNode.dbg("Requesting component: " + sourceUrl);
+                        // キャッシュ経由でコンポーネントを取得
+                        var component = root.getCachedComponent(sourceUrl);
                         componentCache = component;
                         var self = objectContainer;
                         if (component.status === Component.Ready) {

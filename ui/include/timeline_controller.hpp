@@ -124,6 +124,7 @@ class TimelineController : public QObject {
 
   private:
     void updateClipActiveState();
+    void rebuildClipIndex();
 
     ClipModel *m_clipModel;
     double m_timelineScale = 1.0; // 1 frame = 1 pixel (default)
@@ -136,5 +137,9 @@ class TimelineController : public QObject {
     TransportService *m_transport;
     SelectionService *m_selection;
     TimelineService *m_timeline;
+
+    // Optimization: Sorted index for O(log N) queries
+    std::vector<ClipData *> m_sortedClips;
+    int m_maxDuration = 0;
 };
 } // namespace Rina::UI

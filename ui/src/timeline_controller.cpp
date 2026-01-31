@@ -29,6 +29,7 @@ TimelineController::TimelineController(QObject *parent) : QObject(parent) {
 
     // TimelineService signals
     connect(m_timeline, &TimelineService::clipsChanged, this, [this]() {
+        rebuildClipIndex();
         emit clipsChanged();
         updateActiveClipsList();
     });
@@ -58,6 +59,7 @@ TimelineController::TimelineController(QObject *parent) : QObject(parent) {
         updateActiveClipsList();
     });
 
+    rebuildClipIndex();
     updateClipActiveState();
 }
 
@@ -87,6 +89,7 @@ void TimelineController::setClipProperty(const QString &name, const QVariant &va
         if (clip.id == id) {
             // 暫定対応: プロパティ名に応じて適切なエフェクトのパラメータを更新する
             // POD化に伴い、直接書き込みではなくService経由で更新する
+            bool found = false;
             for (int i = 0; i < clip.effects.size(); ++i) {
                 if (clip.effects[i]->params().contains(name)) {
                     // コマンド経由で更新 (Undo/Redo対応)
@@ -97,7 +100,20 @@ void TimelineController::setClipProperty(const QString &name, const QVariant &va
 
                     // Update preview
                     updateActiveClipsList();
-                    break; // 最初に見つかったパラメータを更新
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found && !clip.effects.isEmpty()) {
+                int targetIndex = 0;
+                static const QStringList transformKeys = {"x", "y", "z", "scale", "aspect", "rotationX", "rotationY", "rotationZ", "opacity"};
+                if (!transformKeys.contains(name) && clip.effects.size() > 1) {
+                    targetIndex = 1;
+                }
+                if (targetIndex < clip.effects.size()) {
+                    updateClipEffectParam(id, targetIndex, name, value);
+                    updateActiveClipsList();
                 }
             }
             break;
@@ -221,10 +237,21 @@ void TimelineController::updateActiveClipsList() {
     // 現在フレームにあるクリップを抽出
     int current = m_transport->currentFrame();
     QList<ClipData *> active;
-    for (auto &clip : m_timeline->clipsMutable()) {
-        if (current >= clip.startFrame && current < clip.startFrame + clip.durationFrames) {
 
-            active.append(&clip);
+    // Binary search for the first clip that starts AFTER current frame
+    auto it = std::upper_bound(m_sortedClips.begin(), m_sortedClips.end(), current, [](int frame, const ClipData *clip) { return frame < clip->startFrame; });
+
+    // Iterate backwards to find overlapping clips
+    // Stop if startFrame is too far back (cannot overlap even with maxDuration)
+    int threshold = current - m_maxDuration;
+
+    for (auto i = it; i != m_sortedClips.begin();) {
+        --i;
+        ClipData *clip = *i;
+        if (clip->startFrame < threshold)
+            break;
+        if (current >= clip->startFrame && current < clip->startFrame + clip->durationFrames) {
+            active.append(clip);
         }
     }
 
@@ -232,6 +259,19 @@ void TimelineController::updateActiveClipsList() {
     std::sort(active.begin(), active.end(), [](const ClipData *a, const ClipData *b) { return a->layer < b->layer; });
 
     m_clipModel->updateClips(active);
+}
+
+void TimelineController::rebuildClipIndex() {
+    m_sortedClips.clear();
+    m_maxDuration = 0;
+    auto &clips = m_timeline->clipsMutable();
+    m_sortedClips.reserve(clips.size());
+    for (auto &clip : clips) {
+        m_sortedClips.push_back(&clip);
+        if (clip.durationFrames > m_maxDuration)
+            m_maxDuration = clip.durationFrames;
+    }
+    std::sort(m_sortedClips.begin(), m_sortedClips.end(), [](const ClipData *a, const ClipData *b) { return a->startFrame < b->startFrame; });
 }
 
 void TimelineController::log(const QString &msg) { qDebug() << "[TimelineBridge] " << msg; }
