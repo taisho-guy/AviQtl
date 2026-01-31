@@ -1,16 +1,16 @@
+#include "effect_registry.hpp"
+#include "rina_context.hpp"
+#include "settings_manager.hpp"
+#include "timeline_controller.hpp"
+#include "window_manager.hpp"
 #include <QApplication>
+#include <QPixmap>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QQuickStyle> // 追加
 #include <QQuickWindow>
 #include <QSplashScreen>
-#include <QPixmap>
 #include <QTimer>
-#include "rina_context.hpp"
-#include <QQuickStyle> // 追加
-#include "window_manager.hpp"
-#include "timeline_controller.hpp"
-#include "effect_registry.hpp"
-#include "settings_manager.hpp"
 
 int main(int argc, char *argv[]) {
     // 1. アプリケーション初期化
@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
     } else {
         splashImg = splashImg.scaled(512, 512, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     }
-    
+
     // 最前面表示フラグを明示的に設定
     QSplashScreen splash(splashImg, Qt::WindowStaysOnTopHint | Qt::FramelessWindowHint);
     splash.show();
@@ -46,13 +46,13 @@ int main(int argc, char *argv[]) {
 
     // 外部リソースのロード
     QString appDir = QCoreApplication::applicationDirPath();
-    
+
     // 1. Filters (./effects)
     splash.showMessage("エフェクトを読み込み中...", Qt::AlignBottom | Qt::AlignCenter, Qt::white);
     splash.raise();
     app.processEvents();
     Rina::Core::EffectRegistry::instance().loadEffectsFromDirectory(appDir + "/effects");
-    
+
     // 2. Objects (./objects)
     splash.showMessage("オブジェクトを読み込み中...", Qt::AlignBottom | Qt::AlignCenter, Qt::white);
     splash.raise();
@@ -77,11 +77,11 @@ int main(int argc, char *argv[]) {
 
     // TimelineBridge の登録
     // アプリケーション生存期間中維持されるインスタンスを作成
-    auto* timelineController = new Rina::UI::TimelineController(&app);
+    auto *timelineController = new Rina::UI::TimelineController(&app);
     engine.rootContext()->setContextProperty("TimelineBridge", timelineController);
 
     // WindowManager をQMLから触れるように公開
-    engine.rootContext()->setContextProperty("WindowManager", static_cast<QObject*>(&Rina::UI::WindowManager::instance()));
+    engine.rootContext()->setContextProperty("WindowManager", static_cast<QObject *>(&Rina::UI::WindowManager::instance()));
 
     // ウィンドウ生成（バックグラウンドで生成）
     Rina::UI::WindowManager::instance().spawnInitialWindows(&engine);
@@ -92,9 +92,7 @@ int main(int argc, char *argv[]) {
     app.processEvents();
 
     // スプラッシュを確実に閉じる（ウィンドウ生成完了後、少し遅延）
-    QTimer::singleShot(800, [&splash]() {
-        splash.close();
-    });
+    QTimer::singleShot(800, [&splash]() { splash.close(); });
 
     return app.exec();
 }

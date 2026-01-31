@@ -1,7 +1,7 @@
 #pragma once
+#include <QJsonObject>
 #include <QObject>
 #include <QVariantMap>
-#include <QJsonObject>
 
 namespace Rina::Core {
 
@@ -9,23 +9,23 @@ class SettingsManager : public QObject {
     Q_OBJECT
     Q_PROPERTY(QVariantMap settings READ settings WRITE setSettings NOTIFY settingsChanged)
 
-public:
-    static SettingsManager& instance();
-    
+  public:
+    static SettingsManager &instance();
+
     QVariantMap settings() const { return m_settings; }
-    void setSettings(const QVariantMap& settings);
+    void setSettings(const QVariantMap &settings);
 
     Q_INVOKABLE void load();
     Q_INVOKABLE void save();
 
-signals:
+  signals:
     void settingsChanged();
 
-private:
-    explicit SettingsManager(QObject* parent = nullptr);
+  private:
+    explicit SettingsManager(QObject *parent = nullptr);
     QString getSettingsFilePath() const;
-    
+
     QVariantMap m_settings;
 };
 
-}
+} // namespace Rina::Core

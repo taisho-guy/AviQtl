@@ -1,9 +1,9 @@
 #pragma once
+#include <QHash>
+#include <QList>
 #include <QString>
 #include <QVariantMap>
-#include <QHash>
 #include <vector>
-#include <QList>
 
 namespace Rina::Core {
 
@@ -17,13 +17,13 @@ struct EffectMetadata {
 };
 
 class EffectRegistry {
-public:
-    static EffectRegistry& instance() {
+  public:
+    static EffectRegistry &instance() {
         static EffectRegistry inst;
         return inst;
     }
 
-    void registerEffect(const EffectMetadata& meta) {
+    void registerEffect(const EffectMetadata &meta) {
         // Legacy Fix: O(N) linear search replaced with O(1) hash lookup
         if (!m_effects.contains(meta.id)) {
             m_orderedIds.push_back(meta.id);
@@ -31,21 +31,19 @@ public:
         m_effects.insert(meta.id, meta);
     }
 
-    EffectMetadata getEffect(const QString& id) const {
-        return m_effects.value(id);
-    }
+    EffectMetadata getEffect(const QString &id) const { return m_effects.value(id); }
 
     QList<EffectMetadata> getAllEffects() const {
         QList<EffectMetadata> list;
-        for(const auto& id : m_orderedIds) {
+        for (const auto &id : m_orderedIds) {
             list.append(m_effects[id]);
         }
         return list;
     }
 
-    void loadEffectsFromDirectory(const QString& path);
+    void loadEffectsFromDirectory(const QString &path);
 
-private:
+  private:
     EffectRegistry() = default;
     QHash<QString, EffectMetadata> m_effects;
     std::vector<QString> m_orderedIds;
@@ -54,4 +52,4 @@ private:
 // 標準エフェクト初期化関数
 void initializeStandardEffects();
 
-}
+} // namespace Rina::Core

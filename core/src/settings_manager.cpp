@@ -1,36 +1,24 @@
 #include "settings_manager.hpp"
 #include <QCoreApplication>
+#include <QDebug>
+#include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QStandardPaths>
-#include <QDebug>
-#include <QDir>
-#include <QFileInfo>
 
 namespace Rina::Core {
 
-SettingsManager& SettingsManager::instance() {
+SettingsManager &SettingsManager::instance() {
     static SettingsManager instance;
     return instance;
 }
 
-SettingsManager::SettingsManager(QObject* parent) : QObject(parent) {
+SettingsManager::SettingsManager(QObject *parent) : QObject(parent) {
     // Default settings
-    m_settings = {
-        {"maxImageSize", "1920x1080"},
-        {"cacheSize", 4096},
-        {"undoCount", 32},
-        {"renderThreads", 0},
-        {"theme", "Dark"},
-        {"showConfirmOnClose", true},
-        {"enableAutoBackup", true},
-        {"backupInterval", 5},
-        {"timeUnit", "frame"},
-        {"enableSnap", true},
-        {"splitAtCursor", true},
-        {"showLayerRange", true}
-    };
+    m_settings = {{"maxImageSize", "1920x1080"}, {"cacheSize", 4096},   {"undoCount", 32},     {"renderThreads", 0}, {"theme", "Dark"},       {"showConfirmOnClose", true},
+                  {"enableAutoBackup", true},    {"backupInterval", 5}, {"timeUnit", "frame"}, {"enableSnap", true}, {"splitAtCursor", true}, {"showLayerRange", true}};
     load();
 }
 
@@ -38,7 +26,7 @@ QString SettingsManager::getSettingsFilePath() const {
     // 1. Try executable directory (Portable mode)
     QString exeDir = QCoreApplication::applicationDirPath();
     QString portablePath = exeDir + "/rina_settings.json";
-    
+
     // Check if writable
     QFile file(portablePath);
     if (file.exists()) {
@@ -48,11 +36,11 @@ QString SettingsManager::getSettingsFilePath() const {
             return portablePath;
         }
     } else {
-         // If it doesn't exist, check directory permissions
-         QFileInfo dirInfo(exeDir);
-         if (dirInfo.isWritable()) {
-             return portablePath;
-         }
+        // If it doesn't exist, check directory permissions
+        QFileInfo dirInfo(exeDir);
+        if (dirInfo.isWritable()) {
+            return portablePath;
+        }
     }
 
     // 2. Fallback to AppLocalDataLocation
@@ -61,7 +49,7 @@ QString SettingsManager::getSettingsFilePath() const {
     return dataPath + "/settings.json";
 }
 
-void SettingsManager::setSettings(const QVariantMap& settings) {
+void SettingsManager::setSettings(const QVariantMap &settings) {
     if (m_settings != settings) {
         m_settings = settings;
         emit settingsChanged();
@@ -103,4 +91,4 @@ void SettingsManager::save() {
     qDebug() << "Settings saved to" << path;
 }
 
-}
+} // namespace Rina::Core

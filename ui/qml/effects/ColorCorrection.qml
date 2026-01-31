@@ -1,5 +1,5 @@
-import QtQuick 2.15
 import Qt5Compat.GraphicalEffects 1.0
+import QtQuick 2.15
 import "qrc:/qt/qml/Rina/ui/qml/common" as Common
 
 Common.BaseEffect {
@@ -8,9 +8,10 @@ Common.BaseEffect {
     // saturation 相当
     HueSaturation {
         id: hs
+
         anchors.fill: parent
         source: root.source
-        saturation: (root.evalNumber("saturation", 100) - 100) / 100.0
+        saturation: (root.evalNumber("saturation", 100) - 100) / 100
         visible: root.source !== null && root.width > 0 && root.height > 0
     }
 
@@ -18,8 +19,9 @@ Common.BaseEffect {
     BrightnessContrast {
         anchors.fill: parent
         source: hs
-        brightness: (root.evalNumber("brightness", 100) - 100) / 100.0
-        contrast: (root.evalNumber("contrast", 100) - 100) / 100.0
+        brightness: (root.evalNumber("brightness", 100) - 100) / 100
+        contrast: (root.evalNumber("contrast", 100) - 100) / 100
         visible: hs.visible
     }
+
 }

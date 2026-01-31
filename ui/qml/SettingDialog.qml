@@ -1,14 +1,31 @@
+import Qt.labs.qmlmodels 1.0
+import Qt.labs.qmlmodels 1.0
+import QtQml 2.15
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 import QtQuick.Window 2.15
 import "common" as Common
-import Qt.labs.qmlmodels 1.0
-import Qt.labs.qmlmodels 1.0
-import QtQml 2.15
 
 Common.RinaWindow {
     id: root
+
+    property int targetClipId: (TimelineBridge && TimelineBridge.selection) ? TimelineBridge.selection.selectedClipId : -1
+    property var effectsModel: []
+    property bool inputting: false // 入力中フラグ（バインディングループ防止用）
+
+    function reload() {
+        if (!TimelineBridge || !TimelineBridge.selection)
+            return ;
+
+        var id = TimelineBridge.selection.selectedClipId;
+        targetClipId = id;
+        if (id >= 0)
+            effectsModel = TimelineBridge.getClipEffectsModel(id);
+        else
+            effectsModel = [];
+    }
+
     width: 350
     height: 500
     title: "設定ダイアログ"
@@ -16,56 +33,38 @@ Common.RinaWindow {
     visible: true
     x: 500
     y: 200
+    Component.onCompleted: reload()
 
-    SystemPalette { id: palette; colorGroup: SystemPalette.Active }
+    SystemPalette {
+        id: palette
 
-    property int targetClipId: (TimelineBridge && TimelineBridge.selection) ? TimelineBridge.selection.selectedClipId : -1
-    property var effectsModel: []
-    property bool inputting: false // 入力中フラグ（バインディングループ防止用）
+        colorGroup: SystemPalette.Active
+    }
 
     // 選択変更やデータ更新を監視してモデルをリロード
     Connections {
-        target: TimelineBridge ? TimelineBridge.selection : null
-        function onSelectedClipIdChanged() { reload() }
+        function onSelectedClipIdChanged() {
+            reload();
+        }
+
         // パラメータ変更時の反映用（入力中はリロードしない）
-        function onSelectedClipDataChanged() { if(!inputting) reload() }
+        function onSelectedClipDataChanged() {
+            if (!inputting)
+                reload();
+
+        }
+
+        target: TimelineBridge ? TimelineBridge.selection : null
     }
 
     Connections {
+        function onClipEffectsChanged(clipId) {
+            if (clipId === targetClipId)
+                reload();
+
+        }
+
         target: TimelineBridge
-        function onClipEffectsChanged(clipId) { if (clipId === targetClipId) reload() }
-    }
-
-    Component.onCompleted: reload()
-
-    function reload() {
-        if (!TimelineBridge || !TimelineBridge.selection) return
-        var id = TimelineBridge.selection.selectedClipId
-        targetClipId = id
-        if (id >= 0) {
-            effectsModel = TimelineBridge.getClipEffectsModel(id)
-        } else {
-            effectsModel = []
-        }
-    }
-
-    menuBar: MenuBar {
-        Menu {
-            title: "フィルタ"
-            
-            Repeater {
-                model: TimelineBridge ? TimelineBridge.getAvailableEffects() : []
-                MenuItem {
-                    text: modelData.name
-                    onTriggered: {
-                        if(TimelineBridge) {
-                            TimelineBridge.addEffect(targetClipId, modelData.id)
-                            reload()
-                        }
-                    }
-                }
-            }
-        }
     }
 
     ScrollView {
@@ -79,21 +78,24 @@ Common.RinaWindow {
 
             Repeater {
                 model: effectsModel
+
                 delegate: ColumnLayout {
                     id: effectRoot
-                    width: root.width
-                    spacing: 0
-                    
+
                     // 親デリゲートでデータとインデックスを公開
                     property int effectIndex: index
                     property var currentParams: modelData.params
                     property var effectModel: modelData
+
+                    width: root.width
+                    spacing: 0
 
                     // エフェクトヘッダー
                     Rectangle {
                         Layout.fillWidth: true
                         height: 24
                         color: palette.midlight
+
                         Label {
                             text: modelData.name
                             color: palette.windowText
@@ -111,192 +113,246 @@ Common.RinaWindow {
                             anchors.verticalCenter: parent.verticalCenter
                             onClicked: TimelineBridge.removeEffect(targetClipId, effectRoot.effectIndex)
                         }
+
                     }
 
                     // パラメータリスト
                     // Mapを配列に変換してRepeaterに渡す
                     Repeater {
-                        model: Object.keys(modelData.params).sort()
-                        delegate: ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 0
+                        // End RowLayout
 
+                        model: Object.keys(modelData.params).sort()
+
+                        delegate: ColumnLayout {
                             property string key: modelData
                             property var effectModel: effectRoot.effectModel
-                            
                             // 親のコンテキストからデータを取得
                             property int effIdx: effectRoot.effectIndex
                             property var effVal: effectRoot.currentParams[key]
                             property bool isNumber: typeof effVal === 'number'
-                            
                             // トラック情報と補間状態の取得
                             property int curRelFrame: (TimelineBridge && TimelineBridge.transport) ? (TimelineBridge.transport.currentFrame - TimelineBridge.clipStartFrame) : 0
                             property int clipDur: TimelineBridge ? TimelineBridge.clipDurationFrames : 100
-
                             property var tracks: effectModel.keyframeTracks
                             property var track: tracks ? tracks[key] : undefined
                             property var kfs: track || []
                             property bool hasKeyframes: kfs.length > 0
-
-                            function findInterval(kfs, cur, totalDur) {
-                                let s = 0, e = totalDur
-                                if (!kfs || kfs.length === 0) return {start: s, end: e}
-                                
-                                let foundStart = false
-                                for (let i = kfs.length - 1; i >= 0; i--) {
-                                    if (kfs[i].frame <= cur) {
-                                        s = kfs[i].frame
-                                        foundStart = true
-                                        if (i + 1 < kfs.length) {
-                                            e = kfs[i+1].frame
-                                        } else {
-                                            e = totalDur
-                                        }
-                                        break
-                                    }
-                                }
-                                if (!foundStart) {
-                                    e = kfs[0].frame
-                                    s = 0
-                                }
-                                return {start: s, end: e}
-                            }
-
                             property var interval: findInterval(kfs, curRelFrame, clipDur)
                             property int startFrame: interval.start
                             property int endFrame: interval.end
-
                             // 値の取得（始点・終点）
                             // tracksを依存関係に含めて再評価をトリガー
                             // effVal (currentParams) を依存関係に含めることで、Undo/Redo時のベース値変更にも追従させる
                             property var startVal: isNumber ? (tracks, effVal, effectModel.evaluatedParam(key, startFrame)) : effVal
                             property var endVal: isNumber ? (tracks, effVal, effectModel.evaluatedParam(key, endFrame)) : effVal
-
-                            function getInterpAt(f) {
-                                if (!kfs) return "linear"
-                                for(var i=0; i<kfs.length; i++) {
-                                    if(kfs[i].frame === f) return kfs[i].interp || "linear"
-                                }
-                                return "linear"
-                            }
                             property string interpType: hasKeyframes ? getInterpAt(startFrame) : "constant"
                             property bool isMoving: isNumber && (hasKeyframes || interpType !== "constant")
+
+                            function findInterval(kfs, cur, totalDur) {
+                                let s = 0, e = totalDur;
+                                if (!kfs || kfs.length === 0)
+                                    return {
+                                    "start": s,
+                                    "end": e
+                                };
+
+                                let foundStart = false;
+                                for (let i = kfs.length - 1; i >= 0; i--) {
+                                    if (kfs[i].frame <= cur) {
+                                        s = kfs[i].frame;
+                                        foundStart = true;
+                                        if (i + 1 < kfs.length)
+                                            e = kfs[i + 1].frame;
+                                        else
+                                            e = totalDur;
+                                        break;
+                                    }
+                                }
+                                if (!foundStart) {
+                                    e = kfs[0].frame;
+                                    s = 0;
+                                }
+                                return {
+                                    "start": s,
+                                    "end": e
+                                };
+                            }
+
+                            function getInterpAt(f) {
+                                if (!kfs)
+                                    return "linear";
+
+                                for (var i = 0; i < kfs.length; i++) {
+                                    if (kfs[i].frame === f)
+                                        return kfs[i].interp || "linear";
+
+                                }
+                                return "linear";
+                            }
+
+                            function updateParam(frame, val) {
+                                let type = "linear";
+                                if (frame === startFrame)
+                                    type = interpType;
+                                else
+                                    type = getInterpAt(frame);
+                                if (type === "constant")
+                                    type = "linear";
+
+                                effectModel.setKeyframe(key, frame, val, type);
+                            }
+
+                            Layout.fillWidth: true
+                            spacing: 0
 
                             RowLayout {
                                 Layout.fillWidth: true
                                 Layout.margins: 4
 
-                            // --- Left Slider (Start) ---
-                            Slider {
-                                visible: isNumber
-                                Layout.fillWidth: true
-                                from: (key === "scale" || key === "opacity") ? 0 : -1000
-                                to: (key === "scale") ? 500 : (key === "opacity" ? 1.0 : 1000)
-                                value: Number(startVal) || 0
-                                onMoved: updateParam(startFrame, value)
-                                onPressedChanged: if (pressed) inputting = true; else inputting = false
-                            }
-
-                            // --- Left Box (Start) ---
-                            TextField {
-                                visible: isNumber
-                                Layout.preferredWidth: 60
-                                text: isNumber ? (Number(startVal) || 0).toFixed(2) : ""
-                                selectByMouse: true
-                                onEditingFinished: updateParam(startFrame, Number(text))
-                            }
-
-                            // --- Center Button (Param Name & Interp Menu) ---
-                            Button {
-                                id: interpBtn
-                                Layout.preferredWidth: 100
-                                Layout.fillWidth: !isNumber
-                                text: {
-                                    if (!isNumber) return key
-                                    switch(interpType) {
-                                        case "linear": return key + " (直)";
-                                        case "ease_in": return key + " (加)";
-                                        case "ease_out": return key + " (減)";
-                                        case "ease_in_out": return key + " (加減)";
-                                        default: return key
+                                // --- Left Slider (Start) ---
+                                Slider {
+                                    visible: isNumber
+                                    Layout.fillWidth: true
+                                    from: (key === "scale" || key === "opacity") ? 0 : -1000
+                                    to: (key === "scale") ? 500 : (key === "opacity" ? 1 : 1000)
+                                    value: Number(startVal) || 0
+                                    onMoved: updateParam(startFrame, value)
+                                    onPressedChanged: {
+                                        if (pressed)
+                                            inputting = true;
+                                        else
+                                            inputting = false;
                                     }
                                 }
-                                enabled: isNumber
-                                onClicked: interpMenu.open()
 
-                                Menu {
-                                    id: interpMenu
-                                    y: interpBtn.height
-                                    MenuItem { 
-                                        text: "移動なし"
-                                        onTriggered: {
-                                            let track = effectModel.keyframeTracks[key] || []
-                                            for (let i = 0; i < track.length; i++) {
-                                                effectModel.removeKeyframe(key, track[i].frame)
-                                            }
+                                // --- Left Box (Start) ---
+                                TextField {
+                                    visible: isNumber
+                                    Layout.preferredWidth: 60
+                                    text: isNumber ? (Number(startVal) || 0).toFixed(2) : ""
+                                    selectByMouse: true
+                                    onEditingFinished: updateParam(startFrame, Number(text))
+                                }
+
+                                // --- Center Button (Param Name & Interp Menu) ---
+                                Button {
+                                    id: interpBtn
+
+                                    function setInterp(type) {
+                                        let val = startVal;
+                                        effectModel.setKeyframe(key, startFrame, val, type);
+                                        if (!hasKeyframes)
+                                            effectModel.setKeyframe(key, clipDur, val, "linear");
+
+                                    }
+
+                                    Layout.preferredWidth: 100
+                                    Layout.fillWidth: !isNumber
+                                    text: {
+                                        if (!isNumber)
+                                            return key;
+
+                                        switch (interpType) {
+                                        case "linear":
+                                            return key + " (直)";
+                                        case "ease_in":
+                                            return key + " (加)";
+                                        case "ease_out":
+                                            return key + " (減)";
+                                        case "ease_in_out":
+                                            return key + " (加減)";
+                                        default:
+                                            return key;
                                         }
                                     }
-                                    MenuSeparator {}
-                                    MenuItem { text: "直線移動"; onTriggered: setInterp("linear") }
-                                    MenuItem { text: "加速移動"; onTriggered: setInterp("ease_in") }
-                                    MenuItem { text: "減速移動"; onTriggered: setInterp("ease_out") }
-                                    MenuItem { text: "加減速移動"; onTriggered: setInterp("ease_in_out") }
+                                    enabled: isNumber
+                                    onClicked: interpMenu.open()
+
+                                    Menu {
+                                        id: interpMenu
+
+                                        y: interpBtn.height
+
+                                        MenuItem {
+                                            text: "移動なし"
+                                            onTriggered: {
+                                                let track = effectModel.keyframeTracks[key] || [];
+                                                for (let i = 0; i < track.length; i++) {
+                                                    effectModel.removeKeyframe(key, track[i].frame);
+                                                }
+                                            }
+                                        }
+
+                                        MenuSeparator {
+                                        }
+
+                                        MenuItem {
+                                            text: "直線移動"
+                                            onTriggered: setInterp("linear")
+                                        }
+
+                                        MenuItem {
+                                            text: "加速移動"
+                                            onTriggered: setInterp("ease_in")
+                                        }
+
+                                        MenuItem {
+                                            text: "減速移動"
+                                            onTriggered: setInterp("ease_out")
+                                        }
+
+                                        MenuItem {
+                                            text: "加減速移動"
+                                            onTriggered: setInterp("ease_in_out")
+                                        }
+
+                                    }
+
                                 }
-                                
-                                function setInterp(type) {
-                                    let val = startVal
-                                    effectModel.setKeyframe(key, startFrame, val, type)
-                                    if (!hasKeyframes) {
-                                        effectModel.setKeyframe(key, clipDur, val, "linear")
+
+                                // --- Right Box (End) ---
+                                TextField {
+                                    // 常に表示するが、移動なしの時は無効化（グレーアウト）
+                                    enabled: isMoving
+                                    Layout.preferredWidth: 60
+                                    text: isNumber ? (Number(endVal) || 0).toFixed(2) : ""
+                                    selectByMouse: true
+                                    onEditingFinished: updateParam(endFrame, Number(text))
+                                }
+
+                                // --- Right Slider (End) ---
+                                Slider {
+                                    enabled: isMoving
+                                    Layout.fillWidth: true
+                                    from: (key === "scale" || key === "opacity") ? 0 : -1000
+                                    to: (key === "scale") ? 500 : (key === "opacity" ? 1 : 1000)
+                                    value: Number(endVal) || 0
+                                    onMoved: updateParam(endFrame, value)
+                                    onPressedChanged: {
+                                        if (pressed)
+                                            inputting = true;
+                                        else
+                                            inputting = false;
                                     }
                                 }
-                            }
 
-                            // --- Right Box (End) ---
-                            TextField {
-                                // 常に表示するが、移動なしの時は無効化（グレーアウト）
-                                enabled: isMoving
-                                Layout.preferredWidth: 60
-                                text: isNumber ? (Number(endVal) || 0).toFixed(2) : ""
-                                selectByMouse: true
-                                onEditingFinished: updateParam(endFrame, Number(text))
-                            }
+                                // --- Text Editor (Non-numeric) ---
+                                TextField {
+                                    visible: !isNumber
+                                    Layout.fillWidth: true
+                                    text: String(effVal)
+                                    selectByMouse: true
+                                    onEditingFinished: TimelineBridge.updateClipEffectParam(targetClipId, effIdx, key, text)
+                                }
 
-                            // --- Right Slider (End) ---
-                            Slider {
-                                enabled: isMoving
-                                Layout.fillWidth: true
-                                from: (key === "scale" || key === "opacity") ? 0 : -1000
-                                to: (key === "scale") ? 500 : (key === "opacity" ? 1.0 : 1000)
-                                value: Number(endVal) || 0
-                                onMoved: updateParam(endFrame, value)
-                                onPressedChanged: if (pressed) inputting = true; else inputting = false
-                            }
-
-                            // --- Text Editor (Non-numeric) ---
-                            TextField {
-                                visible: !isNumber
-                                Layout.fillWidth: true
-                                text: String(effVal)
-                                selectByMouse: true
-                                onEditingFinished: TimelineBridge.updateClipEffectParam(targetClipId, effIdx, key, text)
-                            }
-                            } // End RowLayout
-
-                            function updateParam(frame, val) {
-                                let type = "linear"
-                                if (frame === startFrame) type = interpType
-                                else type = getInterpAt(frame)
-                                
-                                if (type === "constant") type = "linear"
-                                effectModel.setKeyframe(key, frame, val, type)
                             }
 
                             // --- Mini Timeline Bar ---
                             Item {
                                 Layout.fillWidth: true
                                 Layout.preferredHeight: 10
-                                Layout.leftMargin: 4; Layout.rightMargin: 4
+                                Layout.leftMargin: 4
+                                Layout.rightMargin: 4
                                 visible: isNumber
 
                                 Rectangle {
@@ -304,7 +360,7 @@ Common.RinaWindow {
                                     width: parent.width
                                     height: 2
                                     color: "#555"
-                                    
+
                                     // Highlight active interval
                                     Rectangle {
                                         height: 4
@@ -315,24 +371,29 @@ Common.RinaWindow {
                                         width: Math.max(0, ((endFrame - startFrame) / clipDur) * parent.width)
                                         visible: clipDur > 0
                                     }
+
                                 }
 
                                 // Keyframes
                                 Repeater {
                                     model: kfs
+
                                     Rectangle {
-                                        width: 4; height: 4
+                                        width: 4
+                                        height: 4
                                         radius: 2
                                         color: "white"
                                         anchors.verticalCenter: parent.verticalCenter
                                         x: (modelData.frame / clipDur) * parent.width - 2
-                                        
+
                                         MouseArea {
                                             anchors.fill: parent
                                             acceptedButtons: Qt.RightButton
                                             onClicked: effectModel.removeKeyframe(key, modelData.frame)
                                         }
+
                                     }
+
                                 }
 
                                 // Cursor
@@ -348,16 +409,47 @@ Common.RinaWindow {
                                     anchors.fill: parent
                                     acceptedButtons: Qt.LeftButton
                                     onDoubleClicked: (mouse) => {
-                                        let f = Math.round((mouse.x / width) * clipDur)
-                                        let val = effectModel.evaluatedParam(key, f)
-                                        effectModel.setKeyframe(key, f, val, "linear")
+                                        let f = Math.round((mouse.x / width) * clipDur);
+                                        let val = effectModel.evaluatedParam(key, f);
+                                        effectModel.setKeyframe(key, f, val, "linear");
                                     }
                                 }
+
                             }
+
+                        }
+
+                    }
+
+                }
+
+            }
+
+        }
+
+    }
+
+    menuBar: MenuBar {
+        Menu {
+            title: "フィルタ"
+
+            Repeater {
+                model: TimelineBridge ? TimelineBridge.getAvailableEffects() : []
+
+                MenuItem {
+                    text: modelData.name
+                    onTriggered: {
+                        if (TimelineBridge) {
+                            TimelineBridge.addEffect(targetClipId, modelData.id);
+                            reload();
                         }
                     }
                 }
+
             }
+
         }
+
     }
+
 }

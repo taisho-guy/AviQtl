@@ -1,209 +1,262 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
-import QtQuick.Layouts 1.15
 import QtQuick.Dialogs
+import QtQuick.Layouts 1.15
 import "common" as Common
 
 Common.RinaWindow {
     id: root
+
+    // プロジェクトが選択されたら他のウィンドウを開く
+    signal projectSelected(string projectPath, int width, int height, double fps, int totalFrames)
+
     width: 700
     height: 500
     title: "Rina - プロジェクトを選択"
-    
-    // プロジェクトが選択されたら他のウィンドウを開く
-    signal projectSelected(string projectPath, int width, int height, double fps, int totalFrames)
-    
     Component.onCompleted: {
         // 最近使ったプロジェクトをロード
         if (SettingsManager && SettingsManager.settings) {
-            var recent = SettingsManager.settings.recentProjects || []
-            recentModel.clear()
+            var recent = SettingsManager.settings.recentProjects || [];
+            recentModel.clear();
             for (var i = 0; i < Math.min(recent.length, 10); i++) {
-                recentModel.append(recent[i])
+                recentModel.append(recent[i]);
             }
         }
     }
-    
+
     ListModel {
         id: recentModel
     }
-    
+
     RowLayout {
         anchors.fill: parent
         anchors.margins: 20
         spacing: 20
-        
+
         // 左側: 新規プロジェクト
         ColumnLayout {
             Layout.fillHeight: true
             Layout.preferredWidth: parent.width * 0.45
             spacing: 15
-            
+
             Label {
                 text: "新規プロジェクト"
                 font.pixelSize: 18
                 font.bold: true
             }
-            
+
             GroupBox {
                 title: "プロジェクト設定"
                 Layout.fillWidth: true
-                
+
                 GridLayout {
                     columns: 2
                     rowSpacing: 10
                     columnSpacing: 10
                     anchors.fill: parent
-                    
-                    Label { text: "テンプレート:" }
+
+                    Label {
+                        text: "テンプレート:"
+                    }
+
                     ComboBox {
                         id: templateCombo
+
                         Layout.fillWidth: true
-                        model: [
-                            "HD 1080p 30fps",
-                            "HD 720p 30fps",
-                            "Full HD 1920x1080 60fps",
-                            "4K UHD 3840x2160 30fps",
-                            "カスタム"
-                        ]
+                        model: ["HD 1080p 30fps", "HD 720p 30fps", "Full HD 1920x1080 60fps", "4K UHD 3840x2160 30fps", "カスタム"]
                         onActivated: (index) => {
-                            switch(index) {
-                                case 0: widthField.text = "1920"; heightField.text = "1080"; fpsField.text = "30"; break;
-                                case 1: widthField.text = "1280"; heightField.text = "720"; fpsField.text = "30"; break;
-                                case 2: widthField.text = "1920"; heightField.text = "1080"; fpsField.text = "60"; break;
-                                case 3: widthField.text = "3840"; heightField.text = "2160"; fpsField.text = "30"; break;
+                            switch (index) {
+                            case 0:
+                                widthField.text = "1920";
+                                heightField.text = "1080";
+                                fpsField.text = "30";
+                                break;
+                            case 1:
+                                widthField.text = "1280";
+                                heightField.text = "720";
+                                fpsField.text = "30";
+                                break;
+                            case 2:
+                                widthField.text = "1920";
+                                heightField.text = "1080";
+                                fpsField.text = "60";
+                                break;
+                            case 3:
+                                widthField.text = "3840";
+                                heightField.text = "2160";
+                                fpsField.text = "30";
+                                break;
                             }
                         }
                     }
-                    
-                    Label { text: "幅 (Width):" }
-                    TextField { 
+
+                    Label {
+                        text: "幅 (Width):"
+                    }
+
+                    TextField {
                         id: widthField
+
                         text: "1920"
-                        validator: IntValidator{ bottom: 1; top: 8000 }
                         Layout.fillWidth: true
+
+                        validator: IntValidator {
+                            bottom: 1
+                            top: 8000
+                        }
+
                     }
-                    
-                    Label { text: "高さ (Height):" }
-                    TextField { 
+
+                    Label {
+                        text: "高さ (Height):"
+                    }
+
+                    TextField {
                         id: heightField
+
                         text: "1080"
-                        validator: IntValidator{ bottom: 1; top: 8000 }
                         Layout.fillWidth: true
+
+                        validator: IntValidator {
+                            bottom: 1
+                            top: 8000
+                        }
+
                     }
-                    
-                    Label { text: "FPS:" }
-                    TextField { 
+
+                    Label {
+                        text: "FPS:"
+                    }
+
+                    TextField {
                         id: fpsField
+
                         text: "30"
-                        validator: DoubleValidator{ bottom: 1.0; top: 240.0 }
                         Layout.fillWidth: true
+
+                        validator: DoubleValidator {
+                            bottom: 1
+                            top: 240
+                        }
+
                     }
-                    
-                    Label { text: "総フレーム数:" }
-                    TextField { 
+
+                    Label {
+                        text: "総フレーム数:"
+                    }
+
+                    TextField {
                         id: framesField
+
                         text: "3600"
-                        validator: IntValidator{ bottom: 1; top: 1000000 }
                         Layout.fillWidth: true
+
+                        validator: IntValidator {
+                            bottom: 1
+                            top: 1e+06
+                        }
+
                     }
+
                 }
+
             }
-            
+
             Button {
                 text: "新規プロジェクトを作成"
                 highlighted: true
                 Layout.fillWidth: true
                 onClicked: {
-                    root.projectSelected(
-                        "",
-                        parseInt(widthField.text),
-                        parseInt(heightField.text),
-                        parseFloat(fpsField.text),
-                        parseInt(framesField.text)
-                    )
-                    root.close()
+                    root.projectSelected("", parseInt(widthField.text), parseInt(heightField.text), parseFloat(fpsField.text), parseInt(framesField.text));
+                    root.close();
                 }
             }
-            
-            Item { Layout.fillHeight: true }
+
+            Item {
+                Layout.fillHeight: true
+            }
+
         }
-        
+
         // 右側: 最近使ったプロジェクト
         ColumnLayout {
             Layout.fillHeight: true
             Layout.fillWidth: true
             spacing: 15
-            
+
             Label {
                 text: "最近使ったプロジェクト"
                 font.pixelSize: 18
                 font.bold: true
             }
-            
+
             ScrollView {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 clip: true
-                
+
                 ListView {
                     id: recentListView
+
                     model: recentModel
                     spacing: 5
-                    
+
                     delegate: ItemDelegate {
                         width: ListView.view.width
                         height: 60
-                        
+                        onClicked: {
+                            root.projectSelected(model.path, model.width, model.height, model.fps, model.totalFrames);
+                            root.close();
+                        }
+
                         ColumnLayout {
                             anchors.fill: parent
                             anchors.margins: 5
-                            
+
                             Label {
                                 text: model.name || "Untitled Project"
                                 font.bold: true
                             }
+
                             Label {
                                 text: model.path || ""
                                 font.pixelSize: 10
                                 color: "gray"
                             }
+
                             Label {
                                 text: (model.width || 1920) + "x" + (model.height || 1080) + " @ " + (model.fps || 30) + "fps"
                                 font.pixelSize: 10
                             }
+
                         }
-                        
-                        onClicked: {
-                            root.projectSelected(
-                                model.path,
-                                model.width,
-                                model.height,
-                                model.fps,
-                                model.totalFrames
-                            )
-                            root.close()
-                        }
+
                     }
+
                 }
+
             }
-            
+
             Button {
                 text: "既存プロジェクトを開く..."
                 Layout.fillWidth: true
                 onClicked: fileDialog.open()
             }
+
         }
+
     }
-    
+
     FileDialog {
         id: fileDialog
+
         title: "プロジェクトファイルを選択"
         nameFilters: ["Rina Project (*.rina)", "All files (*)"]
         onAccepted: {
             // TODO: Load project from file and extract settings
-            root.projectSelected(fileDialog.selectedFile, 1920, 1080, 30, 3600)
-            root.close()
+            root.projectSelected(fileDialog.selectedFile, 1920, 1080, 30, 3600);
+            root.close();
         }
     }
+
 }

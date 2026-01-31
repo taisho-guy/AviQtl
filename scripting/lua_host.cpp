@@ -1,36 +1,35 @@
+#include <iostream>
 #include <lua.hpp>
 #include <luajit.h> // LuaJIT固有ヘッダ
-#include <iostream>
 #include <vector>
 
 namespace Rina::Scripting {
 
-    // ユーザー操作対象の構造体 (16バイトアライメント推奨)
-    struct ObjState {
-        float x, y, z;
-        float zoom;
-        float alpha;
-        // パディング等が必要な場合あり
-    };
+// ユーザー操作対象の構造体 (16バイトアライメント推奨)
+struct ObjState {
+    float x, y, z;
+    float zoom;
+    float alpha;
+    // パディング等が必要な場合あり
+};
 
-    class LuaHost {
-        lua_State* L;
-        // ObjState* currentObj; // unused-private-field warning: Removed unused pointer
+class LuaHost {
+    lua_State *L;
+    // ObjState* currentObj; // unused-private-field warning: Removed unused
+    // pointer
 
-    public:
-        LuaHost() {
-            L = luaL_newstate();
-            luaL_openlibs(L);
-            setupFFI();
-        }
+  public:
+    LuaHost() {
+        L = luaL_newstate();
+        luaL_openlibs(L);
+        setupFFI();
+    }
 
-        ~LuaHost() {
-            lua_close(L);
-        }
+    ~LuaHost() { lua_close(L); }
 
-        void setupFFI() {
-            // FFI定義
-            if (luaL_dostring(L, R"(
+    void setupFFI() {
+        // FFI定義
+        if (luaL_dostring(L, R"(
                 local ffi = require("ffi")
                 ffi.cdef[[
                     typedef struct { float x, y, z; float zoom; float alpha; } ObjState;
@@ -54,21 +53,21 @@ namespace Rina::Scripting {
                 }
                 _G.obj = setmetatable({}, mt)
             )")) {
-                std::cerr << "Lua Init Error: " << lua_tostring(L, -1) << std::endl;
-            }
+            std::cerr << "Lua Init Error: " << lua_tostring(L, -1) << std::endl;
         }
+    }
 
-        // フレーム毎に呼ばれる
-        void executeScript(const std::string& script, ObjState* target) {
-            // ポインタをLua側に渡す (FFIキャスト)
-            // 注: 本来はlua_pushlightuserdata等を使うが、FFIなので文字列や専用APIで渡す
-            
-            // 安全のためグローバル変数にキャストしたポインタをセットするヘルパー関数をLua側に用意しておき、
-            // それをC++から呼ぶのが定石
-            
-            // 簡易実装: ポインタアドレスをLuaに渡してキャストさせる
-            lua_getglobal(L, "set_context"); 
-            // ... (詳細なバインディング実装が必要)
-        }
-    };
-}
+    // フレーム毎に呼ばれる
+    void executeScript(const std::string &script, ObjState *target) {
+        // ポインタをLua側に渡す (FFIキャスト)
+        // 注: 本来はlua_pushlightuserdata等を使うが、FFIなので文字列や専用APIで渡す
+
+        // 安全のためグローバル変数にキャストしたポインタをセットするヘルパー関数をLua側に用意しておき、
+        // それをC++から呼ぶのが定石
+
+        // 簡易実装: ポインタアドレスをLuaに渡してキャストさせる
+        lua_getglobal(L, "set_context");
+        // ... (詳細なバインディング実装が必要)
+    }
+};
+} // namespace Rina::Scripting

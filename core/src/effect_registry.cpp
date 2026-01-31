@@ -1,11 +1,11 @@
 #include "effect_registry.hpp"
+#include <QDebug>
 #include <QDir>
 #include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QDebug>
 #include <QUrl>
 
 namespace Rina::Core {
@@ -14,19 +14,21 @@ void initializeStandardEffects() {
     // 標準エフェクトも外部ファイル(JSON)から読み込むため、ここは空にする
 }
 
-void EffectRegistry::loadEffectsFromDirectory(const QString& path) {
+void EffectRegistry::loadEffectsFromDirectory(const QString &path) {
     QDir dir(path);
     if (!dir.exists()) {
         qWarning().noquote() << "Effect directory not found:" << path;
         return;
     }
 
-    // Optimization: Pre-allocate string list is unnecessary, use brace initialization
+    // Optimization: Pre-allocate string list is unnecessary, use brace
+    // initialization
     QDirIterator it(path, {"*.json"}, QDir::Files, QDirIterator::Subdirectories);
-    
+
     while (it.hasNext()) {
         QFile file(it.next());
-        if (!file.open(QIODevice::ReadOnly)) continue;
+        if (!file.open(QIODevice::ReadOnly))
+            continue;
 
         QJsonParseError error;
         // Optimization: Map file to memory for large JSONs
@@ -59,7 +61,7 @@ void EffectRegistry::loadEffectsFromDirectory(const QString& path) {
         // QMLファイルの絶対パスを解決 (JSONファイルからの相対パスとして処理)
         QFileInfo jsonInfo(file.fileName());
         QString absoluteQmlPath = jsonInfo.absoluteDir().filePath(qmlFileName);
-        
+
         if (QFile::exists(absoluteQmlPath)) {
             meta.qmlSource = QUrl::fromLocalFile(absoluteQmlPath).toString();
         } else {
@@ -72,4 +74,4 @@ void EffectRegistry::loadEffectsFromDirectory(const QString& path) {
     }
 }
 
-}
+} // namespace Rina::Core
