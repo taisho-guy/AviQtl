@@ -33,6 +33,7 @@ class TimelineService : public QObject {
     Q_INVOKABLE int createScene(const QString &name);
     Q_INVOKABLE void removeScene(int sceneId);
     Q_INVOKABLE void switchScene(int sceneId);
+    Q_INVOKABLE bool canAddSceneObject(int targetSceneId) const;
     
     int currentSceneId() const { return m_currentSceneId; }
     QVariantList scenes() const;
@@ -81,6 +82,9 @@ class TimelineService : public QObject {
     void clipCreated(int id, int layer, int startFrame, int duration, const QString &type);
 
   private:
+    const SceneData *getScene(int id) const;
+    bool hasCircularDependency(int checkSceneId, int forbiddenSceneId) const;
+
     QList<std::shared_ptr<SceneData>> m_scenes;
     int m_currentSceneId = 0;
     

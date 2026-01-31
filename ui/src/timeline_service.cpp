@@ -133,6 +133,56 @@ void TimelineService::switchScene(int sceneId) {
     }
 }
 
+bool TimelineService::canAddSceneObject(int targetSceneId) const {
+    // 1. 自己参照のチェック (Direct Recursion)
+    if (targetSceneId == m_currentSceneId)
+        return false;
+
+    // 2. 循環参照のチェック (Indirect Recursion)
+    // 「配置しようとしているシーン(target)の中身を辿っていくと、自分(current)が出てくるか？」
+    return !hasCircularDependency(targetSceneId, m_currentSceneId);
+}
+
+const SceneData *TimelineService::getScene(int id) const {
+    auto it = std::find_if(m_scenes.begin(), m_scenes.end(), [id](const auto &s) { return s->id == id; });
+    return it != m_scenes.end() ? it->get() : nullptr;
+}
+
+bool TimelineService::hasCircularDependency(int checkSceneId, int forbiddenSceneId) const {
+    const SceneData *scene = getScene(checkSceneId);
+    if (!scene)
+        return false;
+
+    // そのシーン内の全クリップを走査
+    for (const auto &clip : scene->clips) {
+        // TODO: シーンオブジェクトのタイプ名を定数化すべき (例: ClipType::Scene)
+        if (clip.type == "Scene") {
+            int refId = -1;
+
+            // クリップのパラメータから参照先シーンIDを探す
+            for (const auto *eff : clip.effects) {
+                QVariantMap params = eff->params();
+                if (params.contains("sceneId")) {
+                    refId = params["sceneId"].toInt();
+                    break;
+                }
+            }
+
+            if (refId != -1) {
+                // 禁断のシーンID（配置先の親シーン）を見つけたらアウト
+                if (refId == forbiddenSceneId)
+                    return true;
+
+                // さらに深く潜る (DFS)
+                if (hasCircularDependency(refId, forbiddenSceneId))
+                    return true;
+            }
+        }
+    }
+    // 最後まで辿ってもforbiddenSceneIdが見つからなければセーフ
+    return false;
+}
+
 SceneData* TimelineService::getCurrentScene() const {
     auto it = std::find_if(m_scenes.begin(), m_scenes.end(), [this](auto s){ return s->id == m_currentSceneId; });
     return it != m_scenes.end() ? it->get() : nullptr;
