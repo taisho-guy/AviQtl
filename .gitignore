@@ -1,3 +1,5 @@
+push.fish
+
 # Builds
 build/
 .build_tmp/
