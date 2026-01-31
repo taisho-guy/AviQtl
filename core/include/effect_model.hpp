@@ -102,59 +102,7 @@ class EffectModel : public QObject {
         if (!m_keyframeTracks.contains(paramName))
             return fallback;
 
-        const QVariantList track = m_keyframeTracks.value(paramName).toList();
-        if (track.isEmpty())
-            return fallback;
-
-        // 非数値はステップ（直前の値）
-        const bool numeric = fallback.canConvert<double>();
-
-        auto getFrame = [](const QVariant &v) { return v.toMap().value("frame").toInt(); };
-        auto getValue = [](const QVariant &v) { return v.toMap().value("value"); };
-        auto getInterp = [](const QVariant &v) {
-            QString s = v.toMap().value("interp").toString();
-            return s.isEmpty() ? QString("linear") : s;
-        };
-
-        if (frame <= getFrame(track.front()))
-            return getValue(track.front());
-        if (frame >= getFrame(track.back()))
-            return getValue(track.back());
-
-        for (int i = 0; i < track.size() - 1; ++i) {
-            const int f0 = getFrame(track[i]);
-            const int f1 = getFrame(track[i + 1]);
-            // `frame == f1` の場合も区間内として処理するため、
-            // `frame >= f1` ではなく `frame > f1` で判定する。
-            // ループ内でreturnするため、重複処理はされない。
-            if (frame < f0 || frame > f1)
-                continue;
-
-            const QVariant v0 = getValue(track[i]);
-            const QVariant v1 = getValue(track[i + 1]);
-            if (!numeric || !v0.canConvert<double>() || !v1.canConvert<double>()) {
-                return v0; // step
-            }
-
-            const double a = v0.toDouble();
-            const double b = v1.toDouble();
-            const double tRaw = (frame - f0) / double(f1 - f0);
-            // const auto interp = stringToInterpolationType(getInterp(track[i])); //
-            // static関数にするため呼び出し変更
-            const auto interpStr = getInterp(track[i]);
-            InterpolationType interp = InterpolationType::Linear;
-            if (interpStr == "ease_in")
-                interp = InterpolationType::EaseIn;
-            else if (interpStr == "ease_out")
-                interp = InterpolationType::EaseOut;
-            else if (interpStr == "ease_in_out")
-                interp = InterpolationType::EaseInOut;
-
-            const double t = applyInterpolation(interp, tRaw);
-            return a + (b - a) * t;
-        }
-
-        return getValue(track.back());
+        return evaluateTrack(m_keyframeTracks.value(paramName).toList(), frame, fallback);
     }
 
     void setKeyframeTracks(const QVariantMap &tracks) {
@@ -169,6 +117,58 @@ class EffectModel : public QObject {
     void keyframeTracksChanged();
 
   private:
+    static InterpolationType stringToInterpolationType(const QString &s) {
+        if (s == "ease_in")
+            return InterpolationType::EaseIn;
+        if (s == "ease_out")
+            return InterpolationType::EaseOut;
+        if (s == "ease_in_out")
+            return InterpolationType::EaseInOut;
+        if (s == "bezier")
+            return InterpolationType::Bezier;
+        return InterpolationType::Linear;
+    }
+
+    static QVariant evaluateTrack(const QVariantList &track, int frame, const QVariant &fallback) {
+        if (track.isEmpty())
+            return fallback;
+
+        auto getFrame = [](const QVariant &v) { return v.toMap().value("frame").toInt(); };
+        auto getValue = [](const QVariant &v) { return v.toMap().value("value"); };
+        auto getInterp = [](const QVariant &v) { return v.toMap().value("interp").toString(); };
+
+        if (frame <= getFrame(track.front()))
+            return getValue(track.front());
+        if (frame >= getFrame(track.back()))
+            return getValue(track.back());
+
+        // 非数値はステップ（直前の値）
+        const bool numeric = fallback.canConvert<double>();
+
+        for (int i = 0; i < track.size() - 1; ++i) {
+            const int f0 = getFrame(track[i]);
+            const int f1 = getFrame(track[i + 1]);
+
+            if (frame < f0 || frame > f1)
+                continue;
+
+            const QVariant v0 = getValue(track[i]);
+            const QVariant v1 = getValue(track[i + 1]);
+
+            if (!numeric || !v0.canConvert<double>() || !v1.canConvert<double>()) {
+                return v0; // step
+            }
+
+            const double a = v0.toDouble();
+            const double b = v1.toDouble();
+            const double tRaw = (frame - f0) / double(f1 - f0);
+            const double t = applyInterpolation(stringToInterpolationType(getInterp(track[i])), tRaw);
+            return a + (b - a) * t;
+        }
+
+        return getValue(track.back());
+    }
+
     static double applyInterpolation(InterpolationType t, double x) {
         x = std::clamp(x, 0.0, 1.0);
         switch (t) {
