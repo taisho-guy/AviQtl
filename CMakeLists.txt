@@ -86,6 +86,7 @@ qt_add_qml_module(Rina
         ui/qml/common/ObjectRenderer.qml
         ui/qml/common/BaseObject.qml
         ui/qml/common/BaseEffect.qml
+        ui/qml/common/Logger.js
         
         # 拡張オブジェクト・エフェクトは外部ロードするため除外
 )

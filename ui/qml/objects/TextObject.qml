@@ -3,24 +3,18 @@ import QtQuick.Effects
 import QtQuick3D
 import Rina
 import "qrc:/qt/qml/Rina/ui/qml/common" as Common
+import "qrc:/qt/qml/Rina/ui/qml/common/Logger.js" as Logger
 
 Common.BaseObject {
     id: root
 
-    readonly property bool dbgEnabled: Qt.application.arguments.indexOf("--rina-debug") !== -1
     property string textContent: String(evalParam("text", "text", "Text"))
     property int textSize: Number(evalParam("text", "textSize", 64))
     property color color: evalParam("text", "color", "#ffffff")
     property real opacity: 1
 
     function dbg(msg) {
-        if (!dbgEnabled)
-            return ;
-
-        console.log("[TextObject][clipId=" + clipId + "] " + msg);
-        if (TimelineBridge && TimelineBridge.log)
-            TimelineBridge.log("[TextObject][clipId=" + clipId + "] " + msg);
-
+        Logger.log("[TextObject][clipId=" + clipId + "] " + msg, TimelineBridge);
     }
 
     sourceItem: originalSource

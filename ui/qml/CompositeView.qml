@@ -1,6 +1,7 @@
 import QtQml 2.15
 import QtQuick 2.15
 import QtQuick3D 6.0
+import "common/Logger.js" as Logger
 
 Item {
     id: root
@@ -130,8 +131,6 @@ Item {
             delegate: Node {
                 id: clipNode
 
-                // コマンドライン `--rina-debug` で有効化
-                readonly property bool dbgEnabled: Qt.application.arguments.indexOf("--rina-debug") !== -1
                 // モデルロールから直接値を取得
                 // パラメータを一度だけ取得してキャッシュ (undefinedチェックのオーバーヘッド削減)
                 readonly property var p: model.params || {
@@ -151,13 +150,7 @@ Item {
                 readonly property real aspectY: pAspect < 0 ? (1 - pAspect) : 1
 
                 function dbg(msg) {
-                    if (!dbgEnabled)
-                        return ;
-
-                    console.log("[CompositeView][clipId=" + model.id + "][type=" + model.type + "] " + msg);
-                    if (TimelineBridge && TimelineBridge.log)
-                        TimelineBridge.log("[CompositeView][clipId=" + model.id + "] " + msg);
-
+                    Logger.log("[CompositeView][clipId=" + model.id + "][type=" + model.type + "] " + msg, TimelineBridge);
                 }
 
                 // 座標変換: 中心(0,0)、Y軸下プラス(AviUtl互換)
