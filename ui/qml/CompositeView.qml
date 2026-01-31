@@ -2,6 +2,7 @@ import QtQml 2.15
 import QtQuick 2.15
 import QtQuick3D 6.0
 import "common/Logger.js" as Logger
+import "common" as Common
 
 Item {
     id: root
@@ -172,94 +173,20 @@ Item {
 
                 // Loader (2D) は 3D シーン内では機能しないため、
                 // Qt.createComponent を使用して Node 派生クラスを動的に生成する
-                Node {
-                    // clipNode.dbg("instantiate end, createdObject=" + (createdObject ? "ok" : "null"))
-                    // BaseObject 側で sourceItem/renderer をこのホストへ移す
-
+                Common.NodeLoader {
                     id: objectContainer
-
-                    property string sourceUrl: model.qmlSource || ""
-                    property var createdObject: null
-                    property var componentCache: null
-                    property var _statusHandler: null
-
-                    function _disconnectStatusHandler() {
-                        if (componentCache && _statusHandler) {
-                            try {
-                                componentCache.statusChanged.disconnect(_statusHandler);
-                            } catch (e) {
-                            }
-                        }
-                        _statusHandler = null;
+                    source: model.qmlSource || ""
+                    
+                    properties: {
+                        "opacity": clipNode.pOpacity,
+                        "clipId": model.id,
+                        "clipStartFrame": model.startFrame,
+                        "clipDurationFrames": model.durationFrames,
+                        "renderHost": offscreenRenderHost,
+                        "clipParams": Qt.binding(function() { return model.params || {}; })
                     }
-
-                    function _instantiate(component) {
-                        // clipNode.dbg("instantiate begin, status=" + component.status + ", url=" + sourceUrl)
-                        createdObject = component.createObject(objectContainer, {
-                            "opacity": clipNode.pOpacity,
-                            "clipId": model.id,
-                            "clipStartFrame": model.startFrame,
-                            "clipDurationFrames": model.durationFrames,
-                            "renderHost": offscreenRenderHost
-                        });
-                        if (createdObject)
-                            createdObject.clipParams = Qt.binding(function() {
-                                return model.params || {
-                                };
-                            });
-
-                    }
-
-                    function reload() {
-                        clipNode.dbg("reload begin, sourceUrl=" + sourceUrl);
-                        if (createdObject) {
-                            createdObject.destroy();
-                            createdObject = null;
-                        }
-                        _disconnectStatusHandler();
-                        if (sourceUrl === "")
-                            return ;
-
-                        clipNode.dbg("Requesting component: " + sourceUrl);
-                        // キャッシュ経由でコンポーネントを取得
-                        var component = root.getCachedComponent(sourceUrl);
-                        componentCache = component;
-                        var self = objectContainer;
-                        if (component.status === Component.Ready) {
-                            _instantiate(component);
-                        } else {
-                            _statusHandler = function _statusHandler() {
-                                clipNode.dbg("statusChanged: status=" + component.status + " (" + sourceUrl + ")");
-                                if (!self || self.componentCache !== component)
-                                    return ;
-
-                                if (component.status === Component.Ready) {
-                                    self._disconnectStatusHandler();
-                                    self._instantiate(component);
-                                } else if (component.status === Component.Error) {
-                                    self._disconnectStatusHandler();
-                                    console.error("Component load failed:", component.errorString());
-                                    clipNode.dbg("Component.Error: " + component.errorString());
-                                }
-                            };
-                            component.statusChanged.connect(_statusHandler);
-                        }
-                        clipNode.dbg("reload end");
-                    }
-
-                    onSourceUrlChanged: reload()
-                    Component.onCompleted: {
-                        clipNode.dbg("objectContainer completed, sourceUrl=" + sourceUrl);
-                        clipNode.dbg("reload onCompleted");
-                        reload();
-                    }
-                    Component.onDestruction: {
-                        clipNode.dbg("objectContainer destruction");
-                        _disconnectStatusHandler();
-                        if (createdObject)
-                            createdObject.destroy();
-
-                    }
+                    
+                    componentFactory: root.getCachedComponent
                 }
 
             }
