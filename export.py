@@ -11,7 +11,7 @@ EXCLUDE_DIRS = {
 }
 
 EXCLUDE_FILES = {
-    ".DS_Store", "Thumbs.db", "package-lock.json", "yarn.lock", "LICENSE"
+    ".DS_Store", "Thumbs.db", "package-lock.json", "yarn.lock", "LICENSE", "push.fish"
 }
 
 INCLUDE_EXTENSIONS = {
