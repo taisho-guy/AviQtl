@@ -40,8 +40,6 @@ class TimelineController : public QObject {
     Q_PROPERTY(QVariantList clips READ clips NOTIFY clipsChanged)
     Q_PROPERTY(Rina::UI::ClipModel *clipModel READ clipModel CONSTANT)
     Q_PROPERTY(int selectedLayer READ selectedLayer WRITE setSelectedLayer NOTIFY selectedLayerChanged)
-    Q_PROPERTY(QVariantList scenes READ scenes NOTIFY scenesChanged)
-    Q_PROPERTY(int currentSceneId READ currentSceneId NOTIFY currentSceneIdChanged)
 
   public:
     explicit TimelineController(QObject *parent = nullptr);
@@ -93,14 +91,6 @@ class TimelineController : public QObject {
     Q_INVOKABLE void addEffect(int clipId, const QString &effectId);
     Q_INVOKABLE void removeEffect(int clipId, int effectIndex);
 
-    // シーン操作
-    QVariantList scenes() const;
-    int currentSceneId() const;
-    Q_INVOKABLE void createScene(const QString &name);
-    Q_INVOKABLE void removeScene(int sceneId);
-    Q_INVOKABLE void switchScene(int sceneId);
-    Q_INVOKABLE QVariantList getSceneClips(int sceneId) const;
-
     // プロジェクト保存・読み込み
     Q_INVOKABLE bool saveProject(const QString &fileUrl);
     Q_INVOKABLE bool loadProject(const QString &fileUrl);
@@ -128,8 +118,6 @@ class TimelineController : public QObject {
     void isClipActiveChanged();
     void activeObjectTypeChanged();
     void clipsChanged(); // 追加
-    void scenesChanged();
-    void currentSceneIdChanged();
     void clipEffectsChanged(int clipId);
     void selectedLayerChanged();
     void errorOccurred(const QString &message);

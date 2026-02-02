@@ -18,19 +18,17 @@ Common.RinaWindow {
 
     function snapFrame(frame) {
         // SettingsManager.settings.enableSnap を尊重（未設定/未ロードでも安全に）
-        var s = (SettingsManager && SettingsManager.settings) ? SettingsManager.settings : ({
-        });
+        var s = (SettingsManager && SettingsManager.settings) ? SettingsManager.settings : ({})
         if (s.enableSnap === false)
-            return frame;
-
+            return frame
         // 最小の実装：整数フレームに吸着（将来ここをグリッド/秒/拍に拡張）
-        return Math.max(0, Math.round(frame));
+        return Math.max(0, Math.round(frame))
     }
 
     function pxToFrame(px, contentX) {
-        var scale = (TimelineBridge ? TimelineBridge.timelineScale : 1);
-        var x = px + (contentX || 0);
-        return snapFrame(x / scale);
+        var scale = (TimelineBridge ? TimelineBridge.timelineScale : 1)
+        var x = px + (contentX || 0)
+        return snapFrame(x / scale)
     }
 
     width: 1280
@@ -227,76 +225,6 @@ Common.RinaWindow {
         spacing: 0
 
         // ========================================
-        // シーンタブバー
-        // ========================================
-        Rectangle {
-            Layout.fillWidth: true
-            Layout.preferredHeight: 28
-            color: palette.window
-            z: 50
-
-            ListView {
-                id: sceneTabs
-
-                anchors.fill: parent
-                orientation: ListView.Horizontal
-                model: TimelineBridge ? TimelineBridge.scenes : []
-
-                delegate: Rectangle {
-                    width: Math.max(100, tabText.implicitWidth + 30)
-                    height: parent.height
-                    color: (TimelineBridge && TimelineBridge.currentSceneId === modelData.id) ? palette.base : palette.button
-                    border.color: palette.mid
-                    border.width: 1
-
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.margins: 4
-
-                        Text {
-                            id: tabText
-
-                            text: modelData.name
-                            color: palette.text
-                            Layout.fillWidth: true
-                            elide: Text.ElideRight
-                        }
-
-                        Text {
-                            text: "×"
-                            color: palette.text
-                            visible: modelData.id !== 0 // Rootは削除不可
-
-                            MouseArea {
-                                anchors.fill: parent
-                                onClicked: TimelineBridge.removeScene(modelData.id)
-                            }
-
-                        }
-
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        z: -1
-                        onClicked: TimelineBridge.switchScene(modelData.id)
-                    }
-
-                }
-
-                footer: Button {
-                    text: "+"
-                    width: 30
-                    height: 28
-                    flat: true
-                    onClicked: TimelineBridge.createScene("Scene " + (sceneTabs.count + 1))
-                }
-
-            }
-
-        }
-
-        // ========================================
         // タイムライン定規（AviUtl風）
         // ========================================
         Rectangle {
@@ -418,14 +346,14 @@ Common.RinaWindow {
                 anchors.fill: parent
                 anchors.leftMargin: 70
                 onPressed: function(mouse) {
-                    if (TimelineBridge && TimelineBridge.transport && rulerArea.targetFlickable)
+                    if (TimelineBridge && TimelineBridge.transport && rulerArea.targetFlickable) {
                         TimelineBridge.transport.currentFrame = pxToFrame(mouse.x + 70, rulerArea.targetFlickable.contentX);
-
+                    }
                 }
                 onPositionChanged: function(mouse) {
-                    if (pressed && TimelineBridge && TimelineBridge.transport && rulerArea.targetFlickable)
+                    if (pressed && TimelineBridge && TimelineBridge.transport && rulerArea.targetFlickable) {
                         TimelineBridge.transport.currentFrame = pxToFrame(mouse.x + 70, rulerArea.targetFlickable.contentX);
-
+                    }
                 }
                 // ホイールでタイムライン縮尺を変更
                 onWheel: function(wheel) {

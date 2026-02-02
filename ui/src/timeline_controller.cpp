@@ -34,8 +34,6 @@ TimelineController::TimelineController(QObject *parent) : QObject(parent) {
         updateActiveClipsList();
     });
     connect(m_timeline, &TimelineService::clipEffectsChanged, this, &TimelineController::clipEffectsChanged);
-    connect(m_timeline, &TimelineService::scenesChanged, this, &TimelineController::scenesChanged);
-    connect(m_timeline, &TimelineService::currentSceneIdChanged, this, &TimelineController::currentSceneIdChanged);
 
     // SelectionService signals
     connect(m_selection, &SelectionService::selectedClipDataChanged, this, [this]() {
@@ -369,13 +367,4 @@ void TimelineController::copyClip(int clipId) { m_timeline->copyClip(clipId); }
 void TimelineController::cutClip(int clipId) { m_timeline->cutClip(clipId); }
 
 void TimelineController::pasteClip(int frame, int layer) { m_timeline->pasteClip(frame, layer); }
-
-QVariantList TimelineController::scenes() const { return m_timeline->scenes(); }
-int TimelineController::currentSceneId() const { return m_timeline->currentSceneId(); }
-void TimelineController::createScene(const QString &name) { m_timeline->createScene(name); }
-void TimelineController::removeScene(int sceneId) { m_timeline->removeScene(sceneId); }
-void TimelineController::switchScene(int sceneId) { m_timeline->switchScene(sceneId); }
-
-QVariantList TimelineController::getSceneClips(int sceneId) const { return m_timeline ? m_timeline->getSceneClips(sceneId) : QVariantList(); }
-
 } // namespace Rina::UI
