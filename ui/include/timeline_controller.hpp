@@ -99,6 +99,7 @@ class TimelineController : public QObject {
     Q_INVOKABLE void createScene(const QString &name);
     Q_INVOKABLE void removeScene(int sceneId);
     Q_INVOKABLE void switchScene(int sceneId);
+    Q_INVOKABLE QVariantList getSceneClips(int sceneId) const;
 
     // プロジェクト保存・読み込み
     Q_INVOKABLE bool saveProject(const QString &fileUrl);

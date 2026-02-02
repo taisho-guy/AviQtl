@@ -376,4 +376,6 @@ void TimelineController::createScene(const QString &name) { m_timeline->createSc
 void TimelineController::removeScene(int sceneId) { m_timeline->removeScene(sceneId); }
 void TimelineController::switchScene(int sceneId) { m_timeline->switchScene(sceneId); }
 
+QVariantList TimelineController::getSceneClips(int sceneId) const { return m_timeline ? m_timeline->getSceneClips(sceneId) : QVariantList(); }
+
 } // namespace Rina::UI

@@ -14,6 +14,7 @@ struct SceneData {
     int height;
     QList<ClipData> clips;
     QUndoStack *undoStack; // シーンごとにUndo履歴を持つ
+    int contentDuration = 0;
 };
 
 class TimelineService : public QObject {
@@ -33,8 +34,9 @@ class TimelineService : public QObject {
     Q_INVOKABLE int createScene(const QString &name);
     Q_INVOKABLE void removeScene(int sceneId);
     Q_INVOKABLE void switchScene(int sceneId);
+    Q_INVOKABLE QVariantList getSceneClips(int sceneId) const;
     Q_INVOKABLE bool canAddSceneObject(int targetSceneId) const;
-    
+
     int currentSceneId() const { return m_currentSceneId; }
     QVariantList scenes() const;
     SceneData *getCurrentScene() const;
@@ -84,10 +86,11 @@ class TimelineService : public QObject {
   private:
     const SceneData *getScene(int id) const;
     bool hasCircularDependency(int checkSceneId, int forbiddenSceneId) const;
+    void recalculateSceneDuration(int sceneId);
 
     QList<std::shared_ptr<SceneData>> m_scenes;
     int m_currentSceneId = 0;
-    
+
     int m_nextClipId = 1;
     std::unique_ptr<ClipData> m_clipboard;
     SelectionService *m_selection;

@@ -59,14 +59,16 @@ else
 end
 
 # エフェクトディレクトリ
-if test -d "$TEMP_BUILD_DIR/effects"
-    cp -r "$TEMP_BUILD_DIR/effects" "$OUTPUT_DIR/"
-end
+echo "Deploying extensible effects..."
+rm -rf "$OUTPUT_DIR/effects"
+mkdir -p "$OUTPUT_DIR/effects"
+cp -r "$SOURCE_DIR/ui/qml/effects/"* "$OUTPUT_DIR/effects/"
 
 # オブジェクトディレクトリ
-if test -d "$TEMP_BUILD_DIR/objects"
-    cp -r "$TEMP_BUILD_DIR/objects" "$OUTPUT_DIR/"
-end
+echo "Deploying extensible objects..."
+rm -rf "$OUTPUT_DIR/objects"
+mkdir -p "$OUTPUT_DIR/objects"
+cp -r "$SOURCE_DIR/ui/qml/objects/"* "$OUTPUT_DIR/objects/"
 
 echo "=== ✅ ビルド完了 ==="
 echo "ディレクトリ構成:"

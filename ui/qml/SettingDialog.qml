@@ -124,6 +124,7 @@ Common.RinaWindow {
                             property int effIdx: effectRoot.effectIndex
                             property var effVal: effectRoot.currentParams[key]
                             property bool isNumber: typeof effVal === 'number'
+                            property bool isSceneSelector: key === "sceneId"
                             // トラック情報と補間状態の取得
                             property int curRelFrame: (TimelineBridge && TimelineBridge.transport) ? (TimelineBridge.transport.currentFrame - TimelineBridge.clipStartFrame) : 0
                             property int clipDur: TimelineBridge ? TimelineBridge.clipDurationFrames : 100
@@ -203,9 +204,37 @@ Common.RinaWindow {
                                 Layout.fillWidth: true
                                 Layout.margins: 4
 
+                                // Scene Selector (Special Case)
+                                ComboBox {
+                                    visible: isSceneSelector
+                                    Layout.fillWidth: true
+                                    model: TimelineBridge ? TimelineBridge.scenes : []
+                                    textRole: "name"
+                                    valueRole: "id"
+                                    // 現在値を選択
+                                    currentIndex: {
+                                        if (!model)
+                                            return -1;
+
+                                        for (var i = 0; i < model.length; i++) {
+                                            if (model[i].id === effVal)
+                                                return i;
+
+                                        }
+                                        return -1;
+                                    }
+                                    onActivated: (index) => {
+                                        var id = model[index].id;
+                                        // 循環参照チェックは C++ 側で行われる (addEffect/updateParam時)
+                                        // しかし updateParam は void なので失敗を検知しにくい。
+                                        // UI側で簡易チェックするか、C++が値を書き戻すのを期待する。
+                                        TimelineBridge.updateClipEffectParam(targetClipId, effIdx, key, id);
+                                    }
+                                }
+
                                 // --- Left Slider (Start) ---
                                 Slider {
-                                    visible: isNumber
+                                    visible: isNumber && !isSceneSelector
                                     Layout.fillWidth: true
                                     from: (key === "scale" || key === "opacity") ? 0 : -1000
                                     to: (key === "scale") ? 500 : (key === "opacity" ? 1 : 1000)
@@ -221,7 +250,7 @@ Common.RinaWindow {
 
                                 // --- Left Box (Start) ---
                                 TextField {
-                                    visible: isNumber
+                                    visible: isNumber && !isSceneSelector
                                     Layout.preferredWidth: 60
                                     text: isNumber ? (Number(startVal) || 0).toFixed(2) : ""
                                     selectByMouse: true
@@ -307,7 +336,8 @@ Common.RinaWindow {
                                 // --- Right Box (End) ---
                                 TextField {
                                     // 常に表示するが、移動なしの時は無効化（グレーアウト）
-                                    enabled: isMoving
+                                    enabled: isMoving && !isSceneSelector
+                                    visible: !isSceneSelector
                                     Layout.preferredWidth: 60
                                     text: isNumber ? (Number(endVal) || 0).toFixed(2) : ""
                                     selectByMouse: true
@@ -316,7 +346,8 @@ Common.RinaWindow {
 
                                 // --- Right Slider (End) ---
                                 Slider {
-                                    enabled: isMoving
+                                    enabled: isMoving && !isSceneSelector
+                                    visible: !isSceneSelector
                                     Layout.fillWidth: true
                                     from: (key === "scale" || key === "opacity") ? 0 : -1000
                                     to: (key === "scale") ? 500 : (key === "opacity" ? 1 : 1000)
@@ -347,7 +378,7 @@ Common.RinaWindow {
                                 Layout.preferredHeight: 10
                                 Layout.leftMargin: 4
                                 Layout.rightMargin: 4
-                                visible: isNumber
+                                visible: isNumber && !isSceneSelector
 
                                 Rectangle {
                                     anchors.centerIn: parent

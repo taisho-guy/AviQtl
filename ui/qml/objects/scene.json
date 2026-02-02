@@ -1,0 +1,9 @@
+{
+    "id": "Scene",
+    "name": "シーン",
+    "category": "object",
+    "qml": "qrc:/qt/qml/Rina/ui/qml/objects/SceneObject.qml",
+    "params": {
+        "sceneId": -1
+    }
+}

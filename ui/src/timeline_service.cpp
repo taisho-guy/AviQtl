@@ -97,20 +97,22 @@ int TimelineService::createScene(const QString &name) {
     // ID生成: 空なら0、それ以外は末尾+1
     scene->id = m_scenes.isEmpty() ? 0 : m_scenes.last()->id + 1;
     scene->name = name;
-    scene->width = 1920; 
+    scene->width = 1920;
     scene->height = 1080;
     scene->undoStack = new QUndoStack(this);
-    
+
     m_scenes.append(scene);
     emit scenesChanged();
     return scene->id;
 }
 
 void TimelineService::removeScene(int sceneId) {
-    if (sceneId == 0) return; // Rootは削除不可
-    if (m_scenes.size() <= 1) return;
+    if (sceneId == 0)
+        return; // Rootは削除不可
+    if (m_scenes.size() <= 1)
+        return;
 
-    auto it = std::find_if(m_scenes.begin(), m_scenes.end(), [sceneId](auto s){ return s->id == sceneId; });
+    auto it = std::find_if(m_scenes.begin(), m_scenes.end(), [sceneId](auto s) { return s->id == sceneId; });
     if (it != m_scenes.end()) {
         if (m_currentSceneId == sceneId) {
             switchScene(0); // 削除対象がアクティブならRootへ退避
@@ -122,9 +124,10 @@ void TimelineService::removeScene(int sceneId) {
 }
 
 void TimelineService::switchScene(int sceneId) {
-    if (m_currentSceneId == sceneId) return;
-    
-    auto it = std::find_if(m_scenes.begin(), m_scenes.end(), [sceneId](auto s){ return s->id == sceneId; });
+    if (m_currentSceneId == sceneId)
+        return;
+
+    auto it = std::find_if(m_scenes.begin(), m_scenes.end(), [sceneId](auto s) { return s->id == sceneId; });
     if (it != m_scenes.end()) {
         m_currentSceneId = sceneId;
         m_selection->select(-1, {}); // 選択解除
@@ -141,6 +144,25 @@ bool TimelineService::canAddSceneObject(int targetSceneId) const {
     // 2. 循環参照のチェック (Indirect Recursion)
     // 「配置しようとしているシーン(target)の中身を辿っていくと、自分(current)が出てくるか？」
     return !hasCircularDependency(targetSceneId, m_currentSceneId);
+}
+
+void TimelineService::recalculateSceneDuration(int sceneId) {
+    auto it = std::find_if(m_scenes.begin(), m_scenes.end(), [sceneId](const auto &s) { return s->id == sceneId; });
+    if (it == m_scenes.end())
+        return;
+
+    SceneData *scene = it->get();
+    int maxFrame = 0;
+    for (const auto &clip : scene->clips) {
+        int end = clip.startFrame + clip.durationFrames;
+        if (end > maxFrame)
+            maxFrame = end;
+    }
+
+    if (scene->contentDuration != maxFrame) {
+        scene->contentDuration = maxFrame;
+        emit scenesChanged();
+    }
 }
 
 const SceneData *TimelineService::getScene(int id) const {
@@ -183,14 +205,38 @@ bool TimelineService::hasCircularDependency(int checkSceneId, int forbiddenScene
     return false;
 }
 
-SceneData* TimelineService::getCurrentScene() const {
-    auto it = std::find_if(m_scenes.begin(), m_scenes.end(), [this](auto s){ return s->id == m_currentSceneId; });
+QVariantList TimelineService::getSceneClips(int sceneId) const {
+    const SceneData *scene = getScene(sceneId);
+    if (!scene)
+        return {};
+
+    QVariantList list;
+    for (const auto &clip : scene->clips) {
+        QVariantMap map;
+        map["id"] = clip.id;
+        map["type"] = clip.type;
+        map["startFrame"] = clip.startFrame;
+        map["durationFrames"] = clip.durationFrames;
+        map["layer"] = clip.layer;
+        auto meta = Rina::Core::EffectRegistry::instance().getEffect(clip.type);
+        map["qmlSource"] = meta.qmlSource;
+        QVariantList effects;
+        for (auto *eff : clip.effects)
+            effects.append(QVariant::fromValue(eff));
+        map["effectModels"] = effects;
+        list.append(map);
+    }
+    return list;
+}
+
+SceneData *TimelineService::getCurrentScene() const {
+    auto it = std::find_if(m_scenes.begin(), m_scenes.end(), [this](auto s) { return s->id == m_currentSceneId; });
     return it != m_scenes.end() ? it->get() : nullptr;
 }
 
-const QList<ClipData>& TimelineService::clips() const { return getCurrentScene()->clips; }
-QList<ClipData>& TimelineService::clipsMutable() { return getCurrentScene()->clips; }
-QUndoStack* TimelineService::undoStack() const { return getCurrentScene()->undoStack; }
+const QList<ClipData> &TimelineService::clips() const { return getCurrentScene()->clips; }
+QList<ClipData> &TimelineService::clipsMutable() { return getCurrentScene()->clips; }
+QUndoStack *TimelineService::undoStack() const { return getCurrentScene()->undoStack; }
 
 void TimelineService::undo() { undoStack()->undo(); }
 void TimelineService::redo() { undoStack()->redo(); }
@@ -207,7 +253,7 @@ void TimelineService::createClipInternal(int clipId, const QString &type, int st
         layer = 0;
 
     auto overlaps = [](int s1, int d1, int s2, int d2) { return (s1 < (s2 + d2)) && (s2 < (s1 + d1)); };
-    auto& currentClips = clipsMutable();
+    auto &currentClips = clipsMutable();
     for (const auto &c : currentClips) {
         if (c.layer == layer && overlaps(startFrame, kDefaultClipDuration, c.startFrame, c.durationFrames)) {
             qWarning() << "Denied createClip: collision at layer/start" << layer << startFrame;
@@ -235,6 +281,7 @@ void TimelineService::createClipInternal(int clipId, const QString &type, int st
 
     currentClips.append(newClip);
     emit clipsChanged();
+    recalculateSceneDuration(m_currentSceneId);
     emit clipCreated(newClip.id, newClip.layer, newClip.startFrame, newClip.durationFrames, newClip.type);
 }
 
@@ -259,7 +306,7 @@ void TimelineService::updateClipInternal(int id, int layer, int startFrame, int 
         layer = 0;
 
     auto overlaps = [](int s1, int d1, int s2, int d2) { return (s1 < (s2 + d2)) && (s2 < (s1 + d1)); };
-    auto& currentClips = clipsMutable();
+    auto &currentClips = clipsMutable();
     for (const auto &c : currentClips) {
         if (c.id == id)
             continue;
@@ -271,6 +318,22 @@ void TimelineService::updateClipInternal(int id, int layer, int startFrame, int 
 
     for (auto &clip : currentClips) {
         if (clip.id == id) {
+            if (clip.type == "Scene") {
+                int targetSceneId = -1;
+                for (auto *eff : clip.effects) {
+                    if (eff->params().contains("sceneId")) {
+                        targetSceneId = eff->params()["sceneId"].toInt();
+                        break;
+                    }
+                }
+                if (targetSceneId != -1) {
+                    const SceneData *target = getScene(targetSceneId);
+                    if (target && duration > target->contentDuration) {
+                        duration = target->contentDuration;
+                    }
+                }
+            }
+
             if (clip.layer != layer || clip.startFrame != startFrame || clip.durationFrames != duration) {
                 clip.layer = layer;
                 clip.startFrame = startFrame;
@@ -285,6 +348,7 @@ void TimelineService::updateClipInternal(int id, int layer, int startFrame, int 
                     data["durationFrames"] = duration;
                     m_selection->select(id, data);
                 }
+                recalculateSceneDuration(m_currentSceneId);
             }
             break;
         }
@@ -317,13 +381,14 @@ void TimelineService::selectClip(int id) {
 }
 
 void TimelineService::deleteClip(int clipId) {
-    auto& currentClips = clipsMutable();
+    auto &currentClips = clipsMutable();
     auto it = std::find_if(currentClips.begin(), currentClips.end(), [clipId](const ClipData &c) { return c.id == clipId; });
     if (it != currentClips.end()) {
         for (auto *eff : it->effects)
             eff->deleteLater();
         currentClips.erase(it);
         emit clipsChanged();
+        recalculateSceneDuration(m_currentSceneId);
     }
 }
 
@@ -455,7 +520,7 @@ ClipData TimelineService::deepCopyClip(const ClipData &source) {
 }
 
 void TimelineService::copyClip(int clipId) {
-    auto& currentClips = clips();
+    auto &currentClips = clips();
     auto it = std::find_if(currentClips.begin(), currentClips.end(), [clipId](const ClipData &c) { return c.id == clipId; });
     if (it != currentClips.end())
         m_clipboard = std::make_unique<ClipData>(deepCopyClip(*it));
@@ -505,10 +570,13 @@ void TimelineService::splitClip(int clipId, int frame) {
 
 QVariantList TimelineService::scenes() const {
     QVariantList list;
-    for(const auto& s : m_scenes) {
+    for (const auto &s : m_scenes) {
         QVariantMap m;
         m["id"] = s->id;
         m["name"] = s->name;
+        m["width"] = s->width;
+        m["height"] = s->height;
+        m["contentDuration"] = s->contentDuration;
         list.append(m);
     }
     return list;

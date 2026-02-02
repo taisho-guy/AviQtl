@@ -1,4 +1,5 @@
 #include "effect_registry.hpp"
+#include <QCoreApplication>
 #include <QDebug>
 #include <QDir>
 #include <QDirIterator>
@@ -11,7 +12,7 @@
 namespace Rina::Core {
 
 void initializeStandardEffects() {
-    // 標準エフェクトも外部ファイル(JSON)から読み込むため、ここは空にする
+    // 外部JSON経由で読み込むため、何もしない
 }
 
 void EffectRegistry::loadEffectsFromDirectory(const QString &path) {
@@ -57,6 +58,14 @@ void EffectRegistry::loadEffectsFromDirectory(const QString &path) {
         meta.name = name;
         meta.category = category;
         meta.defaultParams = params;
+
+        // qrc: で始まる場合は絶対パスとしてそのまま使用
+        if (qmlFileName.startsWith("qrc:")) {
+            meta.qmlSource = qmlFileName;
+            registerEffect(meta);
+            qDebug().noquote() << "Loaded external effect:" << name << "(" << id << ") from" << file.fileName();
+            continue;
+        }
 
         // QMLファイルの絶対パスを解決 (JSONファイルからの相対パスとして処理)
         QFileInfo jsonInfo(file.fileName());

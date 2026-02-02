@@ -88,7 +88,7 @@ class EffectModel : public QObject {
         emit keyframeTracksChanged();
     }
 
-    QVariantMap evaluatedParams(int frame) const {
+    Q_INVOKABLE QVariantMap evaluatedParams(int frame) const {
         QVariantMap out = m_params;
         for (auto it = m_keyframeTracks.begin(); it != m_keyframeTracks.end(); ++it) {
             const QString paramName = it.key();

@@ -88,24 +88,10 @@ qt_add_qml_module(Rina
         ui/qml/common/BaseEffect.qml
         ui/qml/common/Logger.js
         ui/qml/common/NodeLoader.qml
+        ui/qml/common/SceneRenderer.qml
         
+        ui/qml/objects/SceneObject.qml
         # 拡張オブジェクト・エフェクトは外部ロードするため除外
-)
-
-# 拡張リソース（エフェクト、オブジェクト）を出力ディレクトリへコピー
-file(GLOB_RECURSE EFFECT_FILES "ui/qml/effects/*")
-file(GLOB_RECURSE OBJECT_FILES "ui/qml/objects/*")
-
-add_custom_command(TARGET Rina POST_BUILD
-    # Effectsディレクトリ
-    COMMAND ${CMAKE_COMMAND} -E rm -rf $<TARGET_FILE_DIR:Rina>/effects
-    COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:Rina>/effects
-    COMMAND ${CMAKE_COMMAND} -E copy ${EFFECT_FILES} $<TARGET_FILE_DIR:Rina>/effects
-    # Objectsディレクトリ（QMLとJSON両方をコピー）
-    COMMAND ${CMAKE_COMMAND} -E rm -rf $<TARGET_FILE_DIR:Rina>/objects
-    COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:Rina>/objects
-    COMMAND ${CMAKE_COMMAND} -E copy ${OBJECT_FILES} $<TARGET_FILE_DIR:Rina>/objects
-    COMMENT "Deploying extensible effects and objects..."
 )
 
 # リンク設定
