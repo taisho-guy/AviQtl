@@ -12,8 +12,7 @@ Common.RinaWindow {
     // 設定ウィンドウの参照を保持するプロパティ
     property var settingDialog: null
     // Constants from SettingsManager
-    readonly property var s: (SettingsManager && SettingsManager.settings) ? SettingsManager.settings : ({
-    })
+    readonly property var s: (SettingsManager && SettingsManager.settings) ? SettingsManager.settings : ({})
     readonly property int layerCount: s.timelineMaxLayers || 128
     readonly property int layerHeight: (SettingsManager && SettingsManager.settings.timelineTrackHeight) ? SettingsManager.settings.timelineTrackHeight : 30
     readonly property int clipHeight: layerHeight - 2
@@ -68,13 +67,8 @@ Common.RinaWindow {
             while (contextMenu.count > 0) {
                 var item = contextMenu.itemAt(0);
                 contextMenu.removeItem(item);
-                if (item && typeof item.destroy === 'function') {
-                    try {
-                        item.destroy();
-                    } catch (e) {
-                        console.log("Failed to destroy menu item: " + e);
-                    }
-                }
+                // Schedule for deletion to avoid issues with styles accessing the item during destruction.
+                Qt.callLater(item.destroy);
             }
             // コンテキストに応じて項目を追加
             if (contextType === "clip") {
@@ -142,7 +136,6 @@ Common.RinaWindow {
             var item = menuItemComp.createObject(null, {
                 "text": label + (shortcutText ? "\t" + shortcutText : ""),
                 "enabled": enabled,
-                "shortcut": shortcutText || ""
             });
             if (command)
                 item.triggered.connect(function() {
