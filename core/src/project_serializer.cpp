@@ -1,5 +1,6 @@
 #include "project_serializer.hpp"
 #include "effect_registry.hpp"
+#include "settings_manager.hpp"
 #include "project_service.hpp"
 #include "timeline_service.hpp"
 #include <QDebug>
@@ -87,15 +88,18 @@ bool ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
 
     // Project Settings
     bool hasSettings = root.contains("settings");
-    int pWidth = 1920, pHeight = 1080, pTotalFrames = 3600;
-    double pFps = 60.0;
+    auto defaults = Rina::Core::SettingsManager::instance().settings();
+    int pWidth = defaults.value("defaultProjectWidth", 1920).toInt();
+    int pHeight = defaults.value("defaultProjectHeight", 1080).toInt();
+    int pTotalFrames = defaults.value("defaultProjectFrames", 300).toInt();
+    double pFps = defaults.value("defaultProjectFps", 60.0).toDouble();
 
     if (hasSettings) {
         QJsonObject s = root["settings"].toObject();
-        pWidth = s["width"].toInt(1920);
-        pHeight = s["height"].toInt(1080);
-        pFps = s["fps"].toDouble(60.0);
-        pTotalFrames = s["totalFrames"].toInt(3600);
+        pWidth = s["width"].toInt(pWidth);
+        pHeight = s["height"].toInt(pHeight);
+        pFps = s["fps"].toDouble(pFps);
+        pTotalFrames = s["totalFrames"].toInt(pTotalFrames);
     }
 
     // Clips

@@ -140,8 +140,10 @@ ApplicationWindow {
         fileMode: Platform.FileDialog.SaveFile
         nameFilters: ["PNG Sequence (*.png)", "AVI Video (*.avi)"]
         onAccepted: {
-            if (TimelineBridge)
-                TimelineBridge.exportMedia(file, "image_sequence", 95);
+            if (TimelineBridge) {
+                var quality = (SettingsManager && SettingsManager.settings) ? (SettingsManager.settings.exportImageQuality || 95) : 95;
+                TimelineBridge.exportMedia(file, "image_sequence", quality);
+            }
 
         }
     }

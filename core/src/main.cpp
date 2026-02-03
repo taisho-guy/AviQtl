@@ -20,15 +20,21 @@ int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
     app.setApplicationName("Rina");
 
+    // 設定のロード(インスタンス取得時にloadされる)
+    auto settings = Rina::Core::SettingsManager::instance().settings();
+    int splashSize = settings.value("splashSize", 512).toInt();
+    int splashDuration = settings.value("splashDuration", 1000).toInt();
+    int startupDelay = settings.value("appStartupDelay", 1000).toInt();
+
     // --- スプラッシュスクリーンの表示 ---
     // SVGをQPixmapとして読み込み（高解像度対応のため大きめにレンダリング）
     QPixmap splashImg(":/assets/icon.svg");
     if (splashImg.isNull()) {
         qWarning() << "Failed to load splash image from :/assets/icon.svg";
-        splashImg = QPixmap(512, 512);
+        splashImg = QPixmap(splashSize, splashSize);
         splashImg.fill(Qt::black);
     } else {
-        splashImg = splashImg.scaled(512, 512, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        splashImg = splashImg.scaled(splashSize, splashSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     }
 
     // 最前面表示フラグを明示的に設定
@@ -92,10 +98,10 @@ int main(int argc, char *argv[]) {
     app.processEvents();
 
     // スプラッシュを確実に閉じる（ウィンドウ生成完了後、少し遅延）
-    QTimer::singleShot(800, [&splash]() { splash.close(); });
+    QTimer::singleShot(splashDuration, [&splash]() { splash.close(); });
 
     // CompositeViewをTimelineControllerに登録（GPU最適化のため）
-    QTimer::singleShot(1000, [&]() {
+    QTimer::singleShot(startupDelay, [&]() {
         QObject *bridge = engine.rootContext()->contextProperty("TimelineBridge").value<QObject *>();
         auto windows = engine.rootObjects();
 

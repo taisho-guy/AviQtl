@@ -1,14 +1,11 @@
 #include "timeline_service.hpp"
 #include "commands.hpp"
 #include "effect_registry.hpp"
+#include "settings_manager.hpp"
 #include "selection_service.hpp"
 #include <QDebug>
 
 namespace Rina::UI {
-
-namespace {
-constexpr int kDefaultClipDuration = 100;
-}
 
 // === Commands Implementation ===
 AddClipCommand::AddClipCommand(TimelineService *service, int clipId, const QString &type, int startFrame, int layer, const QString &clipName)
@@ -117,9 +114,10 @@ void TimelineService::createClipInternal(int clipId, const QString &type, int st
     if (layer < 0)
         layer = 0;
 
+    const int defaultDuration = Rina::Core::SettingsManager::instance().settings().value("defaultClipDuration", 100).toInt();
     auto overlaps = [](int s1, int d1, int s2, int d2) { return (s1 < (s2 + d2)) && (s2 < (s1 + d1)); };
     for (const auto &c : m_clips) {
-        if (c.layer == layer && overlaps(startFrame, kDefaultClipDuration, c.startFrame, c.durationFrames)) {
+        if (c.layer == layer && overlaps(startFrame, defaultDuration, c.startFrame, c.durationFrames)) {
             qWarning() << "クリップ作成を拒否: レイヤー" << layer << "の" << startFrame << "フレームで衝突が発生";
             return;
         }
@@ -129,7 +127,7 @@ void TimelineService::createClipInternal(int clipId, const QString &type, int st
     newClip.id = clipId;
     newClip.type = type;
     newClip.startFrame = startFrame;
-    newClip.durationFrames = kDefaultClipDuration;
+    newClip.durationFrames = defaultDuration;
     newClip.layer = layer;
 
     // Transformエフェクトは全クリップに必須

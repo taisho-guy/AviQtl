@@ -4,6 +4,7 @@
 #include "../../scripting/lua_host.hpp"
 #include "clip_model.hpp"
 #include "commands.hpp"
+#include "settings_manager.hpp"
 #include "effect_registry.hpp"
 #include "project_service.hpp"
 #include "selection_service.hpp"
@@ -356,6 +357,7 @@ bool TimelineController::exportImageSequence(const QString &dir, int quality) {
     if (baseName.endsWith(".png"))
         baseName.chop(4);
 
+    const int sequencePadding = Rina::Core::SettingsManager::instance().settings().value("exportSequencePadding", 6).toInt();
     for (int frame = 0; frame < totalFrames; ++frame) {
         m_transport->setCurrentFrame(frame);
 
@@ -376,7 +378,7 @@ bool TimelineController::exportImageSequence(const QString &dir, int quality) {
             renderedFrame = renderCurrentFrame();
         }
 
-        QString filename = QString("%1_%2.png").arg(baseName).arg(frame, 6, 10, QChar('0'));
+        QString filename = QString("%1_%2.png").arg(baseName).arg(frame, sequencePadding, 10, QChar('0'));
 
         if (!renderedFrame.save(filename, "PNG", quality)) {
             qWarning() << "フレームの保存に失敗しました:" << filename;

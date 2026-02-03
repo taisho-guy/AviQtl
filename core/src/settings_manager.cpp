@@ -17,8 +17,20 @@ SettingsManager &SettingsManager::instance() {
 
 SettingsManager::SettingsManager(QObject *parent) : QObject(parent) {
     // デフォルト設定
-    m_settings = {{"maxImageSize", "1920x1080"}, {"cacheSize", 4096},   {"undoCount", 32},     {"renderThreads", 0}, {"theme", "Dark"},       {"showConfirmOnClose", true},
-                  {"enableAutoBackup", true},    {"backupInterval", 5}, {"timeUnit", "frame"}, {"enableSnap", true}, {"splitAtCursor", true}, {"showLayerRange", true}};
+    m_settings = {
+        // System
+        {"maxImageSize", "1920x1080"}, {"cacheSize", 4096}, {"undoCount", 32}, {"renderThreads", 0}, {"theme", "Dark"}, {"showConfirmOnClose", true}, {"enableAutoBackup", true}, {"backupInterval", 5},
+        // Project Defaults
+        {"defaultProjectWidth", 1920}, {"defaultProjectHeight", 1080}, {"defaultProjectFps", 60.0}, {"defaultProjectFrames", 3600}, {"defaultClipDuration", 100},
+        // Timeline UI
+        {"timeUnit", "frame"}, {"enableSnap", true}, {"splitAtCursor", true}, {"showLayerRange", true}, {"timelineTrackHeight", 30}, {"timelineHeaderHeight", 28}, {"timelineRulerHeight", 32},
+        {"timelineMaxLayers", 128}, {"timelineLayerHeaderWidth", 60}, {"timelineRulerTimeWidth", 70}, {"timelineClipResizeHandleWidth", 10},
+        // App Behavior
+        {"splashDuration", 1000}, {"splashSize", 512}, {"appStartupDelay", 1000},
+        // Export
+        {"exportImageQuality", 95}, {"exportSequencePadding", 6},
+        // Misc
+        {"textPaddingMultiplier", 4.0}};
     load();
 }
 

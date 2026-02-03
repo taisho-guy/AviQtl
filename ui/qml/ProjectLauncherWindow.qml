@@ -21,6 +21,16 @@ Common.RinaWindow {
             for (var i = 0; i < Math.min(recent.length, 10); i++) {
                 recentModel.append(recent[i]);
             }
+
+            // 設定からデフォルト値を読み込む
+            widthField.text = SettingsManager.settings.defaultProjectWidth || "1920";
+            heightField.text = SettingsManager.settings.defaultProjectHeight || "1080";
+            fpsField.text = SettingsManager.settings.defaultProjectFps || "60";
+            framesField.text = SettingsManager.settings.defaultProjectFrames || "3600";
+            // テンプレートに応じて更新
+            if (templateCombo.currentIndex !== 4) { // Not "カスタム"
+                templateCombo.activated(templateCombo.currentIndex);
+            }
         }
     }
 
@@ -67,24 +77,21 @@ Common.RinaWindow {
                         onActivated: (index) => {
                             switch (index) {
                             case 0:
-                                widthField.text = "1920";
-                                heightField.text = "1080";
-                                fpsField.text = "30";
+                                widthField.text = "1920"; heightField.text = "1080"; fpsField.text = "30";
                                 break;
                             case 1:
-                                widthField.text = "1280";
-                                heightField.text = "720";
-                                fpsField.text = "30";
+                                widthField.text = "1280"; heightField.text = "720"; fpsField.text = "30";
                                 break;
                             case 2:
-                                widthField.text = "1920";
-                                heightField.text = "1080";
-                                fpsField.text = "60";
+                                widthField.text = "1920"; heightField.text = "1080"; fpsField.text = "60";
                                 break;
                             case 3:
-                                widthField.text = "3840";
-                                heightField.text = "2160";
-                                fpsField.text = "30";
+                                widthField.text = "3840"; heightField.text = "2160"; fpsField.text = "30";
+                                break;
+                            default: // カスタム
+                                widthField.text = SettingsManager.settings.defaultProjectWidth || "1920";
+                                heightField.text = SettingsManager.settings.defaultProjectHeight || "1080";
+                                fpsField.text = SettingsManager.settings.defaultProjectFps || "60";
                                 break;
                             }
                         }
@@ -97,7 +104,6 @@ Common.RinaWindow {
                     TextField {
                         id: widthField
 
-                        text: "1920"
                         Layout.fillWidth: true
 
                         validator: IntValidator {
@@ -114,7 +120,6 @@ Common.RinaWindow {
                     TextField {
                         id: heightField
 
-                        text: "1080"
                         Layout.fillWidth: true
 
                         validator: IntValidator {
@@ -131,7 +136,6 @@ Common.RinaWindow {
                     TextField {
                         id: fpsField
 
-                        text: "30"
                         Layout.fillWidth: true
 
                         validator: DoubleValidator {
@@ -148,7 +152,6 @@ Common.RinaWindow {
                     TextField {
                         id: framesField
 
-                        text: "3600"
                         Layout.fillWidth: true
 
                         validator: IntValidator {

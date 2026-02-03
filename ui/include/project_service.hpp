@@ -1,5 +1,6 @@
 #pragma once
 #include <QObject>
+#include "settings_manager.hpp"
 
 namespace Rina::UI {
 
@@ -10,7 +11,13 @@ class ProjectService : public QObject {
     Q_PROPERTY(double fps READ fps WRITE setFps NOTIFY fpsChanged)
     Q_PROPERTY(int totalFrames READ totalFrames WRITE setTotalFrames NOTIFY totalFramesChanged)
   public:
-    explicit ProjectService(QObject *parent = nullptr) : QObject(parent) {}
+    explicit ProjectService(QObject *parent = nullptr) : QObject(parent) {
+        const auto &settings = Rina::Core::SettingsManager::instance().settings();
+        m_width = settings.value("defaultProjectWidth", 1920).toInt();
+        m_height = settings.value("defaultProjectHeight", 1080).toInt();
+        m_fps = settings.value("defaultProjectFps", 60.0).toDouble();
+        m_totalFrames = settings.value("defaultProjectFrames", 3600).toInt();
+    }
 
     int width() const { return m_width; }
     void setWidth(int w) {
@@ -51,9 +58,9 @@ class ProjectService : public QObject {
     void totalFramesChanged();
 
   private:
-    int m_width = 1920;
-    int m_height = 1080;
-    double m_fps = 60.0;
-    int m_totalFrames = 3600;
+    int m_width;
+    int m_height;
+    double m_fps;
+    int m_totalFrames;
 };
 } // namespace Rina::UI

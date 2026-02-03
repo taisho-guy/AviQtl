@@ -11,15 +11,19 @@ Common.RinaWindow {
     property int selectedLayer: TimelineBridge ? TimelineBridge.selectedLayer : 0
     // 設定ウィンドウの参照を保持するプロパティ
     property var settingDialog: null
-    // Constants
-    readonly property int layerCount: 128
-    readonly property int layerHeight: 30
-    readonly property int clipHeight: 28
+    // Constants from SettingsManager
+    readonly property var s: (SettingsManager && SettingsManager.settings) ? SettingsManager.settings : ({})
+    readonly property int layerCount: s.timelineMaxLayers || 128
+    readonly property int layerHeight: (SettingsManager && SettingsManager.settings.timelineTrackHeight) ? SettingsManager.settings.timelineTrackHeight : 30
+    readonly property int clipHeight: layerHeight - 2
+    readonly property int rulerHeight: (SettingsManager && SettingsManager.settings.timelineRulerHeight) ? SettingsManager.settings.timelineRulerHeight : 32
+    readonly property int sceneTabHeight: (SettingsManager && SettingsManager.settings.timelineHeaderHeight) ? SettingsManager.settings.timelineHeaderHeight : 28
+    readonly property int layerHeaderWidth: s.timelineLayerHeaderWidth || 60
+    readonly property int rulerTimeWidth: s.timelineRulerTimeWidth || 70
+    readonly property int clipResizeHandleWidth: s.timelineClipResizeHandleWidth || 10
 
     function snapFrame(frame) {
         // SettingsManager.settings.enableSnap を尊重（未設定/未ロードでも安全に）
-        var s = (SettingsManager && SettingsManager.settings) ? SettingsManager.settings : ({
-        });
         if (s.enableSnap === false)
             return frame;
 
@@ -289,7 +293,7 @@ Common.RinaWindow {
                 footer: Button {
                     text: "+"
                     width: 30
-                    height: 28
+                    height: sceneTabHeight
                     flat: true
                     onClicked: TimelineBridge.createScene("Scene " + (sceneTabs.count + 1))
                 }
@@ -307,7 +311,7 @@ Common.RinaWindow {
             property var targetFlickable: null
 
             Layout.fillWidth: true
-            Layout.preferredHeight: 32
+            Layout.preferredHeight: rulerHeight
             color: palette.window
             z: 10
             Component.onCompleted: {
@@ -395,9 +399,9 @@ Common.RinaWindow {
                 }
 
                 Rectangle {
-                    anchors.left: parent.left
+                    anchors.left: parent.left // This is the time display on the ruler
                     anchors.top: parent.top
-                    width: 70
+                    width: rulerTimeWidth
                     height: parent.height
                     color: palette.base
                     border.color: palette.mid
@@ -418,15 +422,15 @@ Common.RinaWindow {
 
             MouseArea {
                 anchors.fill: parent
-                anchors.leftMargin: 70
+                anchors.leftMargin: rulerTimeWidth
                 onPressed: function(mouse) {
                     if (TimelineBridge && TimelineBridge.transport && rulerArea.targetFlickable)
-                        TimelineBridge.transport.currentFrame = pxToFrame(mouse.x + 70, rulerArea.targetFlickable.contentX);
+                        TimelineBridge.transport.currentFrame = pxToFrame(mouse.x, rulerArea.targetFlickable.contentX);
 
                 }
                 onPositionChanged: function(mouse) {
                     if (pressed && TimelineBridge && TimelineBridge.transport && rulerArea.targetFlickable)
-                        TimelineBridge.transport.currentFrame = pxToFrame(mouse.x + 70, rulerArea.targetFlickable.contentX);
+                        TimelineBridge.transport.currentFrame = pxToFrame(mouse.x, rulerArea.targetFlickable.contentX);
 
                 }
                 // ホイールでタイムライン縮尺を変更
@@ -454,7 +458,7 @@ Common.RinaWindow {
 
             // === 左側: レイヤーヘッダー (Layer 0-127) ===
             Rectangle {
-                Layout.preferredWidth: 60
+                Layout.preferredWidth: layerHeaderWidth
                 Layout.fillHeight: true
                 color: palette.window
                 z: 20 // タイムラインより手前に表示
@@ -476,7 +480,7 @@ Common.RinaWindow {
                             Rectangle {
                                 property bool isHidden: false // 仮の状態管理
 
-                                width: 60
+                                width: layerHeaderWidth
                                 height: layerHeight
                                 color: index % 2 === 0 ? palette.window : Qt.darker(palette.window, 1.1)
                                 border.color: palette.shadow
@@ -534,7 +538,7 @@ Common.RinaWindow {
                 Flickable {
                     id: timelineFlickable
 
-                    contentWidth: 2000
+                    contentWidth: Math.max(2000, (TimelineBridge && TimelineBridge.project) ? (TimelineBridge.project.totalFrames * (TimelineBridge.timelineScale || 1)) : 2000)
                     contentHeight: layerCount * layerHeight
                     interactive: true
                     // contentYが変更されたらヘッダーも同期
@@ -656,7 +660,7 @@ Common.RinaWindow {
                                 id: moveArea
 
                                 anchors.fill: parent
-                                anchors.rightMargin: 10 // リサイズ用エリアを空ける
+                                anchors.rightMargin: clipResizeHandleWidth // リサイズ用エリアを空ける
                                 // ドラッグ設定
                                 drag.target: clipRect
                                 drag.axis: Drag.XAndYAxis
@@ -694,7 +698,7 @@ Common.RinaWindow {
                             Rectangle {
                                 // 視覚的フィードバック（ホバー時に少し白くする等しても良い）
 
-                                width: 10
+                                width: clipResizeHandleWidth
                                 height: parent.height
                                 anchors.right: parent.right
                                 color: "transparent"
