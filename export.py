@@ -7,7 +7,7 @@ from datetime import datetime
 EXCLUDE_DIRS = {
     ".git", "__pycache__", "build", "dist", "node_modules",
     ".idea", ".vscode", "cmake-build-debug", "cmake-build-release",
-    "bin", "obj", "lib", ".build_tmp"
+    "bin", "obj", "lib", ".build_tmp", "assets"
 }
 
 EXCLUDE_FILES = {

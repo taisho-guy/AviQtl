@@ -1,6 +1,8 @@
 #include "timeline_controller.hpp"
 #include "../../core/include/project_serializer.hpp"
 #include "../../engine/timeline/ecs.hpp"
+#include <QImage>
+#include <QQuickWindow>
 #include "clip_model.hpp"
 #include "commands.hpp"
 #include "effect_registry.hpp"
@@ -34,6 +36,9 @@ TimelineController::TimelineController(QObject *parent) : QObject(parent) {
         updateActiveClipsList();
     });
     connect(m_timeline, &TimelineService::clipEffectsChanged, this, &TimelineController::clipEffectsChanged);
+    // シーン機能は未実装のためコメントアウト
+    // connect(m_timeline, &TimelineService::scenesChanged, this, &TimelineController::scenesChanged);
+    // connect(m_timeline, &TimelineService::currentSceneIdChanged, this, &TimelineController::currentSceneIdChanged);
 
     // SelectionService signals
     connect(m_selection, &SelectionService::selectedClipDataChanged, this, [this]() {
@@ -168,7 +173,10 @@ void TimelineController::updateClipActiveState() {
     }
 
     if (m_isClipActive) {
-        Rina::Engine::Timeline::ECS::instance().updateClipState(1, layer(), current - start);
+        int id = m_selection->selectedClipId();
+        if (id >= 0) {
+            Rina::Engine::Timeline::ECS::instance().updateClipState(id, layer(), current - start);
+        }
     }
 }
 
@@ -296,6 +304,105 @@ bool TimelineController::loadProject(const QString &fileUrl) {
     return result;
 }
 
+QVariantMap TimelineController::getProjectInfo(const QString &fileUrl) const {
+    QVariantMap result;
+    QString path = QUrl(fileUrl).toLocalFile();
+    if (path.isEmpty())
+        path = fileUrl;
+
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning() << "Failed to open project file for info:" << path;
+        return result;
+    }
+
+    QJsonParseError error;
+    QJsonDocument doc = QJsonDocument::fromJson(file.readAll(), &error);
+    if (doc.isNull() || !doc.isObject()) {
+        qWarning() << "Failed to parse project JSON:" << error.errorString();
+        return result;
+    }
+
+    QJsonObject root = doc.object();
+    if (root.contains("settings")) {
+        result = root["settings"].toObject().toVariantMap();
+    }
+
+    return result;
+}
+
+bool TimelineController::exportMedia(const QString &fileUrl, const QString &format, int quality) {
+    QString localPath = QUrl(fileUrl).toLocalFile();
+    if (localPath.isEmpty()) localPath = fileUrl;
+
+    if (format == "image_sequence") {
+        return exportImageSequence(localPath, quality);
+    } else if (format == "avi" || format == "mp4") {
+        return exportVideo(localPath, format, quality);
+    }
+
+    qWarning() << "Unsupported export format:" << format;
+    return false;
+}
+
+bool TimelineController::exportImageSequence(const QString &dir, int quality) {
+    int totalFrames = m_project->totalFrames();
+    // ディレクトリ作成等の処理は省略（ファイル名として渡される前提）
+    // 実際は連番ファイル名を生成するロジックが必要
+    QString baseName = dir;
+    if (baseName.endsWith(".png")) baseName.chop(4);
+
+    for (int frame = 0; frame < totalFrames; ++frame) {
+        m_transport->setCurrentFrame(frame);
+
+        // GPU→CPUコピーを最小化: QMLシーングラフから直接キャプチャ
+        QImage renderedFrame;
+
+        if (m_compositeView) {
+            // オプション1: QQuickWindow::grabWindow() (推奨)
+            // GPU→CPUコピーは1回のみ、効率的
+            renderedFrame = m_compositeView->grabWindow();
+
+            // プロジェクト解像度にリサイズ（必要な場合）
+            QSize targetSize(m_project->width(), m_project->height());
+            if (renderedFrame.size() != targetSize) {
+                renderedFrame = renderedFrame.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+            }
+        } else {
+            qWarning() << "CompositeView not set, using fallback rendering";
+            renderedFrame = renderCurrentFrame();
+        }
+
+        QString filename = QString("%1_%2.png").arg(baseName).arg(frame, 6, 10, QChar('0'));
+
+        if (!renderedFrame.save(filename, "PNG", quality)) {
+            qWarning() << "Failed to save frame:" << filename;
+            return false;
+        }
+
+        emit exportProgressChanged((frame * 100) / totalFrames);
+    }
+
+    emit exportProgressChanged(100);
+    return true;
+}
+
+bool TimelineController::exportVideo(const QString &path, const QString &format, int quality) {
+    qWarning() << "Video export not implemented yet (requires FFmpeg integration)";
+    return false;
+}
+
+QImage TimelineController::renderCurrentFrame() const {
+    // DEPRECATED: この実装はCPU転送を伴うため非効率
+    // 代わりに exportImageSequence() 内で m_compositeView->grabWindow() を使用
+
+    qWarning() << "[Performance Warning] CPU-based rendering fallback used. " << "Consider using GPU-accelerated grabWindow() instead.";
+    // フォールバック: 空画像を返す
+    QImage img(m_project->width(), m_project->height(), QImage::Format_ARGB32);
+    img.fill(Qt::black);
+    return img;
+}
+
 void TimelineController::selectClip(int id) {
     if (m_timeline)
         m_timeline->selectClip(id);
@@ -367,4 +474,31 @@ void TimelineController::copyClip(int clipId) { m_timeline->copyClip(clipId); }
 void TimelineController::cutClip(int clipId) { m_timeline->cutClip(clipId); }
 
 void TimelineController::pasteClip(int frame, int layer) { m_timeline->pasteClip(frame, layer); }
+
+// シーン機能は未実装のため、TimelineServiceへの呼び出しを削除してダミー値を返す
+QVariantList TimelineController::scenes() const {
+    return QVariantList();
+}
+
+int TimelineController::currentSceneId() const {
+    return 0;
+}
+
+void TimelineController::createScene(const QString &name) {
+    qWarning() << "createScene not implemented:" << name;
+}
+
+void TimelineController::removeScene(int sceneId) {
+    Q_UNUSED(sceneId);
+}
+
+void TimelineController::switchScene(int sceneId) {
+    Q_UNUSED(sceneId);
+}
+
+QVariantList TimelineController::getSceneClips(int sceneId) const {
+    Q_UNUSED(sceneId);
+    return QVariantList();
+}
+
 } // namespace Rina::UI

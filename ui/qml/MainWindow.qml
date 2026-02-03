@@ -123,6 +123,15 @@ ApplicationWindow {
         }
     }
 
+    Platform.FileDialog {
+        id: exportDialog
+        fileMode: Platform.FileDialog.SaveFile
+        nameFilters: ["PNG Sequence (*.png)", "AVI Video (*.avi)"]
+        onAccepted: {
+            if (TimelineBridge) TimelineBridge.exportMedia(file, "image_sequence", 95)
+        }
+    }
+
     CompositeView {
         anchors.fill: parent
     }
@@ -164,12 +173,13 @@ ApplicationWindow {
 
             MenuItem {
                 text: "メディア書き出し..."
-                enabled: false
+                enabled: TimelineBridge && TimelineBridge.project
+                onTriggered: exportDialog.open()
             }
 
             MenuItem {
                 text: "拡張編集AVI/BMP出力 (RGBA)"
-                enabled: false
+                enabled: TimelineBridge && TimelineBridge.project
             }
 
             MenuSeparator {
@@ -199,7 +209,12 @@ ApplicationWindow {
 
             MenuItem {
                 text: "エフェクトの追加..."
-                enabled: false
+                enabled: TimelineBridge && TimelineBridge.selection && TimelineBridge.selection.selectedClipId >= 0
+                onTriggered: {
+                    if (WindowManager) {
+                        WindowManager.objectSettingsVisible = true;
+                    }
+                }
             }
 
             MenuSeparator {
@@ -207,7 +222,11 @@ ApplicationWindow {
 
             MenuItem {
                 text: "全てのエフェクトをOFFにする"
-                enabled: false
+                enabled: TimelineBridge && TimelineBridge.selection && TimelineBridge.selection.selectedClipId >= 0
+                onTriggered: {
+                    // TODO: Implement disableAllEffects in TimelineBridge
+                    console.log("Disable all effects triggered")
+                }
             }
 
         }

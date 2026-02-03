@@ -253,8 +253,19 @@ Common.RinaWindow {
         title: "プロジェクトファイルを選択"
         nameFilters: ["Rina Project (*.rina)", "All files (*)"]
         onAccepted: {
-            // TODO: Load project from file and extract settings
-            root.projectSelected(fileDialog.selectedFile, 1920, 1080, 30, 3600);
+            var width = 1920;
+            var height = 1080;
+            var fps = 60.0;
+            var totalFrames = 3600;
+
+            if (TimelineBridge) {
+                var info = TimelineBridge.getProjectInfo(fileDialog.selectedFile);
+                if (info.width !== undefined) width = info.width;
+                if (info.height !== undefined) height = info.height;
+                if (info.fps !== undefined) fps = info.fps;
+                if (info.totalFrames !== undefined) totalFrames = info.totalFrames;
+            }
+            root.projectSelected(fileDialog.selectedFile, width, height, fps, totalFrames);
             root.close();
         }
     }

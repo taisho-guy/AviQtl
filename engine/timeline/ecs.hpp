@@ -7,5 +7,7 @@ class ECS {
 
     // UIからの操作を受け取るメソッド
     void updateClipState(int clipId, int layer, double time);
+    bool isRenderGraphDirty() const;
+    void markRenderGraphClean();
 };
 } // namespace Rina::Engine::Timeline

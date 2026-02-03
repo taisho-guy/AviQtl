@@ -94,5 +94,18 @@ int main(int argc, char *argv[]) {
     // スプラッシュを確実に閉じる（ウィンドウ生成完了後、少し遅延）
     QTimer::singleShot(800, [&splash]() { splash.close(); });
 
+    // CompositeViewをTimelineControllerに登録（GPU最適化のため）
+    QTimer::singleShot(1000, [&]() {
+        QObject *bridge = engine.rootContext()->contextProperty("TimelineBridge").value<QObject *>();
+        auto windows = engine.rootObjects();
+
+        for (auto *obj : windows) {
+            if (QQuickWindow *win = qobject_cast<QQuickWindow *>(obj)) {
+                QMetaObject::invokeMethod(bridge, "setCompositeView", Q_ARG(QQuickWindow *, win));
+                break;
+            }
+        }
+    });
+
     return app.exec();
 }
