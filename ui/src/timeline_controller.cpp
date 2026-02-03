@@ -1,6 +1,8 @@
 #include "timeline_controller.hpp"
 #include "../../core/include/project_serializer.hpp"
 #include "../../engine/timeline/ecs.hpp"
+#include "core/include/video_frame_store.hpp"
+#include "../../core/include/video_decoder.hpp"
 #include "../../scripting/lua_host.hpp"
 #include "clip_model.hpp"
 #include "commands.hpp"
@@ -17,7 +19,7 @@
 #include <QtGlobal>
 #include <algorithm>
 
-namespace Rina::UI {
+namespace Rina::UI { // namespace開始
 
 TimelineController::TimelineController(QObject *parent) : QObject(parent) {
     // サービスの初期化
@@ -35,6 +37,7 @@ TimelineController::TimelineController(QObject *parent) : QObject(parent) {
     connect(m_timeline, &TimelineService::clipsChanged, this, [this]() {
         rebuildClipIndex();
         emit clipsChanged();
+        updateVideoDecoders();
         updateActiveClipsList();
     });
     connect(m_timeline, &TimelineService::clipEffectsChanged, this, &TimelineController::clipEffectsChanged);
@@ -63,6 +66,15 @@ TimelineController::TimelineController(QObject *parent) : QObject(parent) {
             m_transport->setCurrentFrame(0);
         }
         updateClipActiveState();
+
+        // アクティブな動画クリップのフレームをシーク
+        for (auto it = m_videoDecoders.begin(); it != m_videoDecoders.end(); ++it) {
+            const auto *clip = m_timeline->findClipById(it.key());
+            if (clip && (nextFrame >= clip->startFrame && nextFrame < clip->startFrame + clip->durationFrames)) {
+                it.value()->seekToFrame(nextFrame - clip->startFrame, m_project->fps());
+            }
+        }
+
         updateActiveClipsList();
     });
 
@@ -283,6 +295,43 @@ void TimelineController::rebuildClipIndex() {
             m_maxDuration = clip.durationFrames;
     }
     std::sort(m_sortedClips.begin(), m_sortedClips.end(), [](const ClipData *a, const ClipData *b) { return a->startFrame < b->startFrame; });
+}
+
+void TimelineController::updateVideoDecoders() {
+    const auto &clips = m_timeline->clips();
+    QSet<int> currentVideoClipIds;
+
+    // 新規・既存の動画クリップをチェック
+    for (const auto &clip : clips) {
+        if (clip.type == "video") {
+            currentVideoClipIds.insert(clip.id);
+            if (!m_videoDecoders.contains(clip.id)) {
+                // 新しいデコーダーを作成
+                const auto *videoEffect = clip.effects.size() > 1 ? clip.effects[1] : nullptr;
+                if (videoEffect) {
+                    QUrl sourceUrl = QUrl::fromLocalFile(videoEffect->params().value("path").toString());
+                    if (sourceUrl.isValid() && !sourceUrl.isEmpty()) {
+                        if (!m_videoFrameStore) {
+                            qWarning() << "VideoFrameStore not set!";
+                            continue;
+                        }
+                        m_videoDecoders.insert(clip.id, new Rina::Core::VideoDecoder(clip.id, sourceUrl, m_videoFrameStore, this));
+                        qDebug() << "TimelineController: VideoDecoder created for clipId:" << clip.id << "source:" << sourceUrl;
+                    }
+                }
+            }
+        }
+    }
+
+    // 削除されたクリップのデコーダーをクリーンアップ
+    for (auto it = m_videoDecoders.begin(); it != m_videoDecoders.end();) {
+        if (!currentVideoClipIds.contains(it.key())) {
+            it.value()->deleteLater();
+            it = m_videoDecoders.erase(it);
+        } else {
+            ++it;
+        }
+    }
 }
 
 void TimelineController::log(const QString &msg) { qDebug() << "[TimelineBridge] " << msg; }

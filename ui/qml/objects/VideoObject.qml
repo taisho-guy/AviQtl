@@ -5,6 +5,14 @@ import "qrc:/qt/qml/Rina/ui/qml/common" as Common
 Common.BaseObject {
     id: base
 
+    // ObjectRendererが期待するプロパティをダミー定義（警告回避）
+    property var source: undefined
+    property var params: ({})
+    property var effectModel: null
+    property int frame: 0
+    property int width: containerItem.width
+    property int height: containerItem.height
+
     // ImageObjectやRectObjectと同じパターンに従う
     sourceItem: Item {
         id: containerItem

@@ -62,6 +62,7 @@ qt_add_executable(Rina
     ui/src/timeline_service.cpp
     core/src/video_frame_store.cpp
     core/src/video_frame_provider.cpp
+    core/src/video_decoder.cpp
     core/src/project_serializer.cpp
 )
 

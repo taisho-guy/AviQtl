@@ -93,6 +93,9 @@ int main(int argc, char *argv[]) {
     auto *timelineController = new Rina::UI::TimelineController(&app);
     engine.rootContext()->setContextProperty("TimelineBridge", timelineController);
 
+    // TimelineControllerにVideoFrameStoreを渡す
+    timelineController->setVideoFrameStore(videoFrameStore);
+
     // WindowManager をQMLから触れるように公開
     engine.rootContext()->setContextProperty("WindowManager", static_cast<QObject *>(&Rina::UI::WindowManager::instance()));
 

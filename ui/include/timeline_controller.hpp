@@ -23,8 +23,15 @@
 
 class QUndoStack;
 
-namespace Rina::UI {
+// Forward declarations for Rina::Core
+namespace Rina {
+namespace Core {
+class VideoDecoder;
+class VideoFrameStore;
+}
+}
 
+namespace Rina::UI { // 元のnamespaceに戻す
 class TimelineController : public QObject {
     Q_OBJECT
 
@@ -48,6 +55,8 @@ class TimelineController : public QObject {
 
   public:
     explicit TimelineController(QObject *parent = nullptr);
+
+    void setVideoFrameStore(Rina::Core::VideoFrameStore *store) { m_videoFrameStore = store; }
 
     // サービスアクセサ
     ProjectService *project() const { return m_project; }
@@ -143,6 +152,7 @@ class TimelineController : public QObject {
   private:
     void updateClipActiveState();
     void rebuildClipIndex();
+    void updateVideoDecoders();
 
     ClipModel *m_clipModel;       // アクティブなクリップをQMLに公開するためのモデル
     double m_timelineScale = 1.0; // タイムラインの表示倍率 (1.0 = 1フレームあたり1ピクセル)
@@ -156,8 +166,12 @@ class TimelineController : public QObject {
     SelectionService *m_selection;
     TimelineService *m_timeline;
 
+    // 動画デコーダーの管理
+    QHash<int, Core::VideoDecoder *> m_videoDecoders;
+    Core::VideoFrameStore *m_videoFrameStore = nullptr;
+
     // 最適化: O(log N) での検索のためのソート済みインデックス
-    std::vector<ClipData *> m_sortedClips;
+    QList<ClipData *> m_sortedClips; // vector<ClipData*> ではなく QList<ClipData>
     int m_maxDuration = 0;
 
     // エクスポート用ヘルパー
