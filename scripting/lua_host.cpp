@@ -1,73 +1,99 @@
+#include "lua_host.hpp"
 #include <iostream>
-#include <lua.hpp>
-#include <luajit.h> // LuaJIT固有ヘッダ
+#include <lua.hpp> // Standard Lua/LuaJIT header
 #include <vector>
+#include <cmath>
+#include <QDebug>
 
 namespace Rina::Scripting {
 
-// ユーザー操作対象の構造体 (16バイトアライメント推奨)
-struct ObjState {
-    float x, y, z;
-    float zoom;
-    float alpha;
-    // パディング等が必要な場合あり
-};
+LuaHost &LuaHost::instance() {
+    static LuaHost inst;
+    return inst;
+}
 
-class LuaHost {
-    lua_State *L;
-    // ObjState* currentObj; // unused-private-field warning: Removed unused
-    // pointer
+LuaHost::LuaHost() : L(nullptr) {
+    initialize();
+}
 
-  public:
-    LuaHost() {
-        L = luaL_newstate();
-        luaL_openlibs(L);
-        setupFFI();
+LuaHost::~LuaHost() {
+    if (L) {
+        lua_close(L);
+        L = nullptr;
+    }
+}
+
+void LuaHost::initialize() {
+    if (L)
+        lua_close(L);
+    L = luaL_newstate();
+    luaL_openlibs(L);
+
+    // Math shortcut (allow usage of sin() instead of math.sin())
+    lua_getglobal(L, "math");
+    lua_setglobal(L, "m");
+
+    // Define standard math functions in global scope for convenience
+    const char *math_shortcuts = "sin = math.sin; cos = math.cos; tan = math.tan; "
+                                 "abs = math.abs; max = math.max; min = math.min; "
+                                 "floor = math.floor; ceil = math.ceil; pi = math.pi; "
+                                 "random = math.random;";
+
+    if (luaL_dostring(L, math_shortcuts) != LUA_OK) {
+        qWarning() << "[LuaHost] Failed to init math shortcuts:" << lua_tostring(L, -1);
+        lua_pop(L, 1);
     }
 
-    ~LuaHost() { lua_close(L); }
+    qDebug() << "[LuaHost] Initialized LuaJIT engine";
+}
 
-    void setupFFI() {
-        // FFI定義
-        if (luaL_dostring(L, R"(
-                local ffi = require("ffi")
-                ffi.cdef[[
-                    typedef struct { float x, y, z; float zoom; float alpha; } ObjState;
-                    void print_debug(const char* msg);
-                ]]
-                
-                -- グローバルな obj テーブルを作成
-                -- __index, __newindex を使って C++ のポインタにアクセスする
-                _G.obj_ptr = nil -- C++側からセットされるポインタ
-                
-                local mt = {
-                    __index = function(t, k)
-                        if _G.obj_ptr == nil then return nil end
-                        return _G.obj_ptr[k]
-                    end,
-                    __newindex = function(t, k, v)
-                        if _G.obj_ptr ~= nil then
-                            _G.obj_ptr[k] = v
-                        end
-                    end
-                }
-                _G.obj = setmetatable({}, mt)
-            )")) {
-            std::cerr << "Lua Init Error: " << lua_tostring(L, -1) << std::endl;
-        }
+double LuaHost::evaluate(const std::string &expression, double time, int index, double currentValue) {
+    if (!L)
+        return currentValue;
+
+    // Reset stack
+    lua_settop(L, 0);
+
+    // 1. Set Context Variables
+    lua_pushnumber(L, time);
+    lua_setglobal(L, "time");
+
+    lua_pushnumber(L, time); // alias 't'
+    lua_setglobal(L, "t");
+
+    lua_pushinteger(L, index);
+    lua_setglobal(L, "index");
+
+    lua_pushnumber(L, currentValue);
+    lua_setglobal(L, "value");
+
+    lua_pushnumber(L, currentValue); // alias 'v'
+    lua_setglobal(L, "v");
+
+    // 2. Prepare Expression
+    // "return " + expression
+    std::string code = "return " + expression;
+
+    // 3. Execute
+    int ret = luaL_dostring(L, code.c_str());
+
+    if (ret != LUA_OK) {
+        const char *errMsg = lua_tostring(L, -1);
+        qWarning() << "[LuaHost] Error evaluating:" << QString::fromStdString(expression) << "->" << errMsg;
+        lua_pop(L, 1); // pop error
+        return currentValue; // Fallback
     }
 
-    // フレーム毎に呼ばれる
-    void executeScript(const std::string &script, ObjState *target) {
-        // ポインタをLua側に渡す (FFIキャスト)
-        // 注: 本来はlua_pushlightuserdata等を使うが、FFIなので文字列や専用APIで渡す
-
-        // 安全のためグローバル変数にキャストしたポインタをセットするヘルパー関数をLua側に用意しておき、
-        // それをC++から呼ぶのが定石
-
-        // 簡易実装: ポインタアドレスをLuaに渡してキャストさせる
-        lua_getglobal(L, "set_context");
-        // ... (詳細なバインディング実装が必要)
+    // 4. Get Result
+    if (!lua_isnumber(L, -1)) {
+        // Result is not a number (nil, string, etc.)
+        lua_pop(L, 1);
+        return currentValue;
     }
-};
+
+    double result = lua_tonumber(L, -1);
+    lua_pop(L, 1);
+    return result;
+}
+
 } // namespace Rina::Scripting
