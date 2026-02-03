@@ -5,6 +5,8 @@ import QtQuick.Layouts 1.15
 import "common" as Common
 
 Common.RinaWindow {
+    // Not "カスタム"
+
     id: root
 
     // プロジェクトが選択されたら他のウィンドウを開く
@@ -14,8 +16,6 @@ Common.RinaWindow {
     height: 500
     title: "Rina - プロジェクトランチャー"
     Component.onCompleted: {
-        // Not "カスタム"
-
         // 最近使ったプロジェクトをロード
         if (SettingsManager && SettingsManager.settings) {
             var recent = SettingsManager.settings.recentProjects || [];
