@@ -1,18 +1,18 @@
 #pragma once
+#include "../../scripting/lua_host.hpp"
 #include <QObject>
 #include <QQmlEngine>
 #include <QVariant>
 #include <QVariantList>
 #include <algorithm>
-#include <cmath>
 #include <array>
+#include <cmath>
 #include <functional>
 #include <map>
-#include "../../scripting/lua_host.hpp"
 
 namespace Rina::UI {
 
-// Easing function signature: double function(t, params)
+// イージング関数シグネチャ: double function(t, params)
 using EasingFunction = std::function<double(double, const std::array<double, 4> &)>;
 
 class EffectModel : public QObject {
@@ -156,18 +156,17 @@ class EffectModel : public QObject {
   private:
     // Static easing function registry
     static const std::map<QString, EasingFunction> &easingFunctions() {
-        static const std::map<QString, EasingFunction> funcs = {
-            {"linear", [](double t, const auto &) { return t; }},
-            {"ease_in", [](double t, const auto &) { return t * t; }},
-            {"ease_out", [](double t, const auto &) { return t * (2.0 - t); }},
-            {"ease_in_out", [](double t, const auto &) { return t < 0.5 ? 2.0 * t * t : -1.0 + (4.0 - 2.0 * t) * t; }},
-            {"bezier", [](double x, const auto &p) {
-                 // p = {x1, y1, x2, y2}
-                 const double t = solveBezierT(x, p[0], p[2]);
-                 const double one_minus_t = 1.0 - t;
-                 // y(t) = 3(1-t)^2 * t * y1 + 3(1-t) * t^2 * y2 + t^3
-                 return 3 * one_minus_t * one_minus_t * t * p[1] + 3 * one_minus_t * t * t * p[3] + t * t * t;
-             }}};
+        static const std::map<QString, EasingFunction> funcs = {{"linear", [](double t, const auto &) { return t; }},
+                                                                {"ease_in", [](double t, const auto &) { return t * t; }},
+                                                                {"ease_out", [](double t, const auto &) { return t * (2.0 - t); }},
+                                                                {"ease_in_out", [](double t, const auto &) { return t < 0.5 ? 2.0 * t * t : -1.0 + (4.0 - 2.0 * t) * t; }},
+                                                                {"bezier", [](double x, const auto &p) {
+                                                                     // p = {x1, y1, x2, y2} 制御点
+                                                                     const double t = solveBezierT(x, p[0], p[2]);
+                                                                     const double one_minus_t = 1.0 - t;
+                                                                     // y(t) = 3(1-t)^2 * t * y1 + 3(1-t) * t^2 * y2 + t^3  (3次ベジェ曲線のY座標)
+                                                                     return 3 * one_minus_t * one_minus_t * t * p[1] + 3 * one_minus_t * t * t * p[3] + t * t * t;
+                                                                 }}};
         return funcs;
     }
 
@@ -181,10 +180,7 @@ class EffectModel : public QObject {
         // ベジェ制御点の取得ヘルパー
         auto getBezierParams = [](const QVariant &v) -> std::array<double, 4> {
             const auto map = v.toMap();
-            return {
-                map.value("bz_x1", 0.33).toDouble(), map.value("bz_y1", 0.0).toDouble(),
-                map.value("bz_x2", 0.66).toDouble(), map.value("bz_y2", 1.0).toDouble()
-            };
+            return {map.value("bz_x1", 0.33).toDouble(), map.value("bz_y1", 0.0).toDouble(), map.value("bz_x2", 0.66).toDouble(), map.value("bz_y2", 1.0).toDouble()};
         };
 
         if (frame <= getFrame(track.front()))
@@ -235,8 +231,8 @@ class EffectModel : public QObject {
         if (x1 == x2 && x1 == x)
             return x;
 
-        double t = x; // 初期推定値
-        for (int i = 0; i < 8; ++i) { // 最大8回反復（十分な精度）
+        double t = x;                 // 初期推定値
+        for (int i = 0; i < 8; ++i) { // 最大8回反復（通常は十分な精度が得られる）
             const double one_minus_t = 1.0 - t;
             // x(t) = 3(1-t)^2 * t * x1 + 3(1-t) * t^2 * x2 + t^3
             const double current_x = 3 * one_minus_t * one_minus_t * t * x1 + 3 * one_minus_t * t * t * x2 + t * t * t;
@@ -259,6 +255,6 @@ class EffectModel : public QObject {
     QVariantMap m_params;
     QString m_qmlSource;
     QVariantMap m_uiDefinition;
-    QVariantMap m_keyframeTracks; // paramName -> QVariantList[{frame,value,interp}]
+    QVariantMap m_keyframeTracks; // パラメータ名 -> QVariantList[{frame,value,interp}]
 };
 } // namespace Rina::UI

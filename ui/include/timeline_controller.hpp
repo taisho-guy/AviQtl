@@ -28,12 +28,12 @@ namespace Rina::UI {
 class TimelineController : public QObject {
     Q_OBJECT
 
-    // === Services (Sub-Controllers) ===
+    // === サービス (サブコントローラ) ===
     Q_PROPERTY(Rina::UI::ProjectService *project READ project CONSTANT)
     Q_PROPERTY(Rina::UI::TransportService *transport READ transport CONSTANT)
     Q_PROPERTY(Rina::UI::SelectionService *selection READ selection CONSTANT)
 
-    // === Legacy / Facade Properties ===
+    // === レガシー / ファサードプロパティ ===
     Q_PROPERTY(double timelineScale READ timelineScale WRITE setTimelineScale NOTIFY timelineScaleChanged)
     Q_PROPERTY(int clipStartFrame READ clipStartFrame WRITE setClipStartFrame NOTIFY clipStartFrameChanged)
     Q_PROPERTY(int clipDurationFrames READ clipDurationFrames WRITE setClipDurationFrames NOTIFY clipDurationFramesChanged)
@@ -49,7 +49,7 @@ class TimelineController : public QObject {
   public:
     explicit TimelineController(QObject *parent = nullptr);
 
-    // Service Accessors
+    // サービスアクセサ
     ProjectService *project() const { return m_project; }
     TransportService *transport() const { return m_transport; }
     SelectionService *selection() const { return m_selection; }
@@ -57,7 +57,7 @@ class TimelineController : public QObject {
     double timelineScale() const;
     void setTimelineScale(double scale);
 
-    // Generic Property Operations
+    // 汎用プロパティ操作
     Q_INVOKABLE void setClipProperty(const QString &name, const QVariant &value);
     Q_INVOKABLE QVariant getClipProperty(const QString &name) const;
 
@@ -82,21 +82,21 @@ class TimelineController : public QObject {
     QVariantList clips() const;
     ClipModel *clipModel() const { return m_clipModel; }
 
-    // クリップの配置・長さを更新（ID指定）
+    // クリップの配置・長さを更新 (ID指定)
     Q_INVOKABLE void updateClip(int id, int layer, int startFrame, int duration);
 
     // エフェクト操作
     Q_INVOKABLE QList<QObject *> getClipEffectsModel(int clipId) const;
     Q_INVOKABLE void updateClipEffectParam(int clipId, int effectIndex, const QString &paramName, const QVariant &value);
 
-    // エフェクト追加・削除
+    // エフェクト・オブジェクトの利用可能リスト取得
     Q_INVOKABLE QVariantList getAvailableEffects() const;
     Q_INVOKABLE QVariantList getAvailableObjects() const;
     Q_INVOKABLE QVariantList getAvailableObjects(const QString &category) const;
     Q_INVOKABLE void addEffect(int clipId, const QString &effectId);
     Q_INVOKABLE void removeEffect(int clipId, int effectIndex);
 
-    // シーン操作
+    // シーン操作 (未実装)
     QVariantList scenes() const;
     int currentSceneId() const;
     Q_INVOKABLE void createScene(const QString &name);
@@ -104,7 +104,7 @@ class TimelineController : public QObject {
     Q_INVOKABLE void switchScene(int sceneId);
     Q_INVOKABLE QVariantList getSceneClips(int sceneId) const;
 
-    // プロジェクト保存・読み込み
+    // プロジェクトI/O
     Q_INVOKABLE bool saveProject(const QString &fileUrl);
     Q_INVOKABLE bool loadProject(const QString &fileUrl);
     Q_INVOKABLE QVariantMap getProjectInfo(const QString &fileUrl) const;
@@ -116,7 +116,7 @@ class TimelineController : public QObject {
     Q_INVOKABLE void undo();
     Q_INVOKABLE void redo();
 
-    // Clip manipulation commands for context menu
+    // コンテキストメニュー用のクリップ操作コマンド
     Q_INVOKABLE void deleteClip(int clipId);
     Q_INVOKABLE void splitClip(int clipId, int frame);
     Q_INVOKABLE void copyClip(int clipId);
@@ -131,8 +131,8 @@ class TimelineController : public QObject {
     void clipDurationFramesChanged();
     void layerChanged();
     void isClipActiveChanged();
-    void activeObjectTypeChanged();
-    void clipsChanged(); // 追加
+    void activeObjectTypeChanged(); // 選択中クリップの種別 (text, rectなど)
+    void clipsChanged();            // 追加
     void scenesChanged();
     void currentSceneIdChanged();
     void clipEffectsChanged(int clipId);
@@ -144,28 +144,32 @@ class TimelineController : public QObject {
     void updateClipActiveState();
     void rebuildClipIndex();
 
-    ClipModel *m_clipModel;
-    double m_timelineScale = 1.0; // 1 frame = 1 pixel (default)
+    ClipModel *m_clipModel;       // アクティブなクリップをQMLに公開するためのモデル
+    double m_timelineScale = 1.0; // タイムラインの表示倍率 (1.0 = 1フレームあたり1ピクセル)
 
     bool m_isClipActive = false;
     int m_selectedLayer = 0;
 
-    // Services
+    // 各機能を担当するサービス群
     ProjectService *m_project;
     TransportService *m_transport;
     SelectionService *m_selection;
     TimelineService *m_timeline;
 
-    // Optimization: Sorted index for O(log N) queries
+    // 最適化: O(log N) での検索のためのソート済みインデックス
     std::vector<ClipData *> m_sortedClips;
     int m_maxDuration = 0;
 
-    // Export helpers
+    // エクスポート用ヘルパー
     bool exportImageSequence(const QString &dir, int quality);
     bool exportVideo(const QString &path, const QString &format, int quality);
 
     // GPU→CPUコピーを避けるため、QQuickWindowから直接キャプチャ
     QImage renderCurrentFrame() const; // DEPRECATED: CPU転送発生
+
+    // デバッグ用: Luaスクリプト直接実行
+    Q_INVOKABLE QString debugRunLua(const QString &script);
+
     Q_INVOKABLE void setCompositeView(QQuickWindow *view) { m_compositeView = view; }
 
   private:

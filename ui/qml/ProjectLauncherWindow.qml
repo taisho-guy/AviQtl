@@ -12,7 +12,7 @@ Common.RinaWindow {
 
     width: 700
     height: 500
-    title: "Rina - プロジェクトを選択"
+    title: "Rina - プロジェクトランチャー"
     Component.onCompleted: {
         // 最近使ったプロジェクトをロード
         if (SettingsManager && SettingsManager.settings) {
@@ -63,7 +63,7 @@ Common.RinaWindow {
                         id: templateCombo
 
                         Layout.fillWidth: true
-                        model: ["HD 1080p 30fps", "HD 720p 30fps", "Full HD 1920x1080 60fps", "4K UHD 3840x2160 30fps", "カスタム"]
+                        model: ["HD 1080p (1920x1080, 30fps)", "HD 720p (1280x720, 30fps)", "Full HD (1920x1080, 60fps)", "4K UHD (3840x2160, 30fps)", "カスタム"]
                         onActivated: (index) => {
                             switch (index) {
                             case 0:
@@ -202,7 +202,7 @@ Common.RinaWindow {
                     spacing: 5
 
                     delegate: ItemDelegate {
-                        width: ListView.view.width
+                        width: recentListView.width
                         height: 60
                         onClicked: {
                             root.projectSelected(model.path, model.width, model.height, model.fps, model.totalFrames);
@@ -214,7 +214,7 @@ Common.RinaWindow {
                             anchors.margins: 5
 
                             Label {
-                                text: model.name || "Untitled Project"
+                                text: model.name || "無題のプロジェクト"
                                 font.bold: true
                             }
 
@@ -250,20 +250,27 @@ Common.RinaWindow {
     FileDialog {
         id: fileDialog
 
-        title: "プロジェクトファイルを選択"
+        title: "プロジェクトファイルを開く"
         nameFilters: ["Rina Project (*.rina)", "All files (*)"]
         onAccepted: {
             var width = 1920;
             var height = 1080;
-            var fps = 60.0;
+            var fps = 60;
             var totalFrames = 3600;
-
             if (TimelineBridge) {
                 var info = TimelineBridge.getProjectInfo(fileDialog.selectedFile);
-                if (info.width !== undefined) width = info.width;
-                if (info.height !== undefined) height = info.height;
-                if (info.fps !== undefined) fps = info.fps;
-                if (info.totalFrames !== undefined) totalFrames = info.totalFrames;
+                if (info.width !== undefined)
+                    width = info.width;
+
+                if (info.height !== undefined)
+                    height = info.height;
+
+                if (info.fps !== undefined)
+                    fps = info.fps;
+
+                if (info.totalFrames !== undefined)
+                    totalFrames = info.totalFrames;
+
             }
             root.projectSelected(fileDialog.selectedFile, width, height, fps, totalFrames);
             root.close();

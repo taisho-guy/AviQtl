@@ -1,8 +1,8 @@
 import QtQml 2.15
 import QtQuick 2.15
 import QtQuick3D 6.0
-import "common/Logger.js" as Logger
 import "common" as Common
+import "common/Logger.js" as Logger
 
 Item {
     id: root
@@ -175,17 +175,19 @@ Item {
                 // Qt.createComponent を使用して Node 派生クラスを動的に生成する
                 Common.NodeLoader {
                     id: objectContainer
+
                     source: model.qmlSource || ""
-                    
                     properties: {
                         "opacity": clipNode.pOpacity,
                         "clipId": model.id,
                         "clipStartFrame": model.startFrame,
                         "clipDurationFrames": model.durationFrames,
                         "renderHost": offscreenRenderHost,
-                        "clipParams": Qt.binding(function() { return model.params || {}; })
+                        "clipParams": Qt.binding(function() {
+                            return model.params || {
+                            };
+                        })
                     }
-                    
                     componentFactory: root.getCachedComponent
                 }
 

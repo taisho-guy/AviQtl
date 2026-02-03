@@ -8,49 +8,43 @@ Dialog {
     property var effectModel: null
     property string paramName: ""
     property int keyframeFrame: 0
-
     // Values to be returned on acceptance
     property string selectedType: "linear"
-    property var bezierParams: [0.33, 0.0, 0.66, 1.0]
+    property var bezierParams: [0.33, 0, 0.66, 1]
 
-    title: "Easing: " + paramName
+    title: "イージング設定: " + paramName
     modal: true
     standardButtons: Dialog.Ok | Dialog.Cancel
-
     onOpened: {
         if (!effectModel)
-            return;
+            return ;
+
         const tracks = effectModel.keyframeTracks;
         const track = tracks ? tracks[paramName] : undefined;
         if (!track)
-            return;
+            return ;
 
         for (let i = 0; i < track.length; i++) {
             if (track[i].frame === keyframeFrame) {
                 const kf = track[i];
                 selectedType = kf.interp || "linear";
                 typeCombo.currentIndex = typeCombo.model.indexOf(selectedType);
+                if (selectedType === "bezier")
+                    bezierParams = [kf.bz_x1 || 0.33, kf.bz_y1 || 0, kf.bz_x2 || 0.66, kf.bz_y2 || 1];
 
-                if (selectedType === "bezier") {
-                    bezierParams = [
-                        kf.bz_x1 || 0.33,
-                        kf.bz_y1 || 0.0,
-                        kf.bz_x2 || 0.66,
-                        kf.bz_y2 || 1.0
-                    ];
-                }
                 break;
             }
         }
     }
-
     onAccepted: {
         if (!effectModel)
-            return;
+            return ;
 
-        const kf = effectModel.keyframeTracks[paramName].find(k => k.frame === keyframeFrame);
+        const kf = effectModel.keyframeTracks[paramName].find((k) => {
+            return k.frame === keyframeFrame;
+        });
         if (!kf)
-            return;
+            return ;
 
         let options = {
             "interp": selectedType
@@ -68,29 +62,75 @@ Dialog {
         spacing: 15
 
         RowLayout {
-            Label { text: "Type:" }
+            Label {
+                text: "種類:"
+            }
+
             ComboBox {
                 id: typeCombo
+
                 model: effectModel ? effectModel.availableEasings() : ["linear"]
                 onCurrentTextChanged: root.selectedType = currentText
             }
+
         }
 
         GroupBox {
-            title: "Bézier Control Points"
+            title: "ベジェ制御点"
             enabled: root.selectedType === "bezier"
+
             GridLayout {
                 columns: 4
                 columnSpacing: 10
-                Label { text: "X1" }
-                TextField { id: bzX1; text: root.bezierParams[0].toFixed(2); onEditingFinished: root.bezierParams[0] = parseFloat(text) }
-                Label { text: "Y1" }
-                TextField { id: bzY1; text: root.bezierParams[1].toFixed(2); onEditingFinished: root.bezierParams[1] = parseFloat(text) }
-                Label { text: "X2" }
-                TextField { id: bzX2; text: root.bezierParams[2].toFixed(2); onEditingFinished: root.bezierParams[2] = parseFloat(text) }
-                Label { text: "Y2" }
-                TextField { id: bzY2; text: root.bezierParams[3].toFixed(2); onEditingFinished: root.bezierParams[3] = parseFloat(text) }
+
+                Label {
+                    text: "X1"
+                }
+
+                TextField {
+                    id: bzX1
+
+                    text: root.bezierParams[0].toFixed(2)
+                    onEditingFinished: root.bezierParams[0] = parseFloat(text)
+                }
+
+                Label {
+                    text: "Y1"
+                }
+
+                TextField {
+                    id: bzY1
+
+                    text: root.bezierParams[1].toFixed(2)
+                    onEditingFinished: root.bezierParams[1] = parseFloat(text)
+                }
+
+                Label {
+                    text: "X2"
+                }
+
+                TextField {
+                    id: bzX2
+
+                    text: root.bezierParams[2].toFixed(2)
+                    onEditingFinished: root.bezierParams[2] = parseFloat(text)
+                }
+
+                Label {
+                    text: "Y2"
+                }
+
+                TextField {
+                    id: bzY2
+
+                    text: root.bezierParams[3].toFixed(2)
+                    onEditingFinished: root.bezierParams[3] = parseFloat(text)
+                }
+
             }
+
         }
+
     }
+
 }

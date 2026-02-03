@@ -5,7 +5,7 @@ class ECS {
   public:
     static ECS &instance();
 
-    // UIからの操作を受け取るメソッド
+    // UIからの操作を受け取るメソッド群
     void updateClipState(int clipId, int layer, double time);
     bool isRenderGraphDirty() const;
     void markRenderGraphClean();

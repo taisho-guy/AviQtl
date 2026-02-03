@@ -11,43 +11,52 @@ constexpr int kDefaultClipDuration = 100;
 }
 
 // === Commands Implementation ===
-AddClipCommand::AddClipCommand(TimelineService *service, int clipId, const QString &type, int startFrame, int layer) : m_service(service), m_clipId(clipId), m_type(type), m_startFrame(startFrame), m_layer(layer) { setText("Add Clip"); }
+AddClipCommand::AddClipCommand(TimelineService *service, int clipId, const QString &type, int startFrame, int layer, const QString &clipName)
+    : m_service(service), m_clipId(clipId), m_type(type), m_startFrame(startFrame), m_layer(layer), m_clipName(clipName) {
+    setText(QString("クリップ追加: %1").arg(clipName));
+}
 void AddClipCommand::undo() { m_service->deleteClip(m_clipId); }
 void AddClipCommand::redo() { m_service->createClipInternal(m_clipId, m_type, m_startFrame, m_layer); }
 
-MoveClipCommand::MoveClipCommand(TimelineService *service, int clipId, int oldLayer, int oldStart, int oldDuration, int newLayer, int newStart, int newDuration)
-    : m_service(service), m_clipId(clipId), m_oldLayer(oldLayer), m_oldStart(oldStart), m_oldDuration(oldDuration), m_newLayer(newLayer), m_newStart(newStart), m_newDuration(newDuration) {
-    setText("Move Clip");
+MoveClipCommand::MoveClipCommand(TimelineService *service, int clipId, int oldLayer, int oldStart, int oldDuration, int newLayer, int newStart, int newDuration, const QString &clipName)
+    : m_service(service), m_clipId(clipId), m_oldLayer(oldLayer), m_oldStart(oldStart), m_oldDuration(oldDuration), m_newLayer(newLayer), m_newStart(newStart), m_newDuration(newDuration), m_clipName(clipName) {
+    setText(QString("クリップ移動: %1").arg(clipName));
 }
 void MoveClipCommand::undo() { m_service->updateClipInternal(m_clipId, m_oldLayer, m_oldStart, m_oldDuration); }
 void MoveClipCommand::redo() { m_service->updateClipInternal(m_clipId, m_newLayer, m_newStart, m_newDuration); }
 
-UpdateEffectParamCommand::UpdateEffectParamCommand(TimelineService *service, int clipId, int effectIndex, const QString &paramName, const QVariant &newValue, const QVariant &oldValue)
-    : m_service(service), m_clipId(clipId), m_effectIndex(effectIndex), m_paramName(paramName), m_newValue(newValue), m_oldValue(oldValue) {
-    setText("Update Param: " + paramName);
+UpdateEffectParamCommand::UpdateEffectParamCommand(TimelineService *service, int clipId, int effectIndex, const QString &paramName, const QVariant &newValue, const QVariant &oldValue, const QString &effectName)
+    : m_service(service), m_clipId(clipId), m_effectIndex(effectIndex), m_paramName(paramName), m_newValue(newValue), m_oldValue(oldValue), m_effectName(effectName) {
+    setText(QString("パラメータ変更: %1 - %2").arg(effectName).arg(paramName));
 }
 void UpdateEffectParamCommand::undo() { m_service->updateEffectParamInternal(m_clipId, m_effectIndex, m_paramName, m_oldValue); }
 void UpdateEffectParamCommand::redo() { m_service->updateEffectParamInternal(m_clipId, m_effectIndex, m_paramName, m_newValue); }
-int UpdateEffectParamCommand::id() const { return 1001; }
+int UpdateEffectParamCommand::id() const { return 1001; } // パラメータ変更コマンドのID
 bool UpdateEffectParamCommand::mergeWith(const QUndoCommand *other) {
     if (other->id() != id())
         return false;
     const auto *cmd = static_cast<const UpdateEffectParamCommand *>(other);
     if (cmd->m_clipId != m_clipId || cmd->m_effectIndex != m_effectIndex || cmd->m_paramName != m_paramName)
         return false;
-    m_newValue = cmd->m_newValue;
+    m_newValue = cmd->m_newValue; // 連続する同じパラメータの変更はマージする
     return true;
 }
 
-AddEffectCommand::AddEffectCommand(TimelineService *service, int clipId, const QString &effectId) : m_service(service), m_clipId(clipId), m_effectId(effectId) { setText("Add Effect"); }
+AddEffectCommand::AddEffectCommand(TimelineService *service, int clipId, const QString &effectId, const QString &effectName) : m_service(service), m_clipId(clipId), m_effectId(effectId), m_effectName(effectName) {
+    setText(QString("エフェクト追加: %1").arg(effectName));
+}
 void AddEffectCommand::undo() { m_service->removeEffectInternal(m_clipId, -1); }
 void AddEffectCommand::redo() { m_service->addEffectInternal(m_clipId, m_effectId); }
 
-RemoveEffectCommand::RemoveEffectCommand(TimelineService *service, int clipId, int effectIndex) : m_service(service), m_clipId(clipId), m_effectIndex(effectIndex) { setText("Remove Effect"); }
+RemoveEffectCommand::RemoveEffectCommand(TimelineService *service, int clipId, int effectIndex, const QString &effectName) : m_service(service), m_clipId(clipId), m_effectIndex(effectIndex), m_effectName(effectName) {
+    setText(QString("エフェクト削除: %1").arg(effectName));
+}
 void RemoveEffectCommand::redo() { m_service->removeEffectInternal(m_clipId, m_effectIndex); }
 void RemoveEffectCommand::undo() { m_service->restoreEffectInternal(m_clipId, m_removedEffectData); }
 
-SplitClipCommand::SplitClipCommand(TimelineService *service, int clipId, int frame) : m_service(service), m_originalClipId(clipId), m_newClipId(-1), m_splitFrame(frame), m_originalDuration(0) { setText("Split Clip"); }
+SplitClipCommand::SplitClipCommand(TimelineService *service, int clipId, int frame, const QString &clipName) : m_service(service), m_originalClipId(clipId), m_newClipId(-1), m_splitFrame(frame), m_originalDuration(0), m_clipName(clipName) {
+    setText(QString("クリップ分割: %1").arg(clipName));
+}
 
 void SplitClipCommand::undo() {
     m_service->deleteClip(m_newClipId);
@@ -94,7 +103,12 @@ void TimelineService::redo() { m_undoStack->redo(); }
 
 void TimelineService::createClip(const QString &type, int startFrame, int layer) {
     int id = m_nextClipId++;
-    m_undoStack->push(new AddClipCommand(this, id, type, startFrame, layer));
+    QString clipName = type;
+    auto meta = Rina::Core::EffectRegistry::instance().getEffect(type);
+    if (!meta.name.isEmpty()) {
+        clipName = meta.name;
+    }
+    m_undoStack->push(new AddClipCommand(this, id, type, startFrame, layer, clipName));
 }
 
 void TimelineService::createClipInternal(int clipId, const QString &type, int startFrame, int layer) {
@@ -106,7 +120,7 @@ void TimelineService::createClipInternal(int clipId, const QString &type, int st
     auto overlaps = [](int s1, int d1, int s2, int d2) { return (s1 < (s2 + d2)) && (s2 < (s1 + d1)); };
     for (const auto &c : m_clips) {
         if (c.layer == layer && overlaps(startFrame, kDefaultClipDuration, c.startFrame, c.durationFrames)) {
-            qWarning() << "Denied createClip: collision at layer/start" << layer << startFrame;
+            qWarning() << "クリップ作成を拒否: レイヤー" << layer << "の" << startFrame << "フレームで衝突が発生";
             return;
         }
     }
@@ -118,12 +132,12 @@ void TimelineService::createClipInternal(int clipId, const QString &type, int st
     newClip.durationFrames = kDefaultClipDuration;
     newClip.layer = layer;
 
-    // Transform
+    // Transformエフェクトは全クリップに必須
     auto *tm = new EffectModel("transform", "座標", {{"x", 0}, {"y", 0}, {"z", 0}, {"scale", 100.0}, {"aspect", 0.0}, {"rotationX", 0.0}, {"rotationY", 0.0}, {"rotationZ", 0.0}, {"opacity", 1.0}}, "", {}, this);
     connect(tm, &EffectModel::keyframeTracksChanged, this, &TimelineService::clipsChanged);
     newClip.effects.append(tm);
 
-    // Object
+    // オブジェクト固有のエフェクト (例: テキスト、図形)
     auto meta = Rina::Core::EffectRegistry::instance().getEffect(type);
     auto *cm = new EffectModel(meta.id.isEmpty() ? "unknown" : meta.id, meta.name.isEmpty() ? "Unknown" : meta.name, meta.defaultParams, meta.qmlSource, meta.uiDefinition, this);
     connect(cm, &EffectModel::keyframeTracksChanged, this, &TimelineService::clipsChanged);
@@ -135,15 +149,16 @@ void TimelineService::createClipInternal(int clipId, const QString &type, int st
 }
 
 void TimelineService::updateClip(int id, int layer, int startFrame, int duration) {
-    int oldLayer = 0, oldStart = 0, oldDur = 0;
-    for (const auto &c : m_clips)
-        if (c.id == id) {
-            oldLayer = c.layer;
-            oldStart = c.startFrame;
-            oldDur = c.durationFrames;
-            break;
-        }
-    m_undoStack->push(new MoveClipCommand(this, id, oldLayer, oldStart, oldDur, layer, startFrame, duration));
+    const auto *clip = findClipById(id);
+    if (!clip)
+        return;
+
+    QString clipName = clip->type;
+    if (!clip->effects.isEmpty()) {
+        clipName = clip->effects.first()->name();
+    }
+
+    m_undoStack->push(new MoveClipCommand(this, id, clip->layer, clip->startFrame, clip->durationFrames, layer, startFrame, duration, clipName));
 }
 
 void TimelineService::updateClipInternal(int id, int layer, int startFrame, int duration) {
@@ -159,7 +174,7 @@ void TimelineService::updateClipInternal(int id, int layer, int startFrame, int 
         if (c.id == id)
             continue;
         if (c.layer == layer && overlaps(startFrame, duration, c.startFrame, c.durationFrames)) {
-            qWarning() << "Denied updateClip: collision for clipId" << id;
+            qWarning() << "クリップ更新を拒否: クリップID" << id << "で衝突が発生";
             return;
         }
     }
@@ -171,8 +186,7 @@ void TimelineService::updateClipInternal(int id, int layer, int startFrame, int 
                 clip.startFrame = startFrame;
                 clip.durationFrames = duration;
                 emit clipsChanged();
-                // 選択中の場合、SelectionServiceの更新はController側でシグナルを受けて行うか、
-                // ここでSelectionServiceを叩く。今回はServiceにSelectionServiceを持たせているので更新する。
+                // 選択中のクリップであれば、SelectionServiceのキャッシュも更新する
                 if (m_selection->selectedClipId() == id) {
                     QVariantMap data = m_selection->selectedClipData();
                     data["layer"] = layer;
@@ -221,7 +235,13 @@ void TimelineService::deleteClip(int clipId) {
     }
 }
 
-void TimelineService::addEffect(int clipId, const QString &effectId) { m_undoStack->push(new AddEffectCommand(this, clipId, effectId)); }
+void TimelineService::addEffect(int clipId, const QString &effectId) {
+    auto meta = Rina::Core::EffectRegistry::instance().getEffect(effectId);
+    if (meta.id.isEmpty())
+        return;
+
+    m_undoStack->push(new AddEffectCommand(this, clipId, effectId, meta.name));
+}
 
 void TimelineService::addEffectInternal(int clipId, const QString &effectId) {
     for (auto &clip : m_clips) {
@@ -260,26 +280,22 @@ void TimelineService::restoreEffectInternal(int clipId, const QVariantMap &data)
 
 void TimelineService::removeEffect(int clipId, int effectIndex) {
     QVariantMap removedData;
-    bool found = false;
-    for (const auto &c : m_clips) {
-        if (c.id == clipId) {
-            int idx = (effectIndex == -1) ? c.effects.size() - 1 : effectIndex;
-            if (idx >= 0 && idx < c.effects.size()) {
-                auto *eff = c.effects[idx];
-                removedData["id"] = eff->id();
-                removedData["name"] = eff->name();
-                removedData["enabled"] = eff->isEnabled();
-                removedData["params"] = eff->params();
-                removedData["qmlSource"] = eff->qmlSource();
-                removedData["uiDefinition"] = eff->uiDefinition();
-                removedData["keyframes"] = eff->keyframeTracks();
-                found = true;
-                break;
-            }
-        }
-    }
-    if (found) {
-        auto *cmd = new RemoveEffectCommand(this, clipId, effectIndex);
+    const auto *clip = findClipById(clipId);
+    if (!clip)
+        return;
+
+    int idx = (effectIndex == -1) ? clip->effects.size() - 1 : effectIndex;
+    if (idx >= 0 && idx < clip->effects.size()) {
+        auto *eff = clip->effects[idx];
+        removedData["id"] = eff->id();
+        removedData["name"] = eff->name();
+        removedData["enabled"] = eff->isEnabled();
+        removedData["params"] = eff->params();
+        removedData["qmlSource"] = eff->qmlSource();
+        removedData["uiDefinition"] = eff->uiDefinition();
+        removedData["keyframes"] = eff->keyframeTracks();
+
+        auto *cmd = new RemoveEffectCommand(this, clipId, effectIndex, eff->name());
         cmd->setRemovedEffect(removedData);
         m_undoStack->push(cmd);
     }
@@ -291,6 +307,7 @@ void TimelineService::removeEffectInternal(int clipId, int effectIndex) {
             if (effectIndex == -1)
                 effectIndex = clip.effects.size() - 1;
             if (effectIndex >= 0 && effectIndex < clip.effects.size()) {
+                // Transformエフェクトは削除不可
                 if (effectIndex == 0 && clip.effects[0]->id() == "transform")
                     return;
                 auto *eff = clip.effects.takeAt(effectIndex);
@@ -305,13 +322,14 @@ void TimelineService::removeEffectInternal(int clipId, int effectIndex) {
 
 void TimelineService::updateEffectParam(int clipId, int effectIndex, const QString &paramName, const QVariant &value) {
     QVariant oldValue;
-    for (const auto &c : m_clips) {
-        if (c.id == clipId && effectIndex < c.effects.size()) {
-            oldValue = c.effects[effectIndex]->params().value(paramName);
-            break;
-        }
-    }
-    m_undoStack->push(new UpdateEffectParamCommand(this, clipId, effectIndex, paramName, value, oldValue));
+    const auto *clip = findClipById(clipId);
+    if (!clip || effectIndex >= clip->effects.size())
+        return;
+
+    const auto *eff = clip->effects[effectIndex];
+    oldValue = eff->params().value(paramName);
+
+    m_undoStack->push(new UpdateEffectParamCommand(this, clipId, effectIndex, paramName, value, oldValue, eff->name()));
 }
 
 void TimelineService::updateEffectParamInternal(int clipId, int effectIndex, const QString &paramName, const QVariant &value) {
@@ -329,6 +347,16 @@ void TimelineService::updateEffectParamInternal(int clipId, int effectIndex, con
             break;
         }
     }
+}
+
+ClipData *TimelineService::findClipById(int clipId) {
+    auto it = std::find_if(m_clips.begin(), m_clips.end(), [clipId](const ClipData &c) { return c.id == clipId; });
+    return (it != m_clips.end()) ? &(*it) : nullptr;
+}
+
+const ClipData *TimelineService::findClipById(int clipId) const {
+    auto it = std::find_if(m_clips.begin(), m_clips.end(), [clipId](const ClipData &c) { return c.id == clipId; });
+    return (it != m_clips.end()) ? &(*it) : nullptr;
 }
 
 ClipData TimelineService::deepCopyClip(const ClipData &source) {
@@ -372,7 +400,7 @@ void TimelineService::pasteClip(int frame, int layer) {
     auto overlaps = [](int s1, int d1, int s2, int d2) { return (s1 < (s2 + d2)) && (s2 < (s1 + d1)); };
     for (const auto &c : m_clips) {
         if (c.layer == layer && overlaps(frame, m_clipboard->durationFrames, c.startFrame, c.durationFrames)) {
-            qWarning() << "Denied pasteClip: collision at layer/start" << layer << frame;
+            qWarning() << "クリップ貼り付けを拒否: レイヤー" << layer << "の" << frame << "フレームで衝突が発生";
             return;
         }
     }
@@ -387,13 +415,15 @@ void TimelineService::pasteClip(int frame, int layer) {
 }
 
 void TimelineService::splitClip(int clipId, int frame) {
-    for (const auto &c : m_clips) {
-        if (c.id == clipId) {
-            if (frame > c.startFrame && frame < c.startFrame + c.durationFrames) {
-                m_undoStack->push(new SplitClipCommand(this, clipId, frame));
-            }
-            break;
-        }
+    const auto *clip = findClipById(clipId);
+    if (!clip)
+        return;
+
+    if (frame > clip->startFrame && frame < clip->startFrame + clip->durationFrames) {
+        QString clipName = clip->type;
+        if (!clip->effects.isEmpty())
+            clipName = clip->effects.first()->name();
+        m_undoStack->push(new SplitClipCommand(this, clipId, frame, clipName));
     }
 }
 } // namespace Rina::UI

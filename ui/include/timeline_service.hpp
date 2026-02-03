@@ -12,12 +12,12 @@ class TimelineService : public QObject {
   public:
     explicit TimelineService(SelectionService *selection, QObject *parent = nullptr);
 
-    // Data Access
+    // データアクセス
     const QList<ClipData> &clips() const { return m_clips; }
-    QList<ClipData> &clipsMutable() { return m_clips; } // For serializer
+    QList<ClipData> &clipsMutable() { return m_clips; } // シリアライザ用
     QUndoStack *undoStack() const { return m_undoStack; }
 
-    // Operations (Public API)
+    // 操作 (公開API)
     void undo();
     void redo();
     void createClip(const QString &type, int startFrame, int layer);
@@ -26,17 +26,17 @@ class TimelineService : public QObject {
     void splitClip(int clipId, int frame);
     void selectClip(int id);
 
-    // Effects
+    // エフェクト
     void addEffect(int clipId, const QString &effectId);
     void removeEffect(int clipId, int effectIndex);
     void updateEffectParam(int clipId, int effectIndex, const QString &paramName, const QVariant &value);
 
-    // Clipboard
+    // クリップボード
     void copyClip(int clipId);
     void cutClip(int clipId);
     void pasteClip(int frame, int layer);
 
-    // Internal (for Commands)
+    // 内部用 (コマンドから呼び出される)
     void createClipInternal(int clipId, const QString &type, int startFrame, int layer);
     void updateClipInternal(int id, int layer, int startFrame, int duration);
     void addEffectInternal(int clipId, const QString &effectId);
@@ -44,11 +44,13 @@ class TimelineService : public QObject {
     void restoreEffectInternal(int clipId, const QVariantMap &data);
     void removeEffectInternal(int clipId, int effectIndex);
     void updateEffectParamInternal(int clipId, int effectIndex, const QString &paramName, const QVariant &value);
+    ClipData *findClipById(int clipId);
+    const ClipData *findClipById(int clipId) const;
 
-    // Helpers
+    // ヘルパー
     ClipData deepCopyClip(const ClipData &source);
 
-    // State Management
+    // 状態管理
     int nextClipId() const { return m_nextClipId; }
     void setNextClipId(int id) { m_nextClipId = id; }
 

@@ -11,10 +11,10 @@ struct EffectMetadata {
     QString id;
     QString name;
     QString category;
-    QString qmlSource; // 将来用: QML実装やシェーダーへのパス
+    QString qmlSource; // QML実装へのパス
     QVariantMap defaultParams;
     QVariantMap uiDefinition; // UI定義（隠しパラメータやウィジェットタイプなど）
-    // 将来用: パラメータの型情報や範囲制限など
+    // TODO: パラメータの型情報や範囲制限などをここに追加
 };
 
 class EffectRegistry {
@@ -25,7 +25,7 @@ class EffectRegistry {
     }
 
     void registerEffect(const EffectMetadata &meta) {
-        // Legacy Fix: O(N) linear search replaced with O(1) hash lookup
+        // 登録順を維持するため、IDが新規の場合のみ順序リストに追加
         if (!m_effects.contains(meta.id)) {
             m_orderedIds.push_back(meta.id);
         }

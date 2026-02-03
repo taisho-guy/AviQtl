@@ -16,34 +16,34 @@ SettingsManager &SettingsManager::instance() {
 }
 
 SettingsManager::SettingsManager(QObject *parent) : QObject(parent) {
-    // Default settings
+    // デフォルト設定
     m_settings = {{"maxImageSize", "1920x1080"}, {"cacheSize", 4096},   {"undoCount", 32},     {"renderThreads", 0}, {"theme", "Dark"},       {"showConfirmOnClose", true},
                   {"enableAutoBackup", true},    {"backupInterval", 5}, {"timeUnit", "frame"}, {"enableSnap", true}, {"splitAtCursor", true}, {"showLayerRange", true}};
     load();
 }
 
 QString SettingsManager::getSettingsFilePath() const {
-    // 1. Try executable directory (Portable mode)
+    // 1. 実行ファイルディレクトリを試す (ポータブルモード)
     QString exeDir = QCoreApplication::applicationDirPath();
     QString portablePath = exeDir + "/rina_settings.json";
 
-    // Check if writable
+    // 書き込み可能かチェック
     QFile file(portablePath);
     if (file.exists()) {
         if (!file.permissions().testFlag(QFile::WriteUser)) {
-            qWarning() << "Portable settings file found but not writable. Falling back.";
+            qWarning() << "ポータブル設定ファイルが見つかりましたが、書き込み不可です。フォールバックします。";
         } else {
             return portablePath;
         }
     } else {
-        // If it doesn't exist, check directory permissions
+        // 存在しない場合は、ディレクトリの権限をチェック
         QFileInfo dirInfo(exeDir);
         if (dirInfo.isWritable()) {
             return portablePath;
         }
     }
 
-    // 2. Fallback to AppLocalDataLocation
+    // 2. AppLocalDataLocationにフォールバック
     QString dataPath = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
     QDir().mkpath(dataPath);
     return dataPath + "/settings.json";
@@ -53,7 +53,7 @@ void SettingsManager::setSettings(const QVariantMap &settings) {
     if (m_settings != settings) {
         m_settings = settings;
         emit settingsChanged();
-        save(); // Auto-save on change
+        save(); // 変更時に自動保存
     }
 }
 
@@ -61,19 +61,19 @@ void SettingsManager::load() {
     QString path = getSettingsFilePath();
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly)) {
-        qDebug() << "No settings file found at" << path << ", using defaults.";
+        qDebug() << "設定ファイルが見つかりません:" << path << "。デフォルト値を使用します。";
         return;
     }
 
     QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
     if (doc.isObject()) {
         QVariantMap loaded = doc.object().toVariantMap();
-        // Merge with defaults (preserve unknown keys, overwrite defaults)
+        // デフォルトとマージ (不明なキーは保持し、デフォルト値を上書き)
         for (auto it = loaded.begin(); it != loaded.end(); ++it) {
             m_settings[it.key()] = it.value();
         }
         emit settingsChanged();
-        qDebug() << "Settings loaded from" << path;
+        qDebug() << "設定をロードしました:" << path;
     }
 }
 
@@ -81,14 +81,14 @@ void SettingsManager::save() {
     QString path = getSettingsFilePath();
     QFile file(path);
     if (!file.open(QIODevice::WriteOnly)) {
-        qWarning() << "Failed to save settings to" << path;
+        qWarning() << "設定の保存に失敗しました:" << path;
         return;
     }
 
     QJsonObject obj = QJsonObject::fromVariantMap(m_settings);
     QJsonDocument doc(obj);
     file.write(doc.toJson());
-    qDebug() << "Settings saved to" << path;
+    qDebug() << "設定を保存しました:" << path;
 }
 
 } // namespace Rina::Core

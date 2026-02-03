@@ -25,7 +25,7 @@ Common.RinaWindow {
             Layout.fillWidth: true
 
             TabButton {
-                text: "基本"
+                text: "一般"
             }
 
             TabButton {
@@ -37,7 +37,7 @@ Common.RinaWindow {
             }
 
             TabButton {
-                text: "UI / 表示"
+                text: "外観"
             }
 
         }
@@ -47,7 +47,7 @@ Common.RinaWindow {
             Layout.fillHeight: true
             currentIndex: bar.currentIndex
 
-            // --- 基本設定 ---
+            // --- 一般設定 ---
             ScrollView {
                 contentWidth: availableWidth
 
@@ -55,17 +55,17 @@ Common.RinaWindow {
                     spacing: 15
 
                     GroupBox {
-                        title: "ファイル操作"
+                        title: "ファイル"
                         Layout.fillWidth: true
 
                         ColumnLayout {
                             CheckBox {
-                                text: "編集ファイルが閉じられる時に確認ダイアログを表示する"
+                                text: "終了時に確認ダイアログを表示する"
                                 checked: root.settings.showConfirmOnClose
                             }
 
                             CheckBox {
-                                text: "自動バックアップを有効にする"
+                                text: "自動バックアップを有効化"
                                 checked: root.settings.enableAutoBackup
                             }
 
@@ -73,7 +73,7 @@ Common.RinaWindow {
                                 enabled: root.settings.enableAutoBackup
 
                                 Label {
-                                    text: "バックアップ間隔 (分):"
+                                    text: "バックアップ間隔(分):"
                                 }
 
                                 SpinBox {
@@ -89,7 +89,7 @@ Common.RinaWindow {
                     }
 
                     GroupBox {
-                        title: "編集・操作"
+                        title: "編集"
                         Layout.fillWidth: true
 
                         ColumnLayout {
@@ -182,7 +182,7 @@ Common.RinaWindow {
                         ColumnLayout {
                             RowLayout {
                                 Label {
-                                    text: "レンダリングスレッド数:"
+                                    text: "レンダー スレッド数:"
                                 }
 
                                 SpinBox {
@@ -212,7 +212,7 @@ Common.RinaWindow {
                     spacing: 15
 
                     GroupBox {
-                        title: "表示・操作"
+                        title: "操作"
                         Layout.fillWidth: true
 
                         ColumnLayout {
@@ -283,7 +283,7 @@ Common.RinaWindow {
 
             }
 
-            // --- UI / 表示設定 ---
+            // --- 外観設定 ---
             ScrollView {
                 contentWidth: availableWidth
 
@@ -300,7 +300,7 @@ Common.RinaWindow {
                             }
 
                             ComboBox {
-                                model: ["Dark", "Light", "Rina Classic"]
+                                model: ["ダーク", "ライト", "クラシック"]
                             }
 
                         }
@@ -321,9 +321,10 @@ Common.RinaWindow {
                 text: "OK"
                 highlighted: true
                 onClicked: {
-                    if (SettingsManager)
+                    if (SettingsManager) {
                         SettingsManager.settings = root.settings;
-
+                        SettingsManager.save();
+                    }
                     if (SettingsManager)
                         SettingsManager.save();
 
@@ -339,7 +340,11 @@ Common.RinaWindow {
             Button {
                 text: "適用"
                 onClicked: {
-                } // Apply only
+                    if (SettingsManager) {
+                        SettingsManager.settings = root.settings;
+                        SettingsManager.save();
+                    }
+                }
             }
 
         }

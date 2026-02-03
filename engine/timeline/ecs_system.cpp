@@ -1,7 +1,7 @@
-// Entity Component System for Timeline Objects
+// タイムラインオブジェクトのためのエンティティ・コンポーネント・システム
 #include "ecs.hpp"
-#include <QString>
 #include <QDebug>
+#include <QString>
 #include <cmath>
 #include <iostream>
 #include <memory>
@@ -58,15 +58,11 @@ void ECS::updateClipState(int clipId, int layer, double time) {
         render->needsUpdate = true;
         g_ecsState.renderGraphDirty = true;
 
-        qDebug() << "[ECS] Clip" << clipId << "updated -> Layer:" << layer << "Time:" << time;
+        qDebug() << "[ECS] クリップ" << clipId << "を更新 -> レイヤー:" << layer << "時間:" << time;
     }
 }
 
-bool ECS::isRenderGraphDirty() const {
-    return g_ecsState.renderGraphDirty;
-}
+bool ECS::isRenderGraphDirty() const { return g_ecsState.renderGraphDirty; }
 
-void ECS::markRenderGraphClean() {
-    g_ecsState.renderGraphDirty = false;
-}
+void ECS::markRenderGraphClean() { g_ecsState.renderGraphDirty = false; }
 } // namespace Rina::Engine::Timeline

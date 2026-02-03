@@ -8,7 +8,7 @@ import "qrc:/qt/qml/Rina/ui/qml/common/Logger.js" as Logger
 Common.BaseObject {
     id: root
 
-    property string textContent: String(evalParam("text", "text", "Text"))
+    property string textContent: String(evalParam("text", "text", "テキスト"))
     property int textSize: Number(evalParam("text", "textSize", 64))
     property color color: evalParam("text", "color", "#ffffff")
     property real opacity: 1

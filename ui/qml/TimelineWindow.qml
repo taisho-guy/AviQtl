@@ -18,17 +18,19 @@ Common.RinaWindow {
 
     function snapFrame(frame) {
         // SettingsManager.settings.enableSnap を尊重（未設定/未ロードでも安全に）
-        var s = (SettingsManager && SettingsManager.settings) ? SettingsManager.settings : ({})
+        var s = (SettingsManager && SettingsManager.settings) ? SettingsManager.settings : ({
+        });
         if (s.enableSnap === false)
-            return frame
+            return frame;
+
         // 最小の実装：整数フレームに吸着（将来ここをグリッド/秒/拍に拡張）
-        return Math.max(0, Math.round(frame))
+        return Math.max(0, Math.round(frame));
     }
 
     function pxToFrame(px, contentX) {
-        var scale = (TimelineBridge ? TimelineBridge.timelineScale : 1)
-        var x = px + (contentX || 0)
-        return snapFrame(x / scale)
+        var scale = (TimelineBridge ? TimelineBridge.timelineScale : 1);
+        var x = px + (contentX || 0);
+        return snapFrame(x / scale);
     }
 
     width: 1280
@@ -71,20 +73,20 @@ Common.RinaWindow {
             }
             // コンテキストに応じて項目を追加
             if (contextType === "clip") {
-                contextMenu.addItem(createMenuItem("コピー", "clip.copy"));
-                contextMenu.addItem(createMenuItem("貼り付け", "edit.paste"));
-                contextMenu.addItem(createMenuItem("切り取り", "clip.cut"));
-                contextMenu.addItem(createMenuItem("分割", "clip.split"));
+                contextMenu.addItem(createMenuItem("コピー", "clip.copy", true, "Ctrl+C"));
+                contextMenu.addItem(createMenuItem("切り取り", "clip.cut", true, "Ctrl+X"));
+                contextMenu.addItem(createMenuItem("貼り付け", "edit.paste", true, "Ctrl+V"));
+                contextMenu.addItem(createMenuItem("分割", "clip.split", true, "S"));
                 addSeparator();
-                contextMenu.addItem(createMenuItem("削除", "clip.delete"));
+                contextMenu.addItem(createMenuItem("削除", "clip.delete", true, "Delete"));
                 addSeparator();
                 contextMenu.addItem(createMenuItem("グループ化", "clip.group", false));
-                contextMenu.addItem(createMenuItem("グループ化解除", "clip.ungroup", false));
+                contextMenu.addItem(createMenuItem("グループ解除", "clip.ungroup", false));
                 addSeparator();
                 contextMenu.addItem(createMenuItem("上のオブジェクトでクリッピング", "clip.clip_above", false));
-                contextMenu.addItem(createMenuItem("下のオブジェクトをクリッピング", "clip.clip_below", false));
+                contextMenu.addItem(createMenuItem("下のオブジェクトでクリップ", "clip.clip_below", false));
                 addSeparator();
-                var cameraItem = createMenuItem("カメラ制御の対象", "clip.camera_target");
+                var cameraItem = createMenuItem("カメラ制御の対象にする", "clip.camera_target");
                 cameraItem.checkable = true;
                 cameraItem.checked = false;
                 contextMenu.addItem(cameraItem);
@@ -111,7 +113,7 @@ Common.RinaWindow {
                 effectMenu.addItem(createMenuItem("カメラ制御", "add.camera_control", false));
                 contextMenu.addMenu(effectMenu);
                 addSeparator();
-                contextMenu.addItem(createMenuItem("貼り付け", "edit.paste"));
+                contextMenu.addItem(createMenuItem("貼り付け", "edit.paste", true, "Ctrl+V"));
                 contextMenu.addItem(createMenuItem("元に戻す", "edit.undo"));
                 addSeparator();
                 var bpmGrid = createMenuItem("BPMグリッドを表示", "view.bpm_grid");
@@ -130,11 +132,12 @@ Common.RinaWindow {
             }
         }
 
-        function createMenuItem(label, command, enabledFlag) {
+        function createMenuItem(label, command, enabledFlag, shortcutText) {
             var enabled = (enabledFlag !== undefined) ? enabledFlag : true;
             var item = menuItemComp.createObject(null, {
-                "text": label,
-                "enabled": enabled
+                "text": label + (shortcutText ? "\t" + shortcutText : ""),
+                "enabled": enabled,
+                "shortcut": shortcutText || ""
             });
             if (command)
                 item.triggered.connect(function() {
@@ -199,6 +202,7 @@ Common.RinaWindow {
 
             MenuItem {
             }
+            // MenuItemにはshortcutプロパティがないので、カスタムプロパティとして追加するか、表示を工夫する必要がある。今回は無視。
 
         }
 
@@ -223,6 +227,76 @@ Common.RinaWindow {
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
+
+        // ========================================
+        // シーンタブバー
+        // ========================================
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 28
+            color: palette.window
+            z: 50
+
+            ListView {
+                id: sceneTabs
+
+                anchors.fill: parent
+                orientation: ListView.Horizontal
+                model: TimelineBridge ? TimelineBridge.scenes : []
+
+                delegate: Rectangle {
+                    width: Math.max(100, tabText.implicitWidth + 30)
+                    height: parent.height
+                    color: (TimelineBridge && TimelineBridge.currentSceneId === modelData.id) ? palette.highlight : palette.button
+                    border.color: palette.mid
+                    border.width: 1
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: 4
+
+                        Text {
+                            id: tabText
+
+                            text: modelData.name
+                            color: palette.text
+                            Layout.fillWidth: true
+                            elide: Text.ElideRight
+                        }
+
+                        Text {
+                            text: "×"
+                            color: parent.hovered ? "red" : palette.text
+                            visible: modelData.id !== 0 // Rootは削除不可
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: TimelineBridge.removeScene(modelData.id)
+                            }
+
+                        }
+
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        z: -1
+                        onClicked: TimelineBridge.switchScene(modelData.id)
+                    }
+
+                }
+
+                footer: Button {
+                    text: "+"
+                    width: 30
+                    height: 28
+                    flat: true
+                    onClicked: TimelineBridge.createScene("Scene " + (sceneTabs.count + 1))
+                }
+
+            }
+
+        }
 
         // ========================================
         // タイムライン定規（AviUtl風）
@@ -346,14 +420,14 @@ Common.RinaWindow {
                 anchors.fill: parent
                 anchors.leftMargin: 70
                 onPressed: function(mouse) {
-                    if (TimelineBridge && TimelineBridge.transport && rulerArea.targetFlickable) {
+                    if (TimelineBridge && TimelineBridge.transport && rulerArea.targetFlickable)
                         TimelineBridge.transport.currentFrame = pxToFrame(mouse.x + 70, rulerArea.targetFlickable.contentX);
-                    }
+
                 }
                 onPositionChanged: function(mouse) {
-                    if (pressed && TimelineBridge && TimelineBridge.transport && rulerArea.targetFlickable) {
+                    if (pressed && TimelineBridge && TimelineBridge.transport && rulerArea.targetFlickable)
                         TimelineBridge.transport.currentFrame = pxToFrame(mouse.x + 70, rulerArea.targetFlickable.contentX);
-                    }
+
                 }
                 // ホイールでタイムライン縮尺を変更
                 onWheel: function(wheel) {
@@ -410,7 +484,7 @@ Common.RinaWindow {
 
                                 Text {
                                     anchors.centerIn: parent
-                                    text: "Layer " + (index + 1)
+                                    text: (index + 1)
                                     color: parent.isHidden ? palette.mid : palette.text
                                     font.pixelSize: 10
                                 }

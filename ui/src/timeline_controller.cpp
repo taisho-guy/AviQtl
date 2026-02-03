@@ -1,8 +1,7 @@
 #include "timeline_controller.hpp"
 #include "../../core/include/project_serializer.hpp"
 #include "../../engine/timeline/ecs.hpp"
-#include <QImage>
-#include <QQuickWindow>
+#include "../../scripting/lua_host.hpp"
 #include "clip_model.hpp"
 #include "commands.hpp"
 #include "effect_registry.hpp"
@@ -11,6 +10,8 @@
 #include "timeline_service.hpp"
 #include "transport_service.hpp"
 #include <QFile>
+#include <QImage>
+#include <QQuickWindow>
 #include <QUrl>
 #include <QtGlobal>
 #include <algorithm>
@@ -29,18 +30,18 @@ TimelineController::TimelineController(QObject *parent) : QObject(parent) {
 
     m_clipModel = new ClipModel(m_transport, this);
 
-    // TimelineService signals
+    // TimelineServiceからのシグナル接続
     connect(m_timeline, &TimelineService::clipsChanged, this, [this]() {
         rebuildClipIndex();
         emit clipsChanged();
         updateActiveClipsList();
     });
     connect(m_timeline, &TimelineService::clipEffectsChanged, this, &TimelineController::clipEffectsChanged);
-    // シーン機能は未実装のためコメントアウト
+    // TODO: シーン機能が実装されたら以下の接続を有効化
     // connect(m_timeline, &TimelineService::scenesChanged, this, &TimelineController::scenesChanged);
     // connect(m_timeline, &TimelineService::currentSceneIdChanged, this, &TimelineController::currentSceneIdChanged);
 
-    // SelectionService signals
+    // SelectionServiceからのシグナル接続
     connect(m_selection, &SelectionService::selectedClipDataChanged, this, [this]() {
         emit clipStartFrameChanged();
         emit clipDurationFramesChanged();
@@ -49,7 +50,7 @@ TimelineController::TimelineController(QObject *parent) : QObject(parent) {
         updateClipActiveState();
     });
 
-    // サービス間の連携
+    // サービス間の連携: FPSが変更されたら再生タイマーの間隔を更新
     connect(m_project, &ProjectService::fpsChanged, [this]() { m_transport->updateTimerInterval(m_project->fps()); });
     m_transport->updateTimerInterval(m_project->fps());
 
@@ -84,7 +85,7 @@ void TimelineController::setTimelineScale(double scale) {
     }
 }
 
-// --- Generic Property Accessors ---
+// --- 汎用プロパティアクセサ ---
 void TimelineController::setClipProperty(const QString &name, const QVariant &value) {
     int id = m_selection->selectedClipId();
     if (id == -1)
@@ -97,10 +98,10 @@ void TimelineController::setClipProperty(const QString &name, const QVariant &va
             bool found = false;
             for (int i = 0; i < clip.effects.size(); ++i) {
                 if (clip.effects[i]->params().contains(name)) {
-                    // コマンド経由で更新 (Undo/Redo対応)
+                    // Undo/Redo対応のためコマンド経由で更新
                     updateClipEffectParam(id, i, name, value);
 
-                    // Update cache (flattened view for current UI)
+                    // キャッシュ更新 (現在のUI用のフラット化されたビュー)
                     // updateClipEffectParam内でSelection更新も行われるため削除
 
                     // Update preview
@@ -112,6 +113,7 @@ void TimelineController::setClipProperty(const QString &name, const QVariant &va
 
             if (!found && !clip.effects.isEmpty()) {
                 int targetIndex = 0;
+                // "transform" に属するキーかどうかで対象エフェクトを振り分け
                 static const QStringList transformKeys = {"x", "y", "z", "scale", "aspect", "rotationX", "rotationY", "rotationZ", "opacity"};
                 if (!transformKeys.contains(name) && clip.effects.size() > 1) {
                     targetIndex = 1;
@@ -246,11 +248,11 @@ void TimelineController::updateActiveClipsList() {
     int current = m_transport->currentFrame();
     QList<ClipData *> active;
 
-    // Binary search for the first clip that starts AFTER current frame
+    // 現在フレームより後に開始する最初のクリップを二分探索で見つける
     auto it = std::upper_bound(m_sortedClips.begin(), m_sortedClips.end(), current, [](int frame, const ClipData *clip) { return frame < clip->startFrame; });
 
-    // Iterate backwards to find overlapping clips
-    // Stop if startFrame is too far back (cannot overlap even with maxDuration)
+    // 後方にイテレートして重なっているクリップを探す
+    // startFrameが遠すぎる場合は停止 (maxDurationを使っても重なり得ない)
     int threshold = current - m_maxDuration;
 
     for (auto i = it; i != m_sortedClips.begin();) {
@@ -263,7 +265,7 @@ void TimelineController::updateActiveClipsList() {
         }
     }
 
-    // レイヤー順（昇順）にソート
+    // レイヤー順 (昇順) にソート
     std::sort(active.begin(), active.end(), [](const ClipData *a, const ClipData *b) { return a->layer < b->layer; });
 
     m_clipModel->updateClips(active);
@@ -312,14 +314,14 @@ QVariantMap TimelineController::getProjectInfo(const QString &fileUrl) const {
 
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly)) {
-        qWarning() << "Failed to open project file for info:" << path;
+        qWarning() << "プロジェクトファイル情報取得のためファイルを開けませんでした:" << path;
         return result;
     }
 
     QJsonParseError error;
     QJsonDocument doc = QJsonDocument::fromJson(file.readAll(), &error);
     if (doc.isNull() || !doc.isObject()) {
-        qWarning() << "Failed to parse project JSON:" << error.errorString();
+        qWarning() << "プロジェクトJSONの解析に失敗しました:" << error.errorString();
         return result;
     }
 
@@ -333,7 +335,8 @@ QVariantMap TimelineController::getProjectInfo(const QString &fileUrl) const {
 
 bool TimelineController::exportMedia(const QString &fileUrl, const QString &format, int quality) {
     QString localPath = QUrl(fileUrl).toLocalFile();
-    if (localPath.isEmpty()) localPath = fileUrl;
+    if (localPath.isEmpty())
+        localPath = fileUrl;
 
     if (format == "image_sequence") {
         return exportImageSequence(localPath, quality);
@@ -341,7 +344,7 @@ bool TimelineController::exportMedia(const QString &fileUrl, const QString &form
         return exportVideo(localPath, format, quality);
     }
 
-    qWarning() << "Unsupported export format:" << format;
+    qWarning() << "サポートされていないエクスポート形式です:" << format;
     return false;
 }
 
@@ -350,7 +353,8 @@ bool TimelineController::exportImageSequence(const QString &dir, int quality) {
     // ディレクトリ作成等の処理は省略（ファイル名として渡される前提）
     // 実際は連番ファイル名を生成するロジックが必要
     QString baseName = dir;
-    if (baseName.endsWith(".png")) baseName.chop(4);
+    if (baseName.endsWith(".png"))
+        baseName.chop(4);
 
     for (int frame = 0; frame < totalFrames; ++frame) {
         m_transport->setCurrentFrame(frame);
@@ -359,8 +363,7 @@ bool TimelineController::exportImageSequence(const QString &dir, int quality) {
         QImage renderedFrame;
 
         if (m_compositeView) {
-            // オプション1: QQuickWindow::grabWindow() (推奨)
-            // GPU→CPUコピーは1回のみ、効率的
+            // QQuickWindow::grabWindow() (推奨): GPU→CPUコピーは1回のみで効率的
             renderedFrame = m_compositeView->grabWindow();
 
             // プロジェクト解像度にリサイズ（必要な場合）
@@ -369,14 +372,14 @@ bool TimelineController::exportImageSequence(const QString &dir, int quality) {
                 renderedFrame = renderedFrame.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
             }
         } else {
-            qWarning() << "CompositeView not set, using fallback rendering";
+            qWarning() << "CompositeViewが設定されていません。フォールバックレンダリングを使用します。";
             renderedFrame = renderCurrentFrame();
         }
 
         QString filename = QString("%1_%2.png").arg(baseName).arg(frame, 6, 10, QChar('0'));
 
         if (!renderedFrame.save(filename, "PNG", quality)) {
-            qWarning() << "Failed to save frame:" << filename;
+            qWarning() << "フレームの保存に失敗しました:" << filename;
             return false;
         }
 
@@ -388,15 +391,15 @@ bool TimelineController::exportImageSequence(const QString &dir, int quality) {
 }
 
 bool TimelineController::exportVideo(const QString &path, const QString &format, int quality) {
-    qWarning() << "Video export not implemented yet (requires FFmpeg integration)";
+    qWarning() << "ビデオエクスポートはまだ実装されていません (FFmpeg連携が必要です)";
     return false;
 }
 
 QImage TimelineController::renderCurrentFrame() const {
     // DEPRECATED: この実装はCPU転送を伴うため非効率
-    // 代わりに exportImageSequence() 内で m_compositeView->grabWindow() を使用
+    // 代わりに exportImageSequence() 内の m_compositeView->grabWindow() を使用すべき
 
-    qWarning() << "[Performance Warning] CPU-based rendering fallback used. " << "Consider using GPU-accelerated grabWindow() instead.";
+    qWarning() << "[パフォーマンス警告] CPUベースのフォールバックレンダリングが使用されました。" << "GPUアクセラレーションを利用するgrabWindow()の使用を検討してください。";
     // フォールバック: 空画像を返す
     QImage img(m_project->width(), m_project->height(), QImage::Format_ARGB32);
     img.fill(Qt::black);
@@ -408,7 +411,7 @@ void TimelineController::selectClip(int id) {
         m_timeline->selectClip(id);
 }
 
-// === エフェクト操作 (Internal実装) ===
+// === エフェクト・オブジェクト操作 ===
 
 QVariantList TimelineController::getAvailableEffects() const {
     QVariantList list;
@@ -476,29 +479,26 @@ void TimelineController::cutClip(int clipId) { m_timeline->cutClip(clipId); }
 void TimelineController::pasteClip(int frame, int layer) { m_timeline->pasteClip(frame, layer); }
 
 // シーン機能は未実装のため、TimelineServiceへの呼び出しを削除してダミー値を返す
-QVariantList TimelineController::scenes() const {
-    return QVariantList();
-}
+QVariantList TimelineController::scenes() const { return QVariantList(); }
 
-int TimelineController::currentSceneId() const {
-    return 0;
-}
+int TimelineController::currentSceneId() const { return 0; }
 
-void TimelineController::createScene(const QString &name) {
-    qWarning() << "createScene not implemented:" << name;
-}
+void TimelineController::createScene(const QString &name) { qWarning() << "createScene not implemented:" << name; }
 
-void TimelineController::removeScene(int sceneId) {
-    Q_UNUSED(sceneId);
-}
+void TimelineController::removeScene(int sceneId) { Q_UNUSED(sceneId); }
 
-void TimelineController::switchScene(int sceneId) {
-    Q_UNUSED(sceneId);
-}
+void TimelineController::switchScene(int sceneId) { Q_UNUSED(sceneId); }
 
 QVariantList TimelineController::getSceneClips(int sceneId) const {
     Q_UNUSED(sceneId);
     return QVariantList();
+}
+
+QString TimelineController::debugRunLua(const QString &script) {
+    // テスト用に time=currentFrame/fps, index=0, value=0 で実行
+    double time = m_transport ? m_transport->currentFrame() / m_project->fps() : 0.0;
+    double result = Rina::Scripting::LuaHost::instance().evaluate(script.toStdString(), time, 0, 0.0);
+    return QString::number(result);
 }
 
 } // namespace Rina::UI

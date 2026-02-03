@@ -26,7 +26,7 @@ void WindowManager::spawnInitialWindows(QQmlEngine *engine) {
     QObject *obj = component.create();
 
     if (component.status() != QQmlComponent::Ready) {
-        qWarning() << "Failed to create ProjectLauncherWindow:" << component.errorString();
+        qWarning() << "ProjectLauncherWindowの作成に失敗:" << component.errorString();
         // フォールバック: 従来通りすぐに編集画面を開く
         spawnWindow(engine, "main", "qrc:/qt/qml/Rina/ui/qml/MainWindow.qml", "Rina Main Preview", 640, 480, 100, 100, true);
         spawnWindow(engine, "timeline", "qrc:/qt/qml/Rina/ui/qml/TimelineWindow.qml", "Timeline", 1280, 300, 100, 600, true);
@@ -41,13 +41,13 @@ void WindowManager::spawnInitialWindows(QQmlEngine *engine) {
         registerWindow("launcher", launcher);
         launcher->show();
     } else {
-        qWarning() << "ProjectLauncherWindow is not a QQuickWindow";
+        qWarning() << "ProjectLauncherWindowはQQuickWindowではありません";
     }
 }
 
 void WindowManager::onProjectSelected(const QString &path, int w, int h, double fps, int frames) {
     if (!m_engine) {
-        qWarning() << "Engine not available in onProjectSelected";
+        qWarning() << "onProjectSelectedでQMLエンジンが利用できません";
         return;
     }
 
@@ -83,13 +83,13 @@ void WindowManager::onProjectSelected(const QString &path, int w, int h, double 
 
 void WindowManager::spawnWindow(QQmlEngine *engine, const QString &id, const QString &urlStr, const QString &title, int w, int h, int x, int y, bool visible) {
     if (!engine) {
-        qWarning() << "WindowManager: Engine is null!";
+        qWarning() << "WindowManager: QMLエンジンがnullです！";
         return;
     }
 
     QQmlComponent comp(engine, QUrl(urlStr));
     if (comp.status() != QQmlComponent::Ready) {
-        qWarning() << "QML Error (" << title << "):" << comp.errorString();
+        qWarning() << "QMLエラー (" << title << "):" << comp.errorString();
         return;
     }
 

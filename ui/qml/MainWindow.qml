@@ -12,7 +12,7 @@ ApplicationWindow {
     height: 360
     x: 100
     y: 100
-    title: "Rina Main"
+    title: "Rina - プレビュー"
     // 本体を閉じたら全部消す（＝全終了）
     onClosing: (close) => {
         if (WindowManager)
@@ -25,7 +25,7 @@ ApplicationWindow {
     Action {
         id: newAction
 
-        text: "新規作成"
+        text: "新規プロジェクト"
         shortcut: "Ctrl+N"
         onTriggered: console.log("New Project")
     }
@@ -33,7 +33,7 @@ ApplicationWindow {
     Action {
         id: saveAction
 
-        text: "プロジェクトを保存..."
+        text: "プロジェクトを名前を付けて保存..."
         shortcut: "Ctrl+S"
         onTriggered: saveDialog.open()
     }
@@ -41,7 +41,7 @@ ApplicationWindow {
     Action {
         id: loadAction
 
-        text: "プロジェクトを開く..."
+        text: "プロジェクトを開く"
         shortcut: "Ctrl+O"
         onTriggered: loadDialog.open()
     }
@@ -125,10 +125,13 @@ ApplicationWindow {
 
     Platform.FileDialog {
         id: exportDialog
+
         fileMode: Platform.FileDialog.SaveFile
         nameFilters: ["PNG Sequence (*.png)", "AVI Video (*.avi)"]
         onAccepted: {
-            if (TimelineBridge) TimelineBridge.exportMedia(file, "image_sequence", 95)
+            if (TimelineBridge)
+                TimelineBridge.exportMedia(file, "image_sequence", 95);
+
         }
     }
 
@@ -146,12 +149,10 @@ ApplicationWindow {
             title: "ファイル"
 
             MenuItem {
-                text: "編集プロジェクトを新規作成"
                 action: newAction
             }
 
             MenuItem {
-                text: "編集プロジェクトを開く"
                 action: loadAction
             }
 
@@ -159,20 +160,29 @@ ApplicationWindow {
             }
 
             MenuItem {
-                text: "編集プロジェクトの保存"
-                action: saveAction
+                // 現在のパスで保存
+
+                text: "プロジェクトの上書き保存"
+                shortcut: "Ctrl+S"
+                onTriggered: {
+                    // TODO: パスが未設定の場合はsaveDialogを開く
+                    if (TimelineBridge)
+                        TimelineBridge.saveProject("");
+
+                }
             }
 
             MenuItem {
-                text: "編集プロジェクトの上書き"
-                action: saveAction
+                text: "プロジェクトを名前を付けて保存..."
+                shortcut: "Ctrl+Shift+S"
+                onTriggered: saveDialog.open()
             }
 
             MenuSeparator {
             }
 
             MenuItem {
-                text: "メディア書き出し..."
+                text: "メディアのエクスポート..."
                 enabled: TimelineBridge && TimelineBridge.project
                 onTriggered: exportDialog.open()
             }
@@ -208,12 +218,12 @@ ApplicationWindow {
             title: "フィルタ"
 
             MenuItem {
-                text: "エフェクトの追加..."
+                text: "エフェクトの追加"
                 enabled: TimelineBridge && TimelineBridge.selection && TimelineBridge.selection.selectedClipId >= 0
                 onTriggered: {
-                    if (WindowManager) {
+                    if (WindowManager)
                         WindowManager.objectSettingsVisible = true;
-                    }
+
                 }
             }
 
@@ -225,7 +235,7 @@ ApplicationWindow {
                 enabled: TimelineBridge && TimelineBridge.selection && TimelineBridge.selection.selectedClipId >= 0
                 onTriggered: {
                     // TODO: Implement disableAllEffects in TimelineBridge
-                    console.log("Disable all effects triggered")
+                    console.log("Disable all effects triggered");
                 }
             }
 
@@ -307,9 +317,7 @@ ApplicationWindow {
                 title: "拡大表示"
 
                 MenuItem {
-                    text: "WindowSize"
-                    onTriggered: {
-                    }
+                    text: "ウィンドウサイズ"
                 }
 
                 MenuItem {

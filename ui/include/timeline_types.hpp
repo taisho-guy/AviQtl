@@ -14,7 +14,7 @@ class EffectModel; // 前方宣言
 struct Keyframe {
     int frame;
     float value;
-    int interpolationType; // 0: Linear
+    int interpolationType; // 0: 線形
 };
 
 struct ClipData {
@@ -24,7 +24,7 @@ struct ClipData {
     int durationFrames;
     int layer;
 
-    // ハイブリッド設計: エフェクトスタックのみポインタで保持 (振る舞いを持つため)
+    // ハイブリッド設計: EffectModelは振る舞いを持つためポインタで保持する
     QList<EffectModel *> effects;
 };
 } // namespace Rina::UI

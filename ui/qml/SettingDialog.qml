@@ -14,10 +14,6 @@ Common.RinaWindow {
     property var effectsModel: []
     property bool inputting: false // 入力中フラグ（バインディングループ防止用）
 
-    Component {
-        id: easingDialogComponent
-        Common.EasingConfigDialog {}
-    }
     function reload() {
         if (!TimelineBridge || !TimelineBridge.selection)
             return ;
@@ -38,6 +34,14 @@ Common.RinaWindow {
     x: 500
     y: 200
     Component.onCompleted: reload()
+
+    Component {
+        id: easingDialogComponent
+
+        Common.EasingConfigDialog {
+        }
+
+    }
 
     // 選択変更やデータ更新を監視してモデルをリロード
     Connections {
@@ -197,7 +201,9 @@ Common.RinaWindow {
                                 if (type === "constant")
                                     type = "linear";
 
-                                effectModel.setKeyframe(key, frame, val, { "interp": type });
+                                effectModel.setKeyframe(key, frame, val, {
+                                    "interp": type
+                                });
                             }
 
                             Layout.fillWidth: true
@@ -242,25 +248,25 @@ Common.RinaWindow {
                                         if (!isNumber)
                                             return key;
 
-                                        switch (interpType) {
-                                        case "linear":
-                                            return key + " (直)";
-                                        case "ease_in":
-                                            return key + " (加)";
-                                        case "ease_out":
-                                            return key + " (減)";
-                                        case "ease_in_out":
-                                            return key + " (加減)";
-                                        default:
-                                            return key;
-                                        }
+                                        var interpLabel = {
+                                            "linear": " (直線)",
+                                            "ease_in": " (加速)",
+                                            "ease_out": " (減速)",
+                                            "ease_in_out": " (加減速)",
+                                            "bezier": " (ベジェ)"
+                                        };
+                                        return key + (interpLabel[interpType] || "");
                                     }
                                     enabled: isNumber
                                     onClicked: {
                                         // Ensure at least one keyframe exists to edit
                                         if (!hasKeyframes) {
-                                            effectModel.setKeyframe(key, startFrame, startVal, { "interp": "linear" });
-                                            effectModel.setKeyframe(key, endFrame, endVal, { "interp": "linear" });
+                                            effectModel.setKeyframe(key, startFrame, startVal, {
+                                                "interp": "linear"
+                                            });
+                                            effectModel.setKeyframe(key, endFrame, endVal, {
+                                                "interp": "linear"
+                                            });
                                         }
                                         var dialog = easingDialogComponent.createObject(root, {
                                             "effectModel": effectModel,
@@ -269,7 +275,6 @@ Common.RinaWindow {
                                         });
                                         dialog.open();
                                     }
-
                                 }
 
                                 // --- Right Box (End) ---
@@ -373,7 +378,9 @@ Common.RinaWindow {
                                     onDoubleClicked: (mouse) => {
                                         let f = Math.round((mouse.x / width) * clipDur);
                                         let val = effectModel.evaluatedParam(key, f);
-                                        effectModel.setKeyframe(key, f, val, { "interp": "linear" });
+                                        effectModel.setKeyframe(key, f, val, {
+                                            "interp": "linear"
+                                        });
                                     }
                                 }
 

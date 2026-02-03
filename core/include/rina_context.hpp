@@ -8,7 +8,7 @@ class Context {
         static Context inst;
         return inst;
     }
-    // Dependency Injection containers will go here
+    // DI (Dependency Injection) コンテナはここに配置する
   private:
     Context() = default;
 };

@@ -51,12 +51,12 @@ bool ProjectSerializer::save(const QString &fileUrl, const UI::TimelineService *
     QFile file(path);
     if (!file.open(QIODevice::WriteOnly)) {
         if (errorMessage)
-            *errorMessage = "Failed to open file for writing: " + file.errorString();
+            *errorMessage = "書き込み用にファイルを開けませんでした: " + file.errorString();
         return false;
     }
     if (file.write(QJsonDocument(root).toJson()) == -1) {
         if (errorMessage)
-            *errorMessage = "Failed to write to file: " + file.errorString();
+            *errorMessage = "ファイルへの書き込みに失敗しました: " + file.errorString();
         return false;
     }
     return true;
@@ -70,7 +70,7 @@ bool ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly)) {
         if (errorMessage)
-            *errorMessage = "Failed to open file for reading: " + file.errorString();
+            *errorMessage = "読み込み用にファイルを開けませんでした: " + file.errorString();
         return false;
     }
 
@@ -78,12 +78,12 @@ bool ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
     QJsonDocument doc = QJsonDocument::fromJson(file.readAll(), &error);
     if (doc.isNull()) {
         if (errorMessage)
-            *errorMessage = "Failed to parse JSON: " + error.errorString();
+            *errorMessage = "JSONの解析に失敗しました: " + error.errorString();
         return false;
     }
     QJsonObject root = doc.object();
 
-    // --- 1. Parse into temporary structures (Validation Phase) ---
+    // --- 1. 一時的な構造体にパース (検証フェーズ) ---
 
     // Project Settings
     bool hasSettings = root.contains("settings");
@@ -122,7 +122,7 @@ bool ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
                     QString effId = eObj["id"].toString();
                     EffectMetadata meta = EffectRegistry::instance().getEffect(effId);
 
-                    // Create with NO parent initially to avoid auto-deletion by timeline if we abort
+                    // 中断した場合にタイムラインによって自動削除されるのを防ぐため、最初は親なしで作成
                     // メタデータからUI定義を取得、なければ空
                     auto *eff = new UI::EffectModel(effId, eObj["name"].toString(), eObj["params"].toObject().toVariantMap(), meta.qmlSource, meta.uiDefinition, nullptr);
                     eff->setEnabled(eObj["enabled"].toBool(true));
@@ -136,7 +136,7 @@ bool ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
         }
     }
 
-    // --- 2. Apply changes (Commit Phase) ---
+    // --- 2. 変更を適用 (コミットフェーズ) ---
 
     if (hasSettings) {
         project->setWidth(pWidth);
@@ -145,17 +145,17 @@ bool ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
         project->setTotalFrames(pTotalFrames);
     }
 
-    // Clear existing clips and delete their effects
+    // 既存のクリップをクリアし、そのエフェクトを削除
     auto &currentClips = timeline->clipsMutable();
     for (auto &clip : currentClips) {
         qDeleteAll(clip.effects);
     }
     currentClips.clear();
 
-    // Move temp clips to timeline
+    // 一時クリップをタイムラインに移動
     for (auto &clip : tempClips) {
         for (auto *eff : clip.effects) {
-            eff->setParent(timeline); // Transfer ownership
+            eff->setParent(timeline); // 所有権を移譲
             QObject::connect(eff, &UI::EffectModel::keyframeTracksChanged, timeline, &UI::TimelineService::clipsChanged);
         }
         currentClips.append(clip);

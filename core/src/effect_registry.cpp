@@ -1,4 +1,5 @@
 #include "effect_registry.hpp"
+#include <QCoreApplication>
 #include <QDebug>
 #include <QDir>
 #include <QDirIterator>
@@ -11,7 +12,7 @@
 namespace Rina::Core {
 
 void initializeStandardEffects() {
-    // 標準エフェクトも外部ファイル(JSON)から読み込むため、ここは空にする
+    // 外部JSON経由で読み込むため、何もしない
 }
 
 void EffectRegistry::loadEffectsFromDirectory(const QString &path) {
@@ -21,8 +22,7 @@ void EffectRegistry::loadEffectsFromDirectory(const QString &path) {
         return;
     }
 
-    // Optimization: Pre-allocate string list is unnecessary, use brace
-    // initialization
+    // *.json ファイルをサブディレクトリを含めて検索
     QDirIterator it(path, {"*.json"}, QDir::Files, QDirIterator::Subdirectories);
 
     while (it.hasNext()) {
@@ -31,7 +31,7 @@ void EffectRegistry::loadEffectsFromDirectory(const QString &path) {
             continue;
 
         QJsonParseError error;
-        // Optimization: Map file to memory for large JSONs
+        // 最適化: 巨大なJSONの場合はメモリマップドファイル化を検討
         const auto data = file.readAll();
         const auto doc = QJsonDocument::fromJson(data, &error);
 
@@ -46,9 +46,10 @@ void EffectRegistry::loadEffectsFromDirectory(const QString &path) {
         QString category = obj["category"].toString("filter");
         QString qmlFileName = obj["qml"].toString();
         QVariantMap params = obj["params"].toObject().toVariantMap();
+        QVariantMap uiDef = obj["ui"].toObject().toVariantMap();
 
         if (id.isEmpty() || name.isEmpty() || qmlFileName.isEmpty()) {
-            qWarning().noquote() << "Skipping incomplete effect definition in:" << file.fileName();
+            qWarning().noquote() << "不完全なエフェクト定義のためスキップ:" << file.fileName();
             continue;
         }
 
@@ -57,6 +58,15 @@ void EffectRegistry::loadEffectsFromDirectory(const QString &path) {
         meta.name = name;
         meta.category = category;
         meta.defaultParams = params;
+        meta.uiDefinition = uiDef;
+
+        // qrc: で始まる場合は絶対パスとしてそのまま使用
+        if (qmlFileName.startsWith("qrc:")) {
+            meta.qmlSource = qmlFileName;
+            registerEffect(meta);
+            qDebug().noquote() << "外部エフェクトをロード:" << name << "(" << id << ") from" << file.fileName();
+            continue;
+        }
 
         // QMLファイルの絶対パスを解決 (JSONファイルからの相対パスとして処理)
         QFileInfo jsonInfo(file.fileName());
@@ -65,12 +75,12 @@ void EffectRegistry::loadEffectsFromDirectory(const QString &path) {
         if (QFile::exists(absoluteQmlPath)) {
             meta.qmlSource = QUrl::fromLocalFile(absoluteQmlPath).toString();
         } else {
-            qWarning() << "Referenced QML file not found for effect" << id << ":" << absoluteQmlPath;
+            qWarning() << "参照されているQMLファイルが見つかりません。エフェクト:" << id << "パス:" << absoluteQmlPath;
             continue;
         }
 
         registerEffect(meta);
-        qDebug().noquote() << "Loaded external effect:" << name << "(" << id << ") from" << file.fileName();
+        qDebug().noquote() << "外部エフェクトをロード:" << name << "(" << id << ") from" << file.fileName();
     }
 }
 
