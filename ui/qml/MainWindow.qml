@@ -31,11 +31,13 @@ ApplicationWindow {
     }
 
     Action {
-        id: saveAction
+        id: saveProjectAction // プロジェクトの上書き保存用アクション
 
-        text: "プロジェクトを名前を付けて保存..."
+        text: "プロジェクトの上書き保存"
         shortcut: "Ctrl+S"
-        onTriggered: saveDialog.open()
+        onTriggered: {
+            if (TimelineBridge) TimelineBridge.saveProject("");
+        }
     }
 
     Action {
@@ -44,6 +46,15 @@ ApplicationWindow {
         text: "プロジェクトを開く"
         shortcut: "Ctrl+O"
         onTriggered: loadDialog.open()
+    }
+
+    Action {
+        id: saveAsProjectAction // プロジェクトを名前を付けて保存用アクション
+
+        text: "プロジェクトを名前を付けて保存..."
+        shortcut: "Ctrl+Shift+S"
+        onTriggered: saveDialog.open()
+
     }
 
     Action {
@@ -155,32 +166,16 @@ ApplicationWindow {
             MenuItem {
                 action: loadAction
             }
-
             MenuSeparator {
             }
-
             MenuItem {
-                // 現在のパスで保存
-
-                text: "プロジェクトの上書き保存"
-                shortcut: "Ctrl+S"
-                onTriggered: {
-                    // TODO: パスが未設定の場合はsaveDialogを開く
-                    if (TimelineBridge)
-                        TimelineBridge.saveProject("");
-
-                }
+                action: saveProjectAction
             }
-
             MenuItem {
-                text: "プロジェクトを名前を付けて保存..."
-                shortcut: "Ctrl+Shift+S"
-                onTriggered: saveDialog.open()
+                action: saveAsProjectAction
             }
-
             MenuSeparator {
             }
-
             MenuItem {
                 text: "メディアのエクスポート..."
                 enabled: TimelineBridge && TimelineBridge.project
@@ -192,8 +187,7 @@ ApplicationWindow {
                 enabled: TimelineBridge && TimelineBridge.project
             }
 
-            MenuSeparator {
-            }
+            MenuSeparator {}
 
             MenuItem {
                 text: "環境設定"
@@ -203,9 +197,7 @@ ApplicationWindow {
 
                 }
             }
-
-            MenuSeparator {
-            }
+            MenuSeparator {}
 
             MenuItem {
                 text: "終了"
