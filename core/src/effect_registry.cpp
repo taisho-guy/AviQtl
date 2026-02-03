@@ -49,7 +49,17 @@ void EffectRegistry::loadEffectsFromDirectory(const QString &path) {
         QVariantMap uiDef = obj["ui"].toObject().toVariantMap();
 
         if (id.isEmpty() || name.isEmpty() || qmlFileName.isEmpty()) {
-            qWarning().noquote() << "不完全なエフェクト定義のためスキップ:" << file.fileName();
+            qWarning().noquote() << "不完全なエフェクト定義のためスキップ:" << file.fileName() << "。";
+            if (id.isEmpty()) {
+                qWarning().noquote() << "  - 理由: 'id' フィールドが空または存在しません。";
+            }
+            if (name.isEmpty()) {
+                qWarning().noquote() << "  - 理由: 'name' フィールドが空または存在しません。";
+            }
+            if (qmlFileName.isEmpty()) {
+                qWarning().noquote() << "  - 理由: 'qml' フィールドが空または存在しません。";
+            }
+            qWarning().noquote() << "  - 解析されたJSON内容:" << doc.toJson(QJsonDocument::Compact);
             continue;
         }
 

@@ -1,0 +1,53 @@
+{
+    "id": "video",
+    "name": "動画",
+    "category": "object",
+    "qml": "VideoObject.qml",
+    "params": {
+        "path": "",
+        "opacity": 1.0,
+        "startOffset": 0,
+        "mute": false,
+        "volume": 1.0,
+        "scale": 100
+    },
+    "ui": {
+        "path": {
+            "label": "ファイルパス",
+            "type": "file",
+            "filter": "Video files (*.mp4 *.avi *.mkv *.mov *.webm);;All files (*)"
+        },
+        "opacity": {
+            "label": "不透明度",
+            "type": "slider",
+            "min": 0.0,
+            "max": 1.0,
+            "step": 0.01
+        },
+        "startOffset": {
+            "label": "開始位置(ms)",
+            "type": "slider",
+            "min": 0,
+            "max": 3600000,
+            "step": 100
+        },
+        "mute": {
+            "label": "ミュート",
+            "type": "bool"
+        },
+        "volume": {
+            "label": "音量",
+            "type": "slider",
+            "min": 0.0,
+            "max": 2.0,
+            "step": 0.1
+        },
+        "scale": {
+            "label": "拡大率(%)",
+            "type": "slider",
+            "min": 0,
+            "max": 2000,
+            "step": 1
+        }
+    }
+}

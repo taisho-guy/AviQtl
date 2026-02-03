@@ -59,13 +59,13 @@ else
 end
 
 # エフェクトディレクトリ
-if test -d "$TEMP_BUILD_DIR/effects"
-    cp -r "$TEMP_BUILD_DIR/effects" "$OUTPUT_DIR/"
+if test -d "$SOURCE_DIR/ui/qml/effects"
+    cp -r "$SOURCE_DIR/ui/qml/effects" "$OUTPUT_DIR/"
 end
 
 # オブジェクトディレクトリ
-if test -d "$TEMP_BUILD_DIR/objects"
-    cp -r "$TEMP_BUILD_DIR/objects" "$OUTPUT_DIR/"
+if test -d "$SOURCE_DIR/ui/qml/objects"
+    cp -r "$SOURCE_DIR/ui/qml/objects" "$OUTPUT_DIR/"
 end
 
 echo "=== ✅ ビルド完了 ==="

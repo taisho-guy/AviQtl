@@ -27,7 +27,7 @@ endif()
 # Qtの標準最適化を有効化
 set(QT_QML_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/qml)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick QuickControls2 WaylandClient Quick3D Widgets Core5Compat Sql Svg)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick QuickControls2 WaylandClient Quick3D Widgets Core5Compat Sql Svg Multimedia)
 find_package(Vulkan REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LUAJIT REQUIRED luajit)
@@ -96,10 +96,7 @@ target_link_libraries(Rina PRIVATE
     Qt6::Widgets
     Qt6::Svg
     Qt6::Core5Compat
+    Qt6::Multimedia
     Vulkan::Vulkan
     ${LUAJIT_LIBRARIES}
 )
-
-# エフェクト/オブジェクト定義JSONをビルドディレクトリにコピー
-file(COPY ui/qml/objects/ DESTINATION ${CMAKE_BINARY_DIR}/objects)
-file(COPY ui/qml/effects/ DESTINATION ${CMAKE_BINARY_DIR}/effects)
