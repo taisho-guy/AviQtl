@@ -119,13 +119,13 @@ void TimelineService::createClipInternal(int clipId, const QString &type, int st
     newClip.layer = layer;
 
     // Transform
-    auto *tm = new EffectModel("transform", "座標", {{"x", 0}, {"y", 0}, {"z", 0}, {"scale", 100.0}, {"aspect", 0.0}, {"rotationX", 0.0}, {"rotationY", 0.0}, {"rotationZ", 0.0}, {"opacity", 1.0}}, "", this);
+    auto *tm = new EffectModel("transform", "座標", {{"x", 0}, {"y", 0}, {"z", 0}, {"scale", 100.0}, {"aspect", 0.0}, {"rotationX", 0.0}, {"rotationY", 0.0}, {"rotationZ", 0.0}, {"opacity", 1.0}}, "", {}, this);
     connect(tm, &EffectModel::keyframeTracksChanged, this, &TimelineService::clipsChanged);
     newClip.effects.append(tm);
 
     // Object
     auto meta = Rina::Core::EffectRegistry::instance().getEffect(type);
-    auto *cm = new EffectModel(meta.id.isEmpty() ? "unknown" : meta.id, meta.name.isEmpty() ? "Unknown" : meta.name, meta.defaultParams, meta.qmlSource, this);
+    auto *cm = new EffectModel(meta.id.isEmpty() ? "unknown" : meta.id, meta.name.isEmpty() ? "Unknown" : meta.name, meta.defaultParams, meta.qmlSource, meta.uiDefinition, this);
     connect(cm, &EffectModel::keyframeTracksChanged, this, &TimelineService::clipsChanged);
     newClip.effects.append(cm);
 
@@ -227,7 +227,7 @@ void TimelineService::addEffectInternal(int clipId, const QString &effectId) {
     for (auto &clip : m_clips) {
         if (clip.id == clipId) {
             auto meta = Rina::Core::EffectRegistry::instance().getEffect(effectId);
-            auto *model = new EffectModel(meta.id, meta.name, meta.defaultParams, meta.qmlSource, this);
+            auto *model = new EffectModel(meta.id, meta.name, meta.defaultParams, meta.qmlSource, meta.uiDefinition, this);
             connect(model, &EffectModel::keyframeTracksChanged, this, &TimelineService::clipsChanged);
             clip.effects.append(model);
             emit clipsChanged();
@@ -246,7 +246,7 @@ void TimelineService::addClipDirectInternal(const ClipData &clip) {
 void TimelineService::restoreEffectInternal(int clipId, const QVariantMap &data) {
     for (auto &clip : m_clips) {
         if (clip.id == clipId) {
-            auto *model = new EffectModel(data["id"].toString(), data["name"].toString(), data["params"].toMap(), data["qmlSource"].toString(), this);
+            auto *model = new EffectModel(data["id"].toString(), data["name"].toString(), data["params"].toMap(), data["qmlSource"].toString(), data["uiDefinition"].toMap(), this);
             model->setEnabled(data["enabled"].toBool());
             model->setKeyframeTracks(data["keyframes"].toMap());
             connect(model, &EffectModel::keyframeTracksChanged, this, &TimelineService::clipsChanged);
@@ -271,6 +271,7 @@ void TimelineService::removeEffect(int clipId, int effectIndex) {
                 removedData["enabled"] = eff->isEnabled();
                 removedData["params"] = eff->params();
                 removedData["qmlSource"] = eff->qmlSource();
+                removedData["uiDefinition"] = eff->uiDefinition();
                 removedData["keyframes"] = eff->keyframeTracks();
                 found = true;
                 break;
@@ -339,7 +340,7 @@ ClipData TimelineService::deepCopyClip(const ClipData &source) {
     newClip.layer = source.layer;
 
     for (const auto *oldEffect : source.effects) {
-        auto *newEffect = new EffectModel(oldEffect->id(), oldEffect->name(), oldEffect->params(), oldEffect->qmlSource(), this);
+        auto *newEffect = new EffectModel(oldEffect->id(), oldEffect->name(), oldEffect->params(), oldEffect->qmlSource(), oldEffect->uiDefinition(), this);
         newEffect->setEnabled(oldEffect->isEnabled());
         newEffect->setKeyframeTracks(oldEffect->keyframeTracks());
         connect(newEffect, &EffectModel::keyframeTracksChanged, this, &TimelineService::clipsChanged);

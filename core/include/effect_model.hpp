@@ -5,6 +5,8 @@
 #include <QVariantList>
 #include <algorithm>
 #include <cmath>
+#include <array>
+#include "../../scripting/lua_host.hpp"
 
 namespace Rina::UI {
 
@@ -19,10 +21,11 @@ class EffectModel : public QObject {
     Q_PROPERTY(QVariantMap params READ params NOTIFY paramsChanged)
     Q_PROPERTY(QString qmlSource READ qmlSource CONSTANT)
     Q_PROPERTY(QVariantMap keyframeTracks READ keyframeTracks NOTIFY keyframeTracksChanged)
+    Q_PROPERTY(QVariantMap uiDefinition READ uiDefinition CONSTANT)
 
   public:
-    explicit EffectModel(const QString &id, const QString &name, const QVariantMap &params = {}, const QString &qmlSource = "", QObject *parent = nullptr)
-        : QObject(parent), m_id(id), m_name(name), m_enabled(true), m_params(params), m_qmlSource(qmlSource) {}
+    explicit EffectModel(const QString &id, const QString &name, const QVariantMap &params = {}, const QString &qmlSource = "", const QVariantMap &uiDef = {}, QObject *parent = nullptr)
+        : QObject(parent), m_id(id), m_name(name), m_enabled(true), m_params(params), m_qmlSource(qmlSource), m_uiDefinition(uiDef) {}
 
     QString id() const { return m_id; }
     QString name() const { return m_name; }
@@ -30,6 +33,7 @@ class EffectModel : public QObject {
     QVariantMap params() const { return m_params; }
     QString qmlSource() const { return m_qmlSource; }
     QVariantMap keyframeTracks() const { return m_keyframeTracks; }
+    QVariantMap uiDefinition() const { return m_uiDefinition; }
 
     void setEnabled(bool e) {
         if (m_enabled != e) {
@@ -88,7 +92,7 @@ class EffectModel : public QObject {
         emit keyframeTracksChanged();
     }
 
-    QVariantMap evaluatedParams(int frame) const {
+    Q_INVOKABLE QVariantMap evaluatedParams(int frame) const {
         QVariantMap out = m_params;
         for (auto it = m_keyframeTracks.begin(); it != m_keyframeTracks.end(); ++it) {
             const QString paramName = it.key();
@@ -102,7 +106,21 @@ class EffectModel : public QObject {
         if (!m_keyframeTracks.contains(paramName))
             return fallback;
 
-        return evaluateTrack(m_keyframeTracks.value(paramName).toList(), frame, fallback);
+        // 1. キーフレームからベース値を計算
+        QVariant baseValue = evaluateTrack(m_keyframeTracks.value(paramName).toList(), frame, fallback);
+
+        // 2. パラメータ自体がエクスプレッション定義かチェック（簡易実装）
+        QString strVal = m_params.value(paramName).toString();
+        if (strVal.startsWith("=")) {
+            // "=time*100" -> "time*100"
+            std::string expr = strVal.mid(1).toStdString();
+            // time: current frame / fps (needs context, passing frame/60.0 for now)
+            // TODO: 正確なFPSを取得するにはContextが必要
+            double time = frame / 60.0;
+            return Rina::Scripting::LuaHost::instance().evaluate(expr, time, 0, baseValue.toDouble());
+        }
+
+        return baseValue;
     }
 
     void setKeyframeTracks(const QVariantMap &tracks) {
@@ -136,6 +154,14 @@ class EffectModel : public QObject {
         auto getFrame = [](const QVariant &v) { return v.toMap().value("frame").toInt(); };
         auto getValue = [](const QVariant &v) { return v.toMap().value("value"); };
         auto getInterp = [](const QVariant &v) { return v.toMap().value("interp").toString(); };
+        // ベジェ制御点の取得ヘルパー
+        auto getBezierParams = [](const QVariant &v) -> std::array<double, 4> {
+            const auto map = v.toMap();
+            return {
+                map.value("bz_x1", 0.33).toDouble(), map.value("bz_y1", 0.0).toDouble(),
+                map.value("bz_x2", 0.66).toDouble(), map.value("bz_y2", 1.0).toDouble()
+            };
+        };
 
         if (frame <= getFrame(track.front()))
             return getValue(track.front());
@@ -162,16 +188,48 @@ class EffectModel : public QObject {
             const double a = v0.toDouble();
             const double b = v1.toDouble();
             const double tRaw = (frame - f0) / double(f1 - f0);
-            const double t = applyInterpolation(stringToInterpolationType(getInterp(track[i])), tRaw);
+
+            // 補間タイプとパラメータを渡す
+            const auto interpType = stringToInterpolationType(getInterp(track[i]));
+            std::array<double, 4> params = {0, 0, 0, 0};
+            if (interpType == InterpolationType::Bezier) {
+                params = getBezierParams(track[i]);
+            }
+
+            const double t = applyInterpolation(interpType, tRaw, params);
             return a + (b - a) * t;
         }
 
         return getValue(track.back());
     }
 
-    static double applyInterpolation(InterpolationType t, double x) {
+    // 3次ベジェ曲線のX座標(時間)からT(パラメータ)を求める - ニュートン法
+    static double solveBezierT(double x, double x1, double x2) {
+        // 線形に近い場合は早期リターン
+        if (x1 == x2 && x1 == x)
+            return x;
+
+        double t = x; // 初期推定値
+        for (int i = 0; i < 8; ++i) { // 最大8回反復（十分な精度）
+            const double one_minus_t = 1.0 - t;
+            // x(t) = 3(1-t)^2 * t * x1 + 3(1-t) * t^2 * x2 + t^3
+            const double current_x = 3 * one_minus_t * one_minus_t * t * x1 + 3 * one_minus_t * t * t * x2 + t * t * t;
+            const double error = current_x - x;
+            if (std::abs(error) < 1e-5)
+                return t;
+
+            // dx/dt = 3(1-t)^2*x1 + 6(1-t)t(x2-x1) + 3t^2(1-x2)
+            const double dx_dt = 3 * one_minus_t * one_minus_t * x1 + 6 * one_minus_t * t * (x2 - x1) + 3 * t * t * (1.0 - x2);
+            if (std::abs(dx_dt) < 1e-6)
+                break; // 傾き0回避
+            t -= error / dx_dt;
+        }
+        return std::clamp(t, 0.0, 1.0);
+    }
+
+    static double applyInterpolation(InterpolationType type, double x, const std::array<double, 4> &p = {}) {
         x = std::clamp(x, 0.0, 1.0);
-        switch (t) {
+        switch (type) {
         case InterpolationType::EaseIn:
             return x * x;
         case InterpolationType::EaseOut: {
@@ -182,8 +240,15 @@ class EffectModel : public QObject {
             if (x < 0.5)
                 return 2.0 * x * x;
             return 1.0 - 2.0 * (1.0 - x) * (1.0 - x);
+        case InterpolationType::Bezier: {
+            // p = {x1, y1, x2, y2}
+            const double t = solveBezierT(x, p[0], p[2]);
+            const double one_minus_t = 1.0 - t;
+            // y(t) = 3(1-t)^2 * t * y1 + 3(1-t) * t^2 * y2 + t^3
+            return 3 * one_minus_t * one_minus_t * t * p[1] + 3 * one_minus_t * t * t * p[3] + t * t * t;
+        }
         default:
-            return x; // Linear / Bezier(未実装)
+            return x; // Linear
         }
     }
 
@@ -192,6 +257,7 @@ class EffectModel : public QObject {
     bool m_enabled;
     QVariantMap m_params;
     QString m_qmlSource;
+    QVariantMap m_uiDefinition;
     QVariantMap m_keyframeTracks; // paramName -> QVariantList[{frame,value,interp}]
 };
 } // namespace Rina::UI

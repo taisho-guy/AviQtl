@@ -13,6 +13,7 @@ struct EffectMetadata {
     QString category;
     QString qmlSource; // 将来用: QML実装やシェーダーへのパス
     QVariantMap defaultParams;
+    QVariantMap uiDefinition; // UI定義（隠しパラメータやウィジェットタイプなど）
     // 将来用: パラメータの型情報や範囲制限など
 };
 

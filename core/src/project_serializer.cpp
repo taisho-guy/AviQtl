@@ -123,7 +123,8 @@ bool ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
                     EffectMetadata meta = EffectRegistry::instance().getEffect(effId);
 
                     // Create with NO parent initially to avoid auto-deletion by timeline if we abort
-                    auto *eff = new UI::EffectModel(effId, eObj["name"].toString(), eObj["params"].toObject().toVariantMap(), meta.qmlSource, nullptr);
+                    // メタデータからUI定義を取得、なければ空
+                    auto *eff = new UI::EffectModel(effId, eObj["name"].toString(), eObj["params"].toObject().toVariantMap(), meta.qmlSource, meta.uiDefinition, nullptr);
                     eff->setEnabled(eObj["enabled"].toBool(true));
                     if (eObj.contains("keyframes"))
                         eff->setKeyframeTracks(eObj["keyframes"].toObject().toVariantMap());
