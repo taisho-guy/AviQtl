@@ -33,7 +33,8 @@ Common.BaseObject {
             // QMLに再描画を強制するため、relFrameをクエリパラメータとして付与する
             // C++側(VideoFrameProvider)でこのパラメータは無視される
             // updateCounterが変わると再リクエスト（デコード完了通知を受けて更新）
-            source: "image://videoFrame/" + (base.clipId ? base.clipId : "debug") + "?v=" + base.relFrame + "&u=" + base.updateCounter
+            // clipIdが有効(>0)な場合のみリクエストし、それ以外は空にする（-1エラー防止）
+            source: base.clipId > 0 ? "image://videoFrame/" + base.clipId + "?v=" + base.relFrame + "&u=" + base.updateCounter : ""
         }
     }
 

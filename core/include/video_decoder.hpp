@@ -30,5 +30,6 @@ class VideoDecoder : public QObject {
     // インスタンスごとにキャッシュを持つ
     QCache<int, QImage> m_frameCache;
     int m_lastRequestedFrame = -1;
+    qint64 m_lastFrameTimestamp = -1; // 重複フレームチェック用
 };
 } // namespace Rina::Core

@@ -30,10 +30,8 @@ VideoDecoder::VideoDecoder(int clipId, const QUrl &source, VideoFrameStore *stor
     // 初期化時はPause状態で待機
     m_player->pause();
 
-    // シーク完了シグナルを使って確実にフレームを取得する
-    // Qt6では mediaStatusChanged で BufferedMedia 等を監視する手もあるが
-    // ここではシンプルに sink の更新を待つ
-    qDebug() << "VideoDecoder created for clipId:" << m_clipId << "source:" << source;
+    // 勝手な再生を防ぐために再生速度を0にする手もあるが、まずはPauseを徹底
+    // connect(m_player, &QMediaPlayer::playbackStateChanged, ...) で監視済み
 }
 
 void VideoDecoder::seekToFrame(int frame, double fps) {
@@ -60,22 +58,24 @@ void VideoDecoder::seekToFrame(int frame, double fps) {
 }
 
 void VideoDecoder::onVideoFrameChanged(const QVideoFrame &vf) {
-    qDebug() << "VideoDecoder::onVideoFrameChanged() called for clipId:" << m_clipId << "valid:" << vf.isValid();
-
     if (!vf.isValid())
         return;
 
+    // 重複フレームのフィルタリング: タイムスタンプが前回と同じなら無視
+    // これにより無駄なQImage変換とStore更新を防ぐ（ロング動画での安定性向上）
+    if (vf.startTime() == m_lastFrameTimestamp)
+        return;
+    m_lastFrameTimestamp = vf.startTime();
+
+    qDebug() << "VideoDecoder::onVideoFrameChanged() clipId:" << m_clipId << "pts:" << vf.startTime();
+
     QImage img = vf.toImage();
-    qDebug() << "VideoDecoder: Frame converted to QImage, size:" << img.size() << "null:" << img.isNull();
 
     if (!img.isNull()) {
         const QString key = QString::number(m_clipId);
         // Storeへ転送
         m_store->setFrameSafe(key, img);
 
-        // キャッシュに登録（コスト＝バイト数）
-        // 実際に取得できたフレームが、リクエストしたものと一致すると仮定
-        // シークの非同期性でズレる可能性はあるが、LRUなので「近いフレーム」が残ればOK
         if (m_lastRequestedFrame >= 0 && !m_frameCache.contains(m_lastRequestedFrame)) {
             m_frameCache.insert(m_lastRequestedFrame, new QImage(img), img.sizeInBytes());
         }
