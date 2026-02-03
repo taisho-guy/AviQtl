@@ -1,6 +1,8 @@
 #include "effect_registry.hpp"
 #include "rina_context.hpp"
 #include "settings_manager.hpp"
+#include "video_frame_provider.hpp"
+#include "video_frame_store.hpp"
 #include "timeline_controller.hpp"
 #include "window_manager.hpp"
 #include <QApplication>
@@ -77,6 +79,11 @@ int main(int argc, char *argv[]) {
     app.processEvents();
 
     QQmlApplicationEngine engine;
+
+    // VideoFrameProviderの登録
+    auto *videoFrameStore = new Rina::Core::VideoFrameStore(&app);
+    engine.addImageProvider("videoFrame", new Rina::Core::VideoFrameProvider(videoFrameStore));
+    engine.rootContext()->setContextProperty("videoFrameStore", videoFrameStore);
 
     // SettingsManager の登録
     engine.rootContext()->setContextProperty("SettingsManager", &Rina::Core::SettingsManager::instance());

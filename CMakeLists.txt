@@ -60,6 +60,8 @@ qt_add_executable(Rina
     ui/src/selection_service.cpp
     ui/src/clip_model.cpp
     ui/src/timeline_service.cpp
+    core/src/video_frame_store.cpp
+    core/src/video_frame_provider.cpp
     core/src/project_serializer.cpp
 )
 
@@ -88,15 +90,20 @@ qt_add_qml_module(Rina
         ui/qml/common/BaseEffect.qml
         ui/qml/common/Logger.js
         ui/qml/common/EasingConfigDialog.qml
-        ui/qml/common/NodeLoader.qml)
+        ui/qml/common/NodeLoader.qml
+
+        # 【削除】Objectsは外部読み込みするため、ここ（コンパイル対象）からは外す
+)
 
 # リンク設定
-target_link_libraries(Rina PRIVATE
-    Qt6::Core Qt6::Gui Qt6::Quick Qt6::QuickControls2 Qt6::WaylandClient Qt6::Quick3D
-    Qt6::Widgets
-    Qt6::Svg
-    Qt6::Core5Compat
-    Qt6::Multimedia
-    Vulkan::Vulkan
-    ${LUAJIT_LIBRARIES}
-)
+target_link_libraries(
+    Rina PRIVATE Qt6::Core Qt6::Gui Qt6::Quick Qt6::QuickControls2 Qt6::WaylandClient Qt6::Quick3D Qt6::Widgets Qt6::Svg Qt6::Core5Compat Qt6::Multimedia Vulkan::Vulkan
+                   ${LUAJIT_LIBRARIES})
+
+# エフェクト/オブジェクト定義JSONをビルドディレクトリにコピー
+file(COPY ui/qml/objects/ DESTINATION ${CMAKE_BINARY_DIR}/objects)
+file(COPY ui/qml/effects/ DESTINATION ${CMAKE_BINARY_DIR}/effects)
+
+# エフェクト/オブジェクト定義JSONをビルドディレクトリにコピー
+file(COPY ui/qml/objects/ DESTINATION ${CMAKE_BINARY_DIR}/objects)
+file(COPY ui/qml/effects/ DESTINATION ${CMAKE_BINARY_DIR}/effects)
