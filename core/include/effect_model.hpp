@@ -6,12 +6,14 @@
 #include <algorithm>
 #include <cmath>
 #include <array>
+#include <functional>
+#include <map>
 #include "../../scripting/lua_host.hpp"
 
 namespace Rina::UI {
 
-// 補間タイプの列挙（setKeyframeで使用前に定義）
-enum class InterpolationType { Linear, EaseIn, EaseOut, EaseInOut, Bezier };
+// Easing function signature: double function(t, params)
+using EasingFunction = std::function<double(double, const std::array<double, 4> &)>;
 
 class EffectModel : public QObject {
     Q_OBJECT
@@ -35,6 +37,14 @@ class EffectModel : public QObject {
     QVariantMap keyframeTracks() const { return m_keyframeTracks; }
     QVariantMap uiDefinition() const { return m_uiDefinition; }
 
+    // Must be public to be invokable from QML
+    Q_INVOKABLE QStringList availableEasings() const {
+        QStringList keys;
+        for (const auto &[k, v] : easingFunctions())
+            keys << k;
+        return keys;
+    }
+
     void setEnabled(bool e) {
         if (m_enabled != e) {
             m_enabled = e;
@@ -50,13 +60,22 @@ class EffectModel : public QObject {
         }
     }
 
-    Q_INVOKABLE void setKeyframe(const QString &paramName, int frame, const QVariant &value, const QString &interpType) {
+    Q_INVOKABLE void setKeyframe(const QString &paramName, int frame, const QVariant &value, const QVariantMap &options) {
         QVariantList track = m_keyframeTracks.value(paramName).toList();
         QVariantMap kf;
         kf["frame"] = frame;
         kf["value"] = value;
-        kf["interp"] = interpType;
+        kf["interp"] = options.value("interp", "linear");
 
+        // Add bezier params if provided
+        if (options.contains("bz_x1"))
+            kf["bz_x1"] = options.value("bz_x1");
+        if (options.contains("bz_y1"))
+            kf["bz_y1"] = options.value("bz_y1");
+        if (options.contains("bz_x2"))
+            kf["bz_x2"] = options.value("bz_x2");
+        if (options.contains("bz_y2"))
+            kf["bz_y2"] = options.value("bz_y2");
         bool updated = false;
         for (int i = 0; i < track.size(); ++i) {
             const auto m = track[i].toMap();
@@ -135,16 +154,21 @@ class EffectModel : public QObject {
     void keyframeTracksChanged();
 
   private:
-    static InterpolationType stringToInterpolationType(const QString &s) {
-        if (s == "ease_in")
-            return InterpolationType::EaseIn;
-        if (s == "ease_out")
-            return InterpolationType::EaseOut;
-        if (s == "ease_in_out")
-            return InterpolationType::EaseInOut;
-        if (s == "bezier")
-            return InterpolationType::Bezier;
-        return InterpolationType::Linear;
+    // Static easing function registry
+    static const std::map<QString, EasingFunction> &easingFunctions() {
+        static const std::map<QString, EasingFunction> funcs = {
+            {"linear", [](double t, const auto &) { return t; }},
+            {"ease_in", [](double t, const auto &) { return t * t; }},
+            {"ease_out", [](double t, const auto &) { return t * (2.0 - t); }},
+            {"ease_in_out", [](double t, const auto &) { return t < 0.5 ? 2.0 * t * t : -1.0 + (4.0 - 2.0 * t) * t; }},
+            {"bezier", [](double x, const auto &p) {
+                 // p = {x1, y1, x2, y2}
+                 const double t = solveBezierT(x, p[0], p[2]);
+                 const double one_minus_t = 1.0 - t;
+                 // y(t) = 3(1-t)^2 * t * y1 + 3(1-t) * t^2 * y2 + t^3
+                 return 3 * one_minus_t * one_minus_t * t * p[1] + 3 * one_minus_t * t * t * p[3] + t * t * t;
+             }}};
+        return funcs;
     }
 
     static QVariant evaluateTrack(const QVariantList &track, int frame, const QVariant &fallback) {
@@ -189,14 +213,16 @@ class EffectModel : public QObject {
             const double b = v1.toDouble();
             const double tRaw = (frame - f0) / double(f1 - f0);
 
-            // 補間タイプとパラメータを渡す
-            const auto interpType = stringToInterpolationType(getInterp(track[i]));
+            QString type = getInterp(track[i]);
+            if (!easingFunctions().count(type))
+                type = "linear";
+
             std::array<double, 4> params = {0, 0, 0, 0};
-            if (interpType == InterpolationType::Bezier) {
+            if (type == "bezier") {
                 params = getBezierParams(track[i]);
             }
 
-            const double t = applyInterpolation(interpType, tRaw, params);
+            const double t = easingFunctions().at(type)(tRaw, params);
             return a + (b - a) * t;
         }
 
@@ -225,31 +251,6 @@ class EffectModel : public QObject {
             t -= error / dx_dt;
         }
         return std::clamp(t, 0.0, 1.0);
-    }
-
-    static double applyInterpolation(InterpolationType type, double x, const std::array<double, 4> &p = {}) {
-        x = std::clamp(x, 0.0, 1.0);
-        switch (type) {
-        case InterpolationType::EaseIn:
-            return x * x;
-        case InterpolationType::EaseOut: {
-            const double u = 1.0 - x;
-            return 1.0 - u * u;
-        }
-        case InterpolationType::EaseInOut:
-            if (x < 0.5)
-                return 2.0 * x * x;
-            return 1.0 - 2.0 * (1.0 - x) * (1.0 - x);
-        case InterpolationType::Bezier: {
-            // p = {x1, y1, x2, y2}
-            const double t = solveBezierT(x, p[0], p[2]);
-            const double one_minus_t = 1.0 - t;
-            // y(t) = 3(1-t)^2 * t * y1 + 3(1-t) * t^2 * y2 + t^3
-            return 3 * one_minus_t * one_minus_t * t * p[1] + 3 * one_minus_t * t * t * p[3] + t * t * t;
-        }
-        default:
-            return x; // Linear
-        }
     }
 
     QString m_id;

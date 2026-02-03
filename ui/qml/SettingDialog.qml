@@ -1,10 +1,10 @@
-import Qt.labs.qmlmodels 1.0
-import Qt.labs.qmlmodels 1.0
-import QtQml 2.15
-import QtQuick 2.15
-import QtQuick.Controls 2.15
-import QtQuick.Layouts 1.15
-import QtQuick.Window 2.15
+import Qt.labs.qmlmodels
+import Qt.labs.qmlmodels
+import QtQml
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
+import QtQuick.Window
 import "common" as Common
 
 Common.RinaWindow {
@@ -14,6 +14,10 @@ Common.RinaWindow {
     property var effectsModel: []
     property bool inputting: false // 入力中フラグ（バインディングループ防止用）
 
+    Component {
+        id: easingDialogComponent
+        Common.EasingConfigDialog {}
+    }
     function reload() {
         if (!TimelineBridge || !TimelineBridge.selection)
             return ;
@@ -187,13 +191,13 @@ Common.RinaWindow {
                             function updateParam(frame, val) {
                                 let type = "linear";
                                 if (frame === startFrame)
-                                    type = interpType;
+                                    type = getInterpAt(startFrame);
                                 else
                                     type = getInterpAt(frame);
                                 if (type === "constant")
                                     type = "linear";
 
-                                effectModel.setKeyframe(key, frame, val, type);
+                                effectModel.setKeyframe(key, frame, val, { "interp": type });
                             }
 
                             Layout.fillWidth: true
@@ -232,14 +236,6 @@ Common.RinaWindow {
                                 Button {
                                     id: interpBtn
 
-                                    function setInterp(type) {
-                                        let val = startVal;
-                                        effectModel.setKeyframe(key, startFrame, val, type);
-                                        if (!hasKeyframes)
-                                            effectModel.setKeyframe(key, clipDur, val, "linear");
-
-                                    }
-
                                     Layout.preferredWidth: 100
                                     Layout.fillWidth: !isNumber
                                     text: {
@@ -260,46 +256,18 @@ Common.RinaWindow {
                                         }
                                     }
                                     enabled: isNumber
-                                    onClicked: interpMenu.open()
-
-                                    Menu {
-                                        id: interpMenu
-
-                                        y: interpBtn.height
-
-                                        MenuItem {
-                                            text: "移動なし"
-                                            onTriggered: {
-                                                let track = effectModel.keyframeTracks[key] || [];
-                                                for (let i = 0; i < track.length; i++) {
-                                                    effectModel.removeKeyframe(key, track[i].frame);
-                                                }
-                                            }
+                                    onClicked: {
+                                        // Ensure at least one keyframe exists to edit
+                                        if (!hasKeyframes) {
+                                            effectModel.setKeyframe(key, startFrame, startVal, { "interp": "linear" });
+                                            effectModel.setKeyframe(key, endFrame, endVal, { "interp": "linear" });
                                         }
-
-                                        MenuSeparator {
-                                        }
-
-                                        MenuItem {
-                                            text: "直線移動"
-                                            onTriggered: setInterp("linear")
-                                        }
-
-                                        MenuItem {
-                                            text: "加速移動"
-                                            onTriggered: setInterp("ease_in")
-                                        }
-
-                                        MenuItem {
-                                            text: "減速移動"
-                                            onTriggered: setInterp("ease_out")
-                                        }
-
-                                        MenuItem {
-                                            text: "加減速移動"
-                                            onTriggered: setInterp("ease_in_out")
-                                        }
-
+                                        var dialog = easingDialogComponent.createObject(root, {
+                                            "effectModel": effectModel,
+                                            "paramName": key,
+                                            "keyframeFrame": startFrame
+                                        });
+                                        dialog.open();
                                     }
 
                                 }
@@ -405,7 +373,7 @@ Common.RinaWindow {
                                     onDoubleClicked: (mouse) => {
                                         let f = Math.round((mouse.x / width) * clipDur);
                                         let val = effectModel.evaluatedParam(key, f);
-                                        effectModel.setKeyframe(key, f, val, "linear");
+                                        effectModel.setKeyframe(key, f, val, { "interp": "linear" });
                                     }
                                 }
 
