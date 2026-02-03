@@ -3,6 +3,7 @@
 #include <QMediaPlayer>
 #include <QObject>
 #include <QVideoSink>
+#include <QTimer>
 
 namespace Rina::Core {
 

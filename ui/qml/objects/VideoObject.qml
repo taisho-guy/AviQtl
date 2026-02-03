@@ -13,6 +13,9 @@ Common.BaseObject {
     property int width: containerItem.width
     property int height: containerItem.height
 
+    // 更新カウンタ（frameUpdatedシグナルを受けてインクリメント）
+    property int updateCounter: 0
+
     // ImageObjectやRectObjectと同じパターンに従う
     sourceItem: Item {
         id: containerItem
@@ -27,8 +30,20 @@ Common.BaseObject {
             fillMode: Image.PreserveAspectFit
             cache: false
 
-            // clipIdを使用してフレームを取得
-            source: "image://videoFrame/" + (base.clipId ? base.clipId : "debug") + "?v=" + base.relFrame
+            // QMLに再描画を強制するため、relFrameをクエリパラメータとして付与する
+            // C++側(VideoFrameProvider)でこのパラメータは無視される
+            // updateCounterが変わると再リクエスト（デコード完了通知を受けて更新）
+            source: "image://videoFrame/" + (base.clipId ? base.clipId : "debug") + "?v=" + base.relFrame + "&u=" + base.updateCounter
+        }
+    }
+
+    // VideoFrameStoreからの更新通知を受けてカウンタをインクリメント
+    Connections {
+        target: videoFrameStore
+        function onFrameUpdated(key) {
+            if (key === String(base.clipId)) {
+                base.updateCounter++;
+            }
         }
     }
 

@@ -14,21 +14,56 @@ VideoDecoder::VideoDecoder(int clipId, const QUrl &source, VideoFrameStore *stor
 
     connect(m_sink, &QVideoSink::videoFrameChanged, this, &VideoDecoder::onVideoFrameChanged);
 
-    m_player->pause(); // シークのみ、自動再生しない
+    // QMediaPlayerの状態変化を監視（デバッグ用）
+    connect(m_player, &QMediaPlayer::playbackStateChanged, this, [this](QMediaPlayer::PlaybackState state) {
+        qDebug() << "VideoDecoder playback state changed:" << state;
+    });
+
+    connect(m_player, &QMediaPlayer::errorOccurred, this, [this](QMediaPlayer::Error error, const QString &errorString) {
+        qWarning() << "VideoDecoder error:" << error << errorString;
+    });
+
+    // フレーム取得のためには一度play()が必要
+    m_player->play();
+    // 即座にpauseしてシーク待機状態にする
+    QTimer::singleShot(100, this, [this]() {
+        m_player->pause();
+        qDebug() << "VideoDecoder: Ready for seeking";
+    });
 
     qDebug() << "VideoDecoder created for clipId:" << clipId << "source:" << source;
 }
 
 void VideoDecoder::seekToFrame(int frame, double fps) {
-    qint64 ms = static_cast<qint64>((frame / fps) * 1000.0);
-    // 現在位置と大きく異なる場合のみシーク（パフォーマンスのため）
-    if (qAbs(m_player->position() - ms) > 100)
-        m_player->setPosition(ms);
+    if (!m_player)
+        return;
+
+    const qint64 ms = static_cast<qint64>((frame / fps) * 1000.0);
+    qDebug() << "VideoDecoder::seekToFrame() clipId:" << m_clipId << "frame:" << frame << "ms:" << ms;
+
+    m_player->setPosition(ms);
+
+    // シーク後、一瞬play()してフレームを取得させる
+    if (m_player->playbackState() != QMediaPlayer::PlayingState) {
+        m_player->play();
+        QTimer::singleShot(50, this, [this]() { m_player->pause(); });
+    }
 }
 
 void VideoDecoder::onVideoFrameChanged(const QVideoFrame &vf) {
-    if (!vf.isValid()) return;
-    m_store->setFrame(QString::number(m_clipId), vf.toImage());
+    qDebug() << "VideoDecoder::onVideoFrameChanged() called for clipId:" << m_clipId << "valid:" << vf.isValid();
+
+    if (!vf.isValid())
+        return;
+
+    QImage img = vf.toImage();
+    qDebug() << "VideoDecoder: Frame converted to QImage, size:" << img.size() << "null:" << img.isNull();
+
+    if (!img.isNull()) {
+        const QString key = QString::number(m_clipId);
+        qDebug() << "VideoDecoder: Storing frame with key:" << key;
+        m_store->setFrame(key, img);
+    }
 }
 
 } // namespace Rina::Core

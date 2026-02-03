@@ -1,6 +1,5 @@
 #include "video_frame_store.hpp"
 #include <QColor>
-#include <QCoreApplication>
 #include <QDebug>
 #include <QMutexLocker>
 #include <QPainter>
@@ -11,14 +10,21 @@ namespace Rina::Core {
 VideoFrameStore::VideoFrameStore(QObject *parent) : QObject(parent) {}
 
 void VideoFrameStore::setFrame(const QString &key, const QImage &img) {
-    // スレッドセーフ対策: 呼び出し元が別スレッドならメインスレッドへ委譲
-    if (QThread::currentThread() != qApp->thread()) {
-        QMetaObject::invokeMethod(this, [this, key, img]() { setFrame(key, img); }, Qt::QueuedConnection);
+    // メインスレッド以外から呼ばれた場合は警告のみ（今回はVideoDecoderはメインスレッド上）
+    if (QThread::currentThread() != thread()) {
+        qWarning() << "VideoFrameStore::setFrame() called from non-main thread! Key:" << key;
+        // Qt::QueuedConnectionで安全に転送（ただしコピーが必要）
+        QMetaObject::invokeMethod(this, "setFrameSafe", Qt::QueuedConnection, Q_ARG(QString, key), Q_ARG(QImage, img));
         return;
     }
 
+    setFrameSafe(key, img);
+}
+
+void VideoFrameStore::setFrameSafe(const QString &key, const QImage &img) {
     QMutexLocker lock(&m_mutex);
     m_frames[key] = img.copy(); // Ensure a deep copy for thread safety
+    lock.unlock();              // シグナル発火前にロック解除（デッドロック回避）
     emit frameUpdated(key);
 }
 

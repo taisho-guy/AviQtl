@@ -56,7 +56,7 @@ class TimelineController : public QObject {
   public:
     explicit TimelineController(QObject *parent = nullptr);
 
-    void setVideoFrameStore(Rina::Core::VideoFrameStore *store) { m_videoFrameStore = store; }
+    void setVideoFrameStore(Rina::Core::VideoFrameStore *store);
 
     // サービスアクセサ
     ProjectService *project() const { return m_project; }

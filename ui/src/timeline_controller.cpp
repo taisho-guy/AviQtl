@@ -40,12 +40,6 @@ TimelineController::TimelineController(QObject *parent) : QObject(parent) {
         updateVideoDecoders();
         updateActiveClipsList();
     });
-    connect(m_timeline, &TimelineService::clipEffectsChanged, this, &TimelineController::clipEffectsChanged);
-    // TODO: シーン機能が実装されたら以下の接続を有効化
-    // connect(m_timeline, &TimelineService::scenesChanged, this, &TimelineController::scenesChanged);
-    // connect(m_timeline, &TimelineService::currentSceneIdChanged, this, &TimelineController::currentSceneIdChanged);
-
-    // SelectionServiceからのシグナル接続
     connect(m_selection, &SelectionService::selectedClipDataChanged, this, [this]() {
         emit clipStartFrameChanged();
         emit clipDurationFramesChanged();
@@ -53,6 +47,11 @@ TimelineController::TimelineController(QObject *parent) : QObject(parent) {
         emit activeObjectTypeChanged();
         updateClipActiveState();
     });
+
+    // TODO: シーン機能が実装されたら以下の接続を有効化
+    // connect(m_timeline, &TimelineService::scenesChanged, this, &TimelineController::scenesChanged);
+    // connect(m_timeline, &TimelineService::currentSceneIdChanged, this, &TimelineController::currentSceneIdChanged);
+    connect(m_timeline, &TimelineService::clipEffectsChanged, this, &TimelineController::clipEffectsChanged);
 
     // サービス間の連携: FPSが変更されたら再生タイマーの間隔を更新
     connect(m_project, &ProjectService::fpsChanged, [this]() { m_transport->updateTimerInterval(m_project->fps()); });
@@ -80,6 +79,13 @@ TimelineController::TimelineController(QObject *parent) : QObject(parent) {
 
     rebuildClipIndex();
     updateClipActiveState();
+}
+
+void TimelineController::setVideoFrameStore(Rina::Core::VideoFrameStore *store) {
+    m_videoFrameStore = store;
+    qDebug() << "TimelineController: VideoFrameStore set. Updating decoders...";
+    // ストアがセットされたので、既存のクリップに対するデコーダを生成する
+    updateVideoDecoders();
 }
 
 void TimelineController::togglePlay() {
@@ -305,11 +311,15 @@ void TimelineController::updateVideoDecoders() {
     for (const auto &clip : clips) {
         if (clip.type == "video") {
             currentVideoClipIds.insert(clip.id);
+
+            // 既にデコーダがある場合はスキップ
             if (!m_videoDecoders.contains(clip.id)) {
-                // 新しいデコーダーを作成
-                const auto *videoEffect = clip.effects.size() > 1 ? clip.effects[1] : nullptr;
+                // Videoエフェクト(index 1)からパスを取得
+                const auto *videoEffect = (clip.effects.size() > 1) ? clip.effects[1] : nullptr;
                 if (videoEffect) {
                     QUrl sourceUrl = QUrl::fromLocalFile(videoEffect->params().value("path").toString());
+                    qDebug() << "TimelineController: Found video clip" << clip.id << "path:" << sourceUrl;
+
                     if (sourceUrl.isValid() && !sourceUrl.isEmpty()) {
                         if (!m_videoFrameStore) {
                             qWarning() << "VideoFrameStore not set!";

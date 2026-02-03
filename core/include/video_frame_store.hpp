@@ -12,6 +12,7 @@ class VideoFrameStore : public QObject {
   public:
     explicit VideoFrameStore(QObject *parent = nullptr);
     Q_INVOKABLE void setFrame(const QString &key, const QImage &img);
+    Q_INVOKABLE void setFrameSafe(const QString &key, const QImage &img);
     QImage frame(const QString &key) const;
   signals:
     void frameUpdated(const QString &key);
