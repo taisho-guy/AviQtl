@@ -15,6 +15,14 @@
 #include <QTimer>
 
 int main(int argc, char *argv[]) {
+    // --- マルチプラットフォーム対応 ハードウェアデコード設定 ---
+    // 1. バックエンドをFFmpegに固定（Rinaのロジック依存のため）
+    qputenv("QT_MEDIA_BACKEND", "ffmpeg");
+
+    // 2. 優先するHWデコーダリストを指定（環境依存のドライバ名は指定しない）
+    // Linux(VAAPI/VDPAU/CUDA), Windows(D3D11VA/DXVA2), macOS(VideoToolbox) を網羅
+    qputenv("QT_FFMPEG_DECODING_HW_DEVICE_TYPES", "cuda,vaapi,vdpau,videotoolbox,d3d11va,dxva2");
+
     // 1. アプリケーション初期化
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);

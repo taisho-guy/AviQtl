@@ -2,8 +2,9 @@
 
 #include <QMediaPlayer>
 #include <QObject>
-#include <QVideoSink>
 #include <QTimer>
+#include <QVideoSink>
+#include <QCache>
 
 namespace Rina::Core {
 
@@ -24,5 +25,10 @@ class VideoDecoder : public QObject {
     VideoFrameStore *m_store;
     QMediaPlayer *m_player;
     QVideoSink *m_sink;
+
+    // LRUキャッシュ: Key="frameNumber", Value=QImage
+    // インスタンスごとにキャッシュを持つ
+    QCache<int, QImage> m_frameCache;
+    int m_lastRequestedFrame = -1;
 };
 } // namespace Rina::Core

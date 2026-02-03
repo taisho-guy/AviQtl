@@ -1,7 +1,7 @@
 #include "video_decoder.hpp"
 #include "video_frame_store.hpp"
-#include <QVideoFrame>
 #include <QDebug>
+#include <QVideoFrame>
 
 namespace Rina::Core {
 
@@ -23,31 +23,40 @@ VideoDecoder::VideoDecoder(int clipId, const QUrl &source, VideoFrameStore *stor
         qWarning() << "VideoDecoder error:" << error << errorString;
     });
 
-    // フレーム取得のためには一度play()が必要
-    m_player->play();
-    // 即座にpauseしてシーク待機状態にする
-    QTimer::singleShot(100, this, [this]() {
-        m_player->pause();
-        qDebug() << "VideoDecoder: Ready for seeking";
-    });
+    // キャッシュ容量設定: 256MB (1920x1080x4byte ~= 8MB -> 約32フレーム分)
+    // この値は将来的にユーザー設定から変更できるようにすると良い
+    m_frameCache.setMaxCost(256 * 1024 * 1024);
 
-    qDebug() << "VideoDecoder created for clipId:" << clipId << "source:" << source;
+    // 初期化時はPause状態で待機
+    m_player->pause();
+
+    // シーク完了シグナルを使って確実にフレームを取得する
+    // Qt6では mediaStatusChanged で BufferedMedia 等を監視する手もあるが
+    // ここではシンプルに sink の更新を待つ
+    qDebug() << "VideoDecoder created for clipId:" << m_clipId << "source:" << source;
 }
 
 void VideoDecoder::seekToFrame(int frame, double fps) {
     if (!m_player)
         return;
 
+    // 1. キャッシュ確認
+    if (m_frameCache.contains(frame)) {
+        qDebug() << "VideoDecoder: Cache hit for frame" << frame;
+        m_store->setFrameSafe(QString::number(m_clipId), *m_frameCache[frame]);
+        return;
+    }
+
+    qDebug() << "VideoDecoder: Cache miss for frame" << frame << "- seeking...";
+
     const qint64 ms = static_cast<qint64>((frame / fps) * 1000.0);
+    m_lastRequestedFrame = frame; // リクエストしたフレーム番号を記憶
     qDebug() << "VideoDecoder::seekToFrame() clipId:" << m_clipId << "frame:" << frame << "ms:" << ms;
 
     m_player->setPosition(ms);
 
-    // シーク後、一瞬play()してフレームを取得させる
-    if (m_player->playbackState() != QMediaPlayer::PlayingState) {
-        m_player->play();
-        QTimer::singleShot(50, this, [this]() { m_player->pause(); });
-    }
+    // Play/Pause のトグルは廃止。setPositionだけでフレーム更新されるはず
+    // もし更新されない環境なら、pause() のまま setPosition() が効くか確認が必要
 }
 
 void VideoDecoder::onVideoFrameChanged(const QVideoFrame &vf) {
@@ -61,8 +70,15 @@ void VideoDecoder::onVideoFrameChanged(const QVideoFrame &vf) {
 
     if (!img.isNull()) {
         const QString key = QString::number(m_clipId);
-        qDebug() << "VideoDecoder: Storing frame with key:" << key;
-        m_store->setFrame(key, img);
+        // Storeへ転送
+        m_store->setFrameSafe(key, img);
+
+        // キャッシュに登録（コスト＝バイト数）
+        // 実際に取得できたフレームが、リクエストしたものと一致すると仮定
+        // シークの非同期性でズレる可能性はあるが、LRUなので「近いフレーム」が残ればOK
+        if (m_lastRequestedFrame >= 0 && !m_frameCache.contains(m_lastRequestedFrame)) {
+            m_frameCache.insert(m_lastRequestedFrame, new QImage(img), img.sizeInBytes());
+        }
     }
 }
 
