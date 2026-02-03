@@ -1,7 +1,7 @@
 #include "project_serializer.hpp"
 #include "effect_registry.hpp"
-#include "settings_manager.hpp"
 #include "project_service.hpp"
+#include "settings_manager.hpp"
 #include "timeline_service.hpp"
 #include <QDebug>
 #include <QFile>

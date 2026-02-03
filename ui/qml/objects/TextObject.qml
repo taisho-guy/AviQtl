@@ -23,7 +23,8 @@ Common.BaseObject {
     Item {
         id: originalSource
 
-        readonly property real paddingMultiplier: (SettingsManager && SettingsManager.settings) ? (SettingsManager.settings.textPaddingMultiplier || 4.0) : 4.0
+        readonly property real paddingMultiplier: (SettingsManager && SettingsManager.settings) ? (SettingsManager.settings.textPaddingMultiplier || 4) : 4
+
         visible: false
         width: textItem.implicitWidth + (padding * paddingMultiplier)
         height: textItem.implicitHeight + (padding * paddingMultiplier)

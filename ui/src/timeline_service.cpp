@@ -1,8 +1,8 @@
 #include "timeline_service.hpp"
 #include "commands.hpp"
 #include "effect_registry.hpp"
-#include "settings_manager.hpp"
 #include "selection_service.hpp"
+#include "settings_manager.hpp"
 #include <QDebug>
 
 namespace Rina::UI {

@@ -1,6 +1,6 @@
 #pragma once
-#include <QObject>
 #include "settings_manager.hpp"
+#include <QObject>
 
 namespace Rina::UI {
 

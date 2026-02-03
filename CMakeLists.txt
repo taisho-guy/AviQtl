@@ -90,6 +90,10 @@ qt_add_qml_module(Rina
         ui/qml/common/EasingConfigDialog.qml
         ui/qml/common/NodeLoader.qml
 
+        # 追加: 新しい画像オブジェクト
+        ui/qml/objects/ImageObject.qml
+        ui/qml/objects/RectObject.qml
+        ui/qml/objects/TextObject.qml
 )
 
 # リンク設定
@@ -101,3 +105,7 @@ target_link_libraries(Rina PRIVATE
     Vulkan::Vulkan
     ${LUAJIT_LIBRARIES}
 )
+
+# エフェクト/オブジェクト定義JSONをビルドディレクトリにコピー
+file(COPY ui/qml/objects/ DESTINATION ${CMAKE_BINARY_DIR}/objects)
+file(COPY ui/qml/effects/ DESTINATION ${CMAKE_BINARY_DIR}/effects)

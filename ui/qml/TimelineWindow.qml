@@ -12,7 +12,8 @@ Common.RinaWindow {
     // 設定ウィンドウの参照を保持するプロパティ
     property var settingDialog: null
     // Constants from SettingsManager
-    readonly property var s: (SettingsManager && SettingsManager.settings) ? SettingsManager.settings : ({})
+    readonly property var s: (SettingsManager && SettingsManager.settings) ? SettingsManager.settings : ({
+    })
     readonly property int layerCount: s.timelineMaxLayers || 128
     readonly property int layerHeight: (SettingsManager && SettingsManager.settings.timelineTrackHeight) ? SettingsManager.settings.timelineTrackHeight : 30
     readonly property int clipHeight: layerHeight - 2

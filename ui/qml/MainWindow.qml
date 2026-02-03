@@ -36,7 +36,9 @@ ApplicationWindow {
         text: "プロジェクトの上書き保存"
         shortcut: "Ctrl+S"
         onTriggered: {
-            if (TimelineBridge) TimelineBridge.saveProject("");
+            if (TimelineBridge)
+                TimelineBridge.saveProject("");
+
         }
     }
 
@@ -54,7 +56,6 @@ ApplicationWindow {
         text: "プロジェクトを名前を付けて保存..."
         shortcut: "Ctrl+Shift+S"
         onTriggered: saveDialog.open()
-
     }
 
     Action {
@@ -144,7 +145,6 @@ ApplicationWindow {
                 var quality = (SettingsManager && SettingsManager.settings) ? (SettingsManager.settings.exportImageQuality || 95) : 95;
                 TimelineBridge.exportMedia(file, "image_sequence", quality);
             }
-
         }
     }
 
@@ -168,16 +168,21 @@ ApplicationWindow {
             MenuItem {
                 action: loadAction
             }
+
             MenuSeparator {
             }
+
             MenuItem {
                 action: saveProjectAction
             }
+
             MenuItem {
                 action: saveAsProjectAction
             }
+
             MenuSeparator {
             }
+
             MenuItem {
                 text: "メディアのエクスポート..."
                 enabled: TimelineBridge && TimelineBridge.project
@@ -189,7 +194,8 @@ ApplicationWindow {
                 enabled: TimelineBridge && TimelineBridge.project
             }
 
-            MenuSeparator {}
+            MenuSeparator {
+            }
 
             MenuItem {
                 text: "環境設定"
@@ -199,7 +205,9 @@ ApplicationWindow {
 
                 }
             }
-            MenuSeparator {}
+
+            MenuSeparator {
+            }
 
             MenuItem {
                 text: "終了"
