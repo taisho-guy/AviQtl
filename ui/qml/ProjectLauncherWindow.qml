@@ -14,6 +14,8 @@ Common.RinaWindow {
     height: 500
     title: "Rina - プロジェクトランチャー"
     Component.onCompleted: {
+        // Not "カスタム"
+
         // 最近使ったプロジェクトをロード
         if (SettingsManager && SettingsManager.settings) {
             var recent = SettingsManager.settings.recentProjects || [];
@@ -28,7 +30,6 @@ Common.RinaWindow {
             framesField.text = SettingsManager.settings.defaultProjectFrames || "3600";
             // テンプレートに応じて更新
             if (templateCombo.currentIndex !== 4)
-                // Not "カスタム"
                 templateCombo.activated(templateCombo.currentIndex);
 
         }

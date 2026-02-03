@@ -8,20 +8,13 @@ Item {
     property var params
     property QtObject effectModel
     property int frame: 0
-
     // QMLバインディング再評価用（params/keyframes変更を確実に検知）
     property int _rev: 0
-    Connections {
-        target: base.effectModel
-        function onParamChanged(key, value) { base._rev++ }
-        function onParamsChanged() { base._rev++ }
-        function onKeyframeTracksChanged() { base._rev++ }
-    }
 
     // 【統一API】キーフレーム優先評価
     function evalParam(key, fallback) {
         // これを参照することで、_rev の変化＝params変更で依存が更新される
-        var _ = base._rev
+        var _ = base._rev;
         if (base.effectModel && base.effectModel.evaluatedParam) {
             var v = base.effectModel.evaluatedParam(key, base.frame);
             if (v !== undefined && v !== null)
@@ -51,4 +44,21 @@ Item {
     // 明示的サイズも設定
     width: implicitWidth > 0 ? implicitWidth : 1
     height: implicitHeight > 0 ? implicitHeight : 1
+
+    Connections {
+        function onParamChanged(key, value) {
+            base._rev++;
+        }
+
+        function onParamsChanged() {
+            base._rev++;
+        }
+
+        function onKeyframeTracksChanged() {
+            base._rev++;
+        }
+
+        target: base.effectModel
+    }
+
 }

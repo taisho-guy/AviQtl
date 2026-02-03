@@ -88,13 +88,7 @@ qt_add_qml_module(Rina
         ui/qml/common/BaseEffect.qml
         ui/qml/common/Logger.js
         ui/qml/common/EasingConfigDialog.qml
-        ui/qml/common/NodeLoader.qml
-
-        # 追加: 新しい画像オブジェクト
-        ui/qml/objects/ImageObject.qml
-        ui/qml/objects/RectObject.qml
-        ui/qml/objects/TextObject.qml
-)
+        ui/qml/common/NodeLoader.qml)
 
 # リンク設定
 target_link_libraries(Rina PRIVATE
