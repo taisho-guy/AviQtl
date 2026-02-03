@@ -193,14 +193,17 @@ Common.RinaWindow {
                             }
 
                             function updateParam(frame, val) {
-                                let type = "linear";
-                                if (frame === startFrame)
-                                    type = getInterpAt(startFrame);
-                                else
-                                    type = getInterpAt(frame);
-                                if (type === "constant")
-                                    type = "linear";
+                                // キーフレームが無い場合は、ベースパラメータを更新（Undo/Redo対応）
+                                if (!hasKeyframes) {
+                                    TimelineBridge.updateClipEffectParam(targetClipId, effIdx, key, val)
+                                    return
+                                }
 
+                                // キーフレームがある場合は、キーフレームを直接編集（現状はUndo非対応）
+                                let type = "linear";
+                                if (frame === startFrame) type = getInterpAt(startFrame);
+                                else type = getInterpAt(frame);
+                                if (type === "constant") type = "linear";
                                 effectModel.setKeyframe(key, frame, val, {
                                     "interp": type
                                 });

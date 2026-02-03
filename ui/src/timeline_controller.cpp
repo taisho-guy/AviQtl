@@ -4,10 +4,10 @@
 #include "../../scripting/lua_host.hpp"
 #include "clip_model.hpp"
 #include "commands.hpp"
+#include "settings_manager.hpp"
 #include "effect_registry.hpp"
 #include "project_service.hpp"
 #include "selection_service.hpp"
-#include "settings_manager.hpp"
 #include "timeline_service.hpp"
 #include "transport_service.hpp"
 #include <QFile>
@@ -458,9 +458,15 @@ QVariantList TimelineController::getAvailableObjects(const QString &category) co
     return list;
 }
 
-void TimelineController::addEffect(int clipId, const QString &effectId) { m_timeline->addEffect(clipId, effectId); }
+void TimelineController::addEffect(int clipId, const QString &effectId) {
+    m_timeline->addEffect(clipId, effectId);
+    updateActiveClipsList();
+}
 
-void TimelineController::removeEffect(int clipId, int effectIndex) { m_timeline->removeEffect(clipId, effectIndex); }
+void TimelineController::removeEffect(int clipId, int effectIndex) {
+    m_timeline->removeEffect(clipId, effectIndex);
+    updateActiveClipsList();
+}
 
 void TimelineController::deleteClip(int clipId) {
     if (m_timeline)

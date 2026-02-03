@@ -29,6 +29,7 @@ Node {
         adopt2D(base.sourceItem)
         // ObjectRenderer(= ShaderEffectSource/effectsチェーン)も移す
         adopt2D(rendererInstance)
+        refreshEffects()
     }
 
     Component.onDestruction: {
@@ -49,19 +50,34 @@ Node {
     // 自動計算プロパティ
     readonly property int currentFrame: (TimelineBridge && TimelineBridge.transport) ? TimelineBridge.transport.currentFrame : 0
     readonly property int relFrame: currentFrame - clipStartFrame
-    readonly property list<QtObject> rawEffectModels: (TimelineBridge && clipId > 0) 
-        ? TimelineBridge.getClipEffectsModel(clipId) : []
+    property var rawEffectModels: []
     
+    function refreshEffects() {
+        rawEffectModels = (TimelineBridge && clipId > 0) ? TimelineBridge.getClipEffectsModel(clipId) : []
+    }
+
+    onClipIdChanged: refreshEffects()
+
+    Connections {
+        target: TimelineBridge
+        function onClipEffectsChanged(changedClipId) {
+            if (changedClipId === clipId) refreshEffects()
+        }
+        function onClipsChanged() {
+            refreshEffects()
+        }
+    }
+
     // フィルタ系エフェクト（transform/object以外）
     readonly property var filterModels: {
-        var list = [];
+        var res = [];
         for(var i=0; i<rawEffectModels.length; i++) {
             var eff = rawEffectModels[i];
             if (eff.id !== "rect" && eff.id !== "text" && eff.id !== "transform") {
-                list.push(eff);
+                res.push(eff);
             }
         }
-        return list;
+        return res;
     }
     
     // 【統一API】キーフレーム優先評価（全オブジェクトで使用可能）
