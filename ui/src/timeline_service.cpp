@@ -477,6 +477,10 @@ QVariantList TimelineService::scenes() const {
         QVariantMap map;
         map["id"] = scene.id;
         map["name"] = scene.name;
+        map["width"] = scene.width;
+        map["height"] = scene.height;
+        map["fps"] = scene.fps;
+        map["totalFrames"] = scene.totalFrames;
         list.append(map);
     }
     return list;
@@ -541,6 +545,20 @@ void TimelineService::switchScene(int sceneId) {
 
     if (m_selection)
         m_selection->select(-1, QVariantMap());
+}
+
+void TimelineService::updateSceneSettings(int sceneId, const QString &name, int width, int height, double fps, int totalFrames) {
+    for (auto &scene : m_scenes) {
+        if (scene.id == sceneId) {
+            scene.name = name;
+            scene.width = width;
+            scene.height = height;
+            scene.fps = fps;
+            scene.totalFrames = totalFrames;
+            emit scenesChanged();
+            return;
+        }
+    }
 }
 
 } // namespace Rina::UI

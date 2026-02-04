@@ -1,0 +1,152 @@
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+import QtQuick.Layouts 1.15
+import "common" as Common
+
+Common.RinaWindow {
+    id: root
+
+    property int targetSceneId: -1
+
+    function openForScene(sceneId, name, w, h, fps, frames) {
+        targetSceneId = sceneId;
+        nameField.text = name;
+        widthField.value = w;
+        heightField.value = h;
+        fpsField.value = Math.round(fps * 100);
+        framesField.value = frames;
+        root.show();
+        root.raise();
+        root.requestActivate();
+    }
+
+    title: "シーン設定"
+    width: 450
+    height: 300
+
+    ColumnLayout {
+        anchors.fill: parent
+        anchors.margins: 15
+        spacing: 10
+
+        RowLayout {
+            Label {
+                text: "シーン名:"
+                Layout.preferredWidth: 100
+            }
+
+            TextField {
+                id: nameField
+
+                Layout.fillWidth: true
+                selectByMouse: true
+            }
+
+        }
+
+        RowLayout {
+            Label {
+                text: "幅:"
+                Layout.preferredWidth: 100
+            }
+
+            SpinBox {
+                id: widthField
+
+                from: 1
+                to: 8000
+                editable: true
+                Layout.fillWidth: true
+            }
+
+        }
+
+        RowLayout {
+            Label {
+                text: "高さ:"
+                Layout.preferredWidth: 100
+            }
+
+            SpinBox {
+                id: heightField
+
+                from: 1
+                to: 8000
+                editable: true
+                Layout.fillWidth: true
+            }
+
+        }
+
+        RowLayout {
+            Label {
+                text: "FPS:"
+                Layout.preferredWidth: 100
+            }
+
+            SpinBox {
+                id: fpsField
+
+                property real realValue: value / 100
+
+                from: 100
+                to: 24000
+                stepSize: 100
+                editable: true
+                Layout.fillWidth: true
+                textFromValue: function(value, locale) {
+                    return (value / 100).toFixed(2);
+                }
+                valueFromText: function(text, locale) {
+                    return Number(text) * 100;
+                }
+            }
+
+        }
+
+        RowLayout {
+            Label {
+                text: "総フレーム数:"
+                Layout.preferredWidth: 100
+            }
+
+            SpinBox {
+                id: framesField
+
+                from: 1
+                to: 1e+06
+                editable: true
+                Layout.fillWidth: true
+            }
+
+        }
+
+        Item {
+            Layout.fillHeight: true
+        }
+
+        RowLayout {
+            Layout.alignment: Qt.AlignRight
+            spacing: 10
+
+            Button {
+                text: "キャンセル"
+                onClicked: root.hide()
+            }
+
+            Button {
+                text: "OK"
+                highlighted: true
+                onClicked: {
+                    if (targetSceneId !== -1 && TimelineBridge)
+                        TimelineBridge.updateSceneSettings(targetSceneId, nameField.text, widthField.value, heightField.value, fpsField.realValue, framesField.value);
+
+                    root.hide();
+                }
+            }
+
+        }
+
+    }
+
+}

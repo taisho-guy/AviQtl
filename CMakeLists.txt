@@ -85,6 +85,7 @@ qt_add_qml_module(Rina
         ui/qml/ProjectSettingsWindow.qml
         ui/qml/SettingDialog.qml
         ui/qml/SystemSettingsWindow.qml
+        ui/qml/SceneSettingsWindow.qml
         ui/qml/CompositeView.qml
         
         ui/qml/common/RinaWindow.qml

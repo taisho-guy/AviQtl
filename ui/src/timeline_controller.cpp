@@ -554,6 +554,8 @@ void TimelineController::removeScene(int sceneId) { m_timeline->removeScene(scen
 
 void TimelineController::switchScene(int sceneId) { m_timeline->switchScene(sceneId); }
 
+void TimelineController::updateSceneSettings(int sceneId, const QString &name, int width, int height, double fps, int totalFrames) { m_timeline->updateSceneSettings(sceneId, name, width, height, fps, totalFrames); }
+
 QVariantList TimelineController::getSceneClips(int sceneId) const {
     Q_UNUSED(sceneId);
     return QVariantList();

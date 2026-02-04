@@ -63,6 +63,18 @@ Common.RinaWindow {
                                 else
                                     TimelineBridge.switchScene(modelData.id);
                             }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                acceptedButtons: Qt.RightButton
+                                onClicked: {
+                                    var win = WindowManager.getWindow("sceneSettings");
+                                    if (win)
+                                        win.openForScene(modelData.id, modelData.name, modelData.width !== undefined ? modelData.width : 1920, modelData.height !== undefined ? modelData.height : 1080, modelData.fps !== undefined ? modelData.fps : 60, modelData.totalFrames !== undefined ? modelData.totalFrames : 300);
+
+                                }
+                            }
+
                         }
 
                     }

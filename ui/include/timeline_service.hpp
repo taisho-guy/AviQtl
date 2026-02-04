@@ -32,6 +32,7 @@ class TimelineService : public QObject {
     void createScene(const QString &name);
     void removeScene(int sceneId);
     void switchScene(int sceneId);
+    void updateSceneSettings(int sceneId, const QString &name, int width, int height, double fps, int totalFrames);
 
     // エフェクト
     void addEffect(int clipId, const QString &effectId);

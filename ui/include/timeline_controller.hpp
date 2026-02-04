@@ -111,6 +111,7 @@ class TimelineController : public QObject {
     Q_INVOKABLE void createScene(const QString &name);
     Q_INVOKABLE void removeScene(int sceneId);
     Q_INVOKABLE void switchScene(int sceneId);
+    Q_INVOKABLE void updateSceneSettings(int sceneId, const QString &name, int width, int height, double fps, int totalFrames);
     Q_INVOKABLE QVariantList getSceneClips(int sceneId) const;
 
     // プロジェクトI/O
