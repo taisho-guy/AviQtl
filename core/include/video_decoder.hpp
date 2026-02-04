@@ -1,10 +1,10 @@
 #pragma once
 
+#include <QCache>
 #include <QMediaPlayer>
 #include <QObject>
 #include <QTimer>
 #include <QVideoSink>
-#include <QCache>
 
 namespace Rina::Core {
 

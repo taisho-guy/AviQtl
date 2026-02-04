@@ -15,13 +15,9 @@ VideoDecoder::VideoDecoder(int clipId, const QUrl &source, VideoFrameStore *stor
     connect(m_sink, &QVideoSink::videoFrameChanged, this, &VideoDecoder::onVideoFrameChanged);
 
     // QMediaPlayerの状態変化を監視（デバッグ用）
-    connect(m_player, &QMediaPlayer::playbackStateChanged, this, [this](QMediaPlayer::PlaybackState state) {
-        qDebug() << "VideoDecoder playback state changed:" << state;
-    });
+    connect(m_player, &QMediaPlayer::playbackStateChanged, this, [](QMediaPlayer::PlaybackState state) { qDebug() << "VideoDecoder playback state changed:" << state; });
 
-    connect(m_player, &QMediaPlayer::errorOccurred, this, [this](QMediaPlayer::Error error, const QString &errorString) {
-        qWarning() << "VideoDecoder error:" << error << errorString;
-    });
+    connect(m_player, &QMediaPlayer::errorOccurred, this, [](QMediaPlayer::Error error, const QString &errorString) { qWarning() << "VideoDecoder error:" << error << errorString; });
 
     // キャッシュ容量設定: 256MB (1920x1080x4byte ~= 8MB -> 約32フレーム分)
     // この値は将来的にユーザー設定から変更できるようにすると良い

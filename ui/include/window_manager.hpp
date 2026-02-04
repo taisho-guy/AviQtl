@@ -26,6 +26,7 @@ class WindowManager : public QObject {
     Q_INVOKABLE void toggleVisible(const QString &id);
     Q_INVOKABLE void raiseWindow(const QString &id);
     Q_INVOKABLE void requestQuit();
+    Q_INVOKABLE QObject *getWindow(const QString &id) const;
 
     bool timelineVisible() const;
     void setTimelineVisible(bool v);

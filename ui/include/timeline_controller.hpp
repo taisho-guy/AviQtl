@@ -28,8 +28,8 @@ namespace Rina {
 namespace Core {
 class VideoDecoder;
 class VideoFrameStore;
-}
-}
+} // namespace Core
+} // namespace Rina
 
 namespace Rina::UI { // 元のnamespaceに戻す
 class TimelineController : public QObject {

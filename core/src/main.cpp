@@ -1,9 +1,9 @@
 #include "effect_registry.hpp"
 #include "rina_context.hpp"
 #include "settings_manager.hpp"
+#include "timeline_controller.hpp"
 #include "video_frame_provider.hpp"
 #include "video_frame_store.hpp"
-#include "timeline_controller.hpp"
 #include "window_manager.hpp"
 #include <QApplication>
 #include <QPixmap>

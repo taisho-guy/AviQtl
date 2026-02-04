@@ -20,7 +20,7 @@ Common.RinaWindow {
     readonly property int rulerHeight: (SettingsManager && SettingsManager.settings.timelineRulerHeight) ? SettingsManager.settings.timelineRulerHeight : 32
     readonly property int sceneTabHeight: (SettingsManager && SettingsManager.settings.timelineHeaderHeight) ? SettingsManager.settings.timelineHeaderHeight : 28
     readonly property int layerHeaderWidth: s.timelineLayerHeaderWidth || 60
-    readonly property int rulerTimeWidth: s.timelineRulerTimeWidth || 70
+    readonly property int rulerTimeWidth: layerHeaderWidth
     readonly property int clipResizeHandleWidth: s.timelineClipResizeHandleWidth || 10
 
     function snapFrame(frame) {
@@ -36,6 +36,19 @@ Common.RinaWindow {
         var scale = (TimelineBridge ? TimelineBridge.timelineScale : 1);
         var x = px + (contentX || 0);
         return snapFrame(x / scale);
+    }
+
+    function getGridInterval(scale) {
+        var minSpacing = 80;
+        var frameInterval = 1;
+        var intervals = [1, 5, 10, fps, fps * 2, fps * 5, fps * 10, fps * 20, fps * 60, fps * 300];
+        for (var i = 0; i < intervals.length; i++) {
+            if (intervals[i] * scale >= minSpacing) {
+                frameInterval = intervals[i];
+                break;
+            }
+        }
+        return frameInterval;
     }
 
     width: 1280
@@ -199,6 +212,15 @@ Common.RinaWindow {
             case "edit.paste":
                 TimelineBridge.pasteClip(clickFrame, clickLayer);
                 break;
+            case "view.grid_settings":
+                if (WindowManager) {
+                    WindowManager.systemSettingsVisible = true;
+                    var win = WindowManager.getWindow("systemSettings");
+                    if (win)
+                        win.currentTabIndex = 2; // タイムラインタブ
+
+                }
+                break;
             default:
                 console.log("Unknown cmd:", cmd);
                 break;
@@ -329,84 +351,14 @@ Common.RinaWindow {
                 });
             }
 
-            Item {
-                id: rulerContent
-
+            RowLayout {
                 anchors.fill: parent
-                clip: true
+                spacing: 0
 
-                Canvas {
-                    id: rulerCanvas
-
-                    property double scale: TimelineBridge ? TimelineBridge.timelineScale : 1
-                    property double offsetX: rulerArea.targetFlickable ? rulerArea.targetFlickable.contentX : 0
-                    property int fps: 30
-
-                    anchors.fill: parent
-                    onScaleChanged: requestPaint()
-                    onOffsetXChanged: requestPaint()
-                    onPaint: {
-                        var ctx = getContext("2d");
-                        ctx.clearRect(0, 0, width, height);
-                        if (!TimelineBridge)
-                            return ;
-
-                        var scale = TimelineBridge.timelineScale;
-                        var viewWidth = width;
-                        var viewOffsetX = offsetX;
-                        var minSpacing = 80;
-                        var frameInterval = 1;
-                        var intervals = [1, 5, 10, fps, fps * 2, fps * 5, fps * 10, fps * 20, fps * 60, fps * 300];
-                        for (var i = 0; i < intervals.length; i++) {
-                            if (intervals[i] * scale >= minSpacing) {
-                                frameInterval = intervals[i];
-                                break;
-                            }
-                        }
-                        var startFrame = Math.floor(viewOffsetX / scale);
-                        var endFrame = Math.ceil((viewOffsetX + viewWidth) / scale);
-                        var alignedStart = Math.floor(startFrame / frameInterval) * frameInterval;
-                        ctx.font = "10px sans-serif";
-                        for (var f = alignedStart; f <= endFrame; f += frameInterval) {
-                            if (f < 0)
-                                continue;
-
-                            var pixelX = f * scale - viewOffsetX;
-                            var isSecond = (f % fps === 0);
-                            ctx.strokeStyle = isSecond ? palette.text : palette.mid;
-                            ctx.lineWidth = 1;
-                            ctx.beginPath();
-                            ctx.moveTo(pixelX, height - (isSecond ? 12 : 6));
-                            ctx.lineTo(pixelX, height);
-                            ctx.stroke();
-                            if (isSecond) {
-                                var totalSeconds = f / fps;
-                                var hours = Math.floor(totalSeconds / 3600);
-                                var minutes = Math.floor((totalSeconds % 3600) / 60);
-                                var seconds = Math.floor(totalSeconds % 60);
-                                var timeLabel = "";
-                                if (hours > 0)
-                                    timeLabel = hours + ":" + ("0" + minutes).slice(-2) + ":" + ("0" + seconds).slice(-2);
-                                else if (minutes > 0)
-                                    timeLabel = minutes + ":" + ("0" + seconds).slice(-2);
-                                else
-                                    timeLabel = seconds + "s";
-                                ctx.fillStyle = palette.text;
-                                ctx.fillText(timeLabel, pixelX + 3, 12);
-                                ctx.font = "8px sans-serif";
-                                ctx.fillStyle = palette.mid;
-                                ctx.fillText(f + "f", pixelX + 3, 24);
-                                ctx.font = "10px sans-serif";
-                            }
-                        }
-                    }
-                }
-
+                // 左側：時間表示エリア (レイヤーヘッダーと幅を同期)
                 Rectangle {
-                    anchors.left: parent.left // This is the time display on the ruler
-                    anchors.top: parent.top
-                    width: rulerTimeWidth
-                    height: parent.height
+                    Layout.preferredWidth: rulerTimeWidth
+                    Layout.fillHeight: true
                     color: palette.base
                     border.color: palette.mid
                     border.width: 1
@@ -422,34 +374,101 @@ Common.RinaWindow {
 
                 }
 
-            }
+                // 右側：定規キャンバスエリア
+                Item {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    clip: true
 
-            MouseArea {
-                anchors.fill: parent
-                anchors.leftMargin: rulerTimeWidth
-                onPressed: function(mouse) {
-                    if (TimelineBridge && TimelineBridge.transport && rulerArea.targetFlickable)
-                        TimelineBridge.transport.currentFrame = pxToFrame(mouse.x, rulerArea.targetFlickable.contentX);
+                    Canvas {
+                        id: rulerCanvas
+
+                        property double scale: TimelineBridge ? TimelineBridge.timelineScale : 1
+                        property double offsetX: rulerArea.targetFlickable ? rulerArea.targetFlickable.contentX : 0
+                        property int fps: 30
+
+                        anchors.fill: parent
+                        onScaleChanged: requestPaint()
+                        onOffsetXChanged: requestPaint()
+                        onPaint: {
+                            var ctx = getContext("2d");
+                            ctx.clearRect(0, 0, width, height);
+                            if (!TimelineBridge)
+                                return ;
+
+                            var scale = TimelineBridge.timelineScale;
+                            var viewWidth = width;
+                            var viewOffsetX = offsetX;
+                            var frameInterval = getGridInterval(scale);
+                            var startFrame = Math.floor(viewOffsetX / scale);
+                            var endFrame = Math.ceil((viewOffsetX + viewWidth) / scale);
+                            var alignedStart = Math.floor(startFrame / frameInterval) * frameInterval;
+                            ctx.font = "10px sans-serif";
+                            for (var f = alignedStart; f <= endFrame; f += frameInterval) {
+                                if (f < 0)
+                                    continue;
+
+                                var pixelX = f * scale - viewOffsetX;
+                                var isSecond = (f % fps === 0);
+                                ctx.strokeStyle = isSecond ? palette.text : palette.mid;
+                                ctx.lineWidth = 1;
+                                ctx.beginPath();
+                                ctx.moveTo(pixelX, height - (isSecond ? 12 : 6));
+                                ctx.lineTo(pixelX, height);
+                                ctx.stroke();
+                                if (isSecond) {
+                                    var totalSeconds = f / fps;
+                                    var hours = Math.floor(totalSeconds / 3600);
+                                    var minutes = Math.floor((totalSeconds % 3600) / 60);
+                                    var seconds = Math.floor(totalSeconds % 60);
+                                    var timeLabel = "";
+                                    if (hours > 0)
+                                        timeLabel = hours + ":" + ("0" + minutes).slice(-2) + ":" + ("0" + seconds).slice(-2);
+                                    else if (minutes > 0)
+                                        timeLabel = minutes + ":" + ("0" + seconds).slice(-2);
+                                    else
+                                        timeLabel = seconds + "s";
+                                    ctx.fillStyle = palette.text;
+                                    ctx.fillText(timeLabel, pixelX + 3, 12);
+                                    ctx.font = "8px sans-serif";
+                                    ctx.fillStyle = palette.mid;
+                                    ctx.fillText(f + "f", pixelX + 3, 24);
+                                    ctx.font = "10px sans-serif";
+                                }
+                            }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            onPressed: function(mouse) {
+                                if (TimelineBridge && TimelineBridge.transport && rulerArea.targetFlickable)
+                                    TimelineBridge.transport.currentFrame = pxToFrame(mouse.x, rulerArea.targetFlickable.contentX);
+
+                            }
+                            onPositionChanged: function(mouse) {
+                                if (pressed && TimelineBridge && TimelineBridge.transport && rulerArea.targetFlickable)
+                                    TimelineBridge.transport.currentFrame = pxToFrame(mouse.x, rulerArea.targetFlickable.contentX);
+
+                            }
+                            // ホイールでタイムライン縮尺を変更
+                            onWheel: function(wheel) {
+                                if (!TimelineBridge)
+                                    return ;
+
+                                var currentScale = TimelineBridge.timelineScale;
+                                var delta = wheel.angleDelta.y / 120;
+                                var zoomFactor = 1 + (delta * 0.1);
+                                var newScale = currentScale * zoomFactor;
+                                newScale = Math.max(0.1, Math.min(20, newScale));
+                                TimelineBridge.timelineScale = newScale;
+                                wheel.accepted = true;
+                            }
+                        }
+
+                    }
 
                 }
-                onPositionChanged: function(mouse) {
-                    if (pressed && TimelineBridge && TimelineBridge.transport && rulerArea.targetFlickable)
-                        TimelineBridge.transport.currentFrame = pxToFrame(mouse.x, rulerArea.targetFlickable.contentX);
 
-                }
-                // ホイールでタイムライン縮尺を変更
-                onWheel: function(wheel) {
-                    if (!TimelineBridge)
-                        return ;
-
-                    var currentScale = TimelineBridge.timelineScale;
-                    var delta = wheel.angleDelta.y / 120;
-                    var zoomFactor = 1 + (delta * 0.1);
-                    var newScale = currentScale * zoomFactor;
-                    newScale = Math.max(0.1, Math.min(20, newScale));
-                    TimelineBridge.timelineScale = newScale;
-                    wheel.accepted = true;
-                }
             }
 
         }
@@ -534,217 +553,275 @@ Common.RinaWindow {
             }
 
             // === 右側: タイムライン本体 ===
-            ScrollView {
+            Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                clip: true
 
-                Flickable {
-                    id: timelineFlickable
+                // 統一グリッド描画 (定規と同期)
+                Canvas {
+                    id: timelineGrid
 
-                    contentWidth: Math.max(2000, (TimelineBridge && TimelineBridge.project) ? (TimelineBridge.project.totalFrames * (TimelineBridge.timelineScale || 1)) : 2000)
-                    contentHeight: layerCount * layerHeight
-                    interactive: true
-                    // contentYが変更されたらヘッダーも同期
-                    onContentYChanged: {
-                        layerHeaderFlickable.contentY = contentY;
+                    property double scale: TimelineBridge ? TimelineBridge.timelineScale : 1
+                    property double contentX: timelineFlickable.contentX
+                    property double contentY: timelineFlickable.contentY
+                    property int fps: timelineWindow.fps
+
+                    anchors.fill: parent
+                    onScaleChanged: requestPaint()
+                    onContentXChanged: requestPaint()
+                    onContentYChanged: requestPaint()
+                    // ウィンドウリサイズ時も再描画
+                    onWidthChanged: requestPaint()
+                    onHeightChanged: requestPaint()
+                    onPaint: {
+                        var ctx = getContext("2d");
+                        ctx.clearRect(0, 0, width, height);
+                        if (!TimelineBridge)
+                            return ;
+
+                        // 1. 水平グリッド (レイヤー)
+                        var startLayer = Math.floor(contentY / layerHeight);
+                        var endLayer = Math.ceil((contentY + height) / layerHeight);
+                        ctx.strokeStyle = palette.shadow;
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        for (var l = startLayer; l <= endLayer; l++) {
+                            var y = Math.floor(l * layerHeight - contentY) + 0.5;
+                            ctx.moveTo(0, y);
+                            ctx.lineTo(width, y);
+                        }
+                        ctx.stroke();
+                        // 2. 垂直グリッド (時間 - 定規と同期)
+                        var frameInterval = getGridInterval(scale);
+                        var startFrame = Math.floor(contentX / scale);
+                        var endFrame = Math.ceil((contentX + width) / scale);
+                        var alignedStart = Math.floor(startFrame / frameInterval) * frameInterval;
+                        // サブ目盛り
+                        ctx.strokeStyle = palette.shadow;
+                        ctx.beginPath();
+                        for (var f = alignedStart; f <= endFrame; f += frameInterval) {
+                            if (f < 0 || f % fps === 0)
+                                continue;
+
+                            var x = Math.floor(f * scale - contentX) + 0.5;
+                            ctx.moveTo(x, 0);
+                            ctx.lineTo(x, height);
+                        }
+                        ctx.stroke();
+                        // 秒目盛り (少し濃く)
+                        ctx.strokeStyle = palette.mid;
+                        ctx.beginPath();
+                        for (var f = alignedStart; f <= endFrame; f += frameInterval) {
+                            if (f < 0 || f % fps !== 0)
+                                continue;
+
+                            var x = Math.floor(f * scale - contentX) + 0.5;
+                            ctx.moveTo(x, 0);
+                            ctx.lineTo(x, height);
+                        }
+                        ctx.stroke();
                     }
+                }
 
-                    // レイヤー区切り線
-                    Repeater {
-                        model: layerCount
+                ScrollView {
+                    anchors.fill: parent
+                    clip: true
 
+                    Flickable {
+                        id: timelineFlickable
+
+                        contentWidth: Math.max(2000, (TimelineBridge && TimelineBridge.project) ? (TimelineBridge.project.totalFrames * (TimelineBridge.timelineScale || 1)) : 2000)
+                        contentHeight: layerCount * layerHeight
+                        interactive: true
+                        // contentYが変更されたらヘッダーも同期
+                        onContentYChanged: {
+                            layerHeaderFlickable.contentY = contentY;
+                        }
+
+                        // === Playhead (Current Time) ===
                         Rectangle {
-                            y: index * layerHeight
-                            width: Math.max(parent.width, 2000)
-                            height: 1
-                            color: palette.shadow
-                        }
-
-                    }
-
-                    // === Playhead (Current Time) ===
-                    Rectangle {
-                        id: playhead
-
-                        property double scale: TimelineBridge ? TimelineBridge.timelineScale : 1
-
-                        x: (TimelineBridge && TimelineBridge.transport) ? (TimelineBridge.transport.currentFrame * scale) : 0
-                        y: 0
-                        width: 2
-                        height: parent.height
-                        color: "red"
-                        z: 100 // 最前面
-
-                        MouseArea {
-                            // ピクセル座標をフレーム数に変換
-
-                            anchors.fill: parent
-                            anchors.margins: -5 // 掴みやすくする
-                            cursorShape: Qt.SizeHorCursor
-                            drag.target: playhead
-                            drag.axis: Drag.XAxis
-                            drag.minimumX: 0
-                            onPositionChanged: {
-                                if (drag.active && TimelineBridge && TimelineBridge.transport)
-                                    TimelineBridge.transport.currentFrame = Math.round(playhead.x / scale);
-
-                            }
-                        }
-
-                    }
-
-                    // 全体を覆うマウスエリア（オブジェクトがない場所のクリック用）
-                    MouseArea {
-                        anchors.fill: parent
-                        acceptedButtons: Qt.RightButton | Qt.LeftButton
-                        z: -1 // オブジェクトより奥に配置
-                        onClicked: (mouse) => {
-                            if (mouse.button !== Qt.RightButton)
-                                return ;
-
-                            var frame = snapFrame(mouse.x / (TimelineBridge ? TimelineBridge.timelineScale : 1));
-                            var layer = Math.floor(mouse.y / layerHeight);
-                            contextMenu.openAt(mouse.x, mouse.y, "timeline_background", frame, layer, -1);
-                            if (mouse.button === Qt.LeftButton) {
-                                if (TimelineBridge)
-                                    TimelineBridge.selectedLayer = layer;
-
-                            }
-                        }
-                    }
-
-                    // クリップ一覧表示 (Repeater)
-                    Repeater {
-                        model: TimelineBridge ? TimelineBridge.clips : []
-
-                        delegate: Rectangle {
-                            id: clipRect
+                            id: playhead
 
                             property double scale: TimelineBridge ? TimelineBridge.timelineScale : 1
 
-                            // Layer 0 is at y=0. Each layer is 30px height.
-                            y: modelData.layer * layerHeight
-                            x: modelData.startFrame * scale
-                            width: modelData.durationFrames * scale
-                            height: clipHeight
-                            color: "#66aa99"
-                            border.color: "white"
-                            border.width: 1
-                            opacity: 0.8
-                            radius: 4
+                            x: (TimelineBridge && TimelineBridge.transport) ? (TimelineBridge.transport.currentFrame * scale) : 0
+                            y: 0
+                            width: 2
+                            height: parent.height
+                            color: "red"
+                            z: 100 // 最前面
 
-                            Text {
-                                anchors.centerIn: parent
-                                text: modelData.type
-                                color: "white"
-                            }
-
-                            // 右クリックは“クリップ上”として別系統で開く（背景Menuと混ざらない）
                             MouseArea {
-                                anchors.fill: parent
-                                acceptedButtons: Qt.RightButton
-                                propagateComposedEvents: true
-                                onPressed: (mouse) => {
-                                    if (!TimelineBridge)
-                                        return ;
-
-                                    TimelineBridge.selectClip(modelData.id);
-                                }
-                                onClicked: (mouse) => {
-                                    var scale = TimelineBridge ? TimelineBridge.timelineScale : 1;
-                                    // 相対座標ではなく、グローバル座標から計算するため mouse.x を使う
-                                    var frame = snapFrame((clipRect.x + mouse.x) / scale);
-                                    contextMenu.openAt(mouse.x, mouse.y, "clip", frame, modelData.layer, modelData.id);
-                                }
-                            }
-
-                            // === 移動用 MouseArea (本体) ===
-                            MouseArea {
-                                id: moveArea
+                                // ピクセル座標をフレーム数に変換
 
                                 anchors.fill: parent
-                                anchors.rightMargin: clipResizeHandleWidth // リサイズ用エリアを空ける
-                                // ドラッグ設定
-                                drag.target: clipRect
-                                drag.axis: Drag.XAndYAxis
+                                anchors.margins: -5 // 掴みやすくする
+                                cursorShape: Qt.SizeHorCursor
+                                drag.target: playhead
+                                drag.axis: Drag.XAxis
                                 drag.minimumX: 0
-                                drag.minimumY: 0
-                                drag.smoothed: false
-                                onPressed: {
+                                onPositionChanged: {
+                                    if (drag.active && TimelineBridge && TimelineBridge.transport)
+                                        TimelineBridge.transport.currentFrame = Math.round(playhead.x / scale);
+
+                                }
+                            }
+
+                        }
+
+                        // 全体を覆うマウスエリア（オブジェクトがない場所のクリック用）
+                        MouseArea {
+                            anchors.fill: parent
+                            acceptedButtons: Qt.RightButton | Qt.LeftButton
+                            z: -1 // オブジェクトより奥に配置
+                            onClicked: (mouse) => {
+                                if (mouse.button !== Qt.RightButton)
+                                    return ;
+
+                                var frame = snapFrame(mouse.x / (TimelineBridge ? TimelineBridge.timelineScale : 1));
+                                var layer = Math.floor(mouse.y / layerHeight);
+                                contextMenu.openAt(mouse.x, mouse.y, "timeline_background", frame, layer, -1);
+                                if (mouse.button === Qt.LeftButton) {
                                     if (TimelineBridge)
+                                        TimelineBridge.selectedLayer = layer;
+
+                                }
+                            }
+                        }
+
+                        // クリップ一覧表示 (Repeater)
+                        Repeater {
+                            model: TimelineBridge ? TimelineBridge.clips : []
+
+                            delegate: Rectangle {
+                                id: clipRect
+
+                                property double scale: TimelineBridge ? TimelineBridge.timelineScale : 1
+
+                                // Layer 0 is at y=0. Each layer is 30px height.
+                                y: modelData.layer * layerHeight
+                                x: modelData.startFrame * scale
+                                width: modelData.durationFrames * scale
+                                height: clipHeight
+                                color: "#66aa99"
+                                border.color: "white"
+                                border.width: 1
+                                opacity: 0.8
+                                radius: 4
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: modelData.type
+                                    color: "white"
+                                }
+
+                                // 右クリックは“クリップ上”として別系統で開く（背景Menuと混ざらない）
+                                MouseArea {
+                                    anchors.fill: parent
+                                    acceptedButtons: Qt.RightButton
+                                    propagateComposedEvents: true
+                                    onPressed: (mouse) => {
+                                        if (!TimelineBridge)
+                                            return ;
+
                                         TimelineBridge.selectClip(modelData.id);
-
-                                }
-                                onClicked: {
-                                    if (TimelineBridge)
-                                        TimelineBridge.selectClip(modelData.id);
-
-                                }
-                                onDoubleClicked: {
-                                    if (WindowManager)
-                                        WindowManager.raiseWindow("objectSettings");
-
-                                }
-                                onReleased: {
-                                    if (TimelineBridge) {
-                                        var scale = TimelineBridge.timelineScale;
-                                        // 座標からフレーム/レイヤーを計算
-                                        var newStart = snapFrame(clipRect.x / scale);
-                                        var newLayer = Math.round(clipRect.y / layerHeight);
-                                        // バインディングを復元しつつ更新
-                                        TimelineBridge.updateClip(modelData.id, newLayer, newStart, modelData.durationFrames);
+                                    }
+                                    onClicked: (mouse) => {
+                                        var scale = TimelineBridge ? TimelineBridge.timelineScale : 1;
+                                        // 相対座標ではなく、グローバル座標から計算するため mouse.x を使う
+                                        var frame = snapFrame((clipRect.x + mouse.x) / scale);
+                                        contextMenu.openAt(mouse.x, mouse.y, "clip", frame, modelData.layer, modelData.id);
                                     }
                                 }
-                            }
 
-                            // === リサイズ用ハンドル (右端) ===
-                            Rectangle {
-                                // 視覚的フィードバック（ホバー時に少し白くする等しても良い）
-
-                                width: clipResizeHandleWidth
-                                height: parent.height
-                                anchors.right: parent.right
-                                color: "transparent"
-
+                                // === 移動用 MouseArea (本体) ===
                                 MouseArea {
-                                    // startWidth等は更新しない（累積誤差を防ぐため初期位置基準）
-
-                                    property int startX: 0
-                                    property int startWidth: 0
-                                    property bool resizing: false
+                                    id: moveArea
 
                                     anchors.fill: parent
-                                    cursorShape: Qt.SizeHorCursor
-                                    hoverEnabled: true // カーソル変更のために必要
-                                    preventStealing: true // ドラッグを確実にする
+                                    anchors.rightMargin: clipResizeHandleWidth // リサイズ用エリアを空ける
+                                    // ドラッグ設定
+                                    drag.target: clipRect
+                                    drag.axis: Drag.XAndYAxis
+                                    drag.minimumX: 0
+                                    drag.minimumY: 0
+                                    drag.smoothed: false
                                     onPressed: {
-                                        startX = mouseX;
-                                        startWidth = clipRect.width;
-                                        resizing = true;
                                         if (TimelineBridge)
                                             TimelineBridge.selectClip(modelData.id);
 
                                     }
-                                    onPositionChanged: {
-                                        if (resizing) {
-                                            // 単純な差分加算
-                                            var delta = mouseX - startX;
-                                            var newW = startWidth + delta;
-                                            if (newW < 5)
-                                                newW = 5;
+                                    onClicked: {
+                                        if (TimelineBridge)
+                                            TimelineBridge.selectClip(modelData.id);
 
-                                            clipRect.width = newW;
-                                        }
+                                    }
+                                    onDoubleClicked: {
+                                        if (WindowManager)
+                                            WindowManager.raiseWindow("objectSettings");
+
                                     }
                                     onReleased: {
-                                        resizing = false;
                                         if (TimelineBridge) {
                                             var scale = TimelineBridge.timelineScale;
-                                            var newDur = Math.round(clipRect.width / scale);
-                                            TimelineBridge.updateClip(modelData.id, modelData.layer, modelData.startFrame, newDur);
+                                            // 座標からフレーム/レイヤーを計算
+                                            var newStart = snapFrame(clipRect.x / scale);
+                                            var newLayer = Math.round(clipRect.y / layerHeight);
+                                            // バインディングを復元しつつ更新
+                                            TimelineBridge.updateClip(modelData.id, newLayer, newStart, modelData.durationFrames);
                                         }
                                     }
+                                }
+
+                                // === リサイズ用ハンドル (右端) ===
+                                Rectangle {
+                                    // 視覚的フィードバック（ホバー時に少し白くする等しても良い）
+
+                                    width: clipResizeHandleWidth
+                                    height: parent.height
+                                    anchors.right: parent.right
+                                    color: "transparent"
+
+                                    MouseArea {
+                                        // startWidth等は更新しない（累積誤差を防ぐため初期位置基準）
+
+                                        property int startX: 0
+                                        property int startWidth: 0
+                                        property bool resizing: false
+
+                                        anchors.fill: parent
+                                        cursorShape: Qt.SizeHorCursor
+                                        hoverEnabled: true // カーソル変更のために必要
+                                        preventStealing: true // ドラッグを確実にする
+                                        onPressed: {
+                                            startX = mouseX;
+                                            startWidth = clipRect.width;
+                                            resizing = true;
+                                            if (TimelineBridge)
+                                                TimelineBridge.selectClip(modelData.id);
+
+                                        }
+                                        onPositionChanged: {
+                                            if (resizing) {
+                                                // 単純な差分加算
+                                                var delta = mouseX - startX;
+                                                var newW = startWidth + delta;
+                                                if (newW < 5)
+                                                    newW = 5;
+
+                                                clipRect.width = newW;
+                                            }
+                                        }
+                                        onReleased: {
+                                            resizing = false;
+                                            if (TimelineBridge) {
+                                                var scale = TimelineBridge.timelineScale;
+                                                var newDur = Math.round(clipRect.width / scale);
+                                                TimelineBridge.updateClip(modelData.id, modelData.layer, modelData.startFrame, newDur);
+                                            }
+                                        }
+                                    }
+
                                 }
 
                             }

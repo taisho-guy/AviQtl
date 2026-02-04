@@ -183,6 +183,8 @@ void WindowManager::raiseWindow(const QString &id) {
     w->requestActivate();
 }
 
+QObject *WindowManager::getWindow(const QString &id) const { return m_windows.value(id); }
+
 void WindowManager::requestQuit() {
     // 全Windowを閉じる（main自身も含めてOK）
     for (auto it = m_windows.begin(); it != m_windows.end(); ++it) {

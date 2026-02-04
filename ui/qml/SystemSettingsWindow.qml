@@ -9,6 +9,7 @@ Common.RinaWindow {
     // C++のSettingsManagerとバインド (初期値としてコピーを取得)
     property var settings: SettingsManager ? SettingsManager.settings : ({
     })
+    property alias currentTabIndex: bar.currentIndex
 
     width: 600
     height: 500
