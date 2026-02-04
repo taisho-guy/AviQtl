@@ -10,7 +10,7 @@ ScrollView {
     property alias contentY: timelineFlickable.contentY
     property int layerHeight: 30
     property int layerCount: 128
-    property int clipResizeHandleWidth: 10
+    property int clipResizeHandleWidth
     // コンテキストメニュー用プロパティ
     property int contextClickFrame: 0
     property int contextClickLayer: 0

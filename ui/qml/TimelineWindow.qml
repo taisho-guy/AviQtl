@@ -13,7 +13,8 @@ Common.RinaWindow {
     readonly property int layerHeight: settings.timelineTrackHeight || 30
     readonly property int rulerHeight: settings.timelineRulerHeight || 32
     readonly property int headerWidth: settings.timelineLayerHeaderWidth || 60
-    readonly property int sceneTabHeight: 28
+    readonly property int clipResizeHandleWidth: settings.timelineClipResizeHandleWidth || 10
+    readonly property int sceneTabHeight: settings.timelineHeaderHeight || 28
 
     title: "Timeline"
     width: 1280
@@ -122,6 +123,7 @@ Common.RinaWindow {
                 Layout.fillHeight: true
                 layerHeight: timelineWindow.layerHeight
                 layerCount: timelineWindow.layerCount
+                clipResizeHandleWidth: timelineWindow.clipResizeHandleWidth
             }
 
         }

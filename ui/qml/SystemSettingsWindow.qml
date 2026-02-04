@@ -67,11 +67,25 @@ Common.RinaWindow {
                             CheckBox {
                                 text: "終了時に確認ダイアログを表示する"
                                 checked: root.settings.showConfirmOnClose
+                                onToggled: {
+                                    var s = root.settings;
+                                    s.showConfirmOnClose = checked;
+                                    if (SettingsManager)
+                                        SettingsManager.settings = s;
+
+                                }
                             }
 
                             CheckBox {
                                 text: "自動バックアップを有効化"
                                 checked: root.settings.enableAutoBackup
+                                onToggled: {
+                                    var s = root.settings;
+                                    s.enableAutoBackup = checked;
+                                    if (SettingsManager)
+                                        SettingsManager.settings = s;
+
+                                }
                             }
 
                             RowLayout {
@@ -85,6 +99,13 @@ Common.RinaWindow {
                                     from: 1
                                     to: 60
                                     value: root.settings.backupInterval
+                                    onValueModified: {
+                                        var s = root.settings;
+                                        s.backupInterval = value;
+                                        if (SettingsManager)
+                                            SettingsManager.settings = s;
+
+                                    }
                                 }
 
                             }
@@ -107,6 +128,13 @@ Common.RinaWindow {
                                     from: 10
                                     to: 1000
                                     value: root.settings.undoCount
+                                    onValueModified: {
+                                        var s = root.settings;
+                                        s.undoCount = value;
+                                        if (SettingsManager)
+                                            SettingsManager.settings = s;
+
+                                    }
                                 }
 
                             }
@@ -166,25 +194,25 @@ Common.RinaWindow {
 
                     }
 
-                    // UI寸法設定
                     GroupBox {
-                        title: "UI寸法 (再起動後に適用)"
+                        title: "起動"
                         Layout.fillWidth: true
 
                         GridLayout {
                             columns: 2
 
                             Label {
-                                text: "トラックの高さ:"
+                                text: "スプラッシュ表示時間 (ms):"
                             }
 
                             SpinBox {
-                                from: 20
-                                to: 100
-                                value: root.settings.timelineTrackHeight
+                                from: 0
+                                to: 5000
+                                stepSize: 100
+                                value: root.settings.splashDuration
                                 onValueModified: {
                                     var s = root.settings;
-                                    s.timelineTrackHeight = value;
+                                    s.splashDuration = value;
                                     if (SettingsManager)
                                         SettingsManager.settings = s;
 
@@ -192,16 +220,17 @@ Common.RinaWindow {
                             }
 
                             Label {
-                                text: "レイヤーヘッダー幅:"
+                                text: "スプラッシュ画像サイズ (px):"
                             }
 
                             SpinBox {
-                                from: 40
-                                to: 300
-                                value: root.settings.timelineLayerHeaderWidth
+                                from: 128
+                                to: 2048
+                                stepSize: 64
+                                value: root.settings.splashSize
                                 onValueModified: {
                                     var s = root.settings;
-                                    s.timelineLayerHeaderWidth = value;
+                                    s.splashSize = value;
                                     if (SettingsManager)
                                         SettingsManager.settings = s;
 
@@ -209,16 +238,17 @@ Common.RinaWindow {
                             }
 
                             Label {
-                                text: "リサイズハンドル幅:"
+                                text: "アプリ起動後遅延 (ms):"
                             }
 
                             SpinBox {
-                                from: 5
-                                to: 30
-                                value: root.settings.timelineClipResizeHandleWidth
+                                from: 100
+                                to: 5000
+                                stepSize: 100
+                                value: root.settings.appStartupDelay
                                 onValueModified: {
                                     var s = root.settings;
-                                    s.timelineClipResizeHandleWidth = value;
+                                    s.appStartupDelay = value;
                                     if (SettingsManager)
                                         SettingsManager.settings = s;
 
@@ -235,7 +265,8 @@ Common.RinaWindow {
 
             // --- パフォーマンス設定 ---
             ScrollView {
-                contentWidth: availableWidth
+                Layout.fillWidth: true
+                Layout.fillHeight: true
 
                 ColumnLayout {
                     spacing: 15
@@ -252,7 +283,14 @@ Common.RinaWindow {
 
                                 ComboBox {
                                     model: ["1280x720", "1920x1080", "2560x1440", "3840x2160"]
-                                    currentIndex: 1
+                                    currentIndex: model.indexOf(root.settings.maxImageSize) !== -1 ? model.indexOf(root.settings.maxImageSize) : 1
+                                    onActivated: {
+                                        var s = root.settings;
+                                        s.maxImageSize = currentText;
+                                        if (SettingsManager)
+                                            SettingsManager.settings = s;
+
+                                    }
                                 }
 
                             }
@@ -274,6 +312,13 @@ Common.RinaWindow {
                                     stepSize: 512
                                     value: root.settings.cacheSize
                                     editable: true
+                                    onValueModified: {
+                                        var s = root.settings;
+                                        s.cacheSize = value;
+                                        if (SettingsManager)
+                                            SettingsManager.settings = s;
+
+                                    }
                                 }
 
                             }
@@ -305,6 +350,13 @@ Common.RinaWindow {
                                     textFromValue: function(v) {
                                         return v === 0 ? "自動" : v;
                                     }
+                                    onValueModified: {
+                                        var s = root.settings;
+                                        s.renderThreads = value;
+                                        if (SettingsManager)
+                                            SettingsManager.settings = s;
+
+                                    }
                                 }
 
                             }
@@ -319,24 +371,6 @@ Common.RinaWindow {
 
                         GridLayout {
                             columns: 2
-
-                            Label {
-                                text: "アプリ起動後遅延 (ms):"
-                            }
-
-                            SpinBox {
-                                from: 100
-                                to: 5000
-                                stepSize: 100
-                                value: root.settings.appStartupDelay
-                                onValueModified: {
-                                    var s = root.settings;
-                                    s.appStartupDelay = value;
-                                    if (SettingsManager)
-                                        SettingsManager.settings = s;
-
-                                }
-                            }
 
                             Label {
                                 text: "テキスト描画パディング係数:"
@@ -366,13 +400,127 @@ Common.RinaWindow {
 
                     }
 
+                    GroupBox {
+                        title: "レイアウト (再起動後に適用)"
+                        Layout.fillWidth: true
+
+                        GridLayout {
+                            columns: 2
+
+                            Label {
+                                text: "トラックの高さ:"
+                            }
+
+                            SpinBox {
+                                from: 20
+                                to: 100
+                                value: root.settings.timelineTrackHeight
+                                onValueModified: {
+                                    var s = root.settings;
+                                    s.timelineTrackHeight = value;
+                                    if (SettingsManager)
+                                        SettingsManager.settings = s;
+
+                                }
+                            }
+
+                            Label {
+                                text: "ヘッダーの高さ:"
+                            }
+
+                            SpinBox {
+                                from: 20
+                                to: 100
+                                value: root.settings.timelineHeaderHeight
+                                onValueModified: {
+                                    var s = root.settings;
+                                    s.timelineHeaderHeight = value;
+                                    if (SettingsManager)
+                                        SettingsManager.settings = s;
+
+                                }
+                            }
+
+                            Label {
+                                text: "ルーラーの高さ:"
+                            }
+
+                            SpinBox {
+                                from: 20
+                                to: 100
+                                value: root.settings.timelineRulerHeight
+                                onValueModified: {
+                                    var s = root.settings;
+                                    s.timelineRulerHeight = value;
+                                    if (SettingsManager)
+                                        SettingsManager.settings = s;
+
+                                }
+                            }
+
+                            Label {
+                                text: "レイヤーヘッダー幅:"
+                            }
+
+                            SpinBox {
+                                from: 40
+                                to: 300
+                                value: root.settings.timelineLayerHeaderWidth
+                                onValueModified: {
+                                    var s = root.settings;
+                                    s.timelineLayerHeaderWidth = value;
+                                    if (SettingsManager)
+                                        SettingsManager.settings = s;
+
+                                }
+                            }
+
+                            Label {
+                                text: "ルーラー時間幅:"
+                            }
+
+                            SpinBox {
+                                from: 40
+                                to: 300
+                                value: root.settings.timelineRulerTimeWidth
+                                onValueModified: {
+                                    var s = root.settings;
+                                    s.timelineRulerTimeWidth = value;
+                                    if (SettingsManager)
+                                        SettingsManager.settings = s;
+
+                                }
+                            }
+
+                            Label {
+                                text: "リサイズハンドル幅:"
+                            }
+
+                            SpinBox {
+                                from: 5
+                                to: 30
+                                value: root.settings.timelineClipResizeHandleWidth
+                                onValueModified: {
+                                    var s = root.settings;
+                                    s.timelineClipResizeHandleWidth = value;
+                                    if (SettingsManager)
+                                        SettingsManager.settings = s;
+
+                                }
+                            }
+
+                        }
+
+                    }
+
                 }
 
             }
 
             // --- タイムライン設定 ---
             ScrollView {
-                contentWidth: availableWidth
+                Layout.fillWidth: true
+                Layout.fillHeight: true
 
                 ColumnLayout {
                     spacing: 15
@@ -471,7 +619,8 @@ Common.RinaWindow {
 
             // --- 外観設定 ---
             ScrollView {
-                contentWidth: availableWidth
+                Layout.fillWidth: true
+                Layout.fillHeight: true
 
                 ColumnLayout {
                     spacing: 15
@@ -486,7 +635,15 @@ Common.RinaWindow {
                             }
 
                             ComboBox {
-                                model: ["ダーク", "ライト", "クラシック"]
+                                model: ["Dark", "Light", "Classic"]
+                                currentIndex: model.indexOf(root.settings.theme) !== -1 ? model.indexOf(root.settings.theme) : 0
+                                onActivated: {
+                                    var s = root.settings;
+                                    s.theme = currentText;
+                                    if (SettingsManager)
+                                        SettingsManager.settings = s;
+
+                                }
                             }
 
                         }
@@ -497,88 +654,106 @@ Common.RinaWindow {
 
             }
 
-        }
+            // --- デフォルトプロジェクト設定 ---
+            ScrollView {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
 
-        // --- デフォルトプロジェクト設定 ---
-        ScrollView {
-            contentWidth: availableWidth
+                ColumnLayout {
+                    spacing: 15
 
-            ColumnLayout {
-                spacing: 15
+                    GroupBox {
+                        title: "新規プロジェクトの既定値"
+                        Layout.fillWidth: true
 
-                GroupBox {
-                    title: "新規プロジェクトの既定値"
-                    Layout.fillWidth: true
+                        GridLayout {
+                            columns: 2
 
-                    GridLayout {
-                        columns: 2
-
-                        Label {
-                            text: "幅:"
-                        }
-
-                        SpinBox {
-                            from: 1
-                            to: 8000
-                            value: root.settings.defaultProjectWidth
-                            onValueModified: {
-                                var s = root.settings;
-                                s.defaultProjectWidth = value;
-                                if (SettingsManager)
-                                    SettingsManager.settings = s;
-
+                            Label {
+                                text: "幅:"
                             }
-                        }
 
-                        Label {
-                            text: "高さ:"
-                        }
+                            SpinBox {
+                                from: 1
+                                to: 8000
+                                value: root.settings.defaultProjectWidth
+                                onValueModified: {
+                                    var s = root.settings;
+                                    s.defaultProjectWidth = value;
+                                    if (SettingsManager)
+                                        SettingsManager.settings = s;
 
-                        SpinBox {
-                            from: 1
-                            to: 8000
-                            value: root.settings.defaultProjectHeight
-                            onValueModified: {
-                                var s = root.settings;
-                                s.defaultProjectHeight = value;
-                                if (SettingsManager)
-                                    SettingsManager.settings = s;
-
+                                }
                             }
-                        }
 
-                        Label {
-                            text: "FPS:"
-                        }
-
-                        SpinBox {
-                            from: 1
-                            to: 240
-                            value: root.settings.defaultProjectFps
-                            onValueModified: {
-                                var s = root.settings;
-                                s.defaultProjectFps = value;
-                                if (SettingsManager)
-                                    SettingsManager.settings = s;
-
+                            Label {
+                                text: "高さ:"
                             }
-                        }
 
-                        Label {
-                            text: "デフォルトクリップ長(F):"
-                        }
+                            SpinBox {
+                                from: 1
+                                to: 8000
+                                value: root.settings.defaultProjectHeight
+                                onValueModified: {
+                                    var s = root.settings;
+                                    s.defaultProjectHeight = value;
+                                    if (SettingsManager)
+                                        SettingsManager.settings = s;
 
-                        SpinBox {
-                            from: 1
-                            to: 1000
-                            value: root.settings.defaultClipDuration
-                            onValueModified: {
-                                var s = root.settings;
-                                s.defaultClipDuration = value;
-                                if (SettingsManager)
-                                    SettingsManager.settings = s;
-
+                                }
                             }
+
+                            Label {
+                                text: "FPS:"
+                            }
+
+                            SpinBox {
+                                from: 1
+                                to: 240
+                                value: root.settings.defaultProjectFps
+                                onValueModified: {
+                                    var s = root.settings;
+                                    s.defaultProjectFps = value;
+                                    if (SettingsManager)
+                                        SettingsManager.settings = s;
+
+                                }
+                            }
+
+                            Label {
+                                text: "デフォルトクリップ長(F):"
+                            }
+
+                            SpinBox {
+                                from: 1
+                                to: 1000
+                                value: root.settings.defaultClipDuration
+                                onValueModified: {
+                                    var s = root.settings;
+                                    s.defaultClipDuration = value;
+                                    if (SettingsManager)
+                                        SettingsManager.settings = s;
+
+                                }
+                            }
+
+                            Label {
+                                text: "総フレーム数:"
+                            }
+
+                            SpinBox {
+                                from: 1
+                                to: 100000
+                                value: root.settings.defaultProjectFrames || 3600
+                                onValueModified: {
+                                    var s = root.settings;
+                                    s.defaultProjectFrames = value;
+                                    if (SettingsManager)
+                                        SettingsManager.settings = s;
+
+                                }
+                            }
+
                         }
 
                     }
