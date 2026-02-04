@@ -5,8 +5,7 @@ build/
 .build_tmp/
 
 # Exports
-project_export.txt
-project_context.txt
+project_context.json
 
 # ---> VisualStudioCode
 .vscode/*
