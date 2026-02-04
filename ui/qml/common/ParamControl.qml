@@ -20,22 +20,6 @@ RowLayout {
     signal endValueModified(real value)
     signal paramButtonClicked()
 
-    // 関数をrootレベルに移動
-    function getInterpolationLabel() {
-        switch (root.interpolationType) {
-        case "linear":
-            return "━━";
-        case "ease_in":
-            return "╱━";
-        case "ease_out":
-            return "━╲";
-        case "ease_in_out":
-            return "╱╲";
-        default:
-            return "━━";
-        }
-    }
-
     spacing: 8
 
     SystemPalette {
@@ -58,24 +42,6 @@ RowLayout {
             var newVal = decimals === 0 ? Math.round(value) : value;
             root.startValueModified(newVal);
         }
-
-        background: Rectangle {
-            x: leftSlider.leftPadding
-            y: leftSlider.topPadding + leftSlider.availableHeight / 2 - height / 2
-            width: leftSlider.availableWidth
-            height: 4
-            radius: 2
-            color: palette.midlight
-
-            Rectangle {
-                width: leftSlider.visualPosition * parent.width
-                height: parent.height
-                color: root.isRangeMode ? palette.highlight : palette.button
-                radius: 2
-            }
-
-        }
-
     }
 
     // 左側数値ボックス
@@ -110,29 +76,6 @@ RowLayout {
         text: root.paramName
         enabled: root.enabled
         onClicked: root.paramButtonClicked()
-
-        contentItem: Column {
-            spacing: 2
-
-            Text {
-                text: paramButton.text
-                color: paramButton.enabled ? palette.text : palette.mid
-                horizontalAlignment: Text.AlignHCenter
-                anchors.horizontalCenter: parent.horizontalCenter
-                font.pointSize: 10
-            }
-
-            Text {
-                text: getInterpolationLabel()
-                color: paramButton.enabled ? "#4a9eff" : palette.mid
-                horizontalAlignment: Text.AlignHCenter
-                anchors.horizontalCenter: parent.horizontalCenter
-                font.pointSize: 8
-                visible: root.isRangeMode
-            }
-
-        }
-
     }
 
     // 右側数値ボックス
@@ -173,24 +116,6 @@ RowLayout {
             var newVal = decimals === 0 ? Math.round(value) : value;
             root.endValueModified(newVal);
         }
-
-        background: Rectangle {
-            x: rightSlider.leftPadding
-            y: rightSlider.topPadding + rightSlider.availableHeight / 2 - height / 2
-            width: rightSlider.availableWidth
-            height: 4
-            radius: 2
-            color: palette.midlight
-
-            Rectangle {
-                width: rightSlider.visualPosition * parent.width
-                height: parent.height
-                color: root.isRangeMode ? palette.highlight : palette.button
-                radius: 2
-            }
-
-        }
-
     }
 
 }

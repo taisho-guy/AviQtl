@@ -215,109 +215,53 @@ Common.RinaWindow {
                             Layout.fillWidth: true
                             spacing: 0
 
-                            RowLayout {
+                            // AviUtl UXを再現する共通コンポーネントを使用
+                            Common.ParamControl {
                                 Layout.fillWidth: true
                                 Layout.margins: 4
 
-                                // --- Left Slider (Start) ---
-                                Slider {
-                                    visible: isNumber
-                                    Layout.fillWidth: true
-                                    from: (key === "scale" || key === "opacity") ? 0 : -1000
-                                    to: (key === "scale") ? 500 : (key === "opacity" ? 1 : 1000)
-                                    value: Number(startVal) || 0
-                                    onMoved: updateParam(startFrame, value)
-                                    onPressedChanged: {
-                                        if (pressed)
-                                            inputting = true;
-                                        else
-                                            inputting = false;
+                                paramName: {
+                                    var interpLabel = { "linear": " (直線)", "ease_in": " (加速)", "ease_out": " (減速)", "ease_in_out": " (加減速)", "bezier": " (ベジェ)" };
+                                    return key + (isMoving ? (interpLabel[interpType] || "") : "");
+                                }
+                                
+                                // 値のバインディング
+                                startValue: Number(startVal) || 0
+                                endValue: Number(endVal) || 0
+                                minValue: (key === "scale" || key === "opacity") ? 0 : -1000
+                                maxValue: (key === "scale") ? 500 : (key === "opacity" ? 1 : 1000)
+                                decimals: 2
+                                
+                                // 状態制御
+                                enabled: isNumber
+                                isRangeMode: isMoving
+                                visible: isNumber
+
+                                // シグナルハンドラ
+                                onStartValueModified: (val) => updateParam(startFrame, val)
+                                onEndValueModified: (val) => updateParam(endFrame, val)
+                                onParamButtonClicked: {
+                                    if (!hasKeyframes) {
+                                        effectModel.setKeyframe(key, startFrame, startVal, { "interp": "linear" });
+                                        effectModel.setKeyframe(key, endFrame, endVal, { "interp": "linear" });
                                     }
+                                    var dialog = easingDialogComponent.createObject(root, {
+                                        "effectModel": effectModel,
+                                        "paramName": key,
+                                        "keyframeFrame": startFrame
+                                    });
+                                    dialog.open();
                                 }
+                            }
 
-                                // --- Left Box (Start) ---
-                                TextField {
-                                    visible: isNumber
-                                    Layout.preferredWidth: 60
-                                    text: isNumber ? (Number(startVal) || 0).toFixed(2) : ""
-                                    selectByMouse: true
-                                    onEditingFinished: updateParam(startFrame, Number(text))
-                                }
-
-                                // --- Center Button (Param Name & Interp Menu) ---
-                                Button {
-                                    id: interpBtn
-
-                                    Layout.preferredWidth: 100
-                                    Layout.fillWidth: !isNumber
-                                    text: {
-                                        if (!isNumber)
-                                            return key;
-
-                                        var interpLabel = {
-                                            "linear": " (直線)",
-                                            "ease_in": " (加速)",
-                                            "ease_out": " (減速)",
-                                            "ease_in_out": " (加減速)",
-                                            "bezier": " (ベジェ)"
-                                        };
-                                        return key + (interpLabel[interpType] || "");
-                                    }
-                                    enabled: isNumber
-                                    onClicked: {
-                                        // Ensure at least one keyframe exists to edit
-                                        if (!hasKeyframes) {
-                                            effectModel.setKeyframe(key, startFrame, startVal, {
-                                                "interp": "linear"
-                                            });
-                                            effectModel.setKeyframe(key, endFrame, endVal, {
-                                                "interp": "linear"
-                                            });
-                                        }
-                                        var dialog = easingDialogComponent.createObject(root, {
-                                            "effectModel": effectModel,
-                                            "paramName": key,
-                                            "keyframeFrame": startFrame
-                                        });
-                                        dialog.open();
-                                    }
-                                }
-
-                                // --- Right Box (End) ---
-                                TextField {
-                                    // 常に表示するが、移動なしの時は無効化（グレーアウト）
-                                    enabled: isMoving
-                                    Layout.preferredWidth: 60
-                                    text: isNumber ? (Number(endVal) || 0).toFixed(2) : ""
-                                    selectByMouse: true
-                                    onEditingFinished: updateParam(endFrame, Number(text))
-                                }
-
-                                // --- Right Slider (End) ---
-                                Slider {
-                                    enabled: isMoving
-                                    Layout.fillWidth: true
-                                    from: (key === "scale" || key === "opacity") ? 0 : -1000
-                                    to: (key === "scale") ? 500 : (key === "opacity" ? 1 : 1000)
-                                    value: Number(endVal) || 0
-                                    onMoved: updateParam(endFrame, value)
-                                    onPressedChanged: {
-                                        if (pressed)
-                                            inputting = true;
-                                        else
-                                            inputting = false;
-                                    }
-                                }
-
-                                // --- Text Editor (Non-numeric) ---
-                                TextField {
-                                    visible: !isNumber
-                                    Layout.fillWidth: true
-                                    text: String(effVal)
-                                    selectByMouse: true
-                                    onEditingFinished: TimelineBridge.updateClipEffectParam(targetClipId, effIdx, key, text)
-                                }
-
+                            // 非数値パラメータ用（テキスト入力）
+                            TextField {
+                                visible: !isNumber
+                                Layout.fillWidth: true
+                                Layout.margins: 4
+                                text: String(effVal)
+                                selectByMouse: true
+                                onEditingFinished: TimelineBridge.updateClipEffectParam(targetClipId, effIdx, key, text)
                             }
 
                             // --- Mini Timeline Bar ---
