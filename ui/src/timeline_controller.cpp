@@ -1,11 +1,11 @@
 #include "timeline_controller.hpp"
 #include "../../core/include/project_serializer.hpp"
-#include "../../core/include/video_decoder.hpp"
 #include "../../engine/timeline/ecs.hpp"
+#include "core/include/video_frame_store.hpp"
+#include "../../core/include/video_decoder.hpp"
 #include "../../scripting/lua_host.hpp"
 #include "clip_model.hpp"
 #include "commands.hpp"
-#include "core/include/video_frame_store.hpp"
 #include "effect_registry.hpp"
 #include "project_service.hpp"
 #include "selection_service.hpp"
@@ -48,9 +48,8 @@ TimelineController::TimelineController(QObject *parent) : QObject(parent) {
         updateClipActiveState();
     });
 
-    // TODO: シーン機能が実装されたら以下の接続を有効化
-    // connect(m_timeline, &TimelineService::scenesChanged, this, &TimelineController::scenesChanged);
-    // connect(m_timeline, &TimelineService::currentSceneIdChanged, this, &TimelineController::currentSceneIdChanged);
+    connect(m_timeline, &TimelineService::scenesChanged, this, &TimelineController::scenesChanged);
+    connect(m_timeline, &TimelineService::currentSceneIdChanged, this, &TimelineController::currentSceneIdChanged);
     connect(m_timeline, &TimelineService::clipEffectsChanged, this, &TimelineController::clipEffectsChanged);
 
     // サービス間の連携: FPSが変更されたら再生タイマーの間隔を更新
@@ -545,16 +544,15 @@ void TimelineController::cutClip(int clipId) { m_timeline->cutClip(clipId); }
 
 void TimelineController::pasteClip(int frame, int layer) { m_timeline->pasteClip(frame, layer); }
 
-// シーン機能は未実装のため、TimelineServiceへの呼び出しを削除してダミー値を返す
-QVariantList TimelineController::scenes() const { return QVariantList(); }
+QVariantList TimelineController::scenes() const { return m_timeline->scenes(); }
 
-int TimelineController::currentSceneId() const { return 0; }
+int TimelineController::currentSceneId() const { return m_timeline->currentSceneId(); }
 
-void TimelineController::createScene(const QString &name) { qWarning() << "createScene not implemented:" << name; }
+void TimelineController::createScene(const QString &name) { m_timeline->createScene(name); }
 
-void TimelineController::removeScene(int sceneId) { Q_UNUSED(sceneId); }
+void TimelineController::removeScene(int sceneId) { m_timeline->removeScene(sceneId); }
 
-void TimelineController::switchScene(int sceneId) { Q_UNUSED(sceneId); }
+void TimelineController::switchScene(int sceneId) { m_timeline->switchScene(sceneId); }
 
 QVariantList TimelineController::getSceneClips(int sceneId) const {
     Q_UNUSED(sceneId);

@@ -27,4 +27,10 @@ struct ClipData {
     // ハイブリッド設計: EffectModelは振る舞いを持つためポインタで保持する
     QList<EffectModel *> effects;
 };
+
+struct SceneData {
+    int id;
+    QString name;
+    QList<ClipData> clips;
+};
 } // namespace Rina::UI

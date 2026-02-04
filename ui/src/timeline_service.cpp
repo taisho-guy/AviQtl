@@ -93,7 +93,14 @@ void SplitClipCommand::redo() {
 
 // === TimelineService Implementation ===
 
-TimelineService::TimelineService(SelectionService *selection, QObject *parent) : QObject(parent), m_undoStack(new QUndoStack(this)), m_selection(selection) {}
+TimelineService::TimelineService(SelectionService *selection, QObject *parent) : QObject(parent), m_undoStack(new QUndoStack(this)), m_selection(selection) {
+    // 初期シーンを作成
+    SceneData rootScene;
+    rootScene.id = 0;
+    rootScene.name = "Root";
+    m_scenes.append(rootScene);
+    m_currentSceneId = 0;
+}
 
 void TimelineService::undo() { m_undoStack->undo(); }
 void TimelineService::redo() { m_undoStack->redo(); }
@@ -116,7 +123,8 @@ void TimelineService::createClipInternal(int clipId, const QString &type, int st
 
     const int defaultDuration = Rina::Core::SettingsManager::instance().settings().value("defaultClipDuration", 100).toInt();
     auto overlaps = [](int s1, int d1, int s2, int d2) { return (s1 < (s2 + d2)) && (s2 < (s1 + d1)); };
-    for (const auto &c : m_clips) {
+    auto &currentClips = clipsMutable();
+    for (const auto &c : currentClips) {
         if (c.layer == layer && overlaps(startFrame, defaultDuration, c.startFrame, c.durationFrames)) {
             qWarning() << "クリップ作成を拒否: レイヤー" << layer << "の" << startFrame << "フレームで衝突が発生";
             return;
@@ -141,7 +149,7 @@ void TimelineService::createClipInternal(int clipId, const QString &type, int st
     connect(cm, &EffectModel::keyframeTracksChanged, this, &TimelineService::clipsChanged);
     newClip.effects.append(cm);
 
-    m_clips.append(newClip);
+    currentClips.append(newClip);
     emit clipsChanged();
     emit clipCreated(newClip.id, newClip.layer, newClip.startFrame, newClip.durationFrames, newClip.type);
 }
@@ -168,7 +176,8 @@ void TimelineService::updateClipInternal(int id, int layer, int startFrame, int 
         layer = 0;
 
     auto overlaps = [](int s1, int d1, int s2, int d2) { return (s1 < (s2 + d2)) && (s2 < (s1 + d1)); };
-    for (const auto &c : m_clips) {
+    auto &currentClips = clipsMutable();
+    for (const auto &c : currentClips) {
         if (c.id == id)
             continue;
         if (c.layer == layer && overlaps(startFrame, duration, c.startFrame, c.durationFrames)) {
@@ -177,7 +186,7 @@ void TimelineService::updateClipInternal(int id, int layer, int startFrame, int 
         }
     }
 
-    for (auto &clip : m_clips) {
+    for (auto &clip : currentClips) {
         if (clip.id == id) {
             if (clip.layer != layer || clip.startFrame != startFrame || clip.durationFrames != duration) {
                 clip.layer = layer;
@@ -202,7 +211,7 @@ void TimelineService::selectClip(int id) {
     if (m_selection->selectedClipId() == id)
         return;
 
-    for (const auto &clip : m_clips) {
+    for (const auto &clip : clips()) {
         if (clip.id == id) {
             QVariantMap cache;
             for (auto *eff : clip.effects) {
@@ -224,11 +233,12 @@ void TimelineService::selectClip(int id) {
 }
 
 void TimelineService::deleteClip(int clipId) {
-    auto it = std::find_if(m_clips.begin(), m_clips.end(), [clipId](const ClipData &c) { return c.id == clipId; });
-    if (it != m_clips.end()) {
+    auto &currentClips = clipsMutable();
+    auto it = std::find_if(currentClips.begin(), currentClips.end(), [clipId](const ClipData &c) { return c.id == clipId; });
+    if (it != currentClips.end()) {
         for (auto *eff : it->effects)
             eff->deleteLater();
-        m_clips.erase(it);
+        currentClips.erase(it);
         emit clipsChanged();
     }
 }
@@ -242,7 +252,7 @@ void TimelineService::addEffect(int clipId, const QString &effectId) {
 }
 
 void TimelineService::addEffectInternal(int clipId, const QString &effectId) {
-    for (auto &clip : m_clips) {
+    for (auto &clip : clipsMutable()) {
         if (clip.id == clipId) {
             auto meta = Rina::Core::EffectRegistry::instance().getEffect(effectId);
             auto *model = new EffectModel(meta.id, meta.name, meta.defaultParams, meta.qmlSource, meta.uiDefinition, this);
@@ -256,13 +266,13 @@ void TimelineService::addEffectInternal(int clipId, const QString &effectId) {
 }
 
 void TimelineService::addClipDirectInternal(const ClipData &clip) {
-    m_clips.append(clip);
+    clipsMutable().append(clip);
     emit clipsChanged();
     emit clipCreated(clip.id, clip.layer, clip.startFrame, clip.durationFrames, clip.type);
 }
 
 void TimelineService::restoreEffectInternal(int clipId, const QVariantMap &data) {
-    for (auto &clip : m_clips) {
+    for (auto &clip : clipsMutable()) {
         if (clip.id == clipId) {
             auto *model = new EffectModel(data["id"].toString(), data["name"].toString(), data["params"].toMap(), data["qmlSource"].toString(), data["uiDefinition"].toMap(), this);
             model->setEnabled(data["enabled"].toBool());
@@ -300,7 +310,7 @@ void TimelineService::removeEffect(int clipId, int effectIndex) {
 }
 
 void TimelineService::removeEffectInternal(int clipId, int effectIndex) {
-    for (auto &clip : m_clips) {
+    for (auto &clip : clipsMutable()) {
         if (clip.id == clipId) {
             if (effectIndex == -1)
                 effectIndex = clip.effects.size() - 1;
@@ -331,7 +341,7 @@ void TimelineService::updateEffectParam(int clipId, int effectIndex, const QStri
 }
 
 void TimelineService::updateEffectParamInternal(int clipId, int effectIndex, const QString &paramName, const QVariant &value) {
-    for (auto &clip : m_clips) {
+    for (auto &clip : clipsMutable()) {
         if (clip.id == clipId) {
             if (effectIndex >= 0 && effectIndex < clip.effects.size()) {
                 clip.effects[effectIndex]->setParam(paramName, value);
@@ -348,13 +358,15 @@ void TimelineService::updateEffectParamInternal(int clipId, int effectIndex, con
 }
 
 ClipData *TimelineService::findClipById(int clipId) {
-    auto it = std::find_if(m_clips.begin(), m_clips.end(), [clipId](const ClipData &c) { return c.id == clipId; });
-    return (it != m_clips.end()) ? &(*it) : nullptr;
+    auto &currentClips = clipsMutable();
+    auto it = std::find_if(currentClips.begin(), currentClips.end(), [clipId](const ClipData &c) { return c.id == clipId; });
+    return (it != currentClips.end()) ? &(*it) : nullptr;
 }
 
 const ClipData *TimelineService::findClipById(int clipId) const {
-    auto it = std::find_if(m_clips.begin(), m_clips.end(), [clipId](const ClipData &c) { return c.id == clipId; });
-    return (it != m_clips.end()) ? &(*it) : nullptr;
+    const auto &currentClips = clips();
+    auto it = std::find_if(currentClips.begin(), currentClips.end(), [clipId](const ClipData &c) { return c.id == clipId; });
+    return (it != currentClips.end()) ? &(*it) : nullptr;
 }
 
 ClipData TimelineService::deepCopyClip(const ClipData &source) {
@@ -376,8 +388,9 @@ ClipData TimelineService::deepCopyClip(const ClipData &source) {
 }
 
 void TimelineService::copyClip(int clipId) {
-    auto it = std::find_if(m_clips.begin(), m_clips.end(), [clipId](const ClipData &c) { return c.id == clipId; });
-    if (it != m_clips.end())
+    const auto &currentClips = clips();
+    auto it = std::find_if(currentClips.begin(), currentClips.end(), [clipId](const ClipData &c) { return c.id == clipId; });
+    if (it != currentClips.end())
         m_clipboard = std::make_unique<ClipData>(deepCopyClip(*it));
 }
 
@@ -396,7 +409,8 @@ void TimelineService::pasteClip(int frame, int layer) {
         layer = 0;
 
     auto overlaps = [](int s1, int d1, int s2, int d2) { return (s1 < (s2 + d2)) && (s2 < (s1 + d1)); };
-    for (const auto &c : m_clips) {
+    auto &currentClips = clipsMutable();
+    for (const auto &c : currentClips) {
         if (c.layer == layer && overlaps(frame, m_clipboard->durationFrames, c.startFrame, c.durationFrames)) {
             qWarning() << "クリップ貼り付けを拒否: レイヤー" << layer << "の" << frame << "フレームで衝突が発生";
             return;
@@ -407,7 +421,7 @@ void TimelineService::pasteClip(int frame, int layer) {
     newClip.id = m_nextClipId++;
     newClip.startFrame = frame;
     newClip.layer = layer;
-    m_clips.append(newClip);
+    currentClips.append(newClip);
     emit clipsChanged();
     emit clipCreated(newClip.id, newClip.layer, newClip.startFrame, newClip.durationFrames, newClip.type);
 }
@@ -424,4 +438,95 @@ void TimelineService::splitClip(int clipId, int frame) {
         m_undoStack->push(new SplitClipCommand(this, clipId, frame, clipName));
     }
 }
+
+SceneData *TimelineService::currentScene() {
+    for (auto &scene : m_scenes) {
+        if (scene.id == m_currentSceneId)
+            return &scene;
+    }
+    if (m_scenes.isEmpty()) {
+        static SceneData dummy;
+        return &dummy;
+    }
+    return &m_scenes[0];
+}
+
+const SceneData *TimelineService::currentScene() const {
+    for (const auto &scene : m_scenes) {
+        if (scene.id == m_currentSceneId)
+            return &scene;
+    }
+    if (m_scenes.isEmpty()) {
+        static SceneData dummy;
+        return &dummy;
+    }
+    return &m_scenes[0];
+}
+
+const QList<ClipData> &TimelineService::clips() const { return currentScene()->clips; }
+
+QList<ClipData> &TimelineService::clipsMutable() { return currentScene()->clips; }
+
+QVariantList TimelineService::scenes() const {
+    QVariantList list;
+    for (const auto &scene : m_scenes) {
+        QVariantMap map;
+        map["id"] = scene.id;
+        map["name"] = scene.name;
+        list.append(map);
+    }
+    return list;
+}
+
+void TimelineService::createScene(const QString &name) {
+    SceneData newScene;
+    int maxId = 0;
+    for (const auto &s : m_scenes)
+        maxId = std::max(maxId, s.id);
+    newScene.id = maxId + 1;
+    newScene.name = name;
+    m_scenes.append(newScene);
+    emit scenesChanged();
+    switchScene(newScene.id);
+}
+
+void TimelineService::removeScene(int sceneId) {
+    if (sceneId == 0)
+        return;
+
+    auto it = std::find_if(m_scenes.begin(), m_scenes.end(), [sceneId](const SceneData &s) { return s.id == sceneId; });
+    if (it != m_scenes.end()) {
+        for (auto &clip : it->clips) {
+            qDeleteAll(clip.effects);
+        }
+        if (m_currentSceneId == sceneId) {
+            switchScene(0);
+        }
+        m_scenes.erase(it);
+        emit scenesChanged();
+    }
+}
+
+void TimelineService::switchScene(int sceneId) {
+    if (m_currentSceneId == sceneId)
+        return;
+
+    bool exists = false;
+    for (const auto &s : m_scenes) {
+        if (s.id == sceneId) {
+            exists = true;
+            break;
+        }
+    }
+    if (!exists)
+        return;
+
+    m_currentSceneId = sceneId;
+    emit currentSceneIdChanged();
+    emit clipsChanged();
+
+    if (m_selection)
+        m_selection->select(-1, QVariantMap());
+}
+
 } // namespace Rina::UI

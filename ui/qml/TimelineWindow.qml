@@ -23,78 +23,59 @@ Common.RinaWindow {
         anchors.fill: parent
         spacing: 0
 
-        // 1. シーンタブ (簡易)
+        // 1. シーンタブ (Row + Button でシンプルに実装)
         Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: 28
+            Layout.preferredHeight: sceneTabHeight
             color: palette.window
             border.color: palette.mid
-            border.width: 0 // 下線はLayoutで調整
+            border.width: 1
+            z: 1
 
-            ListView {
+            ScrollView {
                 anchors.fill: parent
-                orientation: ListView.Horizontal
-                model: TimelineBridge ? TimelineBridge.scenes : []
+                contentWidth: sceneRow.width
+                ScrollBar.vertical.policy: ScrollBar.AlwaysOff
+                clip: true
 
-                delegate: Rectangle {
-                    width: Math.max(100, tabText.implicitWidth + 30)
+                Row {
+                    id: sceneRow
                     height: parent.height
-                    color: TimelineBridge && TimelineBridge.currentSceneId === modelData.id ? palette.highlight : palette.button
-                    border.color: palette.mid
-                    border.width: 1
+                    spacing: 0
 
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.margins: 4
+                    Repeater {
+                        id: sceneRepeater
+                        model: TimelineBridge ? TimelineBridge.scenes : []
 
-                        Text {
-                            id: tabText
+                        Button {
+                            property bool isActive: TimelineBridge && TimelineBridge.currentSceneId === modelData.id
 
-                            text: modelData.name
-                            color: palette.text
-                            Layout.fillWidth: true
-                            elide: Text.ElideRight
-                        }
+                            text: modelData.name + (modelData.id !== 0 ? "  ×" : "")
+                            flat: !isActive
+                            highlighted: isActive
+                            height: sceneTabHeight
 
-                        // 削除ボタン（シーン0は削除不可）
-                        Text {
-                            text: "×"
-                            color: parent.hovered ? "red" : palette.text
-                            visible: modelData.id !== 0
-
-                            MouseArea {
-                                anchors.fill: parent
-                                onClicked: {
+                            onClicked: {
+                                // 右端30pxをクリックした場合は削除、それ以外は切り替え
+                                if (modelData.id !== 0 && pressX > width - 30) {
                                     TimelineBridge.removeScene(modelData.id);
+                                } else {
+                                    TimelineBridge.switchScene(modelData.id);
                                 }
                             }
-
-                        }
-
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        z: -1
-                        onClicked: {
-                            TimelineBridge.switchScene(modelData.id);
                         }
                     }
 
-                }
-
-                footer: Button {
-                    text: "+"
-                    width: 30
-                    height: sceneTabHeight
-                    flat: true
-                    onClicked: {
-                        TimelineBridge.createScene("Scene " + (sceneTabs.count + 1));
+                    // シーン追加ボタン
+                    Button {
+                        text: "+"
+                        flat: true
+                        width: 40
+                        height: sceneTabHeight
+                        onClicked: TimelineBridge.createScene("Scene " + (sceneRepeater.count + 1))
                     }
                 }
-
             }
-
         }
 
         // 2. 定規エリア

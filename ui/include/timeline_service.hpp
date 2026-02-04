@@ -13,8 +13,8 @@ class TimelineService : public QObject {
     explicit TimelineService(SelectionService *selection, QObject *parent = nullptr);
 
     // データアクセス
-    const QList<ClipData> &clips() const { return m_clips; }
-    QList<ClipData> &clipsMutable() { return m_clips; } // シリアライザ用
+    const QList<ClipData> &clips() const;
+    QList<ClipData> &clipsMutable(); // シリアライザ用
     QUndoStack *undoStack() const { return m_undoStack; }
 
     // 操作 (公開API)
@@ -25,6 +25,13 @@ class TimelineService : public QObject {
     void updateClip(int id, int layer, int startFrame, int duration);
     void splitClip(int clipId, int frame);
     void selectClip(int id);
+
+    // シーン管理
+    QVariantList scenes() const;
+    int currentSceneId() const { return m_currentSceneId; }
+    void createScene(const QString &name);
+    void removeScene(int sceneId);
+    void switchScene(int sceneId);
 
     // エフェクト
     void addEffect(int clipId, const QString &effectId);
@@ -56,11 +63,18 @@ class TimelineService : public QObject {
 
   signals:
     void clipsChanged();
+    void scenesChanged();
+    void currentSceneIdChanged();
     void clipEffectsChanged(int clipId);
     void clipCreated(int id, int layer, int startFrame, int duration, const QString &type);
 
   private:
-    QList<ClipData> m_clips;
+    QList<SceneData> m_scenes;
+    int m_currentSceneId = 0;
+
+    SceneData *currentScene();
+    const SceneData *currentScene() const;
+
     int m_nextClipId = 1;
     QUndoStack *m_undoStack;
     std::unique_ptr<ClipData> m_clipboard;
