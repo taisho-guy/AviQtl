@@ -98,6 +98,10 @@ TimelineService::TimelineService(SelectionService *selection, QObject *parent) :
     SceneData rootScene;
     rootScene.id = 0;
     rootScene.name = "Root";
+    rootScene.width = 1920; // プロジェクト設定と同期推奨
+    rootScene.height = 1080;
+    rootScene.fps = 60.0;
+    rootScene.totalFrames = 3600;
     m_scenes.append(rootScene);
     m_currentSceneId = 0;
 }
@@ -485,6 +489,16 @@ void TimelineService::createScene(const QString &name) {
         maxId = std::max(maxId, s.id);
     newScene.id = maxId + 1;
     newScene.name = name;
+
+    // 現在のプロジェクト設定（あるいはRootシーン）の設定を継承
+    // ※本来はSettingsManagerやProjectServiceから取得すべきだが、
+    //   ここでは既存のシーン0の値をデフォルトとして採用する
+    const SceneData &base = m_scenes.first();
+    newScene.width = base.width;
+    newScene.height = base.height;
+    newScene.fps = base.fps;
+    newScene.totalFrames = base.totalFrames;
+
     m_scenes.append(newScene);
     emit scenesChanged();
     switchScene(newScene.id);

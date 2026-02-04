@@ -40,11 +40,13 @@ Common.RinaWindow {
 
                 Row {
                     id: sceneRow
+
                     height: parent.height
                     spacing: 0
 
                     Repeater {
                         id: sceneRepeater
+
                         model: TimelineBridge ? TimelineBridge.scenes : []
 
                         Button {
@@ -54,16 +56,15 @@ Common.RinaWindow {
                             flat: !isActive
                             highlighted: isActive
                             height: sceneTabHeight
-
                             onClicked: {
                                 // 右端30pxをクリックした場合は削除、それ以外は切り替え
-                                if (modelData.id !== 0 && pressX > width - 30) {
+                                if (modelData.id !== 0 && pressX > width - 30)
                                     TimelineBridge.removeScene(modelData.id);
-                                } else {
+                                else
                                     TimelineBridge.switchScene(modelData.id);
-                                }
                             }
                         }
+
                     }
 
                     // シーン追加ボタン
@@ -74,8 +75,11 @@ Common.RinaWindow {
                         height: sceneTabHeight
                         onClicked: TimelineBridge.createScene("Scene " + (sceneRepeater.count + 1))
                     }
+
                 }
+
             }
+
         }
 
         // 2. 定規エリア
