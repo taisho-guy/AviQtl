@@ -4,21 +4,24 @@ import QtQuick.Layouts 1.15
 
 Rectangle {
     id: headerRoot
-    
+
     property int headerWidth: 60
     property int layerHeight: 30
     property int layerCount: 128
     property var syncFlickable: null // TimelineViewのFlickable
+
+    function clamp(v, lo, hi) {
+        return Math.max(lo, Math.min(hi, v));
+    }
 
     Layout.preferredWidth: headerWidth
     Layout.fillHeight: true
     color: palette.button
     z: 2
 
-    function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
-
     Flickable {
         id: layerHeaderFlickable
+
         anchors.fill: parent
         contentHeight: layerCount * layerHeight
         // TimelineViewと同期
@@ -29,22 +32,56 @@ Rectangle {
         Column {
             Repeater {
                 model: layerCount
+
                 Rectangle {
+                    property bool isHidden: false
+
                     width: headerRoot.headerWidth
                     height: headerRoot.layerHeight
-                    color: (index % 2 == 0) ? palette.window : Qt.darker(palette.window, 1.05)
+                    color: (index % 2 == 0) ? palette.window : Qt.darker(palette.window, 1.1)
                     border.color: palette.mid
                     border.width: 1
 
                     Text {
                         anchors.centerIn: parent
                         text: "Layer " + (index + 1)
-                        color: palette.text
+                        color: parent.isHidden ? palette.mid : palette.text
                         font.pixelSize: 10
                     }
+
+                    // レイヤー表示/非表示トグル
+                    Rectangle {
+                        width: 4
+                        height: 4
+                        radius: 2
+                        color: parent.isHidden ? "transparent" : "#00ff00"
+                        anchors.right: parent.right
+                        anchors.rightMargin: 4
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: {
+                                parent.parent.isHidden = !parent.parent.isHidden;
+                            }
+                        }
+
+                    }
+
+                    // レイヤー境界線
+                    Rectangle {
+                        anchors.right: parent.right
+                        width: 1
+                        height: parent.height
+                        color: "#444"
+                    }
+
                 }
+
             }
+
         }
+
     }
 
     // 縦スクロール専用マウスエリア
@@ -53,15 +90,18 @@ Rectangle {
         acceptedButtons: Qt.NoButton
         hoverEnabled: true
         onWheel: (wheel) => {
-            if (!syncFlickable) return;
-            
+            if (!syncFlickable)
+                return ;
+
             var dy = wheel.angleDelta.y;
-            if (wheel.pixelDelta && wheel.pixelDelta.y !== 0) dy = wheel.pixelDelta.y * 10;
-            
+            if (wheel.pixelDelta && wheel.pixelDelta.y !== 0)
+                dy = wheel.pixelDelta.y * 10;
+
             var nextY = syncFlickable.contentY - dy;
             var maxY = Math.max(0, syncFlickable.contentHeight - syncFlickable.height);
             syncFlickable.contentY = clamp(nextY, 0, maxY);
             wheel.accepted = true;
         }
     }
+
 }

@@ -6,9 +6,6 @@ import "timeline" // サブフォルダのモジュールをインポート
 
 Common.RinaWindow {
     id: timelineWindow
-    title: "Timeline"
-    width: 1280
-    height: 300
 
     // 定数・設定
     property var settings: SettingsManager.settings
@@ -16,7 +13,12 @@ Common.RinaWindow {
     readonly property int layerHeight: settings.timelineTrackHeight || 30
     readonly property int rulerHeight: settings.timelineRulerHeight || 32
     readonly property int headerWidth: settings.timelineLayerHeaderWidth || 60
-    
+    readonly property int sceneTabHeight: 28
+
+    title: "Timeline"
+    width: 1280
+    height: 300
+
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
@@ -28,18 +30,71 @@ Common.RinaWindow {
             color: palette.window
             border.color: palette.mid
             border.width: 0 // 下線はLayoutで調整
-            
+
             ListView {
                 anchors.fill: parent
                 orientation: ListView.Horizontal
                 model: TimelineBridge ? TimelineBridge.scenes : []
-                delegate: Button {
-                    text: modelData.name
-                    flat: true
-                    highlighted: TimelineBridge.currentSceneId === modelData.id
-                    onClicked: TimelineBridge.switchScene(modelData.id)
+
+                delegate: Rectangle {
+                    width: Math.max(100, tabText.implicitWidth + 30)
+                    height: parent.height
+                    color: TimelineBridge && TimelineBridge.currentSceneId === modelData.id ? palette.highlight : palette.button
+                    border.color: palette.mid
+                    border.width: 1
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: 4
+
+                        Text {
+                            id: tabText
+
+                            text: modelData.name
+                            color: palette.text
+                            Layout.fillWidth: true
+                            elide: Text.ElideRight
+                        }
+
+                        // 削除ボタン（シーン0は削除不可）
+                        Text {
+                            text: "×"
+                            color: parent.hovered ? "red" : palette.text
+                            visible: modelData.id !== 0
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    TimelineBridge.removeScene(modelData.id);
+                                }
+                            }
+
+                        }
+
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        z: -1
+                        onClicked: {
+                            TimelineBridge.switchScene(modelData.id);
+                        }
+                    }
+
                 }
+
+                footer: Button {
+                    text: "+"
+                    width: 30
+                    height: sceneTabHeight
+                    flat: true
+                    onClicked: {
+                        TimelineBridge.createScene("Scene " + (sceneTabs.count + 1));
+                    }
+                }
+
             }
+
         }
 
         // 2. 定規エリア
@@ -65,12 +120,15 @@ Common.RinaWindow {
 
             TimelineView {
                 id: timelineView
+
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                
                 layerHeight: timelineWindow.layerHeight
                 layerCount: timelineWindow.layerCount
             }
+
         }
+
     }
+
 }
