@@ -12,7 +12,7 @@ Common.RinaWindow {
 
     property int targetClipId: (TimelineBridge && TimelineBridge.selection) ? TimelineBridge.selection.selectedClipId : -1
     property var effectsModel: []
-    property bool inputting: false // 入力中フラグ（バインディングループ防止用）
+    property bool inputting: false // 入力中フラグ（reloadループ防止用）
 
     function reload() {
         if (!TimelineBridge || !TimelineBridge.selection)
@@ -86,8 +86,10 @@ Common.RinaWindow {
 
                     // 親デリゲートでデータとインデックスを公開
                     property int effectIndex: index
-                    property var currentParams: modelData.params
                     property var effectModel: modelData
+                    // EffectModel を一次ソースとして常に参照する
+                    property var currentParams: effectModel ? effectModel.params : ({
+                    })
 
                     width: root.width
                     spacing: 0
@@ -121,16 +123,15 @@ Common.RinaWindow {
                     // パラメータリスト
                     // Mapを配列に変換してRepeaterに渡す
                     Repeater {
-                        // End RowLayout
-
-                        model: Object.keys(modelData.params).sort()
+                        model: Object.keys(effectRoot.currentParams).sort()
 
                         delegate: ColumnLayout {
                             property string key: modelData
                             property var effectModel: effectRoot.effectModel
                             // 親のコンテキストからデータを取得
                             property int effIdx: effectRoot.effectIndex
-                            property var effVal: effectRoot.currentParams[key]
+                            // ★ EffectModel.params を一次ソースとして直接参照
+                            property var effVal: effectRoot.effectModel ? effectRoot.effectModel.params[key] : undefined
                             property bool isNumber: typeof effVal === 'number'
                             // トラック情報と補間状態の取得
                             property int curRelFrame: (TimelineBridge && TimelineBridge.transport) ? (TimelineBridge.transport.currentFrame - TimelineBridge.clipStartFrame) : 0
@@ -240,11 +241,16 @@ Common.RinaWindow {
                                 isRangeMode: isMoving
                                 visible: isNumber
                                 // シグナルハンドラ
+                                // シグナルハンドラ（編集中は reload を抑止）
                                 onStartValueModified: (val) => {
-                                    return updateParam(startFrame, val);
+                                    root.inputting = true;
+                                    updateParam(startFrame, val);
+                                    root.inputting = false;
                                 }
                                 onEndValueModified: (val) => {
-                                    return updateParam(endFrame, val);
+                                    root.inputting = true;
+                                    updateParam(endFrame, val);
+                                    root.inputting = false;
                                 }
                                 onParamButtonClicked: {
                                     if (!hasKeyframes) {
@@ -271,7 +277,11 @@ Common.RinaWindow {
                                 Layout.margins: 4
                                 text: String(effVal)
                                 selectByMouse: true
-                                onEditingFinished: TimelineBridge.updateClipEffectParam(targetClipId, effIdx, key, text)
+                                onEditingFinished: {
+                                    root.inputting = true;
+                                    TimelineBridge.updateClipEffectParam(targetClipId, effIdx, key, text);
+                                    root.inputting = false;
+                                }
                             }
 
                             // --- Mini Timeline Bar ---
