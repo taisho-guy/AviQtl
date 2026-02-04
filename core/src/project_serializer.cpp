@@ -25,27 +25,47 @@ bool ProjectSerializer::save(const QString &fileUrl, const UI::TimelineService *
     settings["totalFrames"] = project->totalFrames();
     root["settings"] = settings;
 
-    QJsonArray clipsArray;
-    for (const auto &clip : timeline->clips()) {
-        QJsonObject clipObj;
-        clipObj["id"] = clip.id;
-        clipObj["type"] = clip.type;
-        clipObj["start"] = clip.startFrame;
-        clipObj["duration"] = clip.durationFrames;
-        clipObj["layer"] = clip.layer;
+    // --- シーン情報の保存 ---
+    QJsonArray scenesArray;
+    for (const auto &scene : timeline->getAllScenes()) {
+        QJsonObject sObj;
+        sObj["id"] = scene.id;
+        sObj["name"] = scene.name;
+        sObj["width"] = scene.width;
+        sObj["height"] = scene.height;
+        sObj["fps"] = scene.fps;
+        sObj["totalFrames"] = scene.totalFrames;
+        sObj["start"] = scene.startFrame;
+        sObj["duration"] = scene.durationFrames;
+        scenesArray.append(sObj);
+    }
+    root["scenes"] = scenesArray;
 
-        QJsonArray effArray;
-        for (const auto *eff : clip.effects) {
-            QJsonObject eObj;
-            eObj["id"] = eff->id();
-            eObj["name"] = eff->name();
-            eObj["enabled"] = eff->isEnabled();
-            eObj["params"] = QJsonObject::fromVariantMap(eff->params());
-            eObj["keyframes"] = QJsonObject::fromVariantMap(eff->keyframeTracks());
-            effArray.append(eObj);
+    // --- 全シーンのクリップをフラットに保存 ---
+    QJsonArray clipsArray;
+    for (const auto &scene : timeline->getAllScenes()) {
+        for (const auto &clip : scene.clips) {
+            QJsonObject clipObj;
+            clipObj["id"] = clip.id;
+            clipObj["sceneId"] = clip.sceneId; // シーンIDを保存
+            clipObj["type"] = clip.type;
+            clipObj["start"] = clip.startFrame;
+            clipObj["duration"] = clip.durationFrames;
+            clipObj["layer"] = clip.layer;
+
+            QJsonArray effArray;
+            for (const auto *eff : clip.effects) {
+                QJsonObject eObj;
+                eObj["id"] = eff->id();
+                eObj["name"] = eff->name();
+                eObj["enabled"] = eff->isEnabled();
+                eObj["params"] = QJsonObject::fromVariantMap(eff->params());
+                eObj["keyframes"] = QJsonObject::fromVariantMap(eff->keyframeTracks());
+                effArray.append(eObj);
+            }
+            clipObj["effects"] = effArray;
+            clipsArray.append(clipObj);
         }
-        clipObj["effects"] = effArray;
-        clipsArray.append(clipObj);
     }
     root["clips"] = clipsArray;
 
@@ -102,6 +122,34 @@ bool ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
         pTotalFrames = s["totalFrames"].toInt(pTotalFrames);
     }
 
+    // Scenes (読み込み)
+    QList<UI::SceneData> tempScenes;
+    int maxSceneId = 0;
+    if (root.contains("scenes")) {
+        QJsonArray scenesArray = root["scenes"].toArray();
+        for (const auto &val : scenesArray) {
+            QJsonObject s = val.toObject();
+            UI::SceneData scene;
+            scene.id = s["id"].toInt();
+            scene.name = s["name"].toString();
+            scene.width = s["width"].toInt(pWidth);
+            scene.height = s["height"].toInt(pHeight);
+            scene.fps = s["fps"].toDouble(pFps);
+            scene.totalFrames = s["totalFrames"].toInt(pTotalFrames);
+            scene.startFrame = s["start"].toInt(0);
+            scene.durationFrames = s["duration"].toInt(0);
+            tempScenes.append(scene);
+            if (scene.id > maxSceneId)
+                maxSceneId = scene.id;
+        }
+    } else {
+        // 旧形式互換: デフォルトシーンを作成
+        UI::SceneData rootScene;
+        rootScene.id = 0;
+        rootScene.name = "Root";
+        tempScenes.append(rootScene);
+    }
+
     // Clips
     QList<UI::ClipData> tempClips;
     int tempMaxId = 0;
@@ -112,6 +160,7 @@ bool ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
             QJsonObject c = val.toObject();
             UI::ClipData clip;
             clip.id = c["id"].toInt();
+            clip.sceneId = c["sceneId"].toInt(0); // デフォルトは0
             if (clip.id > tempMaxId)
                 tempMaxId = clip.id;
             clip.type = c["type"].toString();
@@ -149,23 +198,31 @@ bool ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
         project->setTotalFrames(pTotalFrames);
     }
 
-    // 既存のクリップをクリアし、そのエフェクトを削除
-    auto &currentClips = timeline->clipsMutable();
-    for (auto &clip : currentClips) {
-        qDeleteAll(clip.effects);
-    }
-    currentClips.clear();
-
-    // 一時クリップをタイムラインに移動
+    // クリップを各シーンに分配
     for (auto &clip : tempClips) {
         for (auto *eff : clip.effects) {
             eff->setParent(timeline); // 所有権を移譲
             QObject::connect(eff, &UI::EffectModel::keyframeTracksChanged, timeline, &UI::TimelineService::clipsChanged);
         }
-        currentClips.append(clip);
+
+        // 対応するシーンを探して追加
+        bool added = false;
+        for (auto &scene : tempScenes) {
+            if (scene.id == clip.sceneId) {
+                scene.clips.append(clip);
+                added = true;
+                break;
+            }
+        }
+        // シーンが見つからない場合はルート(0)または先頭に追加
+        if (!added && !tempScenes.isEmpty()) {
+            tempScenes[0].clips.append(clip);
+        }
     }
 
+    timeline->setScenes(tempScenes);
     timeline->setNextClipId(tempMaxId + 1);
+    timeline->setNextSceneId(maxSceneId + 1);
     QMetaObject::invokeMethod(timeline, "clipsChanged");
 
     return true;

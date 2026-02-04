@@ -1,110 +1,37 @@
-import "../" // For CompositeView access if needed
-import "../common" as Common
 import QtQuick 2.15
-import QtQuick3D 6.0
+import QtQuick.Shapes 1.15
+import Rina 1.0
+import "../common" as Common
 
 Common.BaseObject {
     id: root
 
-    property int targetSceneId: parseInt(evalParam("scene", "sceneId", "0"))
-    property int startFrameOffset: parseInt(evalParam("scene", "startFrame", "0"))
-    // シーン内での現在のフレーム
-    property int internalFrame: root.relFrame + root.startFrameOffset
+    // TimelineBridge から現在のフレームやシーン情報を取得する前提
+    property int sceneId: evalParam("scene", "sceneId", 0)
+    property real speed: evalParam("scene", "speed", 1.0)
+    property int offset: evalParam("scene", "offset", 0)
+    property real opacity: evalParam("scene", "opacity", 1.0)
 
-    sourceItem: sceneRenderer
+    // 将来的にはここで「子シーンをオフスクリーン描画」したテクスチャを貼る
+    // MVPとしては境界可視化のみ
 
-    // オフスクリーンレンダリング用Item
-    Item {
-        id: sceneRenderer
-
-        visible: false
-        // シーンの解像度（本来はシーン設定から取得すべきだが、一旦プロジェクト設定を使用）
-        width: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.width : 1920
-        height: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.height : 1080
-
-        // 背景
-        Rectangle {
-            anchors.fill: parent
-            color: "black" // シーン背景色（透過設定があれば変更）
-        }
-
-        // 3Dビューポート（シーン内のオブジェクトを描画）
-        View3D {
-            anchors.fill: parent
-
-            PerspectiveCamera {
-                id: mainCamera
-
-                z: 1000
-            }
-
-            Node {
-                id: sceneRoot
-
-                // シーン内のクリップを展開
-                Repeater {
-                    model: (TimelineBridge && root.targetSceneId >= 0) ? TimelineBridge.getSceneClips(root.targetSceneId) : []
-
-                    delegate: Node {
-                        // クリップのアクティブ判定
-                        property var clipData: modelData
-                        property int currentFrame: root.internalFrame
-                        property bool isActive: currentFrame >= clipData.startFrame && currentFrame < (clipData.startFrame + clipData.durationFrames)
-
-                        visible: isActive
-
-                        // NodeLoaderを使って動的にオブジェクトをロード
-                        Common.NodeLoader {
-                            // 重要: BaseObjectのcurrentFrameを上書きして、親タイムラインではなく
-                            // このシーン内での時間を渡す
-                            // レンダリングホストは親のBaseObjectのものを使用（再帰的な2D描画のため）
-
-                            source: clipData.qmlSource || ""
-                            // プロパティ注入
-                            properties: {
-                                "clipId": clipData.id,
-                                "clipStartFrame": clipData.startFrame,
-                                "clipDurationFrames": clipData.durationFrames,
-                                "clipParams": clipData.params || {
-                                },
-                                "currentFrame": root.internalFrame,
-                                "renderHost": root.renderHost
-                            }
-                        }
-
-                    }
-
-                }
-
-            }
-
-            environment: SceneEnvironment {
-                backgroundMode: SceneEnvironment.Color
-                clearColor: "transparent"
-                antialiasingMode: SceneEnvironment.MSAA
-                antialiasingQuality: SceneEnvironment.High
-            }
-
-        }
-
+    Rectangle {
+        anchors.fill: parent
+        color: "transparent"
+        border.color: "#66ffffff"
+        border.width: 1
+        radius: 4
+        opacity: root.opacity
     }
 
-    // 3Dモデルとしてレンダリング結果を表示
-    Model {
-        source: "#Rectangle"
-        scale: Qt.vector3d(sceneRenderer.width / 100, sceneRenderer.height / 100, 1)
-        opacity: 1
-
-        materials: DefaultMaterial {
-            lighting: DefaultMaterial.NoLighting
-            blendMode: DefaultMaterial.SourceOver
-
-            diffuseMap: Texture {
-                sourceItem: renderer.output
-            }
-
-        }
-
+    Text {
+        anchors.left: parent.left
+        anchors.leftMargin: 4
+        anchors.top: parent.top
+        anchors.topMargin: 2
+        text: "Scene #" + root.sceneId
+        color: "white"
+        font.pixelSize: 10
+        opacity: root.opacity
     }
-
 }

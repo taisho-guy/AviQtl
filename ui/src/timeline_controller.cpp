@@ -262,26 +262,9 @@ QVariantList TimelineController::clips() const {
 }
 
 void TimelineController::updateActiveClipsList() {
-    // 現在フレームにあるクリップを抽出
     int current = m_transport->currentFrame();
-    QList<ClipData *> active;
-
-    // 現在フレームより後に開始する最初のクリップを二分探索で見つける
-    auto it = std::upper_bound(m_sortedClips.begin(), m_sortedClips.end(), current, [](int frame, const ClipData *clip) { return frame < clip->startFrame; });
-
-    // 後方にイテレートして重なっているクリップを探す
-    // startFrameが遠すぎる場合は停止 (maxDurationを使っても重なり得ない)
-    int threshold = current - m_maxDuration;
-
-    for (auto i = it; i != m_sortedClips.begin();) {
-        --i;
-        ClipData *clip = *i;
-        if (clip->startFrame < threshold)
-            break;
-        if (current >= clip->startFrame && current < clip->startFrame + clip->durationFrames) {
-            active.append(clip);
-        }
-    }
+    // ネスト解決済みのクリップリストを取得
+    QList<ClipData *> active = m_timeline->resolvedActiveClipsAt(current);
 
     // レイヤー順 (昇順) にソート
     std::sort(active.begin(), active.end(), [](const ClipData *a, const ClipData *b) { return a->layer < b->layer; });

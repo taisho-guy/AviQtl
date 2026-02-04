@@ -137,6 +137,7 @@ void TimelineService::createClipInternal(int clipId, const QString &type, int st
 
     ClipData newClip;
     newClip.id = clipId;
+    newClip.sceneId = m_currentSceneId;
     newClip.type = type;
     newClip.startFrame = startFrame;
     newClip.durationFrames = defaultDuration;
@@ -423,6 +424,7 @@ void TimelineService::pasteClip(int frame, int layer) {
 
     ClipData newClip = deepCopyClip(*m_clipboard);
     newClip.id = m_nextClipId++;
+    newClip.sceneId = m_currentSceneId;
     newClip.startFrame = frame;
     newClip.layer = layer;
     currentClips.append(newClip);
@@ -495,12 +497,29 @@ QVariantList TimelineService::scenes() const {
     return list;
 }
 
+void TimelineService::setScenes(const QList<SceneData> &scenes) {
+    m_scenes = scenes;
+    if (m_scenes.isEmpty()) {
+        createScene("Root");
+    }
+    // 現在のシーンIDが有効か確認
+    bool found = false;
+    for (const auto &s : m_scenes) {
+        if (s.id == m_currentSceneId) {
+            found = true;
+            break;
+        }
+    }
+    if (!found && !m_scenes.isEmpty())
+        m_currentSceneId = m_scenes.first().id;
+    emit scenesChanged();
+    emit currentSceneIdChanged();
+    emit clipsChanged();
+}
+
 void TimelineService::createScene(const QString &name) {
     SceneData newScene;
-    int maxId = 0;
-    for (const auto &s : m_scenes)
-        maxId = std::max(maxId, s.id);
-    newScene.id = maxId + 1;
+    newScene.id = m_nextSceneId++;
     newScene.name = name;
 
     // 現在のプロジェクト設定（あるいはRootシーン）の設定を継承
@@ -568,6 +587,81 @@ void TimelineService::updateSceneSettings(int sceneId, const QString &name, int 
             return;
         }
     }
+}
+
+QList<ClipData *> TimelineService::resolvedActiveClipsAt(int frame) const {
+    QList<ClipData *> result;
+
+    // 1. 現在シーンを取得
+    const SceneData *currentScenePtr = nullptr;
+    for (const auto &s : m_scenes) {
+        if (s.id == m_currentSceneId) {
+            currentScenePtr = &s;
+            break;
+        }
+    }
+    if (!currentScenePtr)
+        return result;
+
+    // 2. 現在シーン内のクリップを走査
+    for (auto &clip : currentScenePtr->clips) {
+        // 通常クリップ: シンプルな矩形判定
+        if (clip.type != "scene") {
+            if (frame >= clip.startFrame && frame < clip.startFrame + clip.durationFrames) {
+                result.append(const_cast<ClipData *>(&clip));
+            }
+            continue;
+        }
+
+        // 3. シーンオブジェクトの場合: 子シーンのクリップをフラットに解決
+        int parentLocal = frame - clip.startFrame;
+        if (parentLocal < 0 || parentLocal >= clip.durationFrames)
+            continue;
+
+        // パラメータから sceneId / speed / offset を取得
+        int targetSceneId = 0;
+        double speed = 1.0;
+        int offset = 0;
+        if (!clip.effects.isEmpty()) {
+            // 先頭エフェクト(Transform)の次、あるいはIDで検索すべきだが、
+            // 現状の実装パターンに従いエフェクトリストからパラメータを取得
+            for (auto *eff : clip.effects) {
+                if (eff->id() == "scene") {
+                    QVariantMap p = eff->params();
+                    targetSceneId = p.value("sceneId", 0).toInt();
+                    speed = p.value("speed", 1.0).toDouble();
+                    offset = p.value("offset", 0).toInt();
+                    break;
+                }
+            }
+        }
+        if (targetSceneId < 0)
+            continue;
+
+        int childLocal = static_cast<int>(parentLocal * speed) + offset;
+
+        // 対象シーンを探す
+        const SceneData *targetScene = nullptr;
+        for (const auto &s : m_scenes) {
+            if (s.id == targetSceneId) {
+                targetScene = &s;
+                break;
+            }
+        }
+        if (!targetScene)
+            continue;
+
+        // 4. 対象シーン内のクリップを、親シーンの座標系に射影して追加
+        for (auto &child : targetScene->clips) {
+            if (childLocal >= child.startFrame && childLocal < child.startFrame + child.durationFrames) {
+                // グローバル時間で見た start は「親のstart + 子のstart」
+                // （ここではClipData自体は書き換えず、判定だけに使う）
+                result.append(const_cast<ClipData *>(&child));
+            }
+        }
+    }
+
+    return result;
 }
 
 } // namespace Rina::UI

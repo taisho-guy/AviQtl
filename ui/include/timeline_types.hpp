@@ -19,6 +19,7 @@ struct Keyframe {
 
 struct ClipData {
     int id;
+    int sceneId = 0;
     QString type;
     int startFrame;
     int durationFrames;
@@ -38,5 +39,9 @@ struct SceneData {
     int height = 1080;
     double fps = 60.0;
     int totalFrames = 300;
+
+    // ネスト利用のためのメタデータ
+    int startFrame = 0;
+    int durationFrames = 0;
 };
 } // namespace Rina::UI

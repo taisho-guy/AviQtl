@@ -219,31 +219,41 @@ Common.RinaWindow {
                             Common.ParamControl {
                                 Layout.fillWidth: true
                                 Layout.margins: 4
-
                                 paramName: {
-                                    var interpLabel = { "linear": " (直線)", "ease_in": " (加速)", "ease_out": " (減速)", "ease_in_out": " (加減速)", "bezier": " (ベジェ)" };
+                                    var interpLabel = {
+                                        "linear": " (直線)",
+                                        "ease_in": " (加速)",
+                                        "ease_out": " (減速)",
+                                        "ease_in_out": " (加減速)",
+                                        "bezier": " (ベジェ)"
+                                    };
                                     return key + (isMoving ? (interpLabel[interpType] || "") : "");
                                 }
-                                
                                 // 値のバインディング
                                 startValue: Number(startVal) || 0
                                 endValue: Number(endVal) || 0
                                 minValue: (key === "scale" || key === "opacity") ? 0 : -1000
                                 maxValue: (key === "scale") ? 500 : (key === "opacity" ? 1 : 1000)
                                 decimals: 2
-                                
                                 // 状態制御
                                 enabled: isNumber
                                 isRangeMode: isMoving
                                 visible: isNumber
-
                                 // シグナルハンドラ
-                                onStartValueModified: (val) => updateParam(startFrame, val)
-                                onEndValueModified: (val) => updateParam(endFrame, val)
+                                onStartValueModified: (val) => {
+                                    return updateParam(startFrame, val);
+                                }
+                                onEndValueModified: (val) => {
+                                    return updateParam(endFrame, val);
+                                }
                                 onParamButtonClicked: {
                                     if (!hasKeyframes) {
-                                        effectModel.setKeyframe(key, startFrame, startVal, { "interp": "linear" });
-                                        effectModel.setKeyframe(key, endFrame, endVal, { "interp": "linear" });
+                                        effectModel.setKeyframe(key, startFrame, startVal, {
+                                            "interp": "linear"
+                                        });
+                                        effectModel.setKeyframe(key, endFrame, endVal, {
+                                            "interp": "linear"
+                                        });
                                     }
                                     var dialog = easingDialogComponent.createObject(root, {
                                         "effectModel": effectModel,

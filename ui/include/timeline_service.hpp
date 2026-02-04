@@ -16,6 +16,12 @@ class TimelineService : public QObject {
     const QList<ClipData> &clips() const;
     QList<ClipData> &clipsMutable();                 // シリアライザ用
     const QList<ClipData> &clips(int sceneId) const; // 特定シーンのクリップ取得
+
+    // 追加: ネストを解決した「フレーム時点のアクティブクリップ」を返す
+    QList<ClipData *> resolvedActiveClipsAt(int frame) const;
+
+    const QList<SceneData> &getAllScenes() const { return m_scenes; }
+    void setScenes(const QList<SceneData> &scenes);
     QUndoStack *undoStack() const { return m_undoStack; }
 
     // 操作 (公開API)
@@ -62,6 +68,8 @@ class TimelineService : public QObject {
     // 状態管理
     int nextClipId() const { return m_nextClipId; }
     void setNextClipId(int id) { m_nextClipId = id; }
+    int nextSceneId() const { return m_nextSceneId; }
+    void setNextSceneId(int id) { m_nextSceneId = id; }
 
   signals:
     void clipsChanged();
@@ -78,6 +86,7 @@ class TimelineService : public QObject {
     const SceneData *currentScene() const;
 
     int m_nextClipId = 1;
+    int m_nextSceneId = 1;
     QUndoStack *m_undoStack;
     std::unique_ptr<ClipData> m_clipboard;
     SelectionService *m_selection;
