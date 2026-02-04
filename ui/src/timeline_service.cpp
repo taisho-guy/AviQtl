@@ -471,6 +471,15 @@ const QList<ClipData> &TimelineService::clips() const { return currentScene()->c
 
 QList<ClipData> &TimelineService::clipsMutable() { return currentScene()->clips; }
 
+const QList<ClipData> &TimelineService::clips(int sceneId) const {
+    for (const auto &scene : m_scenes) {
+        if (scene.id == sceneId)
+            return scene.clips;
+    }
+    static QList<ClipData> empty;
+    return empty;
+}
+
 QVariantList TimelineService::scenes() const {
     QVariantList list;
     for (const auto &scene : m_scenes) {

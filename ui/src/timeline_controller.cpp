@@ -557,8 +557,43 @@ void TimelineController::switchScene(int sceneId) { m_timeline->switchScene(scen
 void TimelineController::updateSceneSettings(int sceneId, const QString &name, int width, int height, double fps, int totalFrames) { m_timeline->updateSceneSettings(sceneId, name, width, height, fps, totalFrames); }
 
 QVariantList TimelineController::getSceneClips(int sceneId) const {
-    Q_UNUSED(sceneId);
-    return QVariantList();
+    QVariantList list;
+    const auto &clips = m_timeline->clips(sceneId);
+
+    for (const auto &clip : clips) {
+        QVariantMap map;
+        map["id"] = clip.id;
+        map["type"] = clip.type;
+        map["startFrame"] = clip.startFrame;
+        map["durationFrames"] = clip.durationFrames;
+        map["layer"] = clip.layer;
+
+        // QMLソースの解決
+        auto meta = Rina::Core::EffectRegistry::instance().getEffect(clip.type);
+        if (!meta.qmlSource.isEmpty()) {
+            map["qmlSource"] = meta.qmlSource;
+        } else {
+            if (clip.type == "text")
+                map["qmlSource"] = "file:objects/TextObject.qml";
+            else if (clip.type == "rect")
+                map["qmlSource"] = "file:objects/RectObject.qml";
+        }
+
+        // パラメータの収集 (エフェクトからフラット化)
+        QVariantMap params;
+        for (auto *eff : clip.effects) {
+            if (!eff->isEnabled())
+                continue;
+            // ここではキーフレーム評価を行わず、生パラメータまたはデフォルト値を渡す
+            // (SceneObject内で時間に応じて評価されるため)
+            QVariantMap p = eff->params();
+            for (auto it = p.begin(); it != p.end(); ++it)
+                params.insert(it.key(), it.value());
+        }
+        map["params"] = params;
+        list.append(map);
+    }
+    return list;
 }
 
 QString TimelineController::debugRunLua(const QString &script) {

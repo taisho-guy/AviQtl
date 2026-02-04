@@ -14,7 +14,8 @@ class TimelineService : public QObject {
 
     // データアクセス
     const QList<ClipData> &clips() const;
-    QList<ClipData> &clipsMutable(); // シリアライザ用
+    QList<ClipData> &clipsMutable();                 // シリアライザ用
+    const QList<ClipData> &clips(int sceneId) const; // 特定シーンのクリップ取得
     QUndoStack *undoStack() const { return m_undoStack; }
 
     // 操作 (公開API)

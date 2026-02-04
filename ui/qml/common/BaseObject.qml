@@ -15,7 +15,7 @@ Node {
     property var clipParams: ({
     })
     // 自動計算プロパティ
-    readonly property int currentFrame: (TimelineBridge && TimelineBridge.transport) ? TimelineBridge.transport.currentFrame : 0
+    property int currentFrame: (TimelineBridge && TimelineBridge.transport) ? TimelineBridge.transport.currentFrame : 0
     readonly property int relFrame: currentFrame - clipStartFrame
     property var rawEffectModels: []
     // フィルタ系エフェクト（transform/object以外）

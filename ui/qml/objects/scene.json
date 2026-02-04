@@ -1,0 +1,14 @@
+{
+    "id": "scene",
+    "name": "シーン",
+    "category": "object",
+    "qml": "SceneObject.qml",
+    "params": {
+        "sceneId": 0,
+        "startFrame": 0
+    },
+    "ui": {
+        "sceneId": { "label": "シーンID", "type": "int", "min": 0 },
+        "startFrame": { "label": "開始フレーム", "type": "int" }
+    }
+}
