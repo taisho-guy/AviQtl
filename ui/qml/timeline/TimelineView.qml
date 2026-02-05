@@ -130,6 +130,79 @@ ScrollView {
                     }
                 }
 
+                // クリップリサイズハンドル（左端） - [Optimized UX: Left Edge Resize]
+                Rectangle {
+                    width: clipResizeHandleWidth
+                    height: parent.height
+                    anchors.left: parent.left
+                    color: "transparent"
+                    z: 10
+
+                    MouseArea {
+                        property int startX: 0
+                        property int startFrame: 0
+                        property int startDuration: 0
+                        property bool resizing: false
+
+                        anchors.fill: parent
+                        cursorShape: Qt.SizeHorCursor
+                        hoverEnabled: true
+                        preventStealing: true
+
+                        onPressed: (mouse) => {
+                            startX = mouseX;
+                            startFrame = modelData.startFrame;
+                            startDuration = modelData.durationFrames;
+                            resizing = true;
+                            if (TimelineBridge)
+                                TimelineBridge.selectClip(modelData.id);
+
+                            mouse.accepted = true;
+                        }
+
+                        onPositionChanged: (mouse) => {
+                            if (resizing) {
+                                var deltaX = mouseX - startX;
+                                var currentScale = clipRect.scale;
+                                var deltaFrames = Math.round(deltaX / currentScale);
+
+                                // ガード: 持続時間が5フレーム未満にならないように
+                                if (startDuration - deltaFrames < 5)
+                                    return ;
+
+                                // プレビュー更新 (即時反映)
+                                var newStart = startFrame + deltaFrames;
+                                var newDur = startDuration - deltaFrames;
+
+                                clipRect.x = newStart * currentScale;
+                                clipRect.width = newDur * currentScale;
+                            }
+                        }
+
+                        onReleased: {
+                            resizing = false;
+                            if (TimelineBridge) {
+                                var currentScale = clipRect.scale;
+                                // 最終的な座標からフレームを逆算（スナップ含む）
+                                var finalStart = timelineViewRoot.snapFrame(clipRect.x / currentScale);
+                                // Startがズレた分、Durationを補正してEndを維持する
+                                var endFrame = startFrame + startDuration;
+                                var finalDur = endFrame - finalStart;
+
+                                TimelineBridge.updateClip(modelData.id, modelData.layer, finalStart, finalDur);
+
+                                // バインディングが切れたプロパティを復元
+                                clipRect.x = Qt.binding(function() {
+                                    return modelData.startFrame * clipRect.scale;
+                                });
+                                clipRect.width = Qt.binding(function() {
+                                    return modelData.durationFrames * clipRect.scale;
+                                });
+                            }
+                        }
+                    }
+                }
+
                 // クリップリサイズハンドル（右端）
                 Rectangle {
                     width: clipResizeHandleWidth
@@ -171,6 +244,10 @@ ScrollView {
                                 var newDur = Math.round(clipRect.width / scale);
                                 TimelineBridge.updateClip(modelData.id, modelData.layer, modelData.startFrame, newDur);
                             }
+                            // バインディング復元
+                            clipRect.width = Qt.binding(function() {
+                                return modelData.durationFrames * clipRect.scale;
+                            });
                         }
                     }
 
