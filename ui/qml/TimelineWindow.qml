@@ -15,6 +15,14 @@ Common.RinaWindow {
     readonly property int headerWidth: settings.timelineLayerHeaderWidth || 60
     readonly property int clipResizeHandleWidth: settings.timelineClipResizeHandleWidth || 10
     readonly property int sceneTabHeight: settings.timelineHeaderHeight || 28
+    // レイヤー状態のグローバル管理（LayerHeaderからの通知を受け取る）
+    property var globalLayerStates: ({
+    })
+
+    function getLayerVisible(layer) {
+        var state = globalLayerStates[layer];
+        return state ? state.visible : true;
+    }
 
     title: "Timeline"
     width: 1280
@@ -110,10 +118,32 @@ Common.RinaWindow {
             spacing: 0
 
             LayerHeader {
+                id: layerHeader
+
                 headerWidth: timelineWindow.headerWidth
                 layerHeight: timelineWindow.layerHeight
                 layerCount: timelineWindow.layerCount
                 syncFlickable: timelineView.flickable
+                onLayerVisibilityChanged: (layer, visible) => {
+                    if (!globalLayerStates[layer])
+                        globalLayerStates[layer] = {
+                        "visible": true,
+                        "locked": false
+                    };
+
+                    globalLayerStates[layer].visible = visible;
+                    globalLayerStates = globalLayerStates; // 強制再評価
+                }
+                onLayerLockChanged: (layer, locked) => {
+                    if (!globalLayerStates[layer])
+                        globalLayerStates[layer] = {
+                        "visible": true,
+                        "locked": false
+                    };
+
+                    globalLayerStates[layer].locked = locked;
+                    globalLayerStates = globalLayerStates;
+                }
             }
 
             TimelineView {
@@ -124,6 +154,9 @@ Common.RinaWindow {
                 layerHeight: timelineWindow.layerHeight
                 layerCount: timelineWindow.layerCount
                 clipResizeHandleWidth: timelineWindow.clipResizeHandleWidth
+                getLayerLocked: (layer) => {
+                    return layerHeader.getLayerLocked(layer);
+                }
             }
 
         }

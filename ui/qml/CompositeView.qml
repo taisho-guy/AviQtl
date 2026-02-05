@@ -7,6 +7,10 @@ import "common/Logger.js" as Logger
 Item {
     id: root
 
+    // レイヤーの表示状態を取得する関数（外部から注入される）
+    property var getLayerVisible: function(layer) {
+        return true;
+    }
     readonly property int hiddenZ: -9999
     // Component cache to prevent redundant Qt.createComponent calls
     property var _componentCache: ({
@@ -154,6 +158,10 @@ Item {
                     Logger.log("[CompositeView][clipId=" + model.id + "][type=" + model.type + "] " + msg, TimelineBridge);
                 }
 
+                // レイヤーが非表示の場合は描画しない
+                visible: {
+                    return root.getLayerVisible(model.layer);
+                }
                 // 座標変換: 中心(0,0)、Y軸下プラス(AviUtl互換)
                 // Qt3DはY上がプラスなので、入力を反転させる
                 x: px

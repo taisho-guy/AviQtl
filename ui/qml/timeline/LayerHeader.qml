@@ -9,9 +9,51 @@ Rectangle {
     property int layerHeight: 30
     property int layerCount: 128
     property var syncFlickable: null // TimelineViewのFlickable
+    // レイヤー状態管理 (内部保持)
+    property var _layerStates: ({
+    })
+
+    // 外部への通知シグナル
+    signal layerVisibilityChanged(int layer, bool visible)
+    signal layerLockChanged(int layer, bool locked)
 
     function clamp(v, lo, hi) {
         return Math.max(lo, Math.min(hi, v));
+    }
+
+    function getLayerVisible(layer) {
+        var state = _layerStates[layer];
+        return state ? state.visible : true;
+    }
+
+    function getLayerLocked(layer) {
+        var state = _layerStates[layer];
+        return state ? state.locked : false;
+    }
+
+    function setLayerVisible(layer, visible) {
+        if (!_layerStates[layer])
+            _layerStates[layer] = {
+            "visible": true,
+            "locked": false
+        };
+
+        _layerStates[layer].visible = visible;
+        layerVisibilityChanged(layer, visible);
+        // 強制的に再評価を促す
+        _layerStatesChanged();
+    }
+
+    function setLayerLocked(layer, locked) {
+        if (!_layerStates[layer])
+            _layerStates[layer] = {
+            "visible": true,
+            "locked": false
+        };
+
+        _layerStates[layer].locked = locked;
+        layerLockChanged(layer, locked);
+        _layerStatesChanged();
     }
 
     Layout.preferredWidth: headerWidth
@@ -33,47 +75,75 @@ Rectangle {
             Repeater {
                 model: layerCount
 
-                Rectangle {
-                    property bool isHidden: false
+                // レイヤーボタン (AviUtl風)
+                Button {
+                    id: layerBtn
+
+                    property int layerIndex: index
+                    property bool isVisible: headerRoot.getLayerVisible(layerIndex)
+                    property bool isLocked: headerRoot.getLayerLocked(layerIndex)
 
                     width: headerRoot.headerWidth
                     height: headerRoot.layerHeight
-                    color: (index % 2 == 0) ? palette.window : Qt.darker(palette.window, 1.1)
-                    border.color: palette.mid
-                    border.width: 1
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: "Layer " + (index + 1)
-                        color: parent.isHidden ? palette.mid : palette.text
-                        font.pixelSize: 10
+                    flat: true
+                    // 左クリック: 表示/非表示トグル
+                    onClicked: {
+                        headerRoot.setLayerVisible(layerIndex, !isVisible);
                     }
 
-                    // レイヤー表示/非表示トグル
-                    Rectangle {
-                        width: 4
-                        height: 4
-                        radius: 2
-                        color: parent.isHidden ? "transparent" : "#00ff00"
-                        anchors.right: parent.right
-                        anchors.rightMargin: 4
-                        anchors.verticalCenter: parent.verticalCenter
+                    // 右クリック: コンテキストメニュー
+                    MouseArea {
+                        anchors.fill: parent
+                        acceptedButtons: Qt.RightButton
+                        onClicked: {
+                            layerMenu.layerIndex = layerBtn.layerIndex;
+                            layerMenu.popup();
+                        }
+                    }
 
-                        MouseArea {
-                            anchors.fill: parent
-                            onClicked: {
-                                parent.parent.isHidden = !parent.parent.isHidden;
+                    // 背景色: 非表示時は暗く、ロック時は赤みがかる
+                    background: Rectangle {
+                        color: {
+                            if (!layerBtn.isVisible)
+                                return Qt.darker(palette.button, 1.5);
+
+                            if (layerBtn.isLocked)
+                                return Qt.rgba(0.6, 0.3, 0.3, 1);
+
+                            return (layerBtn.layerIndex % 2 == 0) ? palette.button : Qt.darker(palette.button, 1.1);
+                        }
+                        border.color: palette.mid
+                        border.width: 1
+                    }
+
+                    // レイヤー番号表示
+                    contentItem: Item {
+                        Text {
+                            anchors.centerIn: parent
+                            text: (layerBtn.layerIndex + 1).toString()
+                            color: {
+                                if (!layerBtn.isVisible)
+                                    return palette.mid;
+
+                                if (layerBtn.isLocked)
+                                    return "#ffcccc";
+
+                                return palette.text;
                             }
+                            font.pixelSize: 12
+                            font.bold: layerBtn.isVisible && !layerBtn.isLocked
                         }
 
-                    }
+                        // 状態インジケーター (右上に小さな記号)
+                        Text {
+                            anchors.right: parent.right
+                            anchors.top: parent.top
+                            anchors.margins: 2
+                            text: layerBtn.isLocked ? "🔒" : (layerBtn.isVisible ? "" : "✕")
+                            font.pixelSize: 8
+                            color: palette.mid
+                        }
 
-                    // レイヤー境界線
-                    Rectangle {
-                        anchors.right: parent.right
-                        width: 1
-                        height: parent.height
-                        color: "#444"
                     }
 
                 }
@@ -84,10 +154,62 @@ Rectangle {
 
     }
 
+    // レイヤーコンテキストメニュー
+    Menu {
+        id: layerMenu
+
+        property int layerIndex: 0
+
+        MenuItem {
+            text: "表示/非表示を切り替え"
+            onTriggered: {
+                var visible = headerRoot.getLayerVisible(layerMenu.layerIndex);
+                headerRoot.setLayerVisible(layerMenu.layerIndex, !visible);
+            }
+        }
+
+        MenuSeparator {
+        }
+
+        MenuItem {
+            text: {
+                var locked = headerRoot.getLayerLocked(layerMenu.layerIndex);
+                return locked ? "ロックを解除" : "ロック";
+            }
+            onTriggered: {
+                var locked = headerRoot.getLayerLocked(layerMenu.layerIndex);
+                headerRoot.setLayerLocked(layerMenu.layerIndex, !locked);
+            }
+        }
+
+        MenuSeparator {
+        }
+
+        MenuItem {
+            text: "すべて表示"
+            onTriggered: {
+                for (var i = 0; i < headerRoot.layerCount; i++) {
+                    headerRoot.setLayerVisible(i, true);
+                }
+            }
+        }
+
+        MenuItem {
+            text: "すべて非表示"
+            onTriggered: {
+                for (var i = 0; i < headerRoot.layerCount; i++) {
+                    headerRoot.setLayerVisible(i, false);
+                }
+            }
+        }
+
+    }
+
     // 縦スクロール専用マウスエリア
     MouseArea {
         anchors.fill: parent
         acceptedButtons: Qt.NoButton
+        z: -1
         hoverEnabled: true
         onWheel: (wheel) => {
             if (!syncFlickable)

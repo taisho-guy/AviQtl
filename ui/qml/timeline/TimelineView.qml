@@ -11,11 +11,36 @@ ScrollView {
     property int layerHeight: 30
     property int layerCount: 128
     property int clipResizeHandleWidth
+    // レイヤーのロック状態を取得する関数（TimelineWindowから注入される）
+    property var getLayerLocked: function(layer) {
+        return false;
+    }
     // コンテキストメニュー用プロパティ
     property int contextClickFrame: 0
     property int contextClickLayer: 0
     // スナップ設定など
     property bool enableSnap: SettingsManager.settings.enableSnap
+    // 末尾に少し余白を持たせる（AviUtl的な「置きやすさ」）
+    property int tailPaddingFrames: 120
+    // === 動的タイムライン長の計算 (AviUtl風) ===
+    // クリップ配列の末尾を自動追跡する
+    readonly property int maxClipEndFrame: {
+        var maxEnd = 0;
+        var clipList = (TimelineBridge && TimelineBridge.clips) ? TimelineBridge.clips : [];
+        for (var i = 0; i < clipList.length; i++) {
+            var clip = clipList[i];
+            var end = clip.startFrame + clip.durationFrames;
+            if (end > maxEnd)
+                maxEnd = end;
+
+        }
+        return maxEnd;
+    }
+    // プロジェクト尺とクリップ末尾のうち長い方 + 余白
+    readonly property int timelineLengthFrames: {
+        var projectLength = (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.totalFrames : 3600;
+        return Math.max(projectLength, maxClipEndFrame + tailPaddingFrames);
+    }
 
     function clamp(v, lo, hi) {
         return Math.max(lo, Math.min(hi, v));
@@ -35,7 +60,7 @@ ScrollView {
     Flickable {
         id: timelineFlickable
 
-        contentWidth: Math.max(width, 3600 * (TimelineBridge ? TimelineBridge.timelineScale : 1)) // 仮の長さ
+        contentWidth: Math.max(width, timelineLengthFrames * (TimelineBridge ? TimelineBridge.timelineScale : 1))
         contentHeight: layerCount * layerHeight
         interactive: true
 
@@ -75,14 +100,21 @@ ScrollView {
                 id: clipRect
 
                 property double scale: TimelineBridge ? TimelineBridge.timelineScale : 1
+                // 選択状態を監視 (AviUtl風の視覚フィードバック)
+                readonly property bool isSelected: {
+                    return TimelineBridge && TimelineBridge.selection && TimelineBridge.selection.selectedClipId === modelData.id;
+                }
+                // レイヤーがロックされているか確認
+                readonly property bool isLayerLocked: getLayerLocked(modelData.layer)
 
                 x: modelData.startFrame * scale
                 y: modelData.layer * layerHeight
                 width: modelData.durationFrames * scale
                 height: layerHeight - 2
-                color: "#66aa99"
-                border.color: "white"
-                border.width: 1
+                // 選択時は背景を明るく、枠をオレンジに
+                color: isSelected ? "#77ccbb" : "#66aa99"
+                border.color: isSelected ? "#ff8800" : "#ffffff"
+                border.width: isSelected ? 2 : 1
                 opacity: 0.8
                 radius: 4
 
@@ -99,11 +131,16 @@ ScrollView {
 
                     anchors.fill: parent
                     anchors.rightMargin: clipResizeHandleWidth
-                    drag.target: clipRect
+                    // ロックされたレイヤーではドラッグ不可
+                    drag.target: clipRect.isLayerLocked ? null : clipRect
                     drag.axis: Drag.XAndYAxis
                     drag.smoothed: false
                     acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    cursorShape: clipRect.isLayerLocked ? Qt.ForbiddenCursor : Qt.OpenHandCursor
                     onPressed: {
+                        if (clipRect.isLayerLocked)
+                            return ;
+
                         if (TimelineBridge)
                             TimelineBridge.selectClip(modelData.id);
 
@@ -148,8 +185,10 @@ ScrollView {
                         cursorShape: Qt.SizeHorCursor
                         hoverEnabled: true
                         preventStealing: true
-
                         onPressed: (mouse) => {
+                            if (clipRect.isLayerLocked)
+                                return ;
+
                             startX = mouseX;
                             startFrame = modelData.startFrame;
                             startDuration = modelData.durationFrames;
@@ -159,13 +198,11 @@ ScrollView {
 
                             mouse.accepted = true;
                         }
-
                         onPositionChanged: (mouse) => {
                             if (resizing) {
                                 var deltaX = mouseX - startX;
                                 var currentScale = clipRect.scale;
                                 var deltaFrames = Math.round(deltaX / currentScale);
-
                                 // ガード: 持続時間が5フレーム未満にならないように
                                 if (startDuration - deltaFrames < 5)
                                     return ;
@@ -173,12 +210,10 @@ ScrollView {
                                 // プレビュー更新 (即時反映)
                                 var newStart = startFrame + deltaFrames;
                                 var newDur = startDuration - deltaFrames;
-
                                 clipRect.x = newStart * currentScale;
                                 clipRect.width = newDur * currentScale;
                             }
                         }
-
                         onReleased: {
                             resizing = false;
                             if (TimelineBridge) {
@@ -188,9 +223,7 @@ ScrollView {
                                 // Startがズレた分、Durationを補正してEndを維持する
                                 var endFrame = startFrame + startDuration;
                                 var finalDur = endFrame - finalStart;
-
                                 TimelineBridge.updateClip(modelData.id, modelData.layer, finalStart, finalDur);
-
                                 // バインディングが切れたプロパティを復元
                                 clipRect.x = Qt.binding(function() {
                                     return modelData.startFrame * clipRect.scale;
@@ -201,6 +234,7 @@ ScrollView {
                             }
                         }
                     }
+
                 }
 
                 // クリップリサイズハンドル（右端）
@@ -220,6 +254,9 @@ ScrollView {
                         hoverEnabled: true
                         preventStealing: true
                         onPressed: {
+                            if (clipRect.isLayerLocked)
+                                return ;
+
                             startX = mouseX;
                             startWidth = clipRect.width;
                             resizing = true;

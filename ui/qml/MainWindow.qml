@@ -149,7 +149,17 @@ ApplicationWindow {
     }
 
     CompositeView {
+        id: compositeView
+
         anchors.fill: parent
+        // タイムラインウィンドウからレイヤー状態を取得
+        getLayerVisible: function(layer) {
+            var tlWin = WindowManager.getWindow("timeline");
+            if (tlWin && tlWin.getLayerVisible)
+                return tlWin.getLayerVisible(layer);
+
+            return true;
+        }
     }
 
     // 重要: View3D の背後に黒背景を強制
