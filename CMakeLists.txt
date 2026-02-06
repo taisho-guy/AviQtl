@@ -43,6 +43,12 @@ pkg_check_modules(FFMPEG REQUIRED libavcodec libavformat libavutil libswscale)
 
 pkg_check_modules(LUAJIT REQUIRED luajit)
 
+# macOSでのLuaJITリンク問題の修正
+if(APPLE)
+    # pkg-configが返す-lluajit-5.1を-lluajitに変更、またはHomebrewの絶対パスを使用
+    string(REPLACE "-lluajit-5.1" "-lluajit" LUAJIT_LIBRARIES "${LUAJIT_LIBRARIES}")
+endif()
+
 include_directories(
     core/include
     ui/include

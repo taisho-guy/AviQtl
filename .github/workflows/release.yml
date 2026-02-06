@@ -48,7 +48,9 @@ jobs:
           mkdir dist
           cd build
           # Qt依存関係のデプロイ
-          windeployqt --qmldir ../ui/qml --release Rina.exe --dir ../dist
+          # Windowsの絶対パスを使用し、翻訳エラーを回避
+          QML_DIR=$(cygpath -w "$(pwd)/../ui/qml")
+          windeployqt --qmldir "$QML_DIR" --no-translations --release Rina.exe --dir ../dist
           # 実行ファイルとアセットのコピー
           cp Rina.exe ../dist/
           cp -r objects ../dist/
@@ -74,6 +76,11 @@ jobs:
         run: |
           brew update
           brew install qt ffmpeg luajit molten-vk ninja pkg-config
+          
+          # LuaJITのライブラリディレクトリをリンカに教える
+          echo "LDFLAGS=-L$(brew --prefix luajit)/lib" >> $GITHUB_ENV
+          echo "CPPFLAGS=-I$(brew --prefix luajit)/include/luajit-2.1" >> $GITHUB_ENV
+
           # Qtへのパスを通す
           echo "CMAKE_PREFIX_PATH=$(brew --prefix qt)" >> $GITHUB_ENV
           # Vulkan SDK for macOS (LunarG) を手動インストールしないとFindVulkanが失敗しやすい
