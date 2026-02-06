@@ -90,6 +90,10 @@ qt_add_executable(Rina
     core/src/video_encoder.cpp
 )
 
+if(APPLE)
+    set_target_properties(Rina PROPERTIES MACOSX_BUNDLE ON)
+endif()
+
 # Qt Policy設定: QMLモジュールのディレクトリ構造に関する警告を抑制・解決
 qt_policy(SET QTP0004 NEW)
 

@@ -47,10 +47,18 @@ jobs:
         run: |
           mkdir dist
           cd build
-          # windeployqtの翻訳ファイルエラー回避のため、先にexeをコピーして対象を指定
+          
+          # パスをWindows形式の絶対パスに変換
+          QML_DIR=$(cygpath -w "$(pwd)/../ui/qml")
+          EXE_PATH=$(cygpath -w "$(pwd)/../dist/Rina.exe")
+          DIST_DIR=$(cygpath -w "$(pwd)/../dist")
+          
+          # windeployqtの翻訳ファイルエラー回避のため、先にexeをコピー
           cp Rina.exe ../dist/
-          # Qt依存関係のデプロイ
-          windeployqt --qmldir ../ui/qml --no-translations --release ../dist/Rina.exe --dir ../dist
+          
+          # Qt依存関係のデプロイ（絶対パスを使用）
+          windeployqt --qmldir "$QML_DIR" --no-translations --no-compiler-runtime --release "$EXE_PATH" --dir "$DIST_DIR"
+          
           # アセットのコピー
           cp -r objects ../dist/
           cp -r effects ../dist/
@@ -100,12 +108,18 @@ jobs:
         run: |
           mkdir dist
           cd build
-          # Mac用デプロイツール実行
-          $(brew --prefix qt)/bin/macdeployqt Rina.app -qmldir=../ui/qml
           
-          # アセットを含めてZip化
-          # .appバンドル内に含めるのが理想ですが、簡易的に横に配置します
-          zip -r ../dist/Rina-macOS-ARM64.zip Rina.app objects effects
+          # macOSの場合、Rina.appが生成されているはず
+          if [ -d "Rina.app" ]; then
+            # Mac用デプロイツール実行
+            $(brew --prefix qt)/bin/macdeployqt Rina.app -qmldir=../ui/qml
+            
+            # アセットを含めてZip化
+            zip -r ../dist/Rina-macOS-ARM64.zip Rina.app objects effects
+          else
+            echo "Error: Rina.app not found!"
+            exit 1
+          fi
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
