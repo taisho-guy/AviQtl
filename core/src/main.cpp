@@ -8,12 +8,11 @@
 #include "window_manager.hpp"
 #include <QApplication>
 #include <QPixmap>
+#include <QIcon>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickStyle> // 追加
 #include <QQuickWindow>
-#include <QSplashScreen>
-#include <QTimer>
 
 int main(int argc, char *argv[]) {
     // --- マルチプラットフォーム対応 ハードウェアデコード設定 ---
@@ -35,48 +34,24 @@ int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
     app.setApplicationName("Rina");
 
+    // 【追加】アプリケーションアイコンの設定
+    // Qtのリソースシステム (:prefix) から読み込みます
+    // SVGをアイコンに設定すると、ウィンドウマネージャ(KDE/Wayland)が適切にラスタライズしてくれます
+    app.setWindowIcon(QIcon(":/assets/icon.svg"));
+
     // 設定のロード(インスタンス取得時にloadされる)
-    auto settings = Rina::Core::SettingsManager::instance().settings();
-    int splashSize = settings.value("splashSize", 512).toInt();
-    int splashDuration = settings.value("splashDuration", 1000).toInt();
-
-    // --- スプラッシュスクリーンの表示 ---
-    // SVGをQPixmapとして読み込み（高解像度対応のため大きめにレンダリング）
-    QPixmap splashImg(":/assets/icon.svg");
-    if (splashImg.isNull()) {
-        qWarning() << "Failed to load splash image from :/assets/icon.svg";
-        splashImg = QPixmap(splashSize, splashSize);
-        splashImg.fill(Qt::black);
-    } else {
-        splashImg = splashImg.scaled(splashSize, splashSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-    }
-
-    // 最前面表示フラグを明示的に設定
-    QSplashScreen splash(splashImg, Qt::WindowStaysOnTopHint | Qt::FramelessWindowHint);
-    splash.show();
-    splash.raise(); // 明示的に最前面に
-    splash.activateWindow();
-    app.processEvents();
+    Rina::Core::SettingsManager::instance().settings();
 
     // エフェクトレジストリの初期化
-    splash.showMessage("エフェクトレジストリを初期化中...", Qt::AlignBottom | Qt::AlignCenter, Qt::white);
-    splash.raise();
-    app.processEvents();
     Rina::Core::initializeStandardEffects();
 
     // 外部リソースのロード
     QString appDir = QCoreApplication::applicationDirPath();
 
     // 1. Filters (./effects)
-    splash.showMessage("エフェクトを読み込み中...", Qt::AlignBottom | Qt::AlignCenter, Qt::white);
-    splash.raise();
-    app.processEvents();
     Rina::Core::EffectRegistry::instance().loadEffectsFromDirectory(appDir + "/effects");
 
     // 2. Objects (./objects)
-    splash.showMessage("オブジェクトを読み込み中...", Qt::AlignBottom | Qt::AlignCenter, Qt::white);
-    splash.raise();
-    app.processEvents();
     Rina::Core::EffectRegistry::instance().loadEffectsFromDirectory(appDir + "/objects");
 
     // 1. スタイルの強制適用 (KDE Plasma Native)
@@ -85,10 +60,6 @@ int main(int argc, char *argv[]) {
         QQuickStyle::setStyle("org.kde.desktop");
     }
     QQuickStyle::setFallbackStyle("Fusion"); // 非KDE環境でも最低限見れるようにする
-
-    splash.showMessage("UIを初期化中...", Qt::AlignBottom | Qt::AlignCenter, Qt::white);
-    splash.raise();
-    app.processEvents();
 
     QQmlApplicationEngine engine;
 
@@ -116,14 +87,6 @@ int main(int argc, char *argv[]) {
 
     // ウィンドウ生成（バックグラウンドで生成）
     Rina::UI::WindowManager::instance().spawnInitialWindows(&engine);
-
-    // ウィンドウ生成後もスプラッシュを最前面に保つ
-    splash.raise();
-    splash.activateWindow();
-    app.processEvents();
-
-    // スプラッシュを確実に閉じる（ウィンドウ生成完了後、少し遅延）
-    QTimer::singleShot(splashDuration, [&splash]() { splash.close(); });
 
     return app.exec();
 }

@@ -1,7 +1,5 @@
 # Rina - Rina is not AviUtl.
 
-![Screenshot](assets/screenshot.webp)
-
 RinaはAviUtl 1.10（ExEdit 0.92）の代替を目指す実験プロジェクトです。
 
 ## ビルド手順
