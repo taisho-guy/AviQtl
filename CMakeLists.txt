@@ -56,6 +56,11 @@ include_directories(
     ${FFMPEG_INCLUDE_DIRS}
 )
 
+# macOSでHomebrewのライブラリパスを明示的に追加
+if(APPLE)
+    link_directories(/opt/homebrew/lib)
+endif()
+
 # C++ソースコードの収集
 file(GLOB_RECURSE CPP_SOURCES 
     "core/src/*.cpp"

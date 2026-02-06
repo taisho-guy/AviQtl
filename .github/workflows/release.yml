@@ -47,12 +47,11 @@ jobs:
         run: |
           mkdir dist
           cd build
-          # Qt依存関係のデプロイ
-          # Windowsの絶対パスを使用し、翻訳エラーを回避
-          QML_DIR=$(cygpath -w "$(pwd)/../ui/qml")
-          windeployqt --qmldir "$QML_DIR" --no-translations --release Rina.exe --dir ../dist
-          # 実行ファイルとアセットのコピー
+          # windeployqtの翻訳ファイルエラー回避のため、先にexeをコピーして対象を指定
           cp Rina.exe ../dist/
+          # Qt依存関係のデプロイ
+          windeployqt --qmldir ../ui/qml --no-translations --release ../dist/Rina.exe --dir ../dist
+          # アセットのコピー
           cp -r objects ../dist/
           cp -r effects ../dist/
           
@@ -77,9 +76,10 @@ jobs:
           brew update
           brew install qt ffmpeg luajit molten-vk ninja pkg-config
           
-          # LuaJITのライブラリディレクトリをリンカに教える
-          echo "LDFLAGS=-L$(brew --prefix luajit)/lib" >> $GITHUB_ENV
-          echo "CPPFLAGS=-I$(brew --prefix luajit)/include/luajit-2.1" >> $GITHUB_ENV
+          # LuaJIT & FFmpeg のライブラリディレクトリをリンカに教える
+          echo "LDFLAGS=-L$(brew --prefix luajit)/lib -L$(brew --prefix ffmpeg)/lib" >> $GITHUB_ENV
+          echo "CPPFLAGS=-I$(brew --prefix luajit)/include/luajit-2.1 -I$(brew --prefix ffmpeg)/include" >> $GITHUB_ENV
+          echo "PKG_CONFIG_PATH=$(brew --prefix ffmpeg)/lib/pkgconfig:$(brew --prefix luajit)/lib/pkgconfig" >> $GITHUB_ENV
 
           # Qtへのパスを通す
           echo "CMAKE_PREFIX_PATH=$(brew --prefix qt)" >> $GITHUB_ENV

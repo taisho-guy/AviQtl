@@ -2,6 +2,12 @@
 
 RinaはAviUtl 1.10（ExEdit 0.92）の代替を目指す実験プロジェクトです。
 
+## ダウンロード
+
+- [Windows(x86_64)・macOS(ARM64)](https://github.com/taisho-guy/Rina/releases/latest)
+
+- [Linux(x86_64)](https://codeberg.org/taisho-guy/Rina/releases/latest)
+
 ## ビルド手順
 
 ```
