@@ -1,6 +1,7 @@
 #include "timeline_controller.hpp"
 #include "../../core/include/project_serializer.hpp"
 #include "../../core/include/video_decoder.hpp"
+#include "../../core/include/video_encoder.hpp"
 #include "../../engine/timeline/ecs.hpp"
 #include "../../scripting/lua_host.hpp"
 #include "clip_model.hpp"
@@ -12,8 +13,14 @@
 #include "settings_manager.hpp"
 #include "timeline_service.hpp"
 #include "transport_service.hpp"
+#include <QEventLoop>
 #include <QFile>
 #include <QImage>
+#include <QOpenGLContext>
+#include <QOpenGLFramebufferObject>
+#include <QQmlContext>
+#include <QQuickRenderTarget>
+#include <QQuickView>
 #include <QQuickWindow>
 #include <QUrl>
 #include <QtGlobal>
@@ -434,8 +441,152 @@ bool TimelineController::exportImageSequence(const QString &dir, int quality) {
 }
 
 bool TimelineController::exportVideo(const QString &path, const QString &format, int quality) {
-    qWarning() << "ビデオエクスポートはまだ実装されていません (FFmpeg連携が必要です)";
-    return false;
+    Rina::Core::VideoEncoder encoder;
+    Rina::Core::VideoEncoder::Config config;
+
+    config.width = m_project->width();
+    config.height = m_project->height();
+    config.fps_num = static_cast<int>(m_project->fps() * 1000);
+    config.fps_den = 1000;
+    // ビットレート計算 (簡易): 1080p60fps -> 12Mbps 程度を目安に
+    config.bitrate = static_cast<int>(config.width * config.height * m_project->fps() * 0.15);
+    config.outputUrl = path;
+    config.codecName = "h264_vaapi"; // AMD Radeon 780M 推奨
+
+    if (!encoder.open(config)) {
+        emit errorOccurred("エンコーダーの初期化に失敗しました。VA-APIドライバを確認してください。");
+        return false;
+    }
+
+    int totalFrames = m_project->totalFrames();
+    for (int frame = 0; frame < totalFrames; ++frame) {
+        m_transport->setCurrentFrame(frame);
+
+        // QMLシーングラフからキャプチャ (CPUメモリへのダウンロード発生)
+        QImage renderedFrame;
+        if (m_compositeView) {
+            renderedFrame = m_compositeView->grabWindow();
+        } else {
+            renderedFrame = renderCurrentFrame();
+        }
+
+        // エンコーダーへプッシュ (CPU -> GPU アップロード発生)
+        if (!encoder.pushFrame(renderedFrame, frame)) {
+            qWarning() << "Frame encoding failed at:" << frame;
+        }
+        emit exportProgressChanged((frame * 100) / totalFrames);
+    }
+
+    encoder.close();
+    emit exportProgressChanged(100);
+    return true;
+}
+
+void TimelineController::exportVideoHW(Rina::Core::VideoEncoder *encoder) {
+    if (!encoder || !m_project)
+        return;
+
+    // 1. Viewの作成
+    QQuickView renderWindow;
+
+    // 【修正1】コンテキストプロパティを先に設定
+    QQmlContext *ctx = renderWindow.engine()->rootContext();
+    ctx->setContextProperty("TimelineBridge", this);
+    ctx->setContextProperty("videoFrameStore", m_videoFrameStore);
+    ctx->setContextProperty("SettingsManager", &Rina::Core::SettingsManager::instance());
+
+    // ソース設定
+    renderWindow.setSource(QUrl("qrc:/qt/qml/Rina/ui/qml/CompositeView.qml"));
+    renderWindow.setResizeMode(QQuickView::SizeRootObjectToView);
+    renderWindow.resize(m_project->width(), m_project->height());
+
+    // 共有データを保持する構造体
+    struct RenderContext {
+        std::unique_ptr<QOpenGLFramebufferObject> fbo;
+        Rina::Core::VideoEncoder *enc;
+        int frame = 0;
+        bool success = true;
+    } rc;
+    rc.enc = encoder;
+
+    // 【修正2】レンダースレッドでのFBO作成 (sceneGraphInitializedシグナルを利用)
+    // DirectConnectionにより、シグナル発火スレッド（レンダースレッド）で即時実行される
+    QObject::connect(
+        &renderWindow, &QQuickWindow::sceneGraphInitialized, &renderWindow,
+        [&]() {
+            QOpenGLFramebufferObjectFormat format;
+            format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
+            rc.fbo = std::make_unique<QOpenGLFramebufferObject>(renderWindow.size(), format);
+
+            // レンダリングターゲットをFBOに変更
+            renderWindow.setRenderTarget(QQuickRenderTarget::fromOpenGLTexture(rc.fbo->texture(), renderWindow.size()));
+        },
+        Qt::DirectConnection);
+
+    // 【修正3】レンダースレッドでのエンコード (afterRenderingシグナルを利用)
+    QObject::connect(
+        &renderWindow, &QQuickWindow::afterRendering, &renderWindow,
+        [&]() {
+            if (!rc.fbo)
+                return;
+
+            // 現在のフレーム番号でエンコード
+            // 注意: ここはレンダースレッドなのでGL操作が可能
+            if (!rc.enc->pushTexture(rc.fbo->texture(), rc.fbo->size(), rc.frame)) {
+                rc.success = false;
+            }
+        },
+        Qt::DirectConnection);
+
+    // FBOのクリーンアップ (無効化時)
+    QObject::connect(&renderWindow, &QQuickWindow::sceneGraphInvalidated, &renderWindow, [&]() { rc.fbo.reset(); }, Qt::DirectConnection);
+
+    // ウィンドウ表示（これによりレンダリングスレッドが起動）
+    renderWindow.show();
+
+    // 初期化待ち (FBOが作られるまで待つ)
+    QEventLoop initLoop;
+    QObject::connect(&renderWindow, &QQuickWindow::sceneGraphInitialized, &initLoop, &QEventLoop::quit);
+    QTimer::singleShot(3000, &initLoop, &QEventLoop::quit); // タイムアウト3秒
+    initLoop.exec();
+
+    if (!rc.fbo) {
+        qWarning() << "Failed to initialize GL Context/FBO for export.";
+        renderWindow.close();
+        return;
+    }
+
+    // --- メインループ ---
+    int endFrame = m_project->totalFrames();
+    for (int frame = 0; frame < endFrame; ++frame) {
+        if (!rc.success) {
+            qWarning() << "Aborting export due to encoder error.";
+            break;
+        }
+
+        rc.frame = frame;                    // Lambdaが参照するフレーム番号を更新
+        m_transport->setCurrentFrame(frame); // 時間を進める
+
+        // 再描画リクエスト
+        renderWindow.update();
+
+        // レンダリング完了待ち
+        QEventLoop frameLoop;
+        QObject::connect(&renderWindow, &QQuickWindow::afterRendering, &frameLoop, &QEventLoop::quit);
+        QTimer::singleShot(2000, &frameLoop, &QEventLoop::quit); // フリーズ防止
+        frameLoop.exec();
+
+        // 進捗通知
+        if (frame % 10 == 0) {
+            emit exportProgressChanged((frame * 100) / endFrame);
+            QCoreApplication::processEvents();
+        }
+    }
+
+    // 終了処理
+    renderWindow.close(); // FBO破棄もトリガーされる
+    encoder->close();
+    emit exportProgressChanged(100);
 }
 
 QImage TimelineController::renderCurrentFrame() const {

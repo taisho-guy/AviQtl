@@ -30,12 +30,17 @@ set(QT_QML_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/qml)
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick QuickControls2 WaylandClient Quick3D Widgets Core5Compat Sql Svg Multimedia)
 find_package(Vulkan REQUIRED)
 find_package(PkgConfig REQUIRED)
+
+# FFmpeg Integration for Hardware Encoding
+pkg_check_modules(FFMPEG REQUIRED libavcodec libavformat libavutil libswscale)
+
 pkg_check_modules(LUAJIT REQUIRED luajit)
 
 include_directories(
     core/include
     ui/include
     ${LUAJIT_INCLUDE_DIRS}
+    ${FFMPEG_INCLUDE_DIRS}
 )
 
 # C++ソースコードの収集
@@ -64,6 +69,7 @@ qt_add_executable(Rina
     core/src/video_frame_provider.cpp
     core/src/video_decoder.cpp
     core/src/project_serializer.cpp
+    core/src/video_encoder.cpp
 )
 
 # Qt Policy設定: QMLモジュールのディレクトリ構造に関する警告を抑制・解決
@@ -96,6 +102,7 @@ qt_add_qml_module(Rina
         ui/qml/common/Logger.js
         ui/qml/common/EasingConfigDialog.qml
         ui/qml/common/NodeLoader.qml
+        ui/qml/ExportDialog.qml
 
         # 【削除】Objectsは外部読み込みするため、ここ（コンパイル対象）からは外す
 )
@@ -103,7 +110,8 @@ qt_add_qml_module(Rina
 # リンク設定
 target_link_libraries(
     Rina PRIVATE Qt6::Core Qt6::Gui Qt6::Quick Qt6::QuickControls2 Qt6::WaylandClient Qt6::Quick3D Qt6::Widgets Qt6::Svg Qt6::Core5Compat Qt6::Multimedia Vulkan::Vulkan
-                   ${LUAJIT_LIBRARIES})
+                   ${LUAJIT_LIBRARIES}
+                   ${FFMPEG_LIBRARIES})
 
 # エフェクト/オブジェクト定義JSONをビルドディレクトリにコピー
 file(COPY ui/qml/objects/ DESTINATION ${CMAKE_BINARY_DIR}/objects)

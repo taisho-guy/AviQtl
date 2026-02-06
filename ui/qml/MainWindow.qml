@@ -20,6 +20,12 @@ ApplicationWindow {
 
         close.accepted = true;
     }
+    // 【追加】起動時に自分自身(Window)をコントローラーに渡す
+    Component.onCompleted: {
+        if (TimelineBridge)
+            TimelineBridge.setCompositeView(mainWin);
+
+    }
 
     // アクション定義 (ショートカット用)
     Action {
@@ -135,17 +141,10 @@ ApplicationWindow {
         }
     }
 
-    Platform.FileDialog {
+    ExportDialog {
         id: exportDialog
 
-        fileMode: Platform.FileDialog.SaveFile
-        nameFilters: ["PNG Sequence (*.png)", "AVI Video (*.avi)"]
-        onAccepted: {
-            if (TimelineBridge) {
-                var quality = (SettingsManager && SettingsManager.settings) ? (SettingsManager.settings.exportImageQuality || 95) : 95;
-                TimelineBridge.exportMedia(file, "image_sequence", quality);
-            }
-        }
+        anchors.centerIn: parent
     }
 
     CompositeView {
@@ -194,14 +193,11 @@ ApplicationWindow {
             }
 
             MenuItem {
-                text: "メディアのエクスポート..."
+                text: "メディアの書き出し..."
                 enabled: TimelineBridge && TimelineBridge.project
-                onTriggered: exportDialog.open()
-            }
-
-            MenuItem {
-                text: "拡張編集AVI/BMP出力 (RGBA)"
-                enabled: TimelineBridge && TimelineBridge.project
+                onTriggered: {
+                    exportDialog.open();
+                }
             }
 
             MenuSeparator {

@@ -28,6 +28,7 @@ namespace Rina {
 namespace Core {
 class VideoDecoder;
 class VideoFrameStore;
+class VideoEncoder; // 前方宣言
 } // namespace Core
 } // namespace Rina
 
@@ -57,6 +58,8 @@ class TimelineController : public QObject {
     explicit TimelineController(QObject *parent = nullptr);
 
     void setVideoFrameStore(Rina::Core::VideoFrameStore *store);
+
+    Q_INVOKABLE void setCompositeView(QQuickWindow *view) { m_compositeView = view; }
 
     // サービスアクセサ
     ProjectService *project() const { return m_project; }
@@ -119,6 +122,9 @@ class TimelineController : public QObject {
     Q_INVOKABLE bool loadProject(const QString &fileUrl);
     Q_INVOKABLE QVariantMap getProjectInfo(const QString &fileUrl) const;
     Q_INVOKABLE bool exportMedia(const QString &fileUrl, const QString &format, int quality);
+
+    // ハードウェアエンコード実行ループ
+    Q_INVOKABLE void exportVideoHW(Rina::Core::VideoEncoder *encoder);
 
     Q_INVOKABLE void selectClip(int id);
 
@@ -184,8 +190,6 @@ class TimelineController : public QObject {
 
     // デバッグ用: Luaスクリプト直接実行
     Q_INVOKABLE QString debugRunLua(const QString &script);
-
-    Q_INVOKABLE void setCompositeView(QQuickWindow *view) { m_compositeView = view; }
 
   private:
     QPointer<QQuickWindow> m_compositeView; // CompositeViewへの参照

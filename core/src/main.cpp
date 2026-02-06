@@ -2,6 +2,7 @@
 #include "rina_context.hpp"
 #include "settings_manager.hpp"
 #include "timeline_controller.hpp"
+#include "video_encoder.hpp"
 #include "video_frame_provider.hpp"
 #include "video_frame_store.hpp"
 #include "window_manager.hpp"
@@ -23,6 +24,10 @@ int main(int argc, char *argv[]) {
     // Linux(VAAPI/VDPAU/CUDA), Windows(D3D11VA/DXVA2), macOS(VideoToolbox) を網羅
     qputenv("QT_FFMPEG_DECODING_HW_DEVICE_TYPES", "cuda,vaapi,vdpau,videotoolbox,d3d11va,dxva2");
 
+    // 【追加】描画バックエンドをOpenGLに強制 (FBO/Texture共有のため必須)
+    // これがないとLinux/AMDではVulkanが使われ、GPUパイプラインが壊れます
+    qputenv("QSG_RHI_BACKEND", "opengl");
+
     // 1. アプリケーション初期化
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
@@ -34,7 +39,6 @@ int main(int argc, char *argv[]) {
     auto settings = Rina::Core::SettingsManager::instance().settings();
     int splashSize = settings.value("splashSize", 512).toInt();
     int splashDuration = settings.value("splashDuration", 1000).toInt();
-    int startupDelay = settings.value("appStartupDelay", 1000).toInt();
 
     // --- スプラッシュスクリーンの表示 ---
     // SVGをQPixmapとして読み込み（高解像度対応のため大きめにレンダリング）
@@ -93,6 +97,9 @@ int main(int argc, char *argv[]) {
     engine.addImageProvider("videoFrame", new Rina::Core::VideoFrameProvider(videoFrameStore));
     engine.rootContext()->setContextProperty("videoFrameStore", videoFrameStore);
 
+    // VideoEncoderをQMLでインスタンス化可能な型として登録
+    qmlRegisterType<Rina::Core::VideoEncoder>("Rina.Core", 1, 0, "VideoEncoder");
+
     // SettingsManager の登録
     engine.rootContext()->setContextProperty("SettingsManager", &Rina::Core::SettingsManager::instance());
 
@@ -117,19 +124,6 @@ int main(int argc, char *argv[]) {
 
     // スプラッシュを確実に閉じる（ウィンドウ生成完了後、少し遅延）
     QTimer::singleShot(splashDuration, [&splash]() { splash.close(); });
-
-    // CompositeViewをTimelineControllerに登録（GPU最適化のため）
-    QTimer::singleShot(startupDelay, [&]() {
-        QObject *bridge = engine.rootContext()->contextProperty("TimelineBridge").value<QObject *>();
-        auto windows = engine.rootObjects();
-
-        for (auto *obj : windows) {
-            if (QQuickWindow *win = qobject_cast<QQuickWindow *>(obj)) {
-                QMetaObject::invokeMethod(bridge, "setCompositeView", Q_ARG(QQuickWindow *, win));
-                break;
-            }
-        }
-    });
 
     return app.exec();
 }
