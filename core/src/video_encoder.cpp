@@ -172,7 +172,7 @@ bool VideoEncoder::pushFrame(const QImage &img, int64_t pts) {
 
     // 1. QImage (ARGB32) -> SW Frame (NV12) 変換
     if (!m_swsCtx) {
-        m_swsCtx = sws_getContext(img.width(), img.height(), AV_PIX_FMT_BGRA, // QImage::Format_ARGB32_Premultiplied は BGRA 相当の場合が多い(要確認)
+        m_swsCtx = sws_getContext(img.width(), img.height(), AV_PIX_FMT_RGBA, // 【重要】入力はRGBA
                                   m_config.width, m_config.height, AV_PIX_FMT_NV12, SWS_BILINEAR, nullptr, nullptr, nullptr);
     }
 

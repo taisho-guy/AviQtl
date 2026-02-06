@@ -22,8 +22,8 @@
 #include <QQuickRenderTarget>
 #include <QQuickView>
 #include <QQuickWindow>
-#include <QUrl>
 #include <QSurfaceFormat>
+#include <QUrl>
 #include <QtGlobal>
 #include <algorithm>
 
@@ -532,6 +532,11 @@ void TimelineController::exportVideoHW(Rina::Core::VideoEncoder *encoder) {
 
         // 安定した方法でフレーム取得
         QImage img = m_compositeView->grabWindow();
+
+        // 【修正】フォーマットを明示的に変換 (これでメモリ配列が R, G, B, A の順になる)
+        if (img.format() != QImage::Format_RGBA8888) {
+            img = img.convertToFormat(QImage::Format_RGBA8888);
+        }
 
         if (img.size() != QSize(width, height)) {
             img = img.scaled(width, height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
