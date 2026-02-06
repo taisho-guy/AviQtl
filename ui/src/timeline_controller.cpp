@@ -23,6 +23,7 @@
 #include <QQuickView>
 #include <QQuickWindow>
 #include <QUrl>
+#include <QSurfaceFormat>
 #include <QtGlobal>
 #include <algorithm>
 
@@ -508,107 +509,48 @@ void TimelineController::exportVideoHW(Rina::Core::VideoEncoder *encoder) {
     if (!encoder || !m_project)
         return;
 
-    // 1. Viewの作成
-    QQuickView renderWindow;
-
-    // 【修正1】コンテキストプロパティを先に設定
-    QQmlContext *ctx = renderWindow.engine()->rootContext();
-    ctx->setContextProperty("TimelineBridge", this);
-    ctx->setContextProperty("videoFrameStore", m_videoFrameStore);
-    ctx->setContextProperty("SettingsManager", &Rina::Core::SettingsManager::instance());
-
-    // ソース設定
-    renderWindow.setSource(QUrl("qrc:/qt/qml/Rina/ui/qml/CompositeView.qml"));
-    renderWindow.setResizeMode(QQuickView::SizeRootObjectToView);
-    renderWindow.resize(m_project->width(), m_project->height());
-
-    // 共有データを保持する構造体
-    struct RenderContext {
-        std::unique_ptr<QOpenGLFramebufferObject> fbo;
-        Rina::Core::VideoEncoder *enc;
-        int frame = 0;
-        bool success = true;
-    } rc;
-    rc.enc = encoder;
-
-    // 【修正2】レンダースレッドでのFBO作成 (sceneGraphInitializedシグナルを利用)
-    // DirectConnectionにより、シグナル発火スレッド（レンダースレッド）で即時実行される
-    QObject::connect(
-        &renderWindow, &QQuickWindow::sceneGraphInitialized, &renderWindow,
-        [&]() {
-            QOpenGLFramebufferObjectFormat format;
-            format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-            rc.fbo = std::make_unique<QOpenGLFramebufferObject>(renderWindow.size(), format);
-
-            // レンダリングターゲットをFBOに変更
-            renderWindow.setRenderTarget(QQuickRenderTarget::fromOpenGLTexture(rc.fbo->texture(), renderWindow.size()));
-        },
-        Qt::DirectConnection);
-
-    // 【修正3】レンダースレッドでのエンコード (afterRenderingシグナルを利用)
-    QObject::connect(
-        &renderWindow, &QQuickWindow::afterRendering, &renderWindow,
-        [&]() {
-            if (!rc.fbo)
-                return;
-
-            // 現在のフレーム番号でエンコード
-            // 注意: ここはレンダースレッドなのでGL操作が可能
-            if (!rc.enc->pushTexture(rc.fbo->texture(), rc.fbo->size(), rc.frame)) {
-                rc.success = false;
-            }
-        },
-        Qt::DirectConnection);
-
-    // FBOのクリーンアップ (無効化時)
-    QObject::connect(&renderWindow, &QQuickWindow::sceneGraphInvalidated, &renderWindow, [&]() { rc.fbo.reset(); }, Qt::DirectConnection);
-
-    // ウィンドウ表示（これによりレンダリングスレッドが起動）
-    renderWindow.show();
-
-    // 初期化待ち (FBOが作られるまで待つ)
-    QEventLoop initLoop;
-    QObject::connect(&renderWindow, &QQuickWindow::sceneGraphInitialized, &initLoop, &QEventLoop::quit);
-    QTimer::singleShot(3000, &initLoop, &QEventLoop::quit); // タイムアウト3秒
-    initLoop.exec();
-
-    if (!rc.fbo) {
-        qWarning() << "Failed to initialize GL Context/FBO for export.";
-        renderWindow.close();
+    if (!m_compositeView) {
+        qWarning() << "Export failed: CompositeView is not initialized.";
         return;
     }
 
-    // --- メインループ ---
-    int endFrame = m_project->totalFrames();
+    const int endFrame = m_project->totalFrames();
+    const int width = m_project->width();
+    const int height = m_project->height();
+
+    qInfo() << "Starting HW Export (QImage path): 0 to" << endFrame;
+
     for (int frame = 0; frame < endFrame; ++frame) {
-        if (!rc.success) {
-            qWarning() << "Aborting export due to encoder error.";
+        m_transport->setCurrentFrame(frame);
+
+        // 描画完了待ち
+        QEventLoop loop;
+        QObject::connect(m_compositeView, &QQuickWindow::afterRendering, &loop, &QEventLoop::quit);
+        m_compositeView->update();
+        QTimer::singleShot(1000, &loop, &QEventLoop::quit);
+        loop.exec();
+
+        // 安定した方法でフレーム取得
+        QImage img = m_compositeView->grabWindow();
+
+        if (img.size() != QSize(width, height)) {
+            img = img.scaled(width, height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        }
+
+        if (!encoder->pushFrame(img, frame)) {
+            qWarning() << "Failed to encode frame" << frame;
             break;
         }
 
-        rc.frame = frame;                    // Lambdaが参照するフレーム番号を更新
-        m_transport->setCurrentFrame(frame); // 時間を進める
-
-        // 再描画リクエスト
-        renderWindow.update();
-
-        // レンダリング完了待ち
-        QEventLoop frameLoop;
-        QObject::connect(&renderWindow, &QQuickWindow::afterRendering, &frameLoop, &QEventLoop::quit);
-        QTimer::singleShot(2000, &frameLoop, &QEventLoop::quit); // フリーズ防止
-        frameLoop.exec();
-
-        // 進捗通知
         if (frame % 10 == 0) {
             emit exportProgressChanged((frame * 100) / endFrame);
             QCoreApplication::processEvents();
         }
     }
 
-    // 終了処理
-    renderWindow.close(); // FBO破棄もトリガーされる
     encoder->close();
     emit exportProgressChanged(100);
+    qInfo() << "HW Export finished.";
 }
 
 QImage TimelineController::renderCurrentFrame() const {
