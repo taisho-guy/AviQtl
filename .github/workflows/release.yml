@@ -1,0 +1,114 @@
+name: Build and Release (Win/Mac)
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    name: Windows (MSYS2 UCRT64)
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt64-toolchain
+            mingw-w64-ucrt64-cmake
+            mingw-w64-ucrt64-ninja
+            mingw-w64-ucrt64-qt6-base
+            mingw-w64-ucrt64-qt6-declarative
+            mingw-w64-ucrt64-qt6-multimedia
+            mingw-w64-ucrt64-qt6-shadertools
+            mingw-w64-ucrt64-qt6-svg
+            mingw-w64-ucrt64-qt6-5compat
+            mingw-w64-ucrt64-ffmpeg
+            mingw-w64-ucrt64-luajit
+            mingw-w64-ucrt64-vulkan-loader
+            mingw-w64-ucrt64-vulkan-headers
+            mingw-w64-ucrt64-pkg-config
+            mingw-w64-ucrt64-mold
+
+      - name: Build
+        run: |
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build
+
+      - name: Package
+        run: |
+          mkdir dist
+          cd build
+          # Qt依存関係のデプロイ
+          windeployqt --qmldir ../ui/qml --release Rina.exe --dir ../dist
+          # 実行ファイルとアセットのコピー
+          cp Rina.exe ../dist/
+          cp -r objects ../dist/
+          cp -r effects ../dist/
+          
+          # アーカイブ作成
+          cd ../dist
+          7z a Rina-Windows-x64.zip *
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: dist/Rina-Windows-x64.zip
+
+  build-macos:
+    name: macOS (Apple Silicon)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Dependencies
+        run: |
+          brew install qt ffmpeg luajit molten-vk ninja pkg-config
+          # Qtへのパスを通す
+          echo "CMAKE_PREFIX_PATH=$(brew --prefix qt)" >> $GITHUB_ENV
+
+      - name: Build
+        run: |
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build
+
+      - name: Package
+        run: |
+          mkdir dist
+          cd build
+          # Mac用デプロイツール実行
+          $(brew --prefix qt)/bin/macdeployqt Rina.app -qmldir=../ui/qml
+          
+          # アセットを含めてZip化
+          # .appバンドル内に含めるのが理想ですが、簡易的に横に配置します
+          zip -r ../dist/Rina-macOS-ARM64.zip Rina.app objects effects
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-build
+          path: dist/Rina-macOS-ARM64.zip
+
+  release:
+    needs: [build-windows, build-macos]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/windows-build/*.zip
+            artifacts/macos-build/*.zip
