@@ -43,6 +43,10 @@ TimelineController::TimelineController(QObject *parent) : QObject(parent) {
     // TimelineServiceからのシグナル接続
     connect(m_timeline, &TimelineService::clipsChanged, this, [this]() {
         rebuildClipIndex();
+
+        // 【追加】最終フレームを自動計算して更新
+        recalculateTotalFrames();
+
         emit clipsChanged();
         updateVideoDecoders();
         updateActiveClipsList();
@@ -331,6 +335,24 @@ void TimelineController::updateVideoDecoders() {
             ++it;
         }
     }
+}
+
+void TimelineController::recalculateTotalFrames() {
+    int maxEndFrame = 0;
+
+    // 現在のシーンの全クリップを走査
+    // m_timeline->clips() は現在のシーンのクリップリストを返す
+    for (const auto &clip : m_timeline->clips()) {
+        int endFrame = clip.startFrame + clip.durationFrames;
+        if (endFrame > maxEndFrame) {
+            maxEndFrame = endFrame;
+        }
+    }
+
+    // プロジェクト設定を更新
+    // 無限ループを防ぐため、値が変わった時だけセットされる(ProjectService側でチェック済み)
+    // 最低でも1フレームは確保する
+    m_project->setTotalFrames(std::max(1, maxEndFrame));
 }
 
 void TimelineController::log(const QString &msg) { qDebug() << "[TimelineBridge] " << msg; }

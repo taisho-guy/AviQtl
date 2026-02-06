@@ -737,23 +737,6 @@ Common.RinaWindow {
                                 }
                             }
 
-                            Label {
-                                text: "総フレーム数:"
-                            }
-
-                            SpinBox {
-                                from: 1
-                                to: 100000
-                                value: root.settings.defaultProjectFrames || 3600
-                                onValueModified: {
-                                    var s = root.settings;
-                                    s.defaultProjectFrames = value;
-                                    if (SettingsManager)
-                                        SettingsManager.settings = s;
-
-                                }
-                            }
-
                         }
 
                     }

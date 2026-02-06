@@ -27,7 +27,6 @@ Common.RinaWindow {
             widthField.text = SettingsManager.settings.defaultProjectWidth || "1920";
             heightField.text = SettingsManager.settings.defaultProjectHeight || "1080";
             fpsField.text = SettingsManager.settings.defaultProjectFps || "60";
-            framesField.text = SettingsManager.settings.defaultProjectFrames || "3600";
             // テンプレートに応じて更新
             if (templateCombo.currentIndex !== 4)
                 templateCombo.activated(templateCombo.currentIndex);
@@ -155,22 +154,6 @@ Common.RinaWindow {
 
                     }
 
-                    Label {
-                        text: "総フレーム数:"
-                    }
-
-                    TextField {
-                        id: framesField
-
-                        Layout.fillWidth: true
-
-                        validator: IntValidator {
-                            bottom: 1
-                            top: 1e+06
-                        }
-
-                    }
-
                 }
 
             }
@@ -180,7 +163,8 @@ Common.RinaWindow {
                 highlighted: true
                 Layout.fillWidth: true
                 onClicked: {
-                    root.projectSelected("", parseInt(widthField.text), parseInt(heightField.text), parseFloat(fpsField.text), parseInt(framesField.text));
+                    // 総フレーム数は自動計算されるため、初期値として最小限の値(1)を渡す
+                    root.projectSelected("", parseInt(widthField.text), parseInt(heightField.text), parseFloat(fpsField.text), 1);
                     root.close();
                 }
             }

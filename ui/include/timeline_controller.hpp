@@ -160,6 +160,7 @@ class TimelineController : public QObject {
     void updateClipActiveState();
     void rebuildClipIndex();
     void updateVideoDecoders();
+    void recalculateTotalFrames();
 
     ClipModel *m_clipModel;       // アクティブなクリップをQMLに公開するためのモデル
     double m_timelineScale = 1.0; // タイムラインの表示倍率 (1.0 = 1フレームあたり1ピクセル)

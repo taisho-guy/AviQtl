@@ -15,7 +15,6 @@ Common.RinaWindow {
             widthField.text = TimelineBridge.project.width;
             heightField.text = TimelineBridge.project.height;
             fpsField.text = TimelineBridge.project.fps;
-            framesField.text = TimelineBridge.project.totalFrames;
         }
     }
 
@@ -76,22 +75,6 @@ Common.RinaWindow {
 
             }
 
-            Label {
-                text: "総フレーム数:"
-            }
-
-            TextField {
-                id: framesField
-
-                selectByMouse: true
-
-                validator: IntValidator {
-                    bottom: 1
-                    top: 1e+06
-                }
-
-            }
-
         }
 
         RowLayout {
@@ -105,7 +88,6 @@ Common.RinaWindow {
                         TimelineBridge.project.width = parseInt(widthField.text);
                         TimelineBridge.project.height = parseInt(heightField.text);
                         TimelineBridge.project.fps = parseFloat(fpsField.text);
-                        TimelineBridge.project.totalFrames = parseInt(framesField.text);
                         root.hide();
                     }
                 }

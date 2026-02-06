@@ -7,6 +7,7 @@ Common.RinaWindow {
     id: root
 
     property int targetSceneId: -1
+    property int currentFrames: 0 // 既存のフレーム数を保持するためのプロパティ
 
     function openForScene(sceneId, name, w, h, fps, frames) {
         targetSceneId = sceneId;
@@ -14,7 +15,7 @@ Common.RinaWindow {
         widthField.value = w;
         heightField.value = h;
         fpsField.value = Math.round(fps * 100);
-        framesField.value = frames;
+        currentFrames = frames;
         root.show();
         root.raise();
         root.requestActivate();
@@ -104,23 +105,6 @@ Common.RinaWindow {
 
         }
 
-        RowLayout {
-            Label {
-                text: "総フレーム数:"
-                Layout.preferredWidth: 100
-            }
-
-            SpinBox {
-                id: framesField
-
-                from: 1
-                to: 1e+06
-                editable: true
-                Layout.fillWidth: true
-            }
-
-        }
-
         Item {
             Layout.fillHeight: true
         }
@@ -139,7 +123,7 @@ Common.RinaWindow {
                 highlighted: true
                 onClicked: {
                     if (targetSceneId !== -1 && TimelineBridge)
-                        TimelineBridge.updateSceneSettings(targetSceneId, nameField.text, widthField.value, heightField.value, fpsField.realValue, framesField.value);
+                        TimelineBridge.updateSceneSettings(targetSceneId, nameField.text, widthField.value, heightField.value, fpsField.realValue, currentFrames);
 
                     root.hide();
                 }
