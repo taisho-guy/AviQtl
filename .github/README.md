@@ -1,8 +1,6 @@
 > [!WARNING]
 > 本リポジトリはミラーです。イシューやプルリクエスト等は[Codebergリポジトリ](https://codeberg.org/taisho-guy/Rina)へお願いします。
 
----
-
 # Rina - Rina is not AviUtl.
 
 RinaはAviUtl 1.10（ExEdit 0.92）の代替を目指す実験プロジェクトです。
