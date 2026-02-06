@@ -37,6 +37,7 @@ jobs:
             mingw-w64-ucrt-x86_64-vulkan-headers
             mingw-w64-ucrt-x86_64-pkg-config
             mingw-w64-ucrt-x86_64-mold
+            zip
 
       - name: Build
         run: |
@@ -66,7 +67,7 @@ jobs:
           
           # アーカイブ作成
           cd ../dist
-          7z a Rina-Windows-x64.zip *
+          zip -r Rina-Windows-x64.zip .
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
