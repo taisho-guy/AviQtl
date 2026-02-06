@@ -57,7 +57,8 @@ jobs:
           cp Rina.exe ../dist/
           
           # Qt依存関係のデプロイ（絶対パスを使用）
-          windeployqt --qmldir "$QML_DIR" --no-translations --no-compiler-runtime --release "$EXE_PATH" --dir "$DIST_DIR"
+          # windeployqtが翻訳ファイルエラーで終了コード1を返すことがあるため、|| true で抑制
+          windeployqt --qmldir "$QML_DIR" --no-translations --no-compiler-runtime --release "$EXE_PATH" --dir "$DIST_DIR" || true
           
           # アセットのコピー
           cp -r objects ../dist/
