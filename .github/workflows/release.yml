@@ -64,6 +64,19 @@ jobs:
           # windeployqtが翻訳ファイルエラーで終了コード1を返すことがあるため、|| true で抑制
           windeployqt --qmldir "$QML_DIR" --no-translations --no-compiler-runtime --release "$EXE_PATH" --dir "$DIST_DIR" || true
           
+          # 2. 非Qt依存関係（FFmpeg, LuaJIT, ランタイム）の自動収集
+          # システム(C:/Windows)以外のパスにある依存DLLを抽出し、distにコピー
+          echo "Collecting non-Qt dependencies..."
+          ldd ../dist/Rina.exe | grep -iv 'system32' | grep -iv 'windows' | grep '=> /' | awk '{print $3}' | while read -r dll_path; do
+            cp -v "$dll_path" ../dist/
+          done
+
+          # 3. 再帰的な依存関係の解決（DLLが依存するDLLをコピー）
+          # 1回では不足する場合があるため、dist内の全DLLに対して再度lddを実行
+          find ../dist -name "*.dll" -exec ldd {} + | grep -iv 'system32' | grep -iv 'windows' | grep '=> /' | awk '{print $3}' | sort -u | while read -r dll_path; do
+            cp -unv "$dll_path" ../dist/
+          done
+
           # アセットのコピー
           cp -r objects ../dist/
           cp -r effects ../dist/
