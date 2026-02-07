@@ -100,7 +100,7 @@ jobs:
       - name: Install Dependencies
         run: |
           brew update
-          brew install qt ffmpeg luajit molten-vk ninja pkg-config
+          brew install qt ffmpeg luajit molten-vk ninja pkg-config dylibbundler
           
           # LuaJIT & FFmpeg のライブラリディレクトリをリンカに教える
           echo "LDFLAGS=-L$(brew --prefix luajit)/lib -L$(brew --prefix ffmpeg)/lib" >> $GITHUB_ENV
@@ -132,6 +132,16 @@ jobs:
             # Mac用デプロイツール実行
             $(brew --prefix qt)/bin/macdeployqt Rina.app -qmldir=../ui/qml
             
+            # 2. サードパーティ製ライブラリ（FFmpeg, LuaJIT）のバンドルとRPATH修正
+            # -od: 依存ライブラリの出力先 (Frameworks内が通例)
+            # -b: 対象のバイナリ (Executable)
+            # -x: 除外設定 (/usr/lib 等はコピーしない)
+            # -of: 既存のファイルを上書き
+            dylibbundler -od -b -x -of \
+              -cd Rina.app/Contents/Frameworks \
+              -f -p @executable_path/../Frameworks/ \
+              -b Rina.app/Contents/MacOS/Rina
+
             # アセットを含めてZip化
             zip -r ../dist/Rina-macOS-ARM64.zip Rina.app objects effects
           else
