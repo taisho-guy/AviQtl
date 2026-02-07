@@ -62,7 +62,9 @@ jobs:
           cp Rina.exe ../dist/
           
           # qmlimportscannerのパスを明示的に指定（MSYS2環境での検出エラー回避）
-          if [ -f "/ucrt64/lib/qt6/bin/qmlimportscanner.exe" ]; then
+          if [ -f "/ucrt64/bin/qmlimportscanner.exe" ]; then
+            QML_SCANNER_BIN="/ucrt64/bin/qmlimportscanner.exe"
+          elif [ -f "/ucrt64/lib/qt6/bin/qmlimportscanner.exe" ]; then
             QML_SCANNER_BIN="/ucrt64/lib/qt6/bin/qmlimportscanner.exe"
           elif which qmlimportscanner >/dev/null 2>&1; then
             QML_SCANNER_BIN=$(which qmlimportscanner)
