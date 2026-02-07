@@ -34,6 +34,7 @@ jobs:
             mingw-w64-ucrt-x86_64-qt6-shadertools
             mingw-w64-ucrt-x86_64-qt6-svg
             mingw-w64-ucrt-x86_64-qt6-5compat
+            mingw-w64-ucrt-x86_64-qt6-tools
             mingw-w64-ucrt-x86_64-ffmpeg
             mingw-w64-ucrt-x86_64-luajit
             mingw-w64-ucrt-x86_64-vulkan-loader
@@ -61,7 +62,14 @@ jobs:
           cp Rina.exe ../dist/
           
           # qmlimportscannerのパスを明示的に指定（MSYS2環境での検出エラー回避）
-          QML_SCANNER=$(cygpath -w $(which qmlimportscanner))
+          if [ -f "/ucrt64/lib/qt6/bin/qmlimportscanner.exe" ]; then
+            QML_SCANNER_BIN="/ucrt64/lib/qt6/bin/qmlimportscanner.exe"
+          elif which qmlimportscanner >/dev/null 2>&1; then
+            QML_SCANNER_BIN=$(which qmlimportscanner)
+          else
+            echo "ERROR: qmlimportscanner not found!" && exit 1
+          fi
+          QML_SCANNER=$(cygpath -w "$QML_SCANNER_BIN")
           
           # Qt依存関係のデプロイ（絶対パスを使用）
           # windeployqtの実行（エラーは無視しない）
