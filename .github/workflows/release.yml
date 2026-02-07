@@ -61,11 +61,31 @@ jobs:
           cp Rina.exe ../dist/
           
           # Qt依存関係のデプロイ（絶対パスを使用）
-          # windeployqtが翻訳ファイルエラーで終了コード1を返すことがあるため、|| true で抑制
-          windeployqt --qmldir "$QML_DIR" --no-translations --no-compiler-runtime --release "$EXE_PATH" --dir "$DIST_DIR" || true
+          # windeployqtの実行（エラーは無視しない）
+          windeployqt --qmldir "$QML_DIR" --no-translations --no-compiler-runtime --release "$EXE_PATH" --dir "$DIST_DIR"
+          
+          # qt.confを作成してプラグイン検索パスをカレントディレクトリに固定
+          echo "[Paths]" > ../dist/qt.conf
+          echo "Plugins = ." >> ../dist/qt.conf
+          
+          # プラットフォームプラグインの存在確認と明示的コピー
+          echo "Verifying Qt platform plugins..."
+          if [ ! -d "../dist/platforms" ]; then
+            echo "WARNING: platforms directory not created by windeployqt, copying manually..."
+            mkdir -p ../dist/platforms
+            QT_PLUGINS_DIR=$(dirname $(which qmake))/../share/qt6/plugins
+            if [ -f "$QT_PLUGINS_DIR/platforms/qwindows.dll" ]; then
+              cp -v "$QT_PLUGINS_DIR/platforms/qwindows.dll" ../dist/platforms/
+            else
+              echo "ERROR: qwindows.dll not found in $QT_PLUGINS_DIR/platforms/"
+              exit 1
+            fi
+          fi
+          
+          # platformsディレクトリの内容確認
+          ls -la ../dist/platforms/
           
           # 2. 非Qt依存関係（FFmpeg, LuaJIT, ランタイム）の自動収集
-          # システム(C:/Windows)以外のパスにある依存DLLを抽出し、distにコピー
           echo "Collecting non-Qt dependencies..."
           ldd ../dist/Rina.exe | grep -iv 'system32' | grep -iv 'windows' | grep '=> /' | awk '{print $3}' | while read -r dll_path; do
             cp -v "$dll_path" ../dist/
@@ -130,17 +150,22 @@ jobs:
           # macOSの場合、Rina.appが生成されているはず
           if [ -d "Rina.app" ]; then
             # Mac用デプロイツール実行
-            $(brew --prefix qt)/bin/macdeployqt Rina.app -qmldir=../ui/qml
+            # エラーが出ても後続のdylibbundlerで修正するため、|| true で続行させる
+            $(brew --prefix qt)/bin/macdeployqt Rina.app -qmldir=../ui/qml -verbose=1 || true
             
-            # 2. サードパーティ製ライブラリ（FFmpeg, LuaJIT）のバンドルとRPATH修正
-            # -od: 依存ライブラリの出力先 (Frameworks内が通例)
-            # -b: 対象のバイナリ (Executable)
-            # -x: 除外設定 (/usr/lib 等はコピーしない)
-            # -of: 既存のファイルを上書き
-            dylibbundler -od -b -x -of \
-              -cd Rina.app/Contents/Frameworks \
-              -f -p @executable_path/../Frameworks/ \
-              -b Rina.app/Contents/MacOS/Rina
+            # 2. サードパーティ製ライブラリ（FFmpeg, LuaJIT）と不足Qtライブラリのバンドル
+            # dylibbundlerの実行（構文エラー回避のため1行で記述、検索パスに/opt/homebrew/libを追加）
+            dylibbundler -of -cd -b -x Rina.app/Contents/MacOS/Rina -d Rina.app/Contents/Frameworks -p @executable_path/../Frameworks/ -s $(brew --prefix qt)/lib -s $(brew --prefix ffmpeg)/lib -s $(brew --prefix luajit)/lib -s /opt/homebrew/lib
+            
+            # 3. QMLプラグインとQt拡張フレームワークの依存関係を再帰的に修正
+            # macdeployqtで取得できなかったQMLプラグイン内のdylibも処理
+            find Rina.app/Contents -name "*.dylib" -o -name "*.so" | while read lib; do
+              dylibbundler -of -b -x "$lib" -d Rina.app/Contents/Frameworks -p @executable_path/../Frameworks/ -s $(brew --prefix qt)/lib -s $(brew --prefix ffmpeg)/lib -s $(brew --prefix luajit)/lib -s /opt/homebrew/lib || true
+            done
+            
+            # アセットのコピー
+            cp -r objects Rina.app/Contents/Resources/
+            cp -r effects Rina.app/Contents/Resources/
 
             # アセットを含めてZip化
             zip -r ../dist/Rina-macOS-ARM64.zip Rina.app objects effects
