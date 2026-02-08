@@ -111,8 +111,9 @@ jobs:
           done
 
           # アセットのコピー（存在確認を追加）
-          if [ -d "../objects" ]; then cp -r ../objects ../dist/; else echo "WARNING: objects dir not found"; fi
-          if [ -d "../effects" ]; then cp -r ../effects ../dist/; else echo "WARNING: effects dir not found"; fi
+          # 存在すればコピー、なければ空ディレクトリを作成してクラッシュを回避
+          if [ -d "../objects" ]; then cp -r ../objects ../dist/; else mkdir -p ../dist/objects; echo "INFO: 'objects' dir not found, creating empty directory."; fi
+          if [ -d "../effects" ]; then cp -r ../effects ../dist/; else mkdir -p ../dist/effects; echo "INFO: 'effects' dir not found, creating empty directory."; fi
           
           # アーカイブ作成
           cd ../dist

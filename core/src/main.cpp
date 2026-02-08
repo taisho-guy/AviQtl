@@ -56,10 +56,9 @@ int main(int argc, char *argv[]) {
 
     // 1. スタイルの強制適用 (KDE Plasma Native)
     // これにより、システムの色設定（ダークモード等）が自動的にQMLに反映される
-    if (qEnvironmentVariableIsEmpty("QT_QUICK_CONTROLS_STYLE")) {
-        QQuickStyle::setStyle("org.kde.desktop");
-    }
-    QQuickStyle::setFallbackStyle("Fusion"); // 非KDE環境でも最低限見れるようにする
+    // 削除: Windows等で "org.kde.desktop" がない場合にクラッシュする原因となる
+    // Qtデフォルトの自動判定に任せることで、OSごとのネイティブスタイル(WindowsVista等)が適用される
+    QQuickStyle::setFallbackStyle("Fusion"); // Fallback for environments without a native style
 
     QQmlApplicationEngine engine;
 
