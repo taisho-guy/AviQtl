@@ -10,10 +10,10 @@ Common.BaseObject {
     id: root
 
     // TimelineBridge から現在のフレームやシーン情報を取得する前提
-    property int sceneId: evalParam("scene", "sceneId", 0)
-    property real speed: evalParam("scene", "speed", 1)
+    property int targetSceneId: evalParam("scene", "targetSceneId", 0)
+    property real speed: evalParam("scene", "speed", 1.0)
     property int offset: evalParam("scene", "offset", 0)
-    property real opacity: evalParam("scene", "opacity", 1)
+    property real opacity: evalParam("scene", "opacity", 1.0)
 
     Rectangle {
         anchors.fill: parent
@@ -29,7 +29,7 @@ Common.BaseObject {
         anchors.leftMargin: 4
         anchors.top: parent.top
         anchors.topMargin: 2
-        text: "Scene #" + root.sceneId
+        text: "Scene #" + root.targetSceneId + (root.targetSceneId === 0 ? " (Self?)" : "")
         color: "white"
         font.pixelSize: 10
         opacity: root.opacity

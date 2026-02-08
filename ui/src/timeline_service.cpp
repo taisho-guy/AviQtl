@@ -628,7 +628,7 @@ QList<ClipData *> TimelineService::resolvedActiveClipsAt(int frame) const {
             for (auto *eff : clip.effects) {
                 if (eff->id() == "scene") {
                     QVariantMap p = eff->params();
-                    targetSceneId = p.value("sceneId", 0).toInt();
+                    targetSceneId = p.value("targetSceneId", 0).toInt();
                     speed = p.value("speed", 1.0).toDouble();
                     offset = p.value("offset", 0).toInt();
                     break;

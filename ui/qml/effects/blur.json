@@ -4,5 +4,10 @@
     "qml": "Blur.qml",
     "params": {
         "size": 10
+    },
+    "ui": {
+        "controls": [
+            { "type": "float", "param": "size", "label": "サイズ", "min": 0, "max": 200 }
+        ]
     }
 }

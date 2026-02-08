@@ -4,7 +4,7 @@
     "category": "object",
     "qml": "SceneObject.qml",
     "params": {
-        "sceneId": 0,
+        "targetSceneId": 0,
         "speed": 1.0,
         "offset": 0,
         "opacity": 1.0
@@ -14,7 +14,7 @@
         "controls": [
             {
                 "type": "combo",
-                "param": "sceneId",
+                "param": "targetSceneId",
                 "label": "シーン",
                 "source": "TimelineBridge",
                 "sourceProperty": "scenes"

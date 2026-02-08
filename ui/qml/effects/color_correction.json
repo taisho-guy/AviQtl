@@ -6,5 +6,12 @@
         "brightness": 100,
         "contrast": 100,
         "saturation": 100
+    },
+    "ui": {
+        "controls": [
+            { "type": "slider", "param": "brightness", "label": "輝度", "min": 0, "max": 200 },
+            { "type": "slider", "param": "contrast", "label": "コントラスト", "min": 0, "max": 200 },
+            { "type": "slider", "param": "saturation", "label": "彩度", "min": 0, "max": 200 }
+        ]
     }
 }

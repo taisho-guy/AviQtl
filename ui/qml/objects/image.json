@@ -9,21 +9,27 @@
         "opacity": 1.0
     },
     "ui": {
-        "path": {
-            "type": "file",
-            "label": "ファイルパス",
-            "filter": "画像ファイル (*.png *.jpg *.jpeg *.bmp *.svg)"
-        },
-        "smooth": {
-            "type": "bool",
-            "label": "スムーズ描画"
-        },
-        "opacity": {
-            "type": "slider",
-            "label": "不透明度",
-            "min": 0,
-            "max": 1,
-            "step": 0.01
-        }
+        "group": "object",
+        "controls": [
+            {
+                "type": "path",
+                "param": "path",
+                "label": "ファイルパス",
+                "filter": "画像ファイル (*.png *.jpg *.jpeg *.bmp *.svg)"
+            },
+            {
+                "type": "bool",
+                "param": "smooth",
+                "label": "スムーズ描画"
+            },
+            {
+                "type": "slider",
+                "param": "opacity",
+                "label": "不透明度",
+                "min": 0,
+                "max": 1,
+                "step": 0.01
+            }
+        ]
     }
 }
