@@ -112,8 +112,9 @@ jobs:
 
           # アセットのコピー（存在確認を追加）
           # 存在すればコピー、なければ空ディレクトリを作成してクラッシュを回避
-          if [ -d "../objects" ]; then cp -r ../objects ../dist/; else mkdir -p ../dist/objects; echo "INFO: 'objects' dir not found, creating empty directory."; fi
-          if [ -d "../effects" ]; then cp -r ../effects ../dist/; else mkdir -p ../dist/effects; echo "INFO: 'effects' dir not found, creating empty directory."; fi
+          # CMakeのfile(COPY)によりビルドディレクトリ(.)に配置されたアセットを使用
+          if [ -d "objects" ]; then cp -r objects ../dist/; else echo "WARNING: objects dir not found in build dir"; fi
+          if [ -d "effects" ]; then cp -r effects ../dist/; else echo "WARNING: effects dir not found in build dir"; fi
           
           # アーカイブ作成
           cd ../dist
