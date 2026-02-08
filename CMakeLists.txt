@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.20)
 project(Rina VERSION 0.1.0 LANGUAGES CXX C)
 
+# 外部から最適化フラグを受け取る変数
+set(ARCH_FLAGS "" CACHE STRING "Architecture specific flags")
+
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
@@ -13,16 +16,14 @@ if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
         -Wall -Wextra -Wpedantic
         -Wno-unused-parameter
         -fcolor-diagnostics
+        -O3                      # 汎用最大最適化
+        -ffast-math              # 数値計算の高速化
+        -flto=thin               # ThinLTOでリンク時最適化を高速かつ強力に
+        ${ARCH_FLAGS}  # ここにPythonから-march=znver4などが渡される
     )
-    # Use LLD or Mold linker if available for faster linking
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-        execute_process(COMMAND ${CMAKE_CXX_COMPILER} -fuse-ld=mold -Wl,--version OUTPUT_VARIABLE MOLD_CHECK ERROR_QUIET)
-        if ("${MOLD_CHECK}" MATCHES "mold")
-            add_link_options("-fuse-ld=mold")
-            message(STATUS "Using mold linker")
-        else()
-            # add_link_options("-fuse-ld=lld")
-        endif()
+        add_link_options("-fuse-ld=mold")
+        add_link_options("-flto=thin")
     endif()
 endif()
 

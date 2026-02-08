@@ -11,7 +11,11 @@ set TEMP_BUILD_DIR "$SOURCE_DIR/.build_tmp"
 # 最終成果物ディレクトリ（常にクリーンな状態にする）
 set OUTPUT_DIR "$SOURCE_DIR/build"
 set EXECUTABLE_NAME "Rina"
-set BUILD_TYPE "Release"
+set BUILD_TYPE "Debug"
+
+if contains -- --release $argv
+    set BUILD_TYPE "Release"
+end
 
 echo "=== Rina ビルドプロセス開始 ($BUILD_TYPE) with Clang ==="
 
@@ -24,12 +28,10 @@ if not test -d "$TEMP_BUILD_DIR"
     mkdir -p "$TEMP_BUILD_DIR"
 end
 
-# CMake構成 (必要な場合のみ再実行)
-if not test -f "$TEMP_BUILD_DIR/build.ninja"
-    echo "⚙️  CMake (Ninja) を構成中..."
-    cmake -B "$TEMP_BUILD_DIR" -G "Ninja" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -S "$SOURCE_DIR"
-    if test $status -ne 0; echo "❌ CMake構成失敗"; exit 1; end
-end
+# CMake構成 (ビルドタイプ変更を反映するため常に実行)
+echo "⚙️  CMake (Ninja) を構成中..."
+cmake -B "$TEMP_BUILD_DIR" -G "Ninja" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -S "$SOURCE_DIR"
+if test $status -ne 0; echo "❌ CMake構成失敗"; exit 1; end
 
 # コンパイル実行
 echo "🔨 コンパイル中..."
