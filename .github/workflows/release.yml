@@ -73,8 +73,6 @@ jobs:
           fi
           
           # Qt依存関係のデプロイ
-          # --qmlimportscannerオプションは削除し、PATH経由で認識させる
-          # --no-translationsをつけてもcatalogs.jsonエラーは出ることがあるが、ビルドには影響しないため無視
           windeployqt --qmldir "$QML_DIR" --no-translations --no-compiler-runtime --release "$EXE_PATH" --dir "$DIST_DIR"
           
           # qt.confを作成してプラグイン検索パスをカレントディレクトリに固定
@@ -98,12 +96,18 @@ jobs:
           # 2. 非Qt依存関係（FFmpeg, LuaJIT, ランタイム）の自動収集
           echo "Collecting non-Qt dependencies..."
           ldd ../dist/Rina.exe | grep -iv 'system32' | grep -iv 'windows' | grep '=> /' | awk '{print $3}' | while read -r dll_path; do
-            cp -v "$dll_path" ../dist/
+            # すでにdist内にあるファイルはスキップ
+            if [[ "$dll_path" != *"dist/"* ]]; then
+               cp -vu "$dll_path" ../dist/ || true
+            fi
           done
 
           # 3. 再帰的な依存関係の解決
           find ../dist -name "*.dll" -exec ldd {} + | grep -iv 'system32' | grep -iv 'windows' | grep '=> /' | awk '{print $3}' | sort -u | while read -r dll_path; do
-            cp -unv "$dll_path" ../dist/
+            # すでにdist内にあるファイルはスキップ
+            if [[ "$dll_path" != *"dist/"* ]]; then
+               cp -vu "$dll_path" ../dist/ || true
+            fi
           done
 
           # アセットのコピー（存在確認を追加）
@@ -154,7 +158,6 @@ jobs:
             $(brew --prefix qt)/bin/macdeployqt Rina.app -qmldir=../ui/qml -verbose=1 || true
             
             # dylibbundler: サードパーティ製ライブラリと不足Qtライブラリのバンドル
-            # -b: バンドル, -x: 対象指定, -d: 出力先, -p: RPATH, -s: 検索パス
             dylibbundler -of -cd -b -x Rina.app/Contents/MacOS/Rina \
               -d Rina.app/Contents/Frameworks \
               -p @executable_path/../Frameworks/ \
@@ -175,7 +178,6 @@ jobs:
             done
             
             # アセットのコピー（存在確認を追加）
-            # ビルドディレクトリ(build)から見て一つ上(^^/)にあるか、現在のディレクトリ(.)にあるか確認
             if [ -d "../objects" ]; then
               cp -r ../objects Rina.app/Contents/Resources/
             elif [ -d "objects" ]; then
@@ -192,7 +194,7 @@ jobs:
                echo "WARNING: effects directory not found, skipping copy."
             fi
 
-            zip -r ../dist/Rina-macOS-ARM64.zip Rina.app objects effects 2>/dev/null || zip -r ../dist/Rina-macOS-ARM64.zip Rina.app
+            zip -r ../dist/Rina-macOS-ARM64.zip Rina.app
           else
             echo "Error: Rina.app not found!"
             exit 1
