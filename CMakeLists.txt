@@ -109,6 +109,7 @@ qt_add_qml_module(Rina
         ui/qml/timeline/Ruler.qml
         ui/qml/timeline/LayerHeader.qml
         ui/qml/timeline/TimelineView.qml
+        ui/qml/timeline/GridSettingsWindow.qml
         ui/qml/ProjectLauncherWindow.qml
         ui/qml/ProjectSettingsWindow.qml
         ui/qml/SettingDialog.qml

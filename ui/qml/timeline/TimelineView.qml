@@ -22,6 +22,20 @@ ScrollView {
     property bool enableSnap: SettingsManager.settings.enableSnap
     // 末尾に少し余白を持たせる（AviUtl的な「置きやすさ」）
     property int tailPaddingFrames: 120
+    
+    // グリッド設定画面の表示を親に要求するシグナル
+    signal gridSettingsRequested()
+
+    // === グリッド設定 (Parametric Grid State) ===
+    property var gridSettings: ({
+        mode: "Auto", // "Auto", "BPM", "Frame"
+        bpm: 120,
+        offset: 0.0,
+        interval: 10,
+        subdivision: 4
+    })
+    onGridSettingsChanged: timelineGrid.requestPaint()
+
     // === 動的タイムライン長の計算 (AviUtl風) ===
     // クリップ配列の末尾を自動追跡する
     readonly property int maxClipEndFrame: {
@@ -64,27 +78,116 @@ ScrollView {
         contentHeight: layerCount * layerHeight
         interactive: true
 
+        // 再描画トリガーの追加
+        Connections {
+            target: timelineFlickable
+            function onContentXChanged() { timelineGrid.requestPaint(); }
+            function onContentYChanged() { timelineGrid.requestPaint(); }
+        }
+        Connections {
+            target: TimelineBridge ? TimelineBridge : null
+            function onTimelineScaleChanged() { timelineGrid.requestPaint(); }
+        }
+
         // グリッド背景
         Item {
-            width: Math.max(timelineFlickable.width, timelineFlickable.contentWidth)
-            height: timelineFlickable.contentHeight
+            // 最適化: コンテンツ全体ではなく、現在のビューポート(画面)サイズのみ確保する
+            // Flickableの中身と一緒に動かないよう、位置をcontentX/Yに合わせて追従させる
+            x: timelineFlickable.contentX
+            y: timelineFlickable.contentY
+            width: timelineFlickable.width
+            height: timelineFlickable.height
+            z: -1 // クリップの下に描画
 
             Canvas {
                 id: timelineGrid
 
                 anchors.fill: parent
-                // 必要に応じてグリッド線を描画
+                
                 onPaint: {
                     var ctx = getContext("2d");
+                    // Canvasをクリア (透明に)
                     ctx.clearRect(0, 0, width, height);
-                    ctx.strokeStyle = Qt.rgba(0.5, 0.5, 0.5, 0.2);
+
+                    // 共通設定
                     ctx.lineWidth = 1;
+
+                    // --- 1. レイヤー区切り線 (水平) ---
+                    ctx.strokeStyle = Qt.rgba(0.5, 0.5, 0.5, 0.2);
+                    var startY = timelineFlickable.contentY;
+
                     // レイヤー区切り線
                     for (var i = 0; i < layerCount; i++) {
-                        var y = i * layerHeight;
+                        // Canvasの(0,0)はViewportの左上なので、スクロール分を引いて描画位置を計算
+                        var y = (i * layerHeight) - startY;
+                        
+                        // 画面外ならスキップ
+                        if (y < -layerHeight || y > height) continue;
+
                         ctx.beginPath();
                         ctx.moveTo(0, y);
                         ctx.lineTo(width, y);
+                        ctx.stroke();
+                    }
+
+                    // --- 2. 時間軸グリッド (垂直) ---
+                    if (!TimelineBridge) return;
+
+                    var scale = TimelineBridge.timelineScale;
+                    var contentX = timelineFlickable.contentX;
+                    var projectFps = (TimelineBridge.project && TimelineBridge.project.fps) ? TimelineBridge.project.fps : 60.0;
+                    
+                    // 描画すべきフレーム範囲を計算
+                    var startFrame = Math.floor(contentX / scale);
+                    var endFrame = Math.ceil((contentX + width) / scale);
+                    
+                    // === グリッド計算ロジック (Strategy) ===
+                    var step = 1.0;
+                    var offsetFrames = 0.0;
+                    var isBpmMode = (gridSettings.mode === "BPM");
+                    
+                    if (isBpmMode) {
+                        // BPMモード: 1拍あたりのフレーム数を計算
+                        var bps = gridSettings.bpm / 60.0;
+                        step = projectFps / bps; // 1拍のフレーム数 (小数含む)
+                        offsetFrames = gridSettings.offset * projectFps;
+                    } else if (gridSettings.mode === "Frame") {
+                        // 固定フレームモード
+                        step = gridSettings.interval;
+                    } else {
+                        // Auto (AviUtl風): ズームに応じて間引き
+                        if (scale < 0.5) step = Math.ceil(projectFps); // 1秒
+                        else if (scale < 5.0) step = 10;               // 10フレーム
+                        else step = 1;                                 // 1フレーム
+                    }
+
+                    // グリッド線の描画ループ
+                    // 数式: lineX = offset + n * step
+                    // startFrame <= offset + n * step を満たす最小の n を求める
+                    var startN = Math.ceil((startFrame - offsetFrames) / step);
+                    var endN = Math.floor((endFrame - offsetFrames) / step);
+
+                    for (var n = startN; n <= endN; n++) {
+                        var f = offsetFrames + n * step;
+                        // ローカル座標への変換: (フレーム位置 - 現在のスクロール位置)
+                        var x = (f * scale) - contentX;
+                        
+                        ctx.beginPath();
+                        
+                        // 線のスタイリング
+                        if (isBpmMode) {
+                             // 小節の頭 (subdivisionで割れる) は濃く
+                             var isMeasure = (n % gridSettings.subdivision === 0);
+                             ctx.strokeStyle = isMeasure ? Qt.rgba(0.5, 0.8, 1.0, 0.5) : Qt.rgba(0.5, 0.5, 0.5, 0.2);
+                             ctx.lineWidth = isMeasure ? 1.5 : 1;
+                        } else {
+                             // 通常モード
+                             ctx.strokeStyle = Qt.rgba(0.5, 0.5, 0.5, 0.15);
+                             ctx.lineWidth = 1;
+                        }
+                        
+                        ctx.moveTo(x, 0);
+                        ctx.lineTo(x, height);
                         ctx.stroke();
                     }
                 }
@@ -428,13 +531,7 @@ ScrollView {
                 TimelineBridge.pasteClip(contextClickFrame, contextClickLayer);
                 break;
             case "view.gridsettings":
-                if (WindowManager) {
-                    WindowManager.systemSettingsVisible = true;
-                    var win = WindowManager.getWindow("systemSettings");
-                    if (win)
-                        win.currentTabIndex = 2;
-
-                }
+                gridSettingsRequested();
                 break;
             default:
                 console.log("Unknown command:", cmd);

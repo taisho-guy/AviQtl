@@ -28,6 +28,14 @@ Common.RinaWindow {
     width: 1280
     height: 300
 
+    // グリッド設定ウィンドウ (Loaderによる遅延読み込み)
+    Loader {
+        id: gridSettingsLoader
+        active: false
+        source: "timeline/GridSettingsWindow.qml"
+        onLoaded: item.open(timelineView)
+    }
+
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
@@ -156,6 +164,13 @@ Common.RinaWindow {
                 clipResizeHandleWidth: timelineWindow.clipResizeHandleWidth
                 getLayerLocked: (layer) => {
                     return layerHeader.getLayerLocked(layer);
+                }
+                onGridSettingsRequested: {
+                    if (!gridSettingsLoader.active) {
+                        gridSettingsLoader.active = true;
+                    } else {
+                        gridSettingsLoader.item.open(timelineView);
+                    }
                 }
             }
 
