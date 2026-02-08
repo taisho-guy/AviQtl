@@ -8,26 +8,36 @@ RinaはAviUtl 1.10（ExEdit 0.92）の代替を目指す実験プロジェクト
 
 - [Windows(x86_64)・macOS(ARM64)](https://github.com/taisho-guy/Rina/releases/latest)
 
-- [Linux(x86_64)](https://codeberg.org/taisho-guy/Rina/releases)
+- [Linux(x86_64, arm64, RISC-V)](https://codeberg.org/taisho-guy/Rina/releases)
 
 > [!NOTE]
 >その他の環境の方は、以下のビルド手順に従うか、Issueを立ててください。
 
-## ビルド手順
+## ビルド手順(Arch Linux推奨)
+
+- 依存関係をインストールします
 
 ```
-# 依存関係をインストールします
-paru -S --needed fish git cmake ninja qt6-base lua-jit
+pacman -S --needed fish git cmake ninja qt6 lua-jit vulkan-devel base-devel mold p7zip  fftw wayland-protocols libffi
+```
 
-# リポジトリをクローンします
+- リポジトリをクローンします
+
+```
 git clone https://codeberg.org/taisho-guy/Rina.git
+```
 
-# ビルドします
+- ビルドします
+
+```
 cd Rina
-fish ./BUILD.fish
+python BUILD.py
+```
 
-# 実行します
-./build/Rina
+- 実行します
+
+```
+./build/debug/Rina
 ```
 
 ## ライセンス
