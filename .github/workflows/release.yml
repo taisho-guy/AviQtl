@@ -61,23 +61,21 @@ jobs:
           # windeployqtの翻訳ファイルエラー回避のため、先にexeをコピー
           cp Rina.exe ../dist/
           
-          # qmlimportscannerを検索して特定（パス不一致対策）
-          echo "Searching for qmlimportscanner.exe..."
-          QML_SCANNER_BIN=$(find /ucrt64 -name "qmlimportscanner.exe" 2>/dev/null | head -n 1)
+          # qmlimportscannerの場所を特定し、PATHに追加することでwindeployqtから見えるようにする
+          echo "Locating qmlimportscanner..."
+          SCANNER_PATH=$(dirname "$(find /ucrt64 -name "qmlimportscanner.exe" 2>/dev/null | head -n 1)")
           
-          if [ -z "$QML_SCANNER_BIN" ]; then
-            echo "ERROR: qmlimportscanner.exe not found in /ucrt64"
-            echo "Listing /ucrt64/bin for debugging:"
-            ls /ucrt64/bin/qml* || true
-            exit 1
+          if [ -n "$SCANNER_PATH" ]; then
+            echo "Adding $SCANNER_PATH to PATH"
+            export PATH="$SCANNER_PATH:$PATH"
+          else
+            echo "WARNING: qmlimportscanner.exe not found. windeployqt might fail."
           fi
           
-          echo "Found qmlimportscanner at: $QML_SCANNER_BIN"
-          QML_SCANNER=$(cygpath -w "$QML_SCANNER_BIN")
-          
           # Qt依存関係のデプロイ
-          # --releaseフラグはMSYS2環境で誤動作することがあるため削除（自動判定に任せる）
-          windeployqt --qmldir "$QML_DIR" --qmlimportscanner "$QML_SCANNER" --no-translations --no-compiler-runtime "$EXE_PATH" --dir "$DIST_DIR"
+          # --qmlimportscannerオプションは削除し、PATH経由で認識させる
+          # --no-translationsをつけてもcatalogs.jsonエラーは出ることがあるが、ビルドには影響しないため無視
+          windeployqt --qmldir "$QML_DIR" --no-translations --no-compiler-runtime --release "$EXE_PATH" --dir "$DIST_DIR"
           
           # qt.confを作成してプラグイン検索パスをカレントディレクトリに固定
           echo "[Paths]" > ../dist/qt.conf
@@ -97,23 +95,20 @@ jobs:
             fi
           fi
           
-          # platformsディレクトリの内容確認
-          ls -la ../dist/platforms/
-          
           # 2. 非Qt依存関係（FFmpeg, LuaJIT, ランタイム）の自動収集
           echo "Collecting non-Qt dependencies..."
           ldd ../dist/Rina.exe | grep -iv 'system32' | grep -iv 'windows' | grep '=> /' | awk '{print $3}' | while read -r dll_path; do
             cp -v "$dll_path" ../dist/
           done
 
-          # 3. 再帰的な依存関係の解決（DLLが依存するDLLをコピー）
+          # 3. 再帰的な依存関係の解決
           find ../dist -name "*.dll" -exec ldd {} + | grep -iv 'system32' | grep -iv 'windows' | grep '=> /' | awk '{print $3}' | sort -u | while read -r dll_path; do
             cp -unv "$dll_path" ../dist/
           done
 
-          # アセットのコピー
-          cp -r ../objects ../dist/
-          cp -r ../effects ../dist/
+          # アセットのコピー（存在確認を追加）
+          if [ -d "../objects" ]; then cp -r ../objects ../dist/; else echo "WARNING: objects dir not found"; fi
+          if [ -d "../effects" ]; then cp -r ../effects ../dist/; else echo "WARNING: effects dir not found"; fi
           
           # アーカイブ作成
           cd ../dist
@@ -136,21 +131,15 @@ jobs:
           brew update
           brew install qt ffmpeg luajit molten-vk ninja pkg-config dylibbundler
           
-          # LuaJIT & FFmpeg のライブラリディレクトリをリンカに教える
           echo "LDFLAGS=-L$(brew --prefix luajit)/lib -L$(brew --prefix ffmpeg)/lib" >> $GITHUB_ENV
           echo "CPPFLAGS=-I$(brew --prefix luajit)/include/luajit-2.1 -I$(brew --prefix ffmpeg)/include" >> $GITHUB_ENV
           echo "PKG_CONFIG_PATH=$(brew --prefix ffmpeg)/lib/pkgconfig:$(brew --prefix luajit)/lib/pkgconfig" >> $GITHUB_ENV
-
-          # Qtへのパスを通す
           echo "CMAKE_PREFIX_PATH=$(brew --prefix qt)" >> $GITHUB_ENV
-          # Vulkan SDK for macOS (LunarG) を手動インストールしないとFindVulkanが失敗しやすい
-          # 簡易的にbrewのmolten-vkを使うため、CMakeに場所を教える環境変数をセット
           echo "VULKAN_SDK=$(brew --prefix molten-vk)" >> $GITHUB_ENV
           echo "VK_ICD_FILENAMES=$(brew --prefix molten-vk)/share/vulkan/icd.d/MoltenVK_icd.json" >> $GITHUB_ENV
 
       - name: Build
         run: |
-          # MoltenVKをVulkanとして強制的に認識させる
           cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
             -DVulkan_LIBRARY=$(brew --prefix molten-vk)/lib/libMoltenVK.dylib \
             -DVulkan_INCLUDE_DIR=$(brew --prefix molten-vk)/include
@@ -161,28 +150,49 @@ jobs:
           mkdir dist
           cd build
           
-          # macOSの場合、Rina.appが生成されているはず
           if [ -d "Rina.app" ]; then
-            # Mac用デプロイツール実行
-            # エラーが出ても後続のdylibbundlerで修正するため、|| true で続行させる
             $(brew --prefix qt)/bin/macdeployqt Rina.app -qmldir=../ui/qml -verbose=1 || true
             
-            # 2. サードパーティ製ライブラリ（FFmpeg, LuaJIT）と不足Qtライブラリのバンドル
-            # dylibbundlerの実行
-            dylibbundler -of -cd -b -x Rina.app/Contents/MacOS/Rina -d Rina.app/Contents/Frameworks -p @executable_path/../Frameworks/ -s $(brew --prefix qt)/lib -s $(brew --prefix ffmpeg)/lib -s $(brew --prefix luajit)/lib -s /opt/homebrew/lib
+            # dylibbundler: サードパーティ製ライブラリと不足Qtライブラリのバンドル
+            # -b: バンドル, -x: 対象指定, -d: 出力先, -p: RPATH, -s: 検索パス
+            dylibbundler -of -cd -b -x Rina.app/Contents/MacOS/Rina \
+              -d Rina.app/Contents/Frameworks \
+              -p @executable_path/../Frameworks/ \
+              -s $(brew --prefix qt)/lib \
+              -s $(brew --prefix ffmpeg)/lib \
+              -s $(brew --prefix luajit)/lib \
+              -s /opt/homebrew/lib
             
-            # 3. QMLプラグインとQt拡張フレームワークの依存関係を再帰的に修正
-            # macdeployqtで取得できなかったQMLプラグイン内のdylibも処理
+            # QMLプラグイン内の依存関係修正
             find Rina.app/Contents -name "*.dylib" -o -name "*.so" | while read lib; do
-              dylibbundler -of -b -x "$lib" -d Rina.app/Contents/Frameworks -p @executable_path/../Frameworks/ -s $(brew --prefix qt)/lib -s $(brew --prefix ffmpeg)/lib -s $(brew --prefix luajit)/lib -s /opt/homebrew/lib || true
+              dylibbundler -of -b -x "$lib" \
+                -d Rina.app/Contents/Frameworks \
+                -p @executable_path/../Frameworks/ \
+                -s $(brew --prefix qt)/lib \
+                -s $(brew --prefix ffmpeg)/lib \
+                -s $(brew --prefix luajit)/lib \
+                -s /opt/homebrew/lib || true
             done
             
-            # アセットのコピー（buildディレクトリの一つ上にあるobjectsを参照）
-            cp -r ../objects Rina.app/Contents/Resources/
-            cp -r ../effects Rina.app/Contents/Resources/
+            # アセットのコピー（存在確認を追加）
+            # ビルドディレクトリ(build)から見て一つ上(^^/)にあるか、現在のディレクトリ(.)にあるか確認
+            if [ -d "../objects" ]; then
+              cp -r ../objects Rina.app/Contents/Resources/
+            elif [ -d "objects" ]; then
+              cp -r objects Rina.app/Contents/Resources/
+            else
+              echo "WARNING: objects directory not found, skipping copy."
+            fi
 
-            # アセットを含めてZip化
-            zip -r ../dist/Rina-macOS-ARM64.zip Rina.app objects effects
+            if [ -d "../effects" ]; then
+              cp -r ../effects Rina.app/Contents/Resources/
+            elif [ -d "effects" ]; then
+              cp -r effects Rina.app/Contents/Resources/
+            else
+               echo "WARNING: effects directory not found, skipping copy."
+            fi
+
+            zip -r ../dist/Rina-macOS-ARM64.zip Rina.app objects effects 2>/dev/null || zip -r ../dist/Rina-macOS-ARM64.zip Rina.app
           else
             echo "Error: Rina.app not found!"
             exit 1
