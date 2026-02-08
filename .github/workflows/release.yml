@@ -220,6 +220,23 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
+          body: |
+            ### 📥 ダウンロード
+
+            以下の **Assets** セクションより、お使いの環境に合ったファイルをダウンロードしてください。
+
+            > [!TIP]
+            > **Linux版**は[Codeberg](https://codeberg.org/taisho-guy/Rina/releases)にて公開しております。
+
+            ### 💬 ご意見・バグ報告
+
+            [Codeberg](https://codeberg.org/taisho-guy/Rina/issues) にてイシューを作成してください。些細なフィードバックでも開発の大きな励みになります。
+
+            ### 🔨 開発に参加する
+
+            [リポジトリ](https://codeberg.org/taisho-guy/Rina)をクローンし、変更を加えた上で[プルリクエスト](https://codeberg.org/taisho-guy/Rina/pulls)を送ってください。
+            > [!NOTE]
+            > 本プロジェクトへの貢献は[GNU Affero General Public License Version 3](https://www.gnu.org/licenses/agpl-3.0.txt)に基づいて公開されます。
           files: |
             artifacts/windows-build/*.zip
             artifacts/macos-build/*.zip
