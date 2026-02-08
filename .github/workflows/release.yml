@@ -61,21 +61,23 @@ jobs:
           # windeployqtの翻訳ファイルエラー回避のため、先にexeをコピー
           cp Rina.exe ../dist/
           
-          # qmlimportscannerのパスを明示的に指定（MSYS2環境での検出エラー回避）
-          if [ -f "/ucrt64/bin/qmlimportscanner.exe" ]; then
-            QML_SCANNER_BIN="/ucrt64/bin/qmlimportscanner.exe"
-          elif [ -f "/ucrt64/lib/qt6/bin/qmlimportscanner.exe" ]; then
-            QML_SCANNER_BIN="/ucrt64/lib/qt6/bin/qmlimportscanner.exe"
-          elif which qmlimportscanner >/dev/null 2>&1; then
-            QML_SCANNER_BIN=$(which qmlimportscanner)
-          else
-            echo "ERROR: qmlimportscanner not found!" && exit 1
+          # qmlimportscannerを検索して特定（パス不一致対策）
+          echo "Searching for qmlimportscanner.exe..."
+          QML_SCANNER_BIN=$(find /ucrt64 -name "qmlimportscanner.exe" 2>/dev/null | head -n 1)
+          
+          if [ -z "$QML_SCANNER_BIN" ]; then
+            echo "ERROR: qmlimportscanner.exe not found in /ucrt64"
+            echo "Listing /ucrt64/bin for debugging:"
+            ls /ucrt64/bin/qml* || true
+            exit 1
           fi
+          
+          echo "Found qmlimportscanner at: $QML_SCANNER_BIN"
           QML_SCANNER=$(cygpath -w "$QML_SCANNER_BIN")
           
-          # Qt依存関係のデプロイ（絶対パスを使用）
-          # windeployqtの実行（エラーは無視しない）
-          windeployqt --qmldir "$QML_DIR" --qmlimportscanner "$QML_SCANNER" --no-translations --no-compiler-runtime --release "$EXE_PATH" --dir "$DIST_DIR"
+          # Qt依存関係のデプロイ
+          # --releaseフラグはMSYS2環境で誤動作することがあるため削除（自動判定に任せる）
+          windeployqt --qmldir "$QML_DIR" --qmlimportscanner "$QML_SCANNER" --no-translations --no-compiler-runtime "$EXE_PATH" --dir "$DIST_DIR"
           
           # qt.confを作成してプラグイン検索パスをカレントディレクトリに固定
           echo "[Paths]" > ../dist/qt.conf
@@ -105,14 +107,13 @@ jobs:
           done
 
           # 3. 再帰的な依存関係の解決（DLLが依存するDLLをコピー）
-          # 1回では不足する場合があるため、dist内の全DLLに対して再度lddを実行
           find ../dist -name "*.dll" -exec ldd {} + | grep -iv 'system32' | grep -iv 'windows' | grep '=> /' | awk '{print $3}' | sort -u | while read -r dll_path; do
             cp -unv "$dll_path" ../dist/
           done
 
           # アセットのコピー
-          cp -r objects ../dist/
-          cp -r effects ../dist/
+          cp -r ../objects ../dist/
+          cp -r ../effects ../dist/
           
           # アーカイブ作成
           cd ../dist
@@ -167,7 +168,7 @@ jobs:
             $(brew --prefix qt)/bin/macdeployqt Rina.app -qmldir=../ui/qml -verbose=1 || true
             
             # 2. サードパーティ製ライブラリ（FFmpeg, LuaJIT）と不足Qtライブラリのバンドル
-            # dylibbundlerの実行（構文エラー回避のため1行で記述、検索パスに/opt/homebrew/libを追加）
+            # dylibbundlerの実行
             dylibbundler -of -cd -b -x Rina.app/Contents/MacOS/Rina -d Rina.app/Contents/Frameworks -p @executable_path/../Frameworks/ -s $(brew --prefix qt)/lib -s $(brew --prefix ffmpeg)/lib -s $(brew --prefix luajit)/lib -s /opt/homebrew/lib
             
             # 3. QMLプラグインとQt拡張フレームワークの依存関係を再帰的に修正
@@ -176,9 +177,9 @@ jobs:
               dylibbundler -of -b -x "$lib" -d Rina.app/Contents/Frameworks -p @executable_path/../Frameworks/ -s $(brew --prefix qt)/lib -s $(brew --prefix ffmpeg)/lib -s $(brew --prefix luajit)/lib -s /opt/homebrew/lib || true
             done
             
-            # アセットのコピー
-            cp -r objects Rina.app/Contents/Resources/
-            cp -r effects Rina.app/Contents/Resources/
+            # アセットのコピー（buildディレクトリの一つ上にあるobjectsを参照）
+            cp -r ../objects Rina.app/Contents/Resources/
+            cp -r ../effects Rina.app/Contents/Resources/
 
             # アセットを含めてZip化
             zip -r ../dist/Rina-macOS-ARM64.zip Rina.app objects effects
