@@ -60,6 +60,10 @@ Loader {
             case "enum": 
                 return enumComponent;
 
+            // コンボボックス (動的ソース)
+            case "combo":
+                return comboComponent;
+
             // ヘッダー (区切り線)
             case "header": 
                 return headerComponent;
@@ -308,6 +312,51 @@ Loader {
                 
                 onActivated: { // ユーザー操作時のみ発火
                     controlLoader.valueModified(currentText);
+                }
+            }
+        }
+    }
+
+    // --- 9. Combo (Dynamic Source) ---
+    Component {
+        id: comboComponent
+        RowLayout {
+            spacing: 8
+            Label { 
+                text: controlLoader.definition.label || controlLoader.definition.name
+                color: "white"
+                Layout.preferredWidth: 80
+            }
+            ComboBox {
+                id: combo
+                Layout.fillWidth: true
+                
+                // ソースの解決 (TimelineBridge等)
+                property var sourceObj: {
+                    if (controlLoader.definition.source === "TimelineBridge") return TimelineBridge;
+                    return null;
+                }
+                
+                model: sourceObj ? sourceObj[controlLoader.definition.sourceProperty] : []
+                
+                textRole: controlLoader.definition.textRole || "name"
+                valueRole: controlLoader.definition.valueRole || "id"
+                
+                // 現在値の反映
+                currentIndex: {
+                    var val = controlLoader.value;
+                    if (!model) return -1;
+                    for (var i = 0; i < count; i++) {
+                        var item = model[i];
+                        if (item && item[valueRole] == val) return i;
+                    }
+                    return -1;
+                }
+                
+                onActivated: (index) => {
+                    if (index >= 0 && model && model[index]) {
+                        controlLoader.valueModified(model[index][valueRole]);
+                    }
                 }
             }
         }
