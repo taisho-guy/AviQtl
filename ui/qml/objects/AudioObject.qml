@@ -5,6 +5,12 @@ import "qrc:/qt/qml/Rina/ui/qml/common" as Common
 Common.BaseObject {
     id: root
 
+    // ObjectRenderer からのプロパティ要求に対応（ダミー定義）
+    property string source: ""
+    property var params: ({})
+    property var effectModel: null
+    property int frame: 0
+
     // JSONで定義したパラメータを取得 (第1引数のeffectIdはBaseObject内では無視されますが、慣習として指定)
     property string sourcePath: String(evalParam("audio", "source", ""))
     property real volume: Number(evalParam("audio", "volume", 1.0))

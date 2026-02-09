@@ -23,7 +23,7 @@ Node {
         var res = [];
         for (var i = 0; i < rawEffectModels.length; i++) {
             var eff = rawEffectModels[i];
-            if (eff.id !== "rect" && eff.id !== "text" && eff.id !== "image" && eff.id !== "transform")
+            if (eff.id !== "rect" && eff.id !== "text" && eff.id !== "image" && eff.id !== "video" && eff.id !== "audio" && eff.id !== "transform")
                 res.push(eff);
 
         }
