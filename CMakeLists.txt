@@ -12,9 +12,10 @@ if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR "${CMAKE_CXX_COMPILER_ID}" MAT
     add_compile_options(
         -Wall -Wextra -Wpedantic
         -Wno-unused-parameter
-        -O3                      # 汎用最大最適化
-        -ffast-math              # 数値計算の高速化
-        -march=x86-64-v3         # 汎用最適化アーキテクチャ
+        -O3
+        -ffast-math
+        -flto
+        -fno-semantic-interposition
     )
 endif()
 
