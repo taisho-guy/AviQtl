@@ -10,19 +10,30 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-# Compiler Optimization for Clang
-if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+# Compiler Optimization
+if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+    separate_arguments(ARCH_FLAGS_LIST UNIX_COMMAND "${ARCH_FLAGS}")
     add_compile_options(
         -Wall -Wextra -Wpedantic
         -Wno-unused-parameter
-        -fcolor-diagnostics
         -O3                      # 汎用最大最適化
         -ffast-math              # 数値計算の高速化
+        ${ARCH_FLAGS_LIST}
+    )
+endif()
+
+if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+    add_compile_options(
+        -fcolor-diagnostics
         -flto=thin               # ThinLTOでリンク時最適化を高速かつ強力に
-        ${ARCH_FLAGS}  # ここにPythonから-march=znver4などが渡される
     )
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-        add_link_options("-fuse-ld=mold")
+        find_program(MOLD_LINKER mold)
+        if(MOLD_LINKER)
+            add_link_options("-fuse-ld=${MOLD_LINKER}")
+        else()
+            add_link_options("-fuse-ld=lld")
+        endif()
         add_link_options("-flto=thin")
     endif()
 endif()

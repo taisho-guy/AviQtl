@@ -65,9 +65,14 @@ class BuildWorker(QtCore.QThread):
                 conf_cmd = [
                     "cmake", "-B", str(work_dir), "-G", "Ninja",
                     f"-DCMAKE_BUILD_TYPE={'Debug' if self.is_debug else 'Release'}",
-                    f"-DARCH_FLAGS={flags}",
-                    str(self.source_dir)
+                    f"-DARCH_FLAGS={flags}"
                 ]
+
+                # Linux環境ではClangを強制的に使用
+                if sys.platform == "linux":
+                    conf_cmd.extend(["-DCMAKE_C_COMPILER=clang", "-DCMAKE_CXX_COMPILER=clang++"])
+
+                conf_cmd.append(str(self.source_dir))
                 self._run_cmd(conf_cmd)
 
                 # 2. Build (nice を使用してシステム全体のレスポンスを維持)
@@ -132,8 +137,9 @@ class RinaGui(QtWidgets.QMainWindow):
             ("sapphirerapids", "-march=sapphirerapids"),
 
             # --- Others ---
-            ("aarch64", "--target=aarch64-linux-gnu -march=armv8-a"),
-            ("riscv64", "--target=riscv64-linux-gnu -march=rv64gc"),
+            # クロスコンパイルにはSysrootとQtライブラリが必要なため、デフォルトでは無効化
+            # ("aarch64", "--target=aarch64-linux-gnu -march=armv8-a"),
+            # ("riscv64", "--target=riscv64-linux-gnu -march=rv64gc"),
         ]
         
         self.init_ui()
