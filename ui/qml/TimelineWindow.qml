@@ -40,45 +40,57 @@ Common.RinaWindow {
         anchors.fill: parent
         spacing: 0
 
-        // 1. シーンタブ (Row + Button でシンプルに実装)
-        Rectangle {
+        // 1. シーンタブ (TabBar)
+        RowLayout {
             Layout.fillWidth: true
             Layout.preferredHeight: sceneTabHeight
-            color: palette.window
-            border.color: palette.mid
-            border.width: 1
+            spacing: 0
             z: 1
 
             ScrollView {
-                anchors.fill: parent
-                contentWidth: sceneRow.width
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
                 ScrollBar.vertical.policy: ScrollBar.AlwaysOff
-                clip: true
 
-                Row {
-                    id: sceneRow
-
-                    height: parent.height
-                    spacing: 0
+                TabBar {
+                    id: sceneTabBar
+                    // ScrollView内で適切に広がるように設定
+                    width: Math.max(parent.width, contentWidth)
 
                     Repeater {
                         id: sceneRepeater
-
                         model: TimelineBridge ? TimelineBridge.scenes : []
 
-                        Button {
-                            property bool isActive: TimelineBridge && TimelineBridge.currentSceneId === modelData.id
+                        TabButton {
+                            id: tabBtn
 
-                            text: modelData.name + (modelData.id !== 0 ? "  ×" : "")
-                            flat: !isActive
-                            highlighted: isActive
-                            height: sceneTabHeight
+                            checked: TimelineBridge && TimelineBridge.currentSceneId === modelData.id
                             onClicked: {
-                                // 右端30pxをクリックした場合は削除、それ以外は切り替え
-                                if (modelData.id !== 0 && pressX > width - 30)
-                                    TimelineBridge.removeScene(modelData.id);
-                                else
-                                    TimelineBridge.switchScene(modelData.id);
+                                if (TimelineBridge) TimelineBridge.switchScene(modelData.id)
+                            }
+
+                            contentItem: RowLayout {
+                                spacing: 4
+                                Text {
+                                    text: modelData.name
+                                    font: tabBtn.font
+                                    color: palette.text
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                    elide: Text.ElideRight
+                                    Layout.maximumWidth: 200
+                                }
+                                Button {
+                                    text: "×"
+                                    flat: true
+                                    visible: modelData.id !== 0
+                                    Layout.preferredWidth: 20
+                                    Layout.preferredHeight: 20
+                                    onClicked: {
+                                        if (TimelineBridge) TimelineBridge.removeScene(modelData.id);
+                                    }
+                                }
                             }
 
                             MouseArea {
@@ -88,27 +100,21 @@ Common.RinaWindow {
                                     var win = WindowManager.getWindow("sceneSettings");
                                     if (win)
                                         win.openForScene(modelData.id, modelData.name, modelData.width !== undefined ? modelData.width : 1920, modelData.height !== undefined ? modelData.height : 1080, modelData.fps !== undefined ? modelData.fps : 60, modelData.totalFrames !== undefined ? modelData.totalFrames : 300);
-
                                 }
                             }
-
                         }
-
                     }
-
-                    // シーン追加ボタン
-                    Button {
-                        text: "+"
-                        flat: true
-                        width: 40
-                        height: sceneTabHeight
-                        onClicked: TimelineBridge.createScene("Scene " + (sceneRepeater.count + 1))
-                    }
-
                 }
-
             }
 
+            // シーン追加ボタン
+            Button {
+                text: "+"
+                flat: true
+                Layout.preferredWidth: 40
+                Layout.fillHeight: true
+                onClicked: TimelineBridge.createScene("Scene " + (sceneRepeater.count + 1))
+            }
         }
 
         // 2. 定規エリア
