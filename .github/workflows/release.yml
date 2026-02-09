@@ -179,19 +179,22 @@ jobs:
                 -s /opt/homebrew/lib || true
             done
             
+            # Resourcesディレクトリを作成（macdeployqtが作成しなかった場合のため）
+            mkdir -p Rina.app/Contents/Resources
+
             # アセットのコピー（存在確認を追加）
-            if [ -d "../objects" ]; then
-              cp -r ../objects Rina.app/Contents/Resources/
-            elif [ -d "objects" ]; then
+            if [ -d "objects" ]; then
               cp -r objects Rina.app/Contents/Resources/
+            elif [ -d "../objects" ]; then
+              cp -r ../objects Rina.app/Contents/Resources/
             else
               echo "WARNING: objects directory not found, skipping copy."
             fi
 
-            if [ -d "../effects" ]; then
-              cp -r ../effects Rina.app/Contents/Resources/
-            elif [ -d "effects" ]; then
+            if [ -d "effects" ]; then
               cp -r effects Rina.app/Contents/Resources/
+            elif [ -d "../effects" ]; then
+              cp -r ../effects Rina.app/Contents/Resources/
             else
                echo "WARNING: effects directory not found, skipping copy."
             fi
