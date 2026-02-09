@@ -1,6 +1,8 @@
 #include "effect_registry.hpp"
 #include "rina_context.hpp"
 #include "settings_manager.hpp"
+#include "../../scripting/mod_engine.hpp"
+#include "../../engine/timeline/ecs.hpp"
 #include "timeline_controller.hpp"
 #include "video_encoder.hpp"
 #include "video_frame_provider.hpp"
@@ -13,6 +15,8 @@
 #include <QQmlContext>
 #include <QQuickStyle> // 追加
 #include <QQuickWindow>
+#include <QTimer>
+#include <lua.hpp>
 
 int main(int argc, char *argv[]) {
     // --- マルチプラットフォーム対応 ハードウェアデコード設定 ---
@@ -44,6 +48,22 @@ int main(int argc, char *argv[]) {
 
     // エフェクトレジストリの初期化
     Rina::Core::initializeStandardEffects();
+
+    // --- Lua MODエンジンの初期化 (Phase 1 & 2) ---
+    auto& modEngine = Rina::Scripting::ModEngine::instance();
+    // ECSのインスタンス（g_ecsState）のアドレスをLuaに渡す
+    void* ecsPtr = Rina::Engine::Timeline::ECS::instance().getInternalStatePtr();
+    modEngine.initialize(ecsPtr);
+
+    // プラグインのロード
+    modEngine.loadPlugins();
+
+    // Luaフック用のタイマー (約60FPSで同期)
+    QTimer luaHookTimer;
+    QObject::connect(&luaHookTimer, &QTimer::timeout, [&modEngine](){
+        modEngine.onUpdate();
+    });
+    luaHookTimer.start(16);
 
     // 外部リソースのロード
     QString appDir = QCoreApplication::applicationDirPath();

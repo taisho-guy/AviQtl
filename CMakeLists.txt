@@ -91,10 +91,17 @@ qt_add_executable(Rina
     engine/audio_mixer.cpp
     core/src/project_serializer.cpp
     core/src/video_encoder.cpp
+    scripting/mod_engine.cpp
 )
 
 if(APPLE)
     set_target_properties(Rina PROPERTIES MACOSX_BUNDLE ON)
+endif()
+
+# Phase 2.1: シンボルのエクスポート設定 (Lua FFI用)
+set_target_properties(Rina PROPERTIES ENABLE_EXPORTS ON)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_link_options(Rina PRIVATE "-rdynamic")
 endif()
 
 # Qt Policy設定: QMLモジュールのディレクトリ構造に関する警告を抑制・解決
@@ -147,7 +154,4 @@ endif()
 # エフェクト/オブジェクト定義JSONをビルドディレクトリにコピー
 file(COPY ui/qml/objects/ DESTINATION ${CMAKE_BINARY_DIR}/objects)
 file(COPY ui/qml/effects/ DESTINATION ${CMAKE_BINARY_DIR}/effects)
-
-# エフェクト/オブジェクト定義JSONをビルドディレクトリにコピー
-file(COPY ui/qml/objects/ DESTINATION ${CMAKE_BINARY_DIR}/objects)
-file(COPY ui/qml/effects/ DESTINATION ${CMAKE_BINARY_DIR}/effects)
+file(COPY plugins/ DESTINATION ${CMAKE_BINARY_DIR}/plugins)

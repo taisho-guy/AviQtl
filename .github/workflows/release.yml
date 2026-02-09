@@ -115,6 +115,7 @@ jobs:
           # CMakeのfile(COPY)によりビルドディレクトリ(.)に配置されたアセットを使用
           if [ -d "objects" ]; then cp -r objects ../dist/; else echo "WARNING: objects dir not found in build dir"; fi
           if [ -d "effects" ]; then cp -r effects ../dist/; else echo "WARNING: effects dir not found in build dir"; fi
+          if [ -d "plugins" ]; then cp -r plugins ../dist/; else echo "WARNING: plugins dir not found in build dir"; fi
           
           # アーカイブ作成
           cd ../dist
@@ -197,6 +198,14 @@ jobs:
               cp -r ../effects Rina.app/Contents/Resources/
             else
                echo "WARNING: effects directory not found, skipping copy."
+            fi
+
+            if [ -d "plugins" ]; then
+              cp -r plugins Rina.app/Contents/Resources/
+            elif [ -d "../plugins" ]; then
+              cp -r ../plugins Rina.app/Contents/Resources/
+            else
+               echo "WARNING: plugins directory not found, skipping copy."
             fi
 
             zip -r ../dist/Rina-macOS-ARM64.zip Rina.app

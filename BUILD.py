@@ -50,18 +50,18 @@ class BuildWorker(QtCore.QThread):
             else:
                 j_slots = max(1, cpu_count // 2) # 安全策
 
-            self.log_signal.emit(f"🚀 Resource Allocated: {j_slots} parallel jobs")
+            self.log_signal.emit(f"🚀 リソース割り当て: {j_slots} 並列ジョブ")
             
             total_targets = len(self.targets)
             
             for i, (name, flags) in enumerate(self.targets):
-                self.progress_signal.emit(int((i / total_targets) * 100), f"Building: {name}")
+                self.progress_signal.emit(int((i / total_targets) * 100), f"{name} をビルド中")
                 
                 work_dir = self.temp_base / name
                 dest_dir = self.output_dir / name if not self.is_debug else self.output_dir / "debug"
                 
                 # 1. CMake Configuration
-                self.log_signal.emit(f"--- Configuring {name} ---")
+                self.log_signal.emit(f"--- {name} の設定中 ---")
                 conf_cmd = [
                     "cmake", "-B", str(work_dir), "-G", "Ninja",
                     f"-DCMAKE_BUILD_TYPE={'Debug' if self.is_debug else 'Release'}",
@@ -71,7 +71,7 @@ class BuildWorker(QtCore.QThread):
                 self._run_cmd(conf_cmd)
 
                 # 2. Build (nice を使用してシステム全体のレスポンスを維持)
-                self.log_signal.emit(f"🔨 Building {name} (Jobs: {j_slots})")
+                self.log_signal.emit(f"🔨 {name} をビルド中 (ジョブ数: {j_slots})")
                 build_cmd = ["nice", "-n", "15", "cmake", "--build", str(work_dir), "-j", str(j_slots)]
                 self._run_cmd(build_cmd)
 
@@ -85,9 +85,14 @@ class BuildWorker(QtCore.QThread):
                     if src_path.exists():
                         shutil.copytree(src_path, dest_dir / d)
 
+                # Copy plugins
+                plugins_src = self.source_dir / "plugins"
+                if plugins_src.exists():
+                    shutil.copytree(plugins_src, dest_dir / "plugins")
+
                 # 4. Compression (Releaseのみ)
                 if not self.is_debug:
-                    self.log_signal.emit(f"📦 Archiving {name} (7z LZMA2 Max)")
+                    self.log_signal.emit(f"📦 {name} をアーカイブ中 (7z LZMA2 Max)")
                     archive_name = self.output_dir / f"Rina_Linux_{name}.7z"
                     self._run_cmd([
                         "7z", "a", "-t7z", "-m0=lzma2", "-mx=9",
@@ -95,8 +100,8 @@ class BuildWorker(QtCore.QThread):
                     ])
                     shutil.rmtree(dest_dir) # 圧縮後はディレクトリを削除
 
-            self.progress_signal.emit(100, "Done")
-            self.finished_signal.emit(True, "All builds finished.")
+            self.progress_signal.emit(100, "完了")
+            self.finished_signal.emit(True, "すべてのビルドが完了しました。")
         except Exception as e:
             self.finished_signal.emit(False, str(e))
 
@@ -134,13 +139,13 @@ class RinaGui(QtWidgets.QMainWindow):
         self.init_ui()
 
     def init_ui(self):
-        self.setWindowTitle("Rina Galactic Build System")
+        self.setWindowTitle("Rina ビルドシステム")
         self.resize(600, 400)
         
         central = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout(central)
         
-        self.status_label = QtWidgets.QLabel("Status: Ready")
+        self.status_label = QtWidgets.QLabel("ステータス: 準備完了")
         layout.addWidget(self.status_label)
         
         self.progress_bar = QtWidgets.QProgressBar()
@@ -148,14 +153,13 @@ class RinaGui(QtWidgets.QMainWindow):
         
         self.log_view = QtWidgets.QPlainTextEdit()
         self.log_view.setReadOnly(True)
-        self.log_view.setStyleSheet("background-color: #1e1e1e; color: #00ff00; font-family: monospace;")
         layout.addWidget(self.log_view)
         
         btn_layout = QtWidgets.QHBoxLayout()
-        self.btn_full = QtWidgets.QPushButton("🚀 Build All & Compress")
+        self.btn_full = QtWidgets.QPushButton("🚀 全てビルド & 圧縮")
         self.btn_full.clicked.connect(self.run_full_build)
         
-        self.btn_debug = QtWidgets.QPushButton("🛠 Host Debug")
+        self.btn_debug = QtWidgets.QPushButton("🛠 ホストデバッグ")
         self.btn_debug.clicked.connect(self.run_debug_build)
         
         btn_layout.addWidget(self.btn_full)
@@ -188,9 +192,9 @@ class RinaGui(QtWidgets.QMainWindow):
     def on_finished(self, success, msg):
         self.set_ui_enabled(True)
         if success:
-            QtWidgets.QMessageBox.information(self, "Success", "Builds completed!")
+            QtWidgets.QMessageBox.information(self, "成功", "ビルドが完了しました！")
         else:
-            self.log_view.appendPlainText(f"\n❌ ERROR: {msg}")
+            self.log_view.appendPlainText(f"\n❌ エラー: {msg}")
 
     def set_ui_enabled(self, enabled):
         self.btn_full.setEnabled(enabled)
@@ -199,7 +203,6 @@ class RinaGui(QtWidgets.QMainWindow):
 if __name__ == "__main__":
     if "--gui" in sys.argv:
         app = QtWidgets.QApplication(sys.argv)
-        app.setStyle("Fusion")
         gui = RinaGui()
         gui.show()
         sys.exit(app.exec())
@@ -219,6 +222,6 @@ if __name__ == "__main__":
         worker.progress_signal.connect(lambda val, msg: print(f"[{val}%] {msg}"))
         worker.finished_signal.connect(lambda success, msg: app.quit() if success else app.exit(1))
         
-        print("🚀 Starting CLI Debug Build...")
+        print("🚀 CLIデバッグビルドを開始します...")
         worker.start()
         sys.exit(app.exec())
