@@ -25,6 +25,21 @@ class BuildWorker(QtCore.QThread):
         self.output_dir = output_dir
         self.is_debug = is_debug
 
+    def _run_cmd(self, cmd):
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            encoding='utf-8',
+            errors='replace'
+        )
+        for line in process.stdout:
+            self.log_signal.emit(line.rstrip())
+        process.wait()
+        if process.returncode != 0:
+            raise subprocess.CalledProcessError(process.returncode, cmd)
+
     def run(self):
         try:
             # メモリ保護ロジック
@@ -53,12 +68,12 @@ class BuildWorker(QtCore.QThread):
                     f"-DARCH_FLAGS={flags}",
                     str(self.source_dir)
                 ]
-                subprocess.run(conf_cmd, check=True, capture_output=True)
+                self._run_cmd(conf_cmd)
 
                 # 2. Build (nice を使用してシステム全体のレスポンスを維持)
                 self.log_signal.emit(f"🔨 Building {name} (Jobs: {j_slots})")
                 build_cmd = ["nice", "-n", "15", "cmake", "--build", str(work_dir), "-j", str(j_slots)]
-                subprocess.run(build_cmd, check=True, capture_output=True)
+                self._run_cmd(build_cmd)
 
                 # 3. Deployment
                 if dest_dir.exists(): shutil.rmtree(dest_dir)
@@ -74,10 +89,10 @@ class BuildWorker(QtCore.QThread):
                 if not self.is_debug:
                     self.log_signal.emit(f"📦 Archiving {name} (7z LZMA2 Max)")
                     archive_name = self.output_dir / f"Rina_Linux_{name}.7z"
-                    subprocess.run([
+                    self._run_cmd([
                         "7z", "a", "-t7z", "-m0=lzma2", "-mx=9",
                         str(archive_name), f"{dest_dir}/*"
-                    ], check=True, capture_output=True)
+                    ])
                     shutil.rmtree(dest_dir) # 圧縮後はディレクトリを削除
 
             self.progress_signal.emit(100, "Done")
@@ -182,14 +197,28 @@ class RinaGui(QtWidgets.QMainWindow):
         self.btn_debug.setEnabled(enabled)
 
 if __name__ == "__main__":
-    app = QtWidgets.QApplication(sys.argv)
-    # CachyOSのダークテーマに合わせたスタイル
-    app.setStyle("Fusion")
-    
     if "--gui" in sys.argv:
+        app = QtWidgets.QApplication(sys.argv)
+        app.setStyle("Fusion")
         gui = RinaGui()
         gui.show()
         sys.exit(app.exec())
     else:
-        # 引数なしの場合は標準出力にログを出すCLI Debugビルド
-        print("CLI Debug build is not implemented in this snippet for brevity.")
+        # CLI Mode (Debug Build)
+        app = QtCore.QCoreApplication(sys.argv)
+        
+        source_dir = Path.cwd()
+        temp_base = source_dir / ".build_tmp"
+        output_dir = source_dir / "build"
+        
+        # Host Native Debug Build
+        targets = [("host", "-march=native")]
+        worker = BuildWorker(targets, source_dir, temp_base, output_dir, is_debug=True)
+        
+        worker.log_signal.connect(print)
+        worker.progress_signal.connect(lambda val, msg: print(f"[{val}%] {msg}"))
+        worker.finished_signal.connect(lambda success, msg: app.quit() if success else app.exit(1))
+        
+        print("🚀 Starting CLI Debug Build...")
+        worker.start()
+        sys.exit(app.exec())
