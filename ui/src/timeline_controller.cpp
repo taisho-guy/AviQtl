@@ -1,7 +1,9 @@
 #include "timeline_controller.hpp"
 #include "../../core/include/project_serializer.hpp"
+#include "../../core/include/audio_decoder.hpp"
 #include "../../core/include/video_decoder.hpp"
 #include "../../core/include/video_encoder.hpp"
+#include "../../engine/audio_mixer.hpp"
 #include "../../engine/timeline/ecs.hpp"
 #include "../../scripting/lua_host.hpp"
 #include "clip_model.hpp"
@@ -35,6 +37,7 @@ TimelineController::TimelineController(QObject *parent) : QObject(parent) {
     m_transport = new TransportService(this);
     m_selection = new SelectionService(this);
     m_timeline = new TimelineService(m_selection, this);
+    m_audioMixer = new Rina::Engine::AudioMixer(this);
 
     // Phase 1: 初期状態の明示的設定
     m_selection->select(-1, QVariantMap());
@@ -49,7 +52,7 @@ TimelineController::TimelineController(QObject *parent) : QObject(parent) {
         recalculateTotalFrames();
 
         emit clipsChanged();
-        updateVideoDecoders();
+        updateMediaDecoders();
         updateActiveClipsList();
     });
     connect(m_selection, &SelectionService::selectedClipDataChanged, this, [this]() {
@@ -85,6 +88,13 @@ TimelineController::TimelineController(QObject *parent) : QObject(parent) {
             }
         }
 
+        // 音声処理 (再生中のみ)
+        if (m_transport->isPlaying()) {
+            // 1フレーム分のサンプル数 (48kHz / fps)
+            int samples = 48000 / m_project->fps();
+            m_audioMixer->processFrame(nextFrame, m_project->fps(), samples);
+        }
+
         updateActiveClipsList();
     });
 
@@ -95,8 +105,7 @@ TimelineController::TimelineController(QObject *parent) : QObject(parent) {
 void TimelineController::setVideoFrameStore(Rina::Core::VideoFrameStore *store) {
     m_videoFrameStore = store;
     qDebug() << "TimelineController: VideoFrameStore set. Updating decoders...";
-    // ストアがセットされたので、既存のクリップに対するデコーダを生成する
-    updateVideoDecoders();
+    updateMediaDecoders();
 }
 
 void TimelineController::togglePlay() {
@@ -282,6 +291,24 @@ void TimelineController::updateActiveClipsList() {
     std::sort(active.begin(), active.end(), [](const ClipData *a, const ClipData *b) { return a->layer < b->layer; });
 
     m_clipModel->updateClips(active);
+
+    // ECSの音声状態も更新
+    for (const auto *clip : active) {
+        if (clip->type == "audio" || clip->type == "video") {
+            float vol = 1.0f;
+            float pan = 0.0f;
+            bool mute = false;
+            // パラメータ取得 (audioエフェクトは通常index 0または1)
+            for (auto *eff : clip->effects) {
+                if (eff->id() == "audio") {
+                    vol = eff->evaluatedParam("volume", m_transport->currentFrame() - clip->startFrame).toFloat();
+                    pan = eff->evaluatedParam("pan", m_transport->currentFrame() - clip->startFrame).toFloat();
+                    mute = eff->params().value("mute").toBool();
+                }
+            }
+            Rina::Engine::Timeline::ECS::instance().updateAudioClipState(clip->id, clip->startFrame, clip->durationFrames, vol, pan, mute);
+        }
+    }
 }
 
 void TimelineController::rebuildClipIndex() {
@@ -297,9 +324,10 @@ void TimelineController::rebuildClipIndex() {
     std::sort(m_sortedClips.begin(), m_sortedClips.end(), [](const ClipData *a, const ClipData *b) { return a->startFrame < b->startFrame; });
 }
 
-void TimelineController::updateVideoDecoders() {
+void TimelineController::updateMediaDecoders() {
     const auto &clips = m_timeline->clips();
     QSet<int> currentVideoClipIds;
+    QSet<int> currentAudioClipIds;
 
     // 新規・既存の動画クリップをチェック
     for (const auto &clip : clips) {
@@ -325,6 +353,23 @@ void TimelineController::updateVideoDecoders() {
                 }
             }
         }
+        // 音声クリップのチェック
+        if (clip.type == "audio") {
+            currentAudioClipIds.insert(clip.id);
+            if (!m_audioDecoders.contains(clip.id)) {
+                // Audioエフェクト(index 0)からパスを取得
+                const auto *audioEffect = (clip.effects.size() > 0) ? clip.effects[0] : nullptr;
+                if (audioEffect) {
+                    QUrl sourceUrl = QUrl::fromLocalFile(audioEffect->params().value("source").toString());
+                    if (sourceUrl.isValid() && !sourceUrl.isEmpty()) {
+                        auto *decoder = new Rina::Core::AudioDecoder(clip.id, sourceUrl, this);
+                        m_audioDecoders.insert(clip.id, decoder);
+                        m_audioMixer->registerDecoder(clip.id, decoder);
+                        qDebug() << "TimelineController: AudioDecoder created for clipId:" << clip.id;
+                    }
+                }
+            }
+        }
     }
 
     // 削除されたクリップのデコーダーをクリーンアップ
@@ -332,6 +377,16 @@ void TimelineController::updateVideoDecoders() {
         if (!currentVideoClipIds.contains(it.key())) {
             it.value()->deleteLater();
             it = m_videoDecoders.erase(it);
+        } else {
+            ++it;
+        }
+    }
+    // 音声デコーダーのクリーンアップ
+    for (auto it = m_audioDecoders.begin(); it != m_audioDecoders.end();) {
+        if (!currentAudioClipIds.contains(it.key())) {
+            m_audioMixer->unregisterDecoder(it.key());
+            it.value()->deleteLater();
+            it = m_audioDecoders.erase(it);
         } else {
             ++it;
         }
@@ -480,6 +535,9 @@ bool TimelineController::exportVideo(const QString &path, const QString &format,
         emit errorOccurred("エンコーダーの初期化に失敗しました。VA-APIドライバを確認してください。");
         return false;
     }
+    
+    // 音声ストリーム追加
+    encoder.addAudioStream(48000, 2, 192000);
 
     int totalFrames = m_project->totalFrames();
     for (int frame = 0; frame < totalFrames; ++frame) {
@@ -497,6 +555,12 @@ bool TimelineController::exportVideo(const QString &path, const QString &format,
         if (!encoder.pushFrame(renderedFrame, frame)) {
             qWarning() << "Frame encoding failed at:" << frame;
         }
+        
+        // 音声エンコード
+        int samplesNeeded = 48000 / m_project->fps();
+        std::vector<float> audioSamples = m_audioMixer->mix(frame, m_project->fps(), samplesNeeded);
+        encoder.pushAudio(audioSamples.data(), samplesNeeded);
+
         emit exportProgressChanged((frame * 100) / totalFrames);
     }
 
@@ -519,6 +583,9 @@ void TimelineController::exportVideoHW(Rina::Core::VideoEncoder *encoder) {
     const int height = m_project->height();
 
     qInfo() << "Starting HW Export (QImage path): 0 to" << endFrame;
+    
+    // 音声ストリーム追加
+    encoder->addAudioStream(48000, 2, 192000);
 
     for (int frame = 0; frame < endFrame; ++frame) {
         m_transport->setCurrentFrame(frame);
@@ -546,6 +613,11 @@ void TimelineController::exportVideoHW(Rina::Core::VideoEncoder *encoder) {
             qWarning() << "Failed to encode frame" << frame;
             break;
         }
+        
+        // 音声エンコード
+        int samplesNeeded = 48000 / m_project->fps();
+        std::vector<float> audioSamples = m_audioMixer->mix(frame, m_project->fps(), samplesNeeded);
+        encoder->pushAudio(audioSamples.data(), samplesNeeded);
 
         if (frame % 10 == 0) {
             emit exportProgressChanged((frame * 100) / endFrame);

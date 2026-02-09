@@ -8,9 +8,6 @@
 #include <unordered_map>
 
 namespace Rina::Engine::Timeline {
-struct Component {
-    virtual ~Component() = default;
-};
 
 struct TransformComponent : Component {
     int layer;
@@ -27,6 +24,7 @@ struct RenderComponent : Component {
 struct ECSImpl {
     std::unordered_map<int, std::unique_ptr<TransformComponent>> transforms;
     std::unordered_map<int, std::unique_ptr<RenderComponent>> renderStates;
+    std::unordered_map<int, std::unique_ptr<AudioComponent>> audioStates;
     bool renderGraphDirty = false;
 };
 
@@ -60,6 +58,24 @@ void ECS::updateClipState(int clipId, int layer, double time) {
 
         qDebug() << "[ECS] クリップ" << clipId << "を更新 -> レイヤー:" << layer << "時間:" << time;
     }
+}
+
+void ECS::updateAudioClipState(int clipId, int startFrame, int durationFrames, float volume, float pan, bool mute) {
+    auto &audio = g_ecsState.audioStates[clipId];
+    if (!audio) {
+        audio = std::make_unique<AudioComponent>();
+        audio->clipId = clipId;
+    }
+    // パラメータの更新
+    audio->startFrame = startFrame;
+    audio->durationFrames = durationFrames;
+    audio->volume = volume;
+    audio->pan = pan;
+    audio->mute = mute;
+}
+
+const std::unordered_map<int, std::unique_ptr<AudioComponent>> &ECS::getAudioComponents() const {
+    return g_ecsState.audioStates;
 }
 
 bool ECS::isRenderGraphDirty() const { return g_ecsState.renderGraphDirty; }

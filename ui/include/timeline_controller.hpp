@@ -29,8 +29,13 @@ namespace Core {
 class VideoDecoder;
 class VideoFrameStore;
 class VideoEncoder; // 前方宣言
+class AudioDecoder;
 } // namespace Core
 } // namespace Rina
+
+namespace Rina::Engine {
+class AudioMixer;
+}
 
 namespace Rina::UI { // 元のnamespaceに戻す
 class TimelineController : public QObject {
@@ -160,6 +165,7 @@ class TimelineController : public QObject {
     void updateClipActiveState();
     void rebuildClipIndex();
     void updateVideoDecoders();
+    void updateMediaDecoders(); // Video/Audio両対応へ変更
     void recalculateTotalFrames();
 
     ClipModel *m_clipModel;       // アクティブなクリップをQMLに公開するためのモデル
@@ -177,6 +183,10 @@ class TimelineController : public QObject {
     // 動画デコーダーの管理
     QHash<int, Core::VideoDecoder *> m_videoDecoders;
     Core::VideoFrameStore *m_videoFrameStore = nullptr;
+
+    // 音声関連
+    Rina::Engine::AudioMixer *m_audioMixer = nullptr;
+    QHash<int, Core::AudioDecoder *> m_audioDecoders;
 
     // 最適化: O(log N) での検索のためのソート済みインデックス
     QList<ClipData *> m_sortedClips; // vector<ClipData*> ではなく QList<ClipData>

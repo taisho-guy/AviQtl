@@ -11,6 +11,8 @@ extern "C" {
 #include <libavutil/imgutils.h>
 #include <libavutil/opt.h>
 #include <libswscale/swscale.h>
+#include <libswresample/swresample.h>
+#include <libavutil/audio_fifo.h>
 }
 
 namespace Rina::Core {
@@ -24,11 +26,22 @@ void VideoEncoder::cleanup() {
         sws_freeContext(m_swsCtx);
         m_swsCtx = nullptr;
     }
+    if (m_swrCtx) {
+        swr_free(&m_swrCtx);
+        m_swrCtx = nullptr;
+    }
     if (m_hwFrame) {
         av_frame_free(&m_hwFrame);
     }
     if (m_swFrame) {
         av_frame_free(&m_swFrame);
+    }
+    if (m_audioFrame) {
+        av_frame_free(&m_audioFrame);
+    }
+    if (m_audioFifo) {
+        av_audio_fifo_free(m_audioFifo);
+        m_audioFifo = nullptr;
     }
     if (m_encCtx) {
         avcodec_free_context(&m_encCtx);
@@ -42,6 +55,9 @@ void VideoEncoder::cleanup() {
     }
     if (m_hwDeviceCtx) {
         av_buffer_unref(&m_hwDeviceCtx);
+    }
+    if (m_audioEncCtx) {
+        avcodec_free_context(&m_audioEncCtx);
     }
 }
 
@@ -60,6 +76,7 @@ bool VideoEncoder::initHardware(const QString &codecName) {
 bool VideoEncoder::open(const Config &config) {
     cleanup();
     m_config = config;
+    m_headerWritten = false;
 
     // 1. コンテナフォーマットの初期化
     avformat_alloc_output_context2(&m_fmtCtx, nullptr, nullptr, config.outputUrl.toStdString().c_str());
@@ -136,11 +153,8 @@ bool VideoEncoder::open(const Config &config) {
         }
     }
 
-    if (avformat_write_header(m_fmtCtx, nullptr) < 0) {
-        qWarning() << "Error occurred when opening output file.";
-        return false;
-    }
-
+    // ヘッダー書き込みは音声ストリーム追加の機会を与えるため、最初のフレームプッシュまで遅延させる
+    
     // 6. フレーム確保
     m_swFrame = av_frame_alloc();
     m_swFrame->format = AV_PIX_FMT_NV12; // SW変換用中間バッファ
@@ -166,9 +180,72 @@ bool VideoEncoder::open(const QVariantMap &configMap) {
     return open(config);
 }
 
+bool VideoEncoder::addAudioStream(int sampleRate, int channels, int bitrate) {
+    if (!m_fmtCtx) return false;
+
+    const AVCodec *codec = avcodec_find_encoder(AV_CODEC_ID_AAC);
+    if (!codec) {
+        qWarning() << "AAC codec not found.";
+        return false;
+    }
+
+    m_audioStream = avformat_new_stream(m_fmtCtx, codec);
+    if (!m_audioStream) return false;
+
+    m_audioEncCtx = avcodec_alloc_context3(codec);
+    if (!m_audioEncCtx) return false;
+
+    m_audioEncCtx->sample_fmt = codec->sample_fmts ? codec->sample_fmts[0] : AV_SAMPLE_FMT_FLTP;
+    m_audioEncCtx->bit_rate = bitrate;
+    m_audioEncCtx->sample_rate = sampleRate;
+    m_audioEncCtx->ch_layout = (channels == 2) ? (AVChannelLayout)AV_CHANNEL_LAYOUT_STEREO : (AVChannelLayout)AV_CHANNEL_LAYOUT_MONO;
+    m_audioStream->time_base = {1, sampleRate};
+
+    if (m_fmtCtx->oformat->flags & AVFMT_GLOBALHEADER)
+        m_audioEncCtx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+
+    if (avcodec_open2(m_audioEncCtx, codec, nullptr) < 0) {
+        qWarning() << "Could not open audio codec.";
+        return false;
+    }
+
+    avcodec_parameters_from_context(m_audioStream->codecpar, m_audioEncCtx);
+
+    // FIFOとリサンプラーの初期化
+    m_audioFifo = av_audio_fifo_alloc(m_audioEncCtx->sample_fmt, channels, 1024);
+    m_audioFrame = av_frame_alloc();
+    m_audioFrame->nb_samples = m_audioEncCtx->frame_size;
+    m_audioFrame->format = m_audioEncCtx->sample_fmt;
+    m_audioFrame->ch_layout = m_audioEncCtx->ch_layout;
+    m_audioFrame->sample_rate = m_audioEncCtx->sample_rate;
+    av_frame_get_buffer(m_audioFrame, 0);
+
+    // 入力(Float Interleaved) -> 出力(Encoder Format, likely FLTP)
+    swr_alloc_set_opts2(&m_swrCtx,
+                        &m_audioEncCtx->ch_layout, m_audioEncCtx->sample_fmt, m_audioEncCtx->sample_rate,
+                        &m_audioEncCtx->ch_layout, AV_SAMPLE_FMT_FLT, sampleRate,
+                        0, nullptr);
+    swr_init(m_swrCtx);
+
+    qDebug() << "Audio stream added: AAC" << sampleRate << "Hz";
+    return true;
+}
+
+bool VideoEncoder::writeHeaderIfNeeded() {
+    if (m_headerWritten) return true;
+    if (avformat_write_header(m_fmtCtx, nullptr) < 0) {
+        qWarning() << "Error occurred when opening output file.";
+        return false;
+    }
+    m_headerWritten = true;
+    return true;
+}
+
 bool VideoEncoder::pushFrame(const QImage &img, int64_t pts) {
     if (!m_encCtx)
         return false;
+    
+    if (!writeHeaderIfNeeded()) return false;
 
     // 1. QImage (ARGB32) -> SW Frame (NV12) 変換
     if (!m_swsCtx) {
@@ -239,6 +316,8 @@ bool VideoEncoder::pushFrame(const QImage &img, int64_t pts) {
 bool VideoEncoder::pushTexture(unsigned int textureId, const QSize &size, int64_t pts) {
     if (!m_encCtx)
         return false;
+    
+    if (!writeHeaderIfNeeded()) return false;
 
     // 現在のGLコンテキストを取得 (TimelineController側でmakeCurrentされている前提)
     QOpenGLContext *ctx = QOpenGLContext::currentContext();
@@ -319,9 +398,68 @@ bool VideoEncoder::pushTexture(unsigned int textureId, const QSize &size, int64_
     return true;
 }
 
+bool VideoEncoder::pushAudio(const float *samples, int sampleCount) {
+    if (!m_audioEncCtx || !m_audioFifo) return false;
+
+    // 1. リサンプリング & フォーマット変換 (Float -> FLTP等)
+    // 一時バッファに変換
+    uint8_t **convertedData = nullptr;
+    int linesize;
+    av_samples_alloc_array_and_samples(&convertedData, &linesize, m_audioEncCtx->ch_layout.nb_channels, sampleCount, m_audioEncCtx->sample_fmt, 0);
+
+    const uint8_t *inputData[1] = {reinterpret_cast<const uint8_t *>(samples)};
+    swr_convert(m_swrCtx, convertedData, sampleCount, inputData, sampleCount);
+
+    // 2. FIFOに追加
+    av_audio_fifo_write(m_audioFifo, (void **)convertedData, sampleCount);
+    
+    if (convertedData) {
+        av_freep(&convertedData[0]);
+        free(convertedData);
+    }
+
+    // 3. エンコーダーのフレームサイズ分溜まったらエンコード
+    while (av_audio_fifo_size(m_audioFifo) >= m_audioEncCtx->frame_size) {
+        if (av_frame_make_writable(m_audioFrame) < 0) break;
+
+        // FIFOから読み出し
+        av_audio_fifo_read(m_audioFifo, (void **)m_audioFrame->data, m_audioEncCtx->frame_size);
+        
+        m_audioFrame->pts = m_audioPts;
+        m_audioPts += m_audioFrame->nb_samples;
+
+        // エンコード
+        int ret = avcodec_send_frame(m_audioEncCtx, m_audioFrame);
+        if (ret < 0) {
+            qWarning() << "Error sending audio frame to codec.";
+            return false;
+        }
+
+        while (ret >= 0) {
+            AVPacket *pkt = av_packet_alloc();
+            ret = avcodec_receive_packet(m_audioEncCtx, pkt);
+            if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
+                av_packet_free(&pkt);
+                break;
+            } else if (ret < 0) {
+                av_packet_free(&pkt);
+                return false;
+            }
+
+            av_packet_rescale_ts(pkt, m_audioEncCtx->time_base, m_audioStream->time_base);
+            pkt->stream_index = m_audioStream->index;
+            av_interleaved_write_frame(m_fmtCtx, pkt);
+            av_packet_free(&pkt);
+        }
+    }
+    return true;
+}
+
 void VideoEncoder::close() {
     if (!m_encCtx)
         return;
+    
+    writeHeaderIfNeeded(); // 何も書き込まれずにcloseされた場合の安全策
 
     // フラッシュ処理
     avcodec_send_frame(m_encCtx, nullptr);
@@ -336,6 +474,23 @@ void VideoEncoder::close() {
         pkt->stream_index = m_stream->index;
         av_interleaved_write_frame(m_fmtCtx, pkt);
         av_packet_free(&pkt);
+    }
+
+    // 音声フラッシュ
+    if (m_audioEncCtx) {
+        avcodec_send_frame(m_audioEncCtx, nullptr);
+        while (true) {
+            AVPacket *pkt = av_packet_alloc();
+            int ret = avcodec_receive_packet(m_audioEncCtx, pkt);
+            if (ret < 0) {
+                av_packet_free(&pkt);
+                break;
+            }
+            av_packet_rescale_ts(pkt, m_audioEncCtx->time_base, m_audioStream->time_base);
+            pkt->stream_index = m_audioStream->index;
+            av_interleaved_write_frame(m_fmtCtx, pkt);
+            av_packet_free(&pkt);
+        }
     }
 
     av_write_trailer(m_fmtCtx);

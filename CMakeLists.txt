@@ -40,7 +40,7 @@ find_package(Vulkan REQUIRED)
 find_package(PkgConfig REQUIRED)
 
 # FFmpeg Integration for Hardware Encoding
-pkg_check_modules(FFMPEG REQUIRED libavcodec libavformat libavutil libswscale)
+pkg_check_modules(FFMPEG REQUIRED libavcodec libavformat libavutil libswscale libswresample)
 
 pkg_check_modules(LUAJIT REQUIRED luajit)
 
@@ -87,6 +87,8 @@ qt_add_executable(Rina
     core/src/video_frame_store.cpp
     core/src/video_frame_provider.cpp
     core/src/video_decoder.cpp
+    core/src/audio_decoder.cpp
+    engine/audio_mixer.cpp
     core/src/project_serializer.cpp
     core/src/video_encoder.cpp
 )

@@ -14,6 +14,8 @@ struct AVCodecContext;
 struct AVStream;
 struct AVFrame;
 struct SwsContext;
+struct SwrContext;
+struct AVAudioFifo;
 struct AVBufferRef;
 }
 
@@ -39,6 +41,8 @@ class VideoEncoder : public QObject {
     Q_INVOKABLE bool open(const QVariantMap &config);
     bool pushFrame(const QImage &img, int64_t pts);                           // Temporary: CPU -> HW Upload
     bool pushTexture(unsigned int textureId, const QSize &size, int64_t pts); // GL Texture -> HW Upload
+    bool addAudioStream(int sampleRate = 48000, int channels = 2, int bitrate = 128000);
+    bool pushAudio(const float *samples, int sampleCount);
     void close();
 
   private:
@@ -51,7 +55,17 @@ class VideoEncoder : public QObject {
     SwsContext *m_swsCtx = nullptr;
     AVBufferRef *m_hwDeviceCtx = nullptr;
 
+    // Audio
+    AVStream *m_audioStream = nullptr;
+    AVCodecContext *m_audioEncCtx = nullptr;
+    SwrContext *m_swrCtx = nullptr;
+    AVAudioFifo *m_audioFifo = nullptr;
+    AVFrame *m_audioFrame = nullptr;
+    int64_t m_audioPts = 0;
+    bool m_headerWritten = false;
+
     bool initHardware(const QString &codecName);
+    bool writeHeaderIfNeeded();
     void cleanup();
 };
 
