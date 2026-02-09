@@ -8,7 +8,7 @@ RinaはAviUtl 1.10（ExEdit 0.92）の代替を目指す実験プロジェクト
 
 - [Windows(x86_64)・macOS(ARM64)](https://github.com/taisho-guy/Rina/releases/latest)
 
-- [Linux(x86_64, arm64, RISC-V)](https://codeberg.org/taisho-guy/Rina/releases)
+- [Linux(x86_64)](https://codeberg.org/taisho-guy/Rina/releases)
 
 > [!NOTE]
 >その他の環境の方は、以下のビルド手順に従うか、Issueを立ててください。
@@ -31,7 +31,7 @@ git clone https://codeberg.org/taisho-guy/Rina.git
 
 ```
 cd Rina
-python BUILD.py
+python BUILD.py --gui
 ```
 
 - 実行します
