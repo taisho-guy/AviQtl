@@ -17,9 +17,8 @@ class BuildWorker(QtCore.QThread):
     log_signal = QtCore.Signal(str)
     finished_signal = QtCore.Signal(bool, str)
 
-    def __init__(self, targets, source_dir, temp_base, output_dir, is_debug=False):
+    def __init__(self, source_dir, temp_base, output_dir, is_debug=False):
         super().__init__()
-        self.targets = targets
         self.source_dir = source_dir
         self.temp_base = temp_base
         self.output_dir = output_dir
@@ -52,58 +51,55 @@ class BuildWorker(QtCore.QThread):
 
             self.log_signal.emit(f"🚀 リソース割り当て: {j_slots} 並列ジョブ")
             
-            total_targets = len(self.targets)
+            name = "Release"
+            self.progress_signal.emit(10, f"{name} をビルド中")
             
-            for i, (name, flags) in enumerate(self.targets):
-                self.progress_signal.emit(int((i / total_targets) * 100), f"{name} をビルド中")
-                
-                work_dir = self.temp_base / name
-                dest_dir = self.output_dir / name if not self.is_debug else self.output_dir / "debug"
-                
-                # 1. CMake Configuration
-                self.log_signal.emit(f"--- {name} の設定中 ---")
-                conf_cmd = [
-                    "cmake", "-B", str(work_dir), "-G", "Ninja",
-                    f"-DCMAKE_BUILD_TYPE={'Debug' if self.is_debug else 'Release'}",
-                    f"-DARCH_FLAGS={flags}"
-                ]
+            work_dir = self.temp_base / name
+            dest_dir = self.output_dir / name if not self.is_debug else self.output_dir / "debug"
+            
+            # 1. CMake Configuration
+            self.log_signal.emit(f"--- {name} の設定中 ---")
+            conf_cmd = [
+                "cmake", "-B", str(work_dir), "-G", "Ninja",
+                f"-DCMAKE_BUILD_TYPE={'Debug' if self.is_debug else 'Release'}"
+            ]
 
-                # Linux環境ではClangを強制的に使用
-                if sys.platform == "linux":
-                    conf_cmd.extend(["-DCMAKE_C_COMPILER=clang", "-DCMAKE_CXX_COMPILER=clang++"])
+            # Linux環境ではClangを強制的に使用
+            if sys.platform == "linux":
+                conf_cmd.extend(["-DCMAKE_C_COMPILER=clang", "-DCMAKE_CXX_COMPILER=clang++"])
 
-                conf_cmd.append(str(self.source_dir))
-                self._run_cmd(conf_cmd)
+            conf_cmd.append(str(self.source_dir))
+            self._run_cmd(conf_cmd)
 
-                # 2. Build (nice を使用してシステム全体のレスポンスを維持)
-                self.log_signal.emit(f"🔨 {name} をビルド中 (ジョブ数: {j_slots})")
-                build_cmd = ["nice", "-n", "15", "cmake", "--build", str(work_dir), "-j", str(j_slots)]
-                self._run_cmd(build_cmd)
+            # 2. Build (nice を使用してシステム全体のレスポンスを維持)
+            self.log_signal.emit(f"🔨 {name} をビルド中 (ジョブ数: {j_slots})")
+            build_cmd = ["nice", "-n", "15", "cmake", "--build", str(work_dir), "-j", str(j_slots)]
+            self._run_cmd(build_cmd)
 
-                # 3. Deployment
-                if dest_dir.exists(): shutil.rmtree(dest_dir)
-                dest_dir.mkdir(parents=True, exist_ok=True)
-                
-                shutil.copy2(work_dir / "Rina", dest_dir / "Rina")
-                for d in ["effects", "objects"]:
-                    src_path = self.source_dir / "ui/qml" / d
-                    if src_path.exists():
-                        shutil.copytree(src_path, dest_dir / d)
+            # 3. Deployment
+            if dest_dir.exists(): shutil.rmtree(dest_dir)
+            dest_dir.mkdir(parents=True, exist_ok=True)
+            
+            shutil.copy2(work_dir / "Rina", dest_dir / "Rina")
+            for d in ["effects", "objects"]:
+                src_path = self.source_dir / "ui/qml" / d
+                if src_path.exists():
+                    shutil.copytree(src_path, dest_dir / d)
 
-                # Copy plugins
-                plugins_src = self.source_dir / "plugins"
-                if plugins_src.exists():
-                    shutil.copytree(plugins_src, dest_dir / "plugins")
+            # Copy plugins
+            plugins_src = self.source_dir / "plugins"
+            if plugins_src.exists():
+                shutil.copytree(plugins_src, dest_dir / "plugins")
 
-                # 4. Compression (Releaseのみ)
-                if not self.is_debug:
-                    self.log_signal.emit(f"📦 {name} をアーカイブ中 (7z LZMA2 Max)")
-                    archive_name = self.output_dir / f"Rina_Linux_{name}.7z"
-                    self._run_cmd([
-                        "7z", "a", "-t7z", "-m0=lzma2", "-mx=9",
-                        str(archive_name), f"{dest_dir}/*"
-                    ])
-                    shutil.rmtree(dest_dir) # 圧縮後はディレクトリを削除
+            # 4. Compression (Releaseのみ)
+            if not self.is_debug:
+                self.log_signal.emit(f"📦 {name} をアーカイブ中 (7z LZMA2 Max)")
+                archive_name = self.output_dir / f"Rina_Linux_{name}.7z"
+                self._run_cmd([
+                    "7z", "a", "-t7z", "-m0=lzma2", "-mx=9",
+                    str(archive_name), f"{dest_dir}/*"
+                ])
+                shutil.rmtree(dest_dir) # 圧縮後はディレクトリを削除
 
             self.progress_signal.emit(100, "完了")
             self.finished_signal.emit(True, "すべてのビルドが完了しました。")
@@ -116,31 +112,6 @@ class RinaGui(QtWidgets.QMainWindow):
         self.source_dir = Path.cwd()
         self.temp_base = self.source_dir / ".build_tmp"
         self.output_dir = self.source_dir / "build"
-        
-        # ターゲットリスト: (名称, marchフラグ)
-        self.targets = [
-            # --- Generic x86-64 Levels ---
-            ("x86-64-v2", "-march=x86-64-v2"), # Nehalem以降
-            ("x86-64-v3", "-march=x86-64-v3"), # Haswell/AVX2以降
-            ("x86-64-v4", "-march=x86-64-v4"), # AVX-512
-
-            # --- AMD ZEN Family ---
-            ("znver1", "-march=znver1"),
-            ("znver2", "-march=znver2"),
-            ("znver3", "-march=znver3"),
-            ("znver4", "-march=znver4"), # Your 8840U native target
-
-            # --- Intel Family ---
-            ("skylake", "-march=skylake"),
-            ("icelake-client", "-march=icelake-client"),
-            ("alderlake", "-march=alderlake"),
-            ("sapphirerapids", "-march=sapphirerapids"),
-
-            # --- Others ---
-            # クロスコンパイルにはSysrootとQtライブラリが必要なため、デフォルトでは無効化
-            # ("aarch64", "--target=aarch64-linux-gnu -march=armv8-a"),
-            # ("riscv64", "--target=riscv64-linux-gnu -march=rv64gc"),
-        ]
         
         self.init_ui()
 
@@ -176,13 +147,13 @@ class RinaGui(QtWidgets.QMainWindow):
 
     def run_full_build(self):
         self.set_ui_enabled(False)
-        self.worker = BuildWorker(self.targets, self.source_dir, self.temp_base, self.output_dir)
+        self.worker = BuildWorker(self.source_dir, self.temp_base, self.output_dir)
         self.connect_worker()
         self.worker.start()
 
     def run_debug_build(self):
         self.set_ui_enabled(False)
-        self.worker = BuildWorker([("host", "-march=native")], self.source_dir, self.temp_base, self.output_dir, True)
+        self.worker = BuildWorker(self.source_dir, self.temp_base, self.output_dir, True)
         self.connect_worker()
         self.worker.start()
 
@@ -221,8 +192,7 @@ if __name__ == "__main__":
         output_dir = source_dir / "build"
         
         # Host Native Debug Build
-        targets = [("host", "-march=native")]
-        worker = BuildWorker(targets, source_dir, temp_base, output_dir, is_debug=True)
+        worker = BuildWorker(source_dir, temp_base, output_dir, is_debug=True)
         
         worker.log_signal.connect(print)
         worker.progress_signal.connect(lambda val, msg: print(f"[{val}%] {msg}"))

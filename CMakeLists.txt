@@ -1,9 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 project(Rina VERSION 0.1.0 LANGUAGES CXX C)
 
-# 外部から最適化フラグを受け取る変数
-set(ARCH_FLAGS "" CACHE STRING "Architecture specific flags")
-
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
@@ -12,29 +9,35 @@ set(CMAKE_AUTOUIC ON)
 
 # Compiler Optimization
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
-    separate_arguments(ARCH_FLAGS_LIST UNIX_COMMAND "${ARCH_FLAGS}")
     add_compile_options(
         -Wall -Wextra -Wpedantic
         -Wno-unused-parameter
         -O3                      # 汎用最大最適化
         -ffast-math              # 数値計算の高速化
-        ${ARCH_FLAGS_LIST}
+        -march=x86-64-v3         # 汎用最適化アーキテクチャ
     )
 endif()
 
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
     add_compile_options(
         -fcolor-diagnostics
-        -flto=thin               # ThinLTOでリンク時最適化を高速かつ強力に
     )
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         find_program(MOLD_LINKER mold)
+        find_program(LLD_LINKER lld)
         if(MOLD_LINKER)
             add_link_options("-fuse-ld=${MOLD_LINKER}")
+            add_compile_options("-flto=thin")
+            add_link_options("-flto=thin")
+        elseif(LLD_LINKER)
+            add_link_options("-fuse-ld=${LLD_LINKER}")
+            add_compile_options("-flto=thin")
+            add_link_options("-flto=thin")
         else()
-            add_link_options("-fuse-ld=lld")
+            message(WARNING "Mold or LLD linker not found. ThinLTO will be disabled to prevent link errors.")
         endif()
-        add_link_options("-flto=thin")
+    else()
+        add_compile_options("-flto=thin")
     endif()
 endif()
 
@@ -116,7 +119,9 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 endif()
 
 # Qt Policy設定: QMLモジュールのディレクトリ構造に関する警告を抑制・解決
-qt_policy(SET QTP0004 NEW)
+if(COMMAND qt_policy)
+    qt_policy(SET QTP0004 NEW)
+endif()
 
 # QMLモジュールの定義
 qt_add_qml_module(Rina
