@@ -294,7 +294,7 @@ jobs:
           path: artifacts
 
       - name: Create Codeberg Release
-        uses: appleboy/gitea-release-action@v0.0.10
+        uses: appleboy/gitea-release-action@v1
         with:
           base_url: https://codeberg.org
           token: ${{ secrets.CODEBERG }}
