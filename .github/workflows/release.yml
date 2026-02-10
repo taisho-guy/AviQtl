@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build-windows:
-    name: Windows (MSYS2 UCRT64)
+    name: Windows (x86_64)
     runs-on: windows-latest
     defaults:
       run:
@@ -128,7 +128,7 @@ jobs:
           path: dist/Rina-Windows-x64.zip
 
   build-macos:
-    name: macOS (Apple Silicon)
+    name: macOS (ARM64)
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
@@ -221,7 +221,7 @@ jobs:
           path: dist/Rina-macOS-ARM64.zip
 
   build-linux:
-    name: Linux (Arch Linux Rolling / Native)
+    name: Linux (x86_64)
     runs-on: ubuntu-latest
     container:
       image: archlinux:latest
@@ -293,24 +293,27 @@ jobs:
         with:
           path: artifacts
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
+      - name: Create Codeberg Release
+        uses: appleboy/gitea-release-action@v0.0.10
         with:
+          base_url: https://codeberg.org
+          token: ${{ secrets.CODEBERG }}
+          owner: taisho-guy
+          repo: Rina
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
           body: |
             ### 📥 ダウンロード
 
             以下の **Assets** セクションより、お使いの環境に合ったファイルをダウンロードしてください。
 
-            > [!TIP]
-            > **Linux版**は[Codeberg](https://codeberg.org/taisho-guy/Rina/releases)にて公開しております。
-
             ### 💬 ご意見・バグ報告
 
-            [Codeberg](https://codeberg.org/taisho-guy/Rina/issues) にてイシューを作成してください。些細なフィードバックでも開発の大きな励みになります。
+            [イシューを作成](https://codeberg.org/taisho-guy/Rina/issues/new)してください。些細なフィードバックでも開発の大きな励みになります。
 
             ### 🔨 開発に参加する
 
-            [リポジトリ](https://codeberg.org/taisho-guy/Rina)をクローンし、変更を加えた上で[プルリクエスト](https://codeberg.org/taisho-guy/Rina/pulls)を送ってください。
+            [リポジトリ](https://codeberg.org/taisho-guy/Rina)をクローンし、変更を加えた上で[プルリクエスト](https://codeberg.org/taisho-guy/Rina/pulls)を作成して下さい。
             > [!NOTE]
             > 本プロジェクトへの貢献は[GNU Affero General Public License Version 3](https://www.gnu.org/licenses/agpl-3.0.txt)に基づいて公開されます。
           files: |
