@@ -19,7 +19,7 @@ INCLUDE_EXTENSIONS = {
     # C/C++
     ".cpp", ".hpp", ".c", ".h", ".cc", ".hh", ".cxx", ".hxx",
     # Qt/QML
-    ".qml", ".qrc", ".ui", ".pro", ".pri",
+    ".qml", ".qrc", ".ui", ".pro", ".pri", ".js"
     # Build Systems
     ".cmake", "CMakeLists.txt", "Makefile",
     # Scripts

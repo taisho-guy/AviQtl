@@ -153,6 +153,9 @@ qt_add_qml_module(Rina
         ui/qml/common/Logger.js
         ui/qml/common/EasingConfigDialog.qml
         ui/qml/common/NodeLoader.qml
+        ui/qml/common/Icons.js
+        ui/qml/common/RinaIcon.qml
+        ui/qml/common/IconMenuItem.qml
         ui/qml/ExportDialog.qml
 
         # 【削除】Objectsは外部読み込みするため、ここ（コンパイル対象）からは外す

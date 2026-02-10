@@ -26,6 +26,10 @@ ApplicationWindow {
             TimelineBridge.setCompositeView(mainWin);
 
     }
+    
+    FontLoader {
+        source: "qrc:/resources/remixicon.ttf"
+    }
 
     // アクション定義 (ショートカット用)
     Action {
@@ -170,30 +174,35 @@ ApplicationWindow {
         Menu {
             title: "ファイル"
 
-            MenuItem {
+            Common.IconMenuItem {
                 action: newAction
+                iconName: "file_add_line"
             }
 
-            MenuItem {
+            Common.IconMenuItem {
                 action: loadAction
+                iconName: "folder_open_line"
             }
 
             MenuSeparator {
             }
 
-            MenuItem {
+            Common.IconMenuItem {
                 action: saveProjectAction
+                iconName: "save_line"
             }
 
-            MenuItem {
+            Common.IconMenuItem {
                 action: saveAsProjectAction
+                iconName: "save_3_line"
             }
 
             MenuSeparator {
             }
 
-            MenuItem {
+            Common.IconMenuItem {
                 text: "メディアの書き出し..."
+                iconName: "movie_line"
                 enabled: TimelineBridge && TimelineBridge.project
                 onTriggered: {
                     exportDialog.open();
@@ -203,8 +212,9 @@ ApplicationWindow {
             MenuSeparator {
             }
 
-            MenuItem {
+            Common.IconMenuItem {
                 text: "環境設定"
+                iconName: "settings_3_line"
                 onTriggered: {
                     if (WindowManager)
                         WindowManager.systemSettingsVisible = true;
@@ -215,9 +225,10 @@ ApplicationWindow {
             MenuSeparator {
             }
 
-            MenuItem {
+            Common.IconMenuItem {
                 text: "終了"
                 action: quitAction
+                iconName: "close_circle_line"
             }
 
         }
@@ -225,8 +236,9 @@ ApplicationWindow {
         Menu {
             title: "フィルタ"
 
-            MenuItem {
+            Common.IconMenuItem {
                 text: "エフェクトの追加"
+                iconName: "magic_line"
                 enabled: TimelineBridge && TimelineBridge.selection && TimelineBridge.selection.selectedClipId >= 0
                 onTriggered: {
                     if (WindowManager)
@@ -238,8 +250,9 @@ ApplicationWindow {
             MenuSeparator {
             }
 
-            MenuItem {
+            Common.IconMenuItem {
                 text: "全てのエフェクトをOFFにする"
+                iconName: "eye_off_line"
                 enabled: TimelineBridge && TimelineBridge.selection && TimelineBridge.selection.selectedClipId >= 0
                 onTriggered: {
                     // TODO: Implement disableAllEffects in TimelineBridge
@@ -252,8 +265,9 @@ ApplicationWindow {
         Menu {
             title: "設定"
 
-            MenuItem {
+            Common.IconMenuItem {
                 text: "サイズの変更"
+                iconName: "aspect_ratio_line"
                 onTriggered: {
                     if (WindowManager)
                         WindowManager.projectSettingsVisible = true;
@@ -261,8 +275,9 @@ ApplicationWindow {
                 }
             }
 
-            MenuItem {
+            Common.IconMenuItem {
                 text: "フレームレートの変更"
+                iconName: "speed_line"
                 onTriggered: {
                     if (WindowManager)
                         WindowManager.projectSettingsVisible = true;
@@ -273,8 +288,9 @@ ApplicationWindow {
             MenuSeparator {
             }
 
-            MenuItem {
+            Common.IconMenuItem {
                 text: "環境設定"
+                iconName: "settings_3_line"
                 onTriggered: {
                     if (WindowManager)
                         WindowManager.systemSettingsVisible = true;
@@ -287,32 +303,37 @@ ApplicationWindow {
         Menu {
             title: "編集"
 
-            MenuItem {
+            Common.IconMenuItem {
                 action: undoAction
+                iconName: "arrow_go_back_line"
             }
 
-            MenuItem {
+            Common.IconMenuItem {
                 action: redoAction
+                iconName: "arrow_go_forward_line"
             }
 
             MenuSeparator {
             }
 
-            MenuItem {
+            Common.IconMenuItem {
                 text: "すべてのフレームを選択"
+                iconName: "checkbox_multiple_line"
                 enabled: false
             }
 
-            MenuItem {
+            Common.IconMenuItem {
                 text: "選択範囲のフレームを削除"
+                iconName: "delete_bin_line"
                 enabled: false
             }
 
             MenuSeparator {
             }
 
-            MenuItem {
+            Common.IconMenuItem {
                 text: "再生速度の情報を変更"
+                iconName: "speed_mini_line"
                 enabled: false
             }
 
@@ -324,12 +345,14 @@ ApplicationWindow {
             Menu {
                 title: "拡大表示"
 
-                MenuItem {
+                Common.IconMenuItem {
                     text: "ウィンドウサイズ"
+                    iconName: "fullscreen_line"
                 }
 
-                MenuItem {
+                Common.IconMenuItem {
                     text: "100%"
+                    iconName: "zoom_in_line"
                     onTriggered: {
                     }
                 }
@@ -339,13 +362,15 @@ ApplicationWindow {
             MenuSeparator {
             }
 
-            MenuItem {
+            Common.IconMenuItem {
                 text: "再生ウィンドウの表示"
+                iconName: "play_circle_line"
                 onTriggered: mainWin.requestActivate()
             }
 
-            MenuItem {
+            Common.IconMenuItem {
                 text: "タイムラインの表示"
+                iconName: "layout_bottom_line"
                 onTriggered: {
                     if (WindowManager)
                         WindowManager.timelineVisible = true;
@@ -353,8 +378,9 @@ ApplicationWindow {
                 }
             }
 
-            MenuItem {
+            Common.IconMenuItem {
                 text: "設定ダイアログの表示"
+                iconName: "equalizer_line"
                 onTriggered: {
                     if (WindowManager)
                         WindowManager.objectSettingsVisible = true;
@@ -367,16 +393,18 @@ ApplicationWindow {
         Menu {
             title: "その他"
 
-            MenuItem {
+            Common.IconMenuItem {
                 text: "バージョン情報"
+                iconName: "information_line"
                 onTriggered: console.log("Rina version 0.1")
             }
 
             MenuSeparator {
             }
 
-            MenuItem {
+            Common.IconMenuItem {
                 text: "未実装機能の非表示"
+                iconName: "eye_close_line"
                 checkable: true
                 checked: true
             }
