@@ -294,12 +294,13 @@ jobs:
           path: artifacts
 
       - name: Create Codeberg Release
-        uses: akkuman/gitea-release-action@v0.0.4
+        uses: akkuman/gitea-release-action@v1
         with:
-          owner: taisho-guy
-          repo: Rina
           server_url: https://codeberg.org
           token: ${{ secrets.CODEBERG_TOKEN }}
+          repository: taisho-guy/Rina
+          draft: false
+          prerelease: false
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
           body: |
