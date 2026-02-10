@@ -248,10 +248,13 @@ jobs:
 
           # RPATHの設定を変更: $ORIGIN (同梱) ではなく、システムパスを優先
           # 最適化は維持 (-march=x86-64-v3)
+          # 環境変数でリンカーを明示的に ld.lld に固定
+          export LD=ld.lld
           cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_CXX_FLAGS="-O3 -march=x86-64-v3 -flto -fno-semantic-interposition" \
-            -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=ld.lld" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld" \
+            -DCMAKE_POLICY_DEFAULT_CMP0056=NEW \
             -DCMAKE_SKIP_INSTALL_RPATH=ON
             
           cmake --build build
