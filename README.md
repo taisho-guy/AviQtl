@@ -1,24 +1,23 @@
 # Rina - Rina is not AviUtl.
 
-RinaはAviUtl 1.10（ExEdit 0.92）の代替を目指す実験プロジェクトです。
+RinaはAviUtl 1.10（ExEdit 0.92）の代替を目指すプロジェクトです。
 
 ### [Rinaのお部屋](https://taisho-guy.codeberg.page/Rina) ・ [Wiki](https://codeberg.org/taisho-guy/Rina/wiki)
 
 ## ダウンロード
 
-- [Windows(x86_64)・macOS(ARM64)](https://github.com/taisho-guy/Rina/releases/latest)
-
-- [Linux(x86_64)](https://codeberg.org/taisho-guy/Rina/releases)
+### [Linux(x86_64)・Windows(x86_64)・macOS(ARM64)](https://codeberg.org/taisho-guy/Rina/releases)
 
 > [!NOTE]
->その他の環境の方は、以下のビルド手順に従うか、Issueを立ててください。
+> - Linux版は依存関係を同梱しておりません。Qt6, LuaJIT, Vulkan, FFmpegをインストールしてください。
+> - Arch Linux上でビルドしているため、最新のランタイムが利用できないディストリビューション（Ubuntu等）では動作しない場合がございます。ローリングリリースのディストリビューション（CachyOS等）でご利用頂くことを推奨致します。
 
-## ビルド手順(Arch Linux推奨)
+## ビルド手順(CachyOS推奨)
 
 - 依存関係をインストールします
 
 ```
-pacman -S --needed fish git cmake ninja qt6 lua-jit vulkan-devel base-devel mold p7zip  fftw wayland-protocols libffi
+paru -S --needed fish git cmake ninja qt6 lua-jit vulkan-devel base-devel mold p7zip  fftw wayland-protocols libffi
 ```
 
 - リポジトリをクローンします
@@ -39,6 +38,10 @@ python BUILD.py --gui
 ```
 ./build/debug/Rina
 ```
+
+## サードパーティー製の埋め込みリソース
+
+- [Remix Icon](https://github.com/Remix-Design/RemixIcon) (MIT License)
 
 ## ライセンス
 
