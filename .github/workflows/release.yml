@@ -294,12 +294,12 @@ jobs:
           path: artifacts
 
       - name: Create Codeberg Release
-        uses: appleboy/gitea-release-action@v1
+        uses: akkuman/gitea-release-action@v0.0.4
         with:
-          base_url: https://codeberg.org
-          token: ${{ secrets.CODEBERG }}
           owner: taisho-guy
           repo: Rina
+          server_url: https://codeberg.org
+          token: ${{ secrets.CODEBERG_TOKEN }}
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
           body: |
@@ -317,6 +317,4 @@ jobs:
             > [!NOTE]
             > 本プロジェクトへの貢献は[GNU Affero General Public License Version 3](https://www.gnu.org/licenses/agpl-3.0.txt)に基づいて公開されます。
           files: |
-            artifacts/windows-build/*.zip
-            artifacts/macos-build/*.zip
-            artifacts/linux-arch-build/*.zip
+            artifacts/**/*.zip
