@@ -220,8 +220,72 @@ jobs:
           name: macos-build
           path: dist/Rina-macOS-ARM64.zip
 
+  build-linux:
+    name: Linux (Arch Linux Rolling / Native)
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+    steps:
+      - name: Install System Dependencies
+        run: |
+          pacman -Syu --noconfirm
+          # ビルドと実行に必要なパッケージをすべてシステムに入れる
+          pacman -S --noconfirm \
+            base-devel git cmake ninja clang lld zip \
+            mesa vulkan-headers vulkan-icd-loader \
+            libxkbcommon wayland \
+            ffmpeg luajit \
+            qt6-base qt6-declarative qt6-shadertools qt6-5compat qt6-svg qt6-multimedia qt6-quick3d
+
+      - uses: actions/checkout@v4
+
+      - name: Build
+        env:
+          CC: clang
+          CXX: clang++
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+          # RPATHの設定を変更: $ORIGIN (同梱) ではなく、システムパスを優先
+          # 最適化は維持 (-march=x86-64-v3)
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_FLAGS="-O3 -march=x86-64-v3 -flto -fno-semantic-interposition" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld" \
+            -DCMAKE_SKIP_INSTALL_RPATH=ON
+            
+          cmake --build build
+
+      - name: Package
+        run: |
+          mkdir dist
+          cd build
+
+          # 1. 実行ファイルのみコピー (ライブラリは一切コピーしない)
+          cp Rina ../dist/
+          
+          # 2. アセットのコピー (アプリ動作に必要なデータのみ)
+          if [ -d "objects" ]; then cp -r objects ../dist/; fi
+          if [ -d "effects" ]; then cp -r effects ../dist/; fi
+          
+          # アプリ固有のプラグインがある場合のみコピー (Qtプラグインではない)
+          if [ -d "plugins" ] && [ "$(ls -A plugins)" ]; then
+            mkdir -p ../dist/plugins
+            cp -r plugins/* ../dist/plugins/
+          fi
+
+          # 3. 圧縮
+          cd ../dist
+          zip -r Rina-Linux-x86_64-v3.zip .
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-arch-build
+          path: dist/Rina-Linux-x86_64-v3.zip
+
   release:
-    needs: [build-windows, build-macos]
+    needs: [build-windows, build-macos, build-linux]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     steps:
@@ -252,3 +316,4 @@ jobs:
           files: |
             artifacts/windows-build/*.zip
             artifacts/macos-build/*.zip
+            artifacts/linux-arch-build/*.zip

@@ -6,11 +6,8 @@ import multiprocessing
 from pathlib import Path
 from PySide6 import QtWidgets, QtCore, QtGui
 
-try:
-    import psutil
-    HAS_PSUTIL = True
-except ImportError:
-    HAS_PSUTIL = False
+# psutilは必須とする（開発環境なので）
+import psutil
 
 class BuildWorker(QtCore.QThread):
     progress_signal = QtCore.Signal(int, str)
@@ -25,6 +22,8 @@ class BuildWorker(QtCore.QThread):
         self.is_debug = is_debug
 
     def _run_cmd(self, cmd):
+        # 開発者向けにコマンドをログ出力
+        self.log_signal.emit(f"Run: {' '.join(cmd)}")
         process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
@@ -41,68 +40,73 @@ class BuildWorker(QtCore.QThread):
 
     def run(self):
         try:
-            # メモリ保護ロジック
+            # 1. リソース割り当て: Ryzen 8840U (16 threads) をフル活用
+            # 開発機なので容赦なく全スレッドを使う
             cpu_count = multiprocessing.cpu_count()
-            if HAS_PSUTIL:
-                mem_gb = psutil.virtual_memory().total / (1024**3)
-                j_slots = max(1, min(cpu_count // 2, int(mem_gb // 4)))
-            else:
-                j_slots = max(1, cpu_count // 2) # 安全策
+            j_slots = cpu_count
 
-            self.log_signal.emit(f"🚀 リソース割り当て: {j_slots} 並列ジョブ")
+            self.log_signal.emit(f"🚀 リソース割り当て: {j_slots} 並列ジョブ (Host Native)")
             
-            name = "Release"
-            self.progress_signal.emit(10, f"{name} をビルド中")
+            name = "Debug" if self.is_debug else "Release"
+            self.progress_signal.emit(10, f"{name} ビルド開始")
             
+            # ビルドディレクトリを保持 (インクリメンタルビルドのため削除しない)
             work_dir = self.temp_base / name
-            dest_dir = self.output_dir / name if not self.is_debug else self.output_dir / "debug"
             
             # 1. CMake Configuration
-            self.log_signal.emit(f"--- {name} の設定中 ---")
+            self.log_signal.emit(f"--- {name} 設定 (CachyOS Clang Native) ---")
+            
             conf_cmd = [
                 "cmake", "-B", str(work_dir), "-G", "Ninja",
-                f"-DCMAKE_BUILD_TYPE={'Debug' if self.is_debug else 'Release'}"
+                f"-DCMAKE_BUILD_TYPE={name}",
+                # コンパイラ強制 (システムデフォルトのClang)
+                "-DCMAKE_C_COMPILER=clang",
+                "-DCMAKE_CXX_COMPILER=clang++",
             ]
 
-            # Linux環境ではClangを強制的に使用
-            if sys.platform == "linux":
-                conf_cmd.extend(["-DCMAKE_C_COMPILER=clang", "-DCMAKE_CXX_COMPILER=clang++"])
+            # 究極のローカル最適化フラグ
+            if not self.is_debug:
+                conf_cmd.append("-DCMAKE_CXX_FLAGS=-O3 -march=native -mtune=native -flto=thin -fno-semantic-interposition")
+                conf_cmd.append("-DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld -Wl,--as-needed")
 
             conf_cmd.append(str(self.source_dir))
             self._run_cmd(conf_cmd)
 
-            # 2. Build (nice を使用してシステム全体のレスポンスを維持)
-            self.log_signal.emit(f"🔨 {name} をビルド中 (ジョブ数: {j_slots})")
-            build_cmd = ["nice", "-n", "15", "cmake", "--build", str(work_dir), "-j", str(j_slots)]
+            # 3. Build
+            self.log_signal.emit(f"🔨 {name} コンパイル中...")
+            # nice値は削除し、最高優先度で実行
+            build_cmd = ["cmake", "--build", str(work_dir), "-j", str(j_slots)]
             self._run_cmd(build_cmd)
 
-            # 3. Deployment
-            if dest_dir.exists(): shutil.rmtree(dest_dir)
-            dest_dir.mkdir(parents=True, exist_ok=True)
-            
-            shutil.copy2(work_dir / "Rina", dest_dir / "Rina")
+            # 4. 配布処理 (.build_tmp -> build)
+            self.log_signal.emit(f"📂 成果物を {self.output_dir} にコピー中...")
+            self.output_dir.mkdir(parents=True, exist_ok=True)
+
+            dest_bin = self.output_dir / "Rina"
+            if dest_bin.exists():
+                dest_bin.unlink()
+            shutil.copy2(work_dir / "Rina", dest_bin)
+
+            # アセットのコピー
             for d in ["effects", "objects"]:
                 src_path = self.source_dir / "ui/qml" / d
+                dest_path = self.output_dir / d
                 if src_path.exists():
-                    shutil.copytree(src_path, dest_dir / d)
+                    if dest_path.exists(): shutil.rmtree(dest_path)
+                    shutil.copytree(src_path, dest_path)
 
-            # Copy plugins
+            # Plugins
             plugins_src = self.source_dir / "plugins"
+            plugins_dest = self.output_dir / "plugins"
             if plugins_src.exists():
-                shutil.copytree(plugins_src, dest_dir / "plugins")
+                if plugins_dest.exists(): shutil.rmtree(plugins_dest)
+                shutil.copytree(plugins_src, plugins_dest)
 
-            # 4. Compression (Releaseのみ)
-            if not self.is_debug:
-                self.log_signal.emit(f"📦 {name} をアーカイブ中 (7z LZMA2 Max)")
-                archive_name = self.output_dir / f"Rina_Linux_{name}.7z"
-                self._run_cmd([
-                    "7z", "a", "-t7z", "-m0=lzma2", "-mx=9",
-                    str(archive_name), f"{dest_dir}/*"
-                ])
-                shutil.rmtree(dest_dir) # 圧縮後はディレクトリを削除
-
+            self.log_signal.emit(f"✅ ビルド完了: {dest_bin}")
+            self.log_signal.emit("ヒント: ./BUILD.py --run で直ちに起動できます")
+            
             self.progress_signal.emit(100, "完了")
-            self.finished_signal.emit(True, "すべてのビルドが完了しました。")
+            self.finished_signal.emit(True, f"ビルド成功: {dest_bin}")
         except Exception as e:
             self.finished_signal.emit(False, str(e))
 
