@@ -82,11 +82,15 @@ Common.RinaWindow {
                                     Layout.maximumWidth: 200
                                 }
                                 Button {
-                                    text: "×"
                                     flat: true
                                     visible: modelData.id !== 0
                                     Layout.preferredWidth: 20
                                     Layout.preferredHeight: 20
+                                    contentItem: Common.RinaIcon {
+                                        iconName: "close_line"
+                                        size: 14
+                                        color: parent.hovered ? parent.palette.highlight : parent.palette.text
+                                    }
                                     onClicked: {
                                         if (TimelineBridge) TimelineBridge.removeScene(modelData.id);
                                     }
@@ -109,10 +113,14 @@ Common.RinaWindow {
 
             // シーン追加ボタン
             Button {
-                text: "+"
                 flat: true
                 Layout.preferredWidth: 40
                 Layout.fillHeight: true
+                contentItem: Common.RinaIcon {
+                    iconName: "add_line"
+                    size: 20
+                    color: parent.hovered ? parent.palette.highlight : parent.palette.text
+                }
                 onClicked: TimelineBridge.createScene("Scene " + (sceneRepeater.count + 1))
             }
         }

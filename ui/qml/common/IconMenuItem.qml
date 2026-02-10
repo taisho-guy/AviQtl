@@ -6,8 +6,22 @@ MenuItem {
     id: control
     property string iconName: ""
 
+    // デフォルトのインジケーター（チェックボックス）を無効化し、
+    // contentItem内で自前で描画することでアイコンとの重なりを防ぐ
+    indicator: Item {}
+
     contentItem: RowLayout {
         spacing: 6
+
+        // チェックマーク (checkableな場合のみ表示・スペース確保)
+        RinaIcon {
+            visible: control.checkable
+            iconName: "check_line"
+            size: 18
+            color: control.highlighted ? control.palette.highlightedText : control.palette.text
+            opacity: control.checked ? 1.0 : 0.0
+            Layout.alignment: Qt.AlignVCenter
+        }
 
         // アイコン
         RinaIcon {

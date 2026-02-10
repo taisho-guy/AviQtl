@@ -1,6 +1,7 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import "../common" as Common
 
 ScrollView {
     id: timelineViewRoot
@@ -476,9 +477,10 @@ ScrollView {
             popup();
         }
 
-        function createMenuItem(label, cmd) {
+        function createMenuItem(label, cmd, icon) {
             var item = menuItemComp.createObject(null, {
-                "text": label
+                "text": label,
+                "iconName": icon || ""
             });
             item.triggered.connect(function() {
                 handleCommand(cmd);
@@ -562,7 +564,8 @@ ScrollView {
                 for (var i = 0; i < objects.length; i++) {
                     var obj = objects[i];
                     var objItem = menuItemComp.createObject(null, {
-                        "text": obj.name
+                        "text": obj.name,
+                        "iconName": "shape_line" // 汎用アイコン
                     });
                     (function(id) {
                         objItem.triggered.connect(function() {
@@ -573,18 +576,18 @@ ScrollView {
                 }
                 contextMenu.addMenu(objectMenu);
                 addSeparator();
-                contextMenu.addItem(createMenuItem("元に戻す", "edit.undo"));
-                contextMenu.addItem(createMenuItem("やり直す", "edit.redo"));
-                contextMenu.addItem(createMenuItem("貼り付け", "edit.paste"));
+                contextMenu.addItem(createMenuItem("元に戻す", "edit.undo", "arrow_go_back_line"));
+                contextMenu.addItem(createMenuItem("やり直す", "edit.redo", "arrow_go_forward_line"));
+                contextMenu.addItem(createMenuItem("貼り付け", "edit.paste", "clipboard_line"));
                 addSeparator();
-                contextMenu.addItem(createMenuItem("グリッド設定...", "view.gridsettings"));
+                contextMenu.addItem(createMenuItem("グリッド設定...", "view.gridsettings", "grid_line"));
             } else if (targetType === "clip") {
                 // クリップ右クリック
-                contextMenu.addItem(createMenuItem("削除", "clip.delete"));
-                contextMenu.addItem(createMenuItem("分割", "clip.split"));
+                contextMenu.addItem(createMenuItem("削除", "clip.delete", "delete_bin_line"));
+                contextMenu.addItem(createMenuItem("分割", "clip.split", "scissors_cut_line"));
                 addSeparator();
-                contextMenu.addItem(createMenuItem("切り取り", "clip.cut"));
-                contextMenu.addItem(createMenuItem("コピー", "clip.copy"));
+                contextMenu.addItem(createMenuItem("切り取り", "clip.cut", "scissors_line"));
+                contextMenu.addItem(createMenuItem("コピー", "clip.copy", "file_copy_line"));
                 addSeparator();
                 // エフェクト追加メニュー
                 var effectMenu = createSubMenu("エフェクトを追加");
@@ -592,7 +595,8 @@ ScrollView {
                 for (var j = 0; j < effects.length; j++) {
                     var eff = effects[j];
                     var effItem = menuItemComp.createObject(null, {
-                        "text": eff.name
+                        "text": eff.name,
+                        "iconName": "magic_line"
                     });
                     (function(clipId, effId) {
                         effItem.triggered.connect(function() {
@@ -608,7 +612,7 @@ ScrollView {
         Component {
             id: menuItemComp
 
-            MenuItem {
+            Common.IconMenuItem {
             }
 
         }

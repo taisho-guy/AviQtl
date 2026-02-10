@@ -1,6 +1,7 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import "../common" as Common
 
 Rectangle {
     id: headerRoot
@@ -135,13 +136,23 @@ Rectangle {
                         }
 
                         // 状態インジケーター (右上に小さな記号)
-                        Text {
+                        Row {
                             anchors.right: parent.right
                             anchors.top: parent.top
                             anchors.margins: 2
-                            text: layerBtn.isLocked ? "🔒" : (layerBtn.isVisible ? "" : "✕")
-                            font.pixelSize: 8
-                            color: palette.mid
+                            spacing: 2
+                            Common.RinaIcon {
+                                visible: layerBtn.isLocked
+                                iconName: "lock_fill"
+                                size: 10
+                                color: "#ffcccc"
+                            }
+                            Common.RinaIcon {
+                                visible: !layerBtn.isVisible
+                                iconName: "eye_off_line"
+                                size: 10
+                                color: palette.mid
+                            }
                         }
 
                     }
@@ -160,8 +171,9 @@ Rectangle {
 
         property int layerIndex: 0
 
-        MenuItem {
+        Common.IconMenuItem {
             text: "表示/非表示を切り替え"
+            iconName: headerRoot.getLayerVisible(layerMenu.layerIndex) ? "eye_off_line" : "eye_line"
             onTriggered: {
                 var visible = headerRoot.getLayerVisible(layerMenu.layerIndex);
                 headerRoot.setLayerVisible(layerMenu.layerIndex, !visible);
@@ -171,11 +183,12 @@ Rectangle {
         MenuSeparator {
         }
 
-        MenuItem {
+        Common.IconMenuItem {
             text: {
                 var locked = headerRoot.getLayerLocked(layerMenu.layerIndex);
                 return locked ? "ロックを解除" : "ロック";
             }
+            iconName: headerRoot.getLayerLocked(layerMenu.layerIndex) ? "lock_unlock_line" : "lock_line"
             onTriggered: {
                 var locked = headerRoot.getLayerLocked(layerMenu.layerIndex);
                 headerRoot.setLayerLocked(layerMenu.layerIndex, !locked);
@@ -185,8 +198,9 @@ Rectangle {
         MenuSeparator {
         }
 
-        MenuItem {
+        Common.IconMenuItem {
             text: "すべて表示"
+            iconName: "eye_line"
             onTriggered: {
                 for (var i = 0; i < headerRoot.layerCount; i++) {
                     headerRoot.setLayerVisible(i, true);
@@ -194,8 +208,9 @@ Rectangle {
             }
         }
 
-        MenuItem {
+        Common.IconMenuItem {
             text: "すべて非表示"
+            iconName: "eye_off_line"
             onTriggered: {
                 for (var i = 0; i < headerRoot.layerCount; i++) {
                     headerRoot.setLayerVisible(i, false);

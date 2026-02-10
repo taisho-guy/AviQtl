@@ -159,9 +159,20 @@ Common.RinaWindow {
             }
 
             Button {
-                text: "新規プロジェクトを作成"
                 highlighted: true
                 Layout.fillWidth: true
+                contentItem: RowLayout {
+                    spacing: 8
+                    Common.RinaIcon {
+                        iconName: "file_add_line"
+                        color: parent.palette.buttonText
+                    }
+                    Text {
+                        text: "新規プロジェクトを作成"
+                        color: parent.palette.buttonText
+                        font: parent.font
+                    }
+                }
                 onClicked: {
                     // 総フレーム数は自動計算されるため、初期値として最小限の値(1)を渡す
                     root.projectSelected("", parseInt(widthField.text), parseInt(heightField.text), parseFloat(fpsField.text), 1);
@@ -235,8 +246,19 @@ Common.RinaWindow {
             }
 
             Button {
-                text: "既存プロジェクトを開く..."
                 Layout.fillWidth: true
+                contentItem: RowLayout {
+                    spacing: 8
+                    Common.RinaIcon {
+                        iconName: "folder_open_line"
+                        color: parent.palette.buttonText
+                    }
+                    Text {
+                        text: "既存プロジェクトを開く..."
+                        color: parent.palette.buttonText
+                        font: parent.font
+                    }
+                }
                 onClicked: fileDialog.open()
             }
 

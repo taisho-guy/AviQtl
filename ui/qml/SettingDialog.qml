@@ -156,10 +156,16 @@ Common.RinaWindow {
 
                         // 削除ボタン (Transform以外)
                         Button {
-                            text: "×"
                             visible: modelData.id !== "transform" && modelData.id !== "rect" && modelData.id !== "text"
                             anchors.right: parent.right
                             anchors.verticalCenter: parent.verticalCenter
+                            flat: true
+                            width: 24; height: 24
+                            contentItem: Common.RinaIcon {
+                                iconName: "close_line"
+                                size: 16
+                                color: parent.hovered ? parent.palette.highlight : parent.palette.text
+                            }
                             onClicked: TimelineBridge.removeEffect(targetClipId, effectRoot.effectIndex)
                         }
 
@@ -406,8 +412,9 @@ Common.RinaWindow {
             Repeater {
                 model: TimelineBridge ? TimelineBridge.getAvailableEffects() : []
 
-                MenuItem {
+                Common.IconMenuItem {
                     text: modelData.name
+                    iconName: "magic_line"
                     onTriggered: {
                         if (TimelineBridge) {
                             TimelineBridge.addEffect(targetClipId, modelData.id);
