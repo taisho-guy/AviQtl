@@ -307,9 +307,9 @@ Common.RinaWindow {
                                 }
 
                                 SpinBox {
-                                    from: 512
-                                    to: 65536
-                                    stepSize: 512
+                                    from: 128
+                                    to: 16384
+                                    stepSize: 128
                                     value: root.settings.cacheSize
                                     editable: true
                                     onValueModified: {
@@ -324,7 +324,7 @@ Common.RinaWindow {
                             }
 
                             Label {
-                                text: "※ 推奨: 実装メモリの1/4〜1/2程度 (例: 32GBなら8192MB)"
+                                text: "※ 動画クリップごとのキャッシュ容量 (推奨: 512MB〜2048MB)"
                                 font.pixelSize: 11
                                 color: "gray"
                             }

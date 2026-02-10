@@ -71,6 +71,14 @@ TimelineController::TimelineController(QObject *parent) : QObject(parent) {
     connect(m_project, &ProjectService::fpsChanged, [this]() { m_transport->updateTimerInterval(m_project->fps()); });
     m_transport->updateTimerInterval(m_project->fps());
 
+    // 再生状態の変化をデコーダーに伝播
+    connect(m_transport, &TransportService::isPlayingChanged, this, [this]() {
+        bool playing = m_transport->isPlaying();
+        for (auto *decoder : m_videoDecoders) {
+            decoder->setPlaying(playing);
+        }
+    });
+
     // 再生位置が変わったらプレビュー更新
     connect(m_transport, &TransportService::currentFrameChanged, this, [this]() {
         int nextFrame = m_transport->currentFrame();
@@ -347,7 +355,9 @@ void TimelineController::updateMediaDecoders() {
                             qWarning() << "VideoFrameStore not set!";
                             continue;
                         }
-                        m_videoDecoders.insert(clip.id, new Rina::Core::VideoDecoder(clip.id, sourceUrl, m_videoFrameStore, this));
+                        auto *decoder = new Rina::Core::VideoDecoder(clip.id, sourceUrl, m_videoFrameStore, this);
+                        decoder->setPlaying(m_transport->isPlaying());
+                        m_videoDecoders.insert(clip.id, decoder);
                         qDebug() << "TimelineController: VideoDecoder created for clipId:" << clip.id << "source:" << sourceUrl;
                     }
                 }

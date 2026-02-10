@@ -1,7 +1,9 @@
 #include "video_decoder.hpp"
+#include "settings_manager.hpp"
 #include "video_frame_store.hpp"
 #include <QDebug>
 #include <QVideoFrame>
+#include <QtConcurrent>
 
 namespace Rina::Core {
 
@@ -19,9 +21,9 @@ VideoDecoder::VideoDecoder(int clipId, const QUrl &source, VideoFrameStore *stor
 
     connect(m_player, &QMediaPlayer::errorOccurred, this, [](QMediaPlayer::Error error, const QString &errorString) { qWarning() << "VideoDecoder error:" << error << errorString; });
 
-    // キャッシュ容量設定: 256MB (1920x1080x4byte ~= 8MB -> 約32フレーム分)
-    // この値は将来的にユーザー設定から変更できるようにすると良い
-    m_frameCache.setMaxCost(256 * 1024 * 1024);
+    // キャッシュ容量設定: SettingsManagerから取得し、変更を監視
+    updateCacheSize();
+    connect(&SettingsManager::instance(), &SettingsManager::settingsChanged, this, &VideoDecoder::updateCacheSize);
 
     // 初期化時はPause状態で待機
     m_player->pause();
@@ -31,50 +33,84 @@ VideoDecoder::VideoDecoder(int clipId, const QUrl &source, VideoFrameStore *stor
 }
 
 void VideoDecoder::seekToFrame(int frame, double fps) {
-    if (!m_player)
-        return;
+    m_fps = fps;
+    if (!m_player) return;
 
-    // 1. キャッシュ確認
-    if (m_frameCache.contains(frame)) {
-        qDebug() << "VideoDecoder: Cache hit for frame" << frame;
-        m_store->setFrameSafe(QString::number(m_clipId), *m_frameCache[frame]);
+    // 再生中は setPosition (シーク) を避け、自然な再生に任せる
+    // これにより GOP 境界でのフリーズやバッファフラッシュによるカクつきを防ぐ
+    if (m_player->playbackState() == QMediaPlayer::PlayingState) {
+        m_lastRequestedFrame = frame;
+        const qint64 targetMs = static_cast<qint64>((frame / fps) * 1000.0);
+        // 許容範囲(300ms)を超えてズレた場合のみ補正シークを行う
+        if (qAbs(m_player->position() - targetMs) > 300) {
+            m_player->setPosition(targetMs);
+        }
         return;
     }
 
-    qDebug() << "VideoDecoder: Cache miss for frame" << frame << "- seeking...";
+    if (frame == m_lastRequestedFrame) return;
+
+    // 1. キャッシュ確認
+    if (m_frameCache.contains(frame)) {
+        m_store->setFrameSafe(QString::number(m_clipId), *m_frameCache[frame]);
+        m_lastRequestedFrame = frame;
+        return;
+    }
 
     const qint64 ms = static_cast<qint64>((frame / fps) * 1000.0);
-    m_lastRequestedFrame = frame; // リクエストしたフレーム番号を記憶
-    qDebug() << "VideoDecoder::seekToFrame() clipId:" << m_clipId << "frame:" << frame << "ms:" << ms;
-
-    m_player->setPosition(ms);
-
-    // Play/Pause のトグルは廃止。setPositionだけでフレーム更新されるはず
-    // もし更新されない環境なら、pause() のまま setPosition() が効くか確認が必要
+    m_lastRequestedFrame = frame;
+    
+    // プリフェッチ: 次のフレーム(frame+1)もキャッシュになければ、デコーダを先行させる
+    if (!m_frameCache.contains(frame + 1)) {
+        m_player->setPosition(ms);
+    }
 }
 
 void VideoDecoder::onVideoFrameChanged(const QVideoFrame &vf) {
-    if (!vf.isValid())
-        return;
+    if (!vf.isValid() || m_lastRequestedFrame < 0) return;
 
-    // 重複フレームのフィルタリング: タイムスタンプが前回と同じなら無視
-    // これにより無駄なQImage変換とStore更新を防ぐ（ロング動画での安定性向上）
-    if (vf.startTime() == m_lastFrameTimestamp)
-        return;
+    // タイムスタンプ重複ガード
+    if (vf.startTime() == m_lastFrameTimestamp) return;
+    
+    int targetFrame = m_lastRequestedFrame;
     m_lastFrameTimestamp = vf.startTime();
 
-    qDebug() << "VideoDecoder::onVideoFrameChanged() clipId:" << m_clipId << "pts:" << vf.startTime();
+    // 重い変換処理の前に、すでにキャッシュされているか再確認（競合防止）
+    if (m_frameCache.contains(targetFrame)) return;
 
-    QImage img = vf.toImage();
+    // 警告回避しつつ非同期実行。GPUテクスチャが利用可能ならマップを試みる
+    auto future = QtConcurrent::run([this, vf, targetFrame]() {
+        // GPU->CPUの転送(toImage)を最小化するため、まずはマップ可能かチェック
+        if (const_cast<QVideoFrame&>(vf).map(QVideoFrame::ReadOnly)) {
+            QImage img = vf.toImage();
+            const_cast<QVideoFrame&>(vf).unmap();
 
-    if (!img.isNull()) {
-        const QString key = QString::number(m_clipId);
-        // Storeへ転送
-        m_store->setFrameSafe(key, img);
-
-        if (m_lastRequestedFrame >= 0 && !m_frameCache.contains(m_lastRequestedFrame)) {
-            m_frameCache.insert(m_lastRequestedFrame, new QImage(img), img.sizeInBytes());
+            if (!img.isNull()) {
+                QMetaObject::invokeMethod(this, [this, img, targetFrame]() {
+                    m_store->setFrameSafe(QString::number(m_clipId), img);
+                    if (!m_frameCache.contains(targetFrame)) {
+                        m_frameCache.insert(targetFrame, new QImage(img), img.sizeInBytes());
+                    }
+                }, Qt::QueuedConnection);
+            }
         }
+    });
+    (void)future; // 警告を確実に消去
+}
+
+void VideoDecoder::updateCacheSize() {
+    int sizeMB = SettingsManager::instance().settings().value("cacheSize", 512).toInt();
+    if (sizeMB < 64) sizeMB = 64; // 安全策: 最小64MB
+    m_frameCache.setMaxCost(sizeMB * 1024 * 1024);
+}
+
+void VideoDecoder::setPlaying(bool playing) {
+    if (!m_player) return;
+    if (playing) {
+        m_player->play();
+        m_player->setPlaybackRate(1.0);
+    } else {
+        m_player->pause();
     }
 }
 

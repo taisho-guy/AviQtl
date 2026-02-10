@@ -19,7 +19,7 @@ SettingsManager::SettingsManager(QObject *parent) : QObject(parent) {
     // デフォルト設定
     m_settings = {// System
                   {"maxImageSize", "1920x1080"},
-                  {"cacheSize", 4096},
+                  {"cacheSize", 512},
                   {"undoCount", 32},
                   {"renderThreads", 0},
                   {"theme", "Dark"},

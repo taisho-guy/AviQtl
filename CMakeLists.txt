@@ -50,7 +50,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     list(APPEND EXTRA_QT_COMPONENTS WaylandClient)
 endif()
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick QuickControls2 Quick3D Widgets Core5Compat Sql Svg Multimedia ${EXTRA_QT_COMPONENTS})
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick QuickControls2 Quick3D Widgets Core5Compat Sql Svg Multimedia Concurrent ${EXTRA_QT_COMPONENTS})
 find_package(Vulkan REQUIRED)
 find_package(PkgConfig REQUIRED)
 
@@ -160,7 +160,7 @@ qt_add_qml_module(Rina
 
 # リンク設定
 target_link_libraries(
-    Rina PRIVATE Qt6::Core Qt6::Gui Qt6::Quick Qt6::QuickControls2 Qt6::Quick3D Qt6::Widgets Qt6::Svg Qt6::Core5Compat Qt6::Multimedia Vulkan::Vulkan
+    Rina PRIVATE Qt6::Core Qt6::Gui Qt6::Quick Qt6::QuickControls2 Qt6::Quick3D Qt6::Widgets Qt6::Svg Qt6::Core5Compat Qt6::Multimedia Qt6::Concurrent Vulkan::Vulkan
                    ${LUAJIT_LIBRARIES}
                    ${FFMPEG_LIBRARIES})
 
