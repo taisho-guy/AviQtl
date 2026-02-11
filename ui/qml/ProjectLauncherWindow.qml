@@ -15,6 +15,11 @@ Common.RinaWindow {
     width: 700
     height: 500
     title: "Rina - プロジェクトランチャー"
+
+    FontLoader {
+        source: "qrc:/resources/remixicon.ttf"
+    }
+
     Component.onCompleted: {
         // 最近使ったプロジェクトをロード
         if (SettingsManager && SettingsManager.settings) {

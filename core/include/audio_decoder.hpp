@@ -19,8 +19,12 @@ class AudioDecoder : public QObject {
 
     bool isReady() const { return m_isReady; }
 
+  public slots:
+    void seek(qint64 ms);
+
   signals:
     void ready();
+    void seekRequested(qint64 ms);
 
   private slots:
     void onBufferReady();

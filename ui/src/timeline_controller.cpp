@@ -85,6 +85,11 @@ TimelineController::TimelineController(QObject *parent) : QObject(parent) {
         // ループ再生ロジック
         if (nextFrame > m_project->totalFrames()) {
             m_transport->setCurrentFrame(0);
+            // 音声エンジンのリセットとデコーダのシーク（バッファフラッシュ）
+            for (auto *decoder : m_audioDecoders) {
+                decoder->seek(0);
+            }
+            return; // ループ時はここで処理を切り上げ、再帰呼び出し先(0フレーム目)に任せる
         }
         updateClipActiveState();
 
@@ -344,8 +349,14 @@ void TimelineController::updateMediaDecoders() {
 
             // 既にデコーダがある場合はスキップ
             if (!m_videoDecoders.contains(clip.id)) {
-                // Videoエフェクト(index 1)からパスを取得
-                const auto *videoEffect = (clip.effects.size() > 1) ? clip.effects[1] : nullptr;
+                // Videoエフェクトを検索
+                const EffectModel *videoEffect = nullptr;
+                for (const auto *eff : clip.effects) {
+                    if (eff->id() == "video") {
+                        videoEffect = eff;
+                        break;
+                    }
+                }
                 if (videoEffect) {
                     QUrl sourceUrl = QUrl::fromLocalFile(videoEffect->params().value("path").toString());
                     qDebug() << "TimelineController: Found video clip" << clip.id << "path:" << sourceUrl;
@@ -367,8 +378,14 @@ void TimelineController::updateMediaDecoders() {
         if (clip.type == "audio") {
             currentAudioClipIds.insert(clip.id);
             if (!m_audioDecoders.contains(clip.id)) {
-                // Audioエフェクト(index 0)からパスを取得
-                const auto *audioEffect = (clip.effects.size() > 0) ? clip.effects[0] : nullptr;
+                // Audioエフェクトを検索
+                const EffectModel *audioEffect = nullptr;
+                for (const auto *eff : clip.effects) {
+                    if (eff->id() == "audio") {
+                        audioEffect = eff;
+                        break;
+                    }
+                }
                 if (audioEffect) {
                     QUrl sourceUrl = QUrl::fromLocalFile(audioEffect->params().value("source").toString());
                     if (sourceUrl.isValid() && !sourceUrl.isEmpty()) {

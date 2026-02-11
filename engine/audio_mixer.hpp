@@ -20,6 +20,7 @@ class AudioMixer : public QObject {
     void unregisterDecoder(int clipId);
 
     void processFrame(int currentFrame, double fps, int samplesPerFrame);
+    void reset();
     
     // エクスポート用に生データを取得するメソッド
     std::vector<float> mix(int currentFrame, double fps, int samplesPerFrame);
@@ -28,6 +29,7 @@ class AudioMixer : public QObject {
     QAudioSink *m_audioSink = nullptr;
     QIODevice *m_audioOutput = nullptr;
     std::unordered_map<int, Rina::Core::AudioDecoder *> m_decoders;
+    int m_lastFrame = -1;
 };
 
 } // namespace Rina::Engine

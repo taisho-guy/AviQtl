@@ -18,6 +18,10 @@ AudioDecoder::AudioDecoder(int clipId, const QUrl &source, QObject *parent)
     m_decoder->setAudioFormat(format);
     m_decoder->setSource(source);
 
+    // 修正: ループ時のデコーダリセット処理を削除。
+    // AudioDecoderはファイルを一度だけ全読み込みし、メモリ上に保持し続ける設計とします。
+    // これにより、デコードが遅い場合でもリセットされず、完了次第音が鳴るようになります。
+
     connect(m_decoder, &QAudioDecoder::bufferReady, this, &AudioDecoder::onBufferReady);
     connect(m_decoder, &QAudioDecoder::finished, this, &AudioDecoder::onFinished);
     connect(m_decoder, QOverload<QAudioDecoder::Error>::of(&QAudioDecoder::error), this, [this](QAudioDecoder::Error error){
@@ -29,18 +33,40 @@ AudioDecoder::AudioDecoder(int clipId, const QUrl &source, QObject *parent)
     m_decoder->start();
 }
 
+void AudioDecoder::seek(qint64 ms) {
+    emit seekRequested(ms);
+}
+
 void AudioDecoder::onBufferReady() {
     QAudioBuffer buffer = m_decoder->read();
     if (!buffer.isValid())
         return;
 
-    // 要求したフォーマット(Float)で来ていると仮定
-    // Qt6のQAudioDecoderはsetAudioFormatで指定した形式への変換を試みます
-    const float *data = buffer.constData<float>();
-    int sampleCount = buffer.sampleCount();
+    const int sampleCount = buffer.sampleCount();
+    const auto fmt = buffer.format();
 
-    if (data) {
-        m_fullAudioData.insert(m_fullAudioData.end(), data, data + sampleCount);
+    // 初回のみフォーマットをログ出力
+    static bool loggedFormat = false;
+    if (!loggedFormat) {
+        qDebug() << "[AudioDecoder] Received buffer format:" << fmt;
+        loggedFormat = true;
+    }
+
+    // フォーマットに応じてFloatへ変換して格納
+    if (fmt.sampleFormat() == QAudioFormat::Float) {
+        const float *data = buffer.constData<float>();
+        if (data) m_fullAudioData.insert(m_fullAudioData.end(), data, data + sampleCount);
+    } else if (fmt.sampleFormat() == QAudioFormat::Int16) {
+        const qint16 *data = buffer.constData<qint16>();
+        if (data) {
+            m_fullAudioData.reserve(m_fullAudioData.size() + sampleCount);
+            for (int i = 0; i < sampleCount; ++i) {
+                // 16bit int -> float
+                m_fullAudioData.push_back(static_cast<float>(data[i]) / 32768.0f);
+            }
+        }
+    } else {
+        qWarning() << "[AudioDecoder] Unsupported sample format:" << fmt.sampleFormat();
     }
 }
 
