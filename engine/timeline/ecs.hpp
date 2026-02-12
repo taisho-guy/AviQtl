@@ -30,6 +30,6 @@ class ECS {
     void markRenderGraphClean();
 
     // Phase 2.2: 内部状態へのポインタを取得 (Lua MOD用)
-    void* getInternalStatePtr();
+    void *getInternalStatePtr();
 };
 } // namespace Rina::Engine::Timeline

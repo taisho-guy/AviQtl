@@ -1,6 +1,6 @@
 {
     "id": "scene",
-    "name": "シーンオブジェクト",
+    "name": "シーン",
     "category": "object",
     "qml": "SceneObject.qml",
     "params": {

@@ -2,8 +2,8 @@
 #include "core/include/audio_decoder.hpp"
 #include "engine/timeline/ecs.hpp"
 #include <QAudioFormat>
-#include <QMediaDevices>
 #include <QDebug>
+#include <QMediaDevices>
 #include <vector>
 
 namespace Rina::Engine {
@@ -34,13 +34,9 @@ AudioMixer::~AudioMixer() {
         m_audioSink->stop();
 }
 
-void AudioMixer::registerDecoder(int clipId, Rina::Core::AudioDecoder *decoder) {
-    m_decoders[clipId] = decoder;
-}
+void AudioMixer::registerDecoder(int clipId, Rina::Core::AudioDecoder *decoder) { m_decoders[clipId] = decoder; }
 
-void AudioMixer::unregisterDecoder(int clipId) {
-    m_decoders.erase(clipId);
-}
+void AudioMixer::unregisterDecoder(int clipId) { m_decoders.erase(clipId); }
 
 std::vector<float> AudioMixer::mix(int currentFrame, double fps, int samplesPerFrame) {
     // 1. マスターバッファの初期化（無音）
@@ -50,8 +46,10 @@ std::vector<float> AudioMixer::mix(int currentFrame, double fps, int samplesPerF
     const auto &audioStates = Timeline::ECS::instance().getAudioComponents();
 
     for (const auto &[clipId, audio] : audioStates) {
-        if (audio->mute) continue;
-        if (m_decoders.find(clipId) == m_decoders.end()) continue;
+        if (audio->mute)
+            continue;
+        if (m_decoders.find(clipId) == m_decoders.end())
+            continue;
 
         if (currentFrame < audio->startFrame || currentFrame >= audio->startFrame + audio->durationFrames)
             continue;

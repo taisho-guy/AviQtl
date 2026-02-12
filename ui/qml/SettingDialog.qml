@@ -25,6 +25,42 @@ Common.RinaWindow {
             effectsModel = [];
     }
 
+    // UI定義を正規化してリストとして取得するヘルパー
+    function getUiModel(effectModel) {
+        var ui = effectModel.uiDefinition;
+        if (ui) {
+            // 1. 標準形式: { controls: [...] }
+            if (ui.controls && typeof ui.controls.length === 'number')
+                return ui.controls;
+
+            // 2. マップ形式 (後方互換): { "param": { ... } }
+            var keys = Object.keys(ui);
+            if (keys.length > 0 && keys.indexOf("controls") === -1 && keys.indexOf("group") === -1) {
+                var list = [];
+                for (var i = 0; i < keys.length; i++) {
+                    var def = ui[keys[i]];
+                    if (typeof def === 'object') {
+                        def.param = keys[i];
+                        list.push(def);
+                    }
+                }
+                return list;
+            }
+        }
+        // 3. フォールバック: paramsから自動生成
+        var params = effectModel.params;
+        var pKeys = Object.keys(params).sort();
+        var autoList = [];
+        for (var j = 0; j < pKeys.length; j++) {
+            autoList.push({
+                "type": typeof params[pKeys[j]] === 'number' ? 'float' : 'string',
+                "param": pKeys[j],
+                "label": pKeys[j]
+            });
+        }
+        return autoList;
+    }
+
     width: 350
     height: 500
     title: "設定ダイアログ"
@@ -68,41 +104,6 @@ Common.RinaWindow {
         target: TimelineBridge
     }
 
-    // UI定義を正規化してリストとして取得するヘルパー
-    function getUiModel(effectModel) {
-        var ui = effectModel.uiDefinition;
-        if (ui) {
-            // 1. 標準形式: { controls: [...] }
-            if (ui.controls && typeof ui.controls.length === 'number') return ui.controls;
-            
-            // 2. マップ形式 (後方互換): { "param": { ... } }
-            var keys = Object.keys(ui);
-            if (keys.length > 0 && keys.indexOf("controls") === -1 && keys.indexOf("group") === -1) {
-                var list = [];
-                for (var i=0; i<keys.length; i++) {
-                    var def = ui[keys[i]];
-                    if (typeof def === 'object') {
-                        def.param = keys[i];
-                        list.push(def);
-                    }
-                }
-                return list;
-            }
-        }
-        // 3. フォールバック: paramsから自動生成
-        var params = effectModel.params;
-        var pKeys = Object.keys(params).sort();
-        var autoList = [];
-        for (var j=0; j<pKeys.length; j++) {
-            autoList.push({ 
-                type: typeof params[pKeys[j]] === 'number' ? 'float' : 'string', 
-                param: pKeys[j], 
-                label: pKeys[j] 
-            });
-        }
-        return autoList;
-    }
-
     ScrollView {
         anchors.fill: parent
         contentWidth: parent.width
@@ -124,15 +125,20 @@ Common.RinaWindow {
                     // EffectModel を一次ソースとして常に参照する
                     property var currentParams: effectModel ? effectModel.params : ({
                     })
-                    
                     // UI定義の有無を判定するプロパティをここに移動
                     property var uiDef: effectModel ? effectModel.uiDefinition : null
                     property bool hasExplicitUi: {
-                        if (!uiDef) return false;
+                        if (!uiDef)
+                            return false;
+
                         // 配列形式のチェック
-                        if (typeof uiDef.length === 'number' && uiDef.length > 0) return true;
+                        if (typeof uiDef.length === 'number' && uiDef.length > 0)
+                            return true;
+
                         // オブジェクト形式(controlsプロパティ)のチェック
-                        if (uiDef.controls && typeof uiDef.controls.length === 'number' && uiDef.controls.length > 0) return true;
+                        if (uiDef.controls && typeof uiDef.controls.length === 'number' && uiDef.controls.length > 0)
+                            return true;
+
                         return false;
                     }
 
@@ -160,13 +166,16 @@ Common.RinaWindow {
                             anchors.right: parent.right
                             anchors.verticalCenter: parent.verticalCenter
                             flat: true
-                            width: 24; height: 24
+                            width: 24
+                            height: 24
+                            onClicked: TimelineBridge.removeEffect(targetClipId, effectRoot.effectIndex)
+
                             contentItem: Common.RinaIcon {
                                 iconName: "close_line"
                                 size: 16
                                 color: parent.hovered ? parent.palette.highlight : parent.palette.text
                             }
-                            onClicked: TimelineBridge.removeEffect(targetClipId, effectRoot.effectIndex)
+
                         }
 
                     }
@@ -186,13 +195,13 @@ Common.RinaWindow {
                                 Layout.margins: 4
                                 definition: modelData
                                 value: effectRoot.currentParams[modelData.param || modelData.name]
-                                
                                 onValueModified: function(val) {
                                     root.inputting = true;
                                     TimelineBridge.updateClipEffectParam(targetClipId, effectRoot.effectIndex, modelData.param || modelData.name, val);
                                     root.inputting = false;
                                 }
                             }
+
                         }
 
                         // === 方式B: レガシー (既存のパラメータキーベース) ===
@@ -205,7 +214,6 @@ Common.RinaWindow {
                                 property int effIdx: effectRoot.effectIndex
                                 property var effVal: effectRoot.effectModel ? effectRoot.effectModel.params[key] : undefined
                                 property bool isNumber: typeof effVal === 'number'
-                                
                                 // キーフレーム関連のロジック
                                 property int curRelFrame: (TimelineBridge && TimelineBridge.transport) ? (TimelineBridge.transport.currentFrame - TimelineBridge.clipStartFrame) : 0
                                 property int clipDur: TimelineBridge ? TimelineBridge.clipDurationFrames : 100
@@ -223,25 +231,42 @@ Common.RinaWindow {
 
                                 function findInterval(kfs, cur, totalDur) {
                                     let s = 0, e = totalDur;
-                                    if (!kfs || kfs.length === 0) return {"start": s, "end": e};
+                                    if (!kfs || kfs.length === 0)
+                                        return {
+                                        "start": s,
+                                        "end": e
+                                    };
+
                                     let foundStart = false;
                                     for (let i = kfs.length - 1; i >= 0; i--) {
                                         if (kfs[i].frame <= cur) {
                                             s = kfs[i].frame;
                                             foundStart = true;
-                                            if (i + 1 < kfs.length) e = kfs[i + 1].frame;
-                                            else e = totalDur;
+                                            if (i + 1 < kfs.length)
+                                                e = kfs[i + 1].frame;
+                                            else
+                                                e = totalDur;
                                             break;
                                         }
                                     }
-                                    if (!foundStart) { e = kfs[0].frame; s = 0; }
-                                    return {"start": s, "end": e};
+                                    if (!foundStart) {
+                                        e = kfs[0].frame;
+                                        s = 0;
+                                    }
+                                    return {
+                                        "start": s,
+                                        "end": e
+                                    };
                                 }
 
                                 function getInterpAt(f) {
-                                    if (!kfs) return "linear";
+                                    if (!kfs)
+                                        return "linear";
+
                                     for (var i = 0; i < kfs.length; i++) {
-                                        if (kfs[i].frame === f) return kfs[i].interp || "linear";
+                                        if (kfs[i].frame === f)
+                                            return kfs[i].interp || "linear";
+
                                     }
                                     return "linear";
                                 }
@@ -249,13 +274,19 @@ Common.RinaWindow {
                                 function updateParam(frame, val) {
                                     if (!hasKeyframes) {
                                         TimelineBridge.updateClipEffectParam(targetClipId, effIdx, key, val);
-                                        return;
+                                        return ;
                                     }
                                     let type = "linear";
-                                    if (frame === startFrame) type = getInterpAt(startFrame);
-                                    else type = getInterpAt(frame);
-                                    if (type === "constant") type = "linear";
-                                    effectModel.setKeyframe(key, frame, val, {"interp": type});
+                                    if (frame === startFrame)
+                                        type = getInterpAt(startFrame);
+                                    else
+                                        type = getInterpAt(frame);
+                                    if (type === "constant")
+                                        type = "linear";
+
+                                    effectModel.setKeyframe(key, frame, val, {
+                                        "interp": type
+                                    });
                                 }
 
                                 Layout.fillWidth: true
@@ -283,7 +314,6 @@ Common.RinaWindow {
                                     enabled: isNumber
                                     isRangeMode: isMoving
                                     visible: isNumber
-                                    
                                     onStartValueModified: function(val) {
                                         root.inputting = true;
                                         updateParam(startFrame, val);
@@ -296,8 +326,12 @@ Common.RinaWindow {
                                     }
                                     onParamButtonClicked: {
                                         if (!hasKeyframes) {
-                                            effectModel.setKeyframe(key, startFrame, startVal, {"interp": "linear"});
-                                            effectModel.setKeyframe(key, endFrame, endVal, {"interp": "linear"});
+                                            effectModel.setKeyframe(key, startFrame, startVal, {
+                                                "interp": "linear"
+                                            });
+                                            effectModel.setKeyframe(key, endFrame, endVal, {
+                                                "interp": "linear"
+                                            });
                                         }
                                         var dialog = easingDialogComponent.createObject(root, {
                                             "effectModel": effectModel,
@@ -393,8 +427,11 @@ Common.RinaWindow {
                                     }
 
                                 }
+
                             }
+
                         }
+
                     }
 
                 }

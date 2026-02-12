@@ -3,6 +3,7 @@ import os
 import json
 import argparse
 from datetime import datetime
+import sys
 
 # Files/Directories to always exclude (even if they match include patterns)
 EXCLUDE_DIRS = {
@@ -19,15 +20,15 @@ INCLUDE_EXTENSIONS = {
     # C/C++
     ".cpp", ".hpp", ".c", ".h", ".cc", ".hh", ".cxx", ".hxx",
     # Qt/QML
-    ".qml", ".qrc", ".ui", ".pro", ".pri", ".js"
+    ".qml", ".qrc", ".ui", ".pro", ".pri", ".js",
     # Build Systems
     ".cmake", "CMakeLists.txt", "Makefile",
     # Scripts
-    ".sh", ".bash", ".py", ".lua", ".fish"
+    ".sh", ".bash", ".py", ".lua", ".fish",
     # Config/Data
     ".json", ".xml", ".yaml", ".yml", ".toml", ".ini", ".conf",
     # Documentation
-    ".md", ".txt", ".rst"
+    ".md", ".txt", ".rst",
 }
 
 INCLUDE_FILENAMES = {
@@ -68,7 +69,7 @@ def should_process(filepath):
     # return is_text_file(filepath) 
     return False
 
-def generate_export(output_file="project_context.json", root_dir="."):
+def generate_export(output_file="project_context.json", root_dir=".", expect_paths=None):
     """
     Traverses the directory and writes structured content to a JSON file.
     """
@@ -83,6 +84,9 @@ def generate_export(output_file="project_context.json", root_dir="."):
         },
         "files": []
     }
+
+    exported = set()
+    expect_paths = expect_paths or []
 
     try:
         for root, dirs, files in os.walk(abs_root):
@@ -110,6 +114,7 @@ def generate_export(output_file="project_context.json", root_dir="."):
                             "size": len(content),
                             "content": content
                         })
+                        exported.add(rel_path)
                     except Exception as e:
                         print(f"⚠️ Skipping {rel_path}: {e}")
 
@@ -118,6 +123,14 @@ def generate_export(output_file="project_context.json", root_dir="."):
 
         print(f"✅ Export completed: {output_file}")
 
+        missing = [p for p in expect_paths if p not in exported]
+        if missing:
+            print("❌ Expected files missing from export:")
+            for p in missing:
+                ap = os.path.join(abs_root, p)
+                print(f"  - {p} (exists={os.path.exists(ap)})")
+            sys.exit(2)
+
     except IOError as e:
         print(f"❌ Error writing output file: {e}")
 
@@ -125,6 +138,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Export project source code to a single text file.")
     parser.add_argument("-o", "--output", default="project_context.json", help="Output filename")
     parser.add_argument("-d", "--dir", default=".", help="Root directory to scan")
+    parser.add_argument("--expect", action="append", default=[], help="Path expected in JSON (relative to root)")
     
     args = parser.parse_args()
-    generate_export(args.output, args.dir)
+    generate_export(args.output, args.dir, args.expect)

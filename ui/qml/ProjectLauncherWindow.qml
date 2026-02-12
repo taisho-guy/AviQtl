@@ -15,11 +15,6 @@ Common.RinaWindow {
     width: 700
     height: 500
     title: "Rina - プロジェクトランチャー"
-
-    FontLoader {
-        source: "qrc:/resources/remixicon.ttf"
-    }
-
     Component.onCompleted: {
         // 最近使ったプロジェクトをロード
         if (SettingsManager && SettingsManager.settings) {
@@ -37,6 +32,10 @@ Common.RinaWindow {
                 templateCombo.activated(templateCombo.currentIndex);
 
         }
+    }
+
+    FontLoader {
+        source: "qrc:/resources/remixicon.ttf"
     }
 
     ListModel {
@@ -166,23 +165,29 @@ Common.RinaWindow {
             Button {
                 highlighted: true
                 Layout.fillWidth: true
-                contentItem: RowLayout {
-                    spacing: 8
-                    Common.RinaIcon {
-                        iconName: "file_add_line"
-                        color: parent.palette.buttonText
-                    }
-                    Text {
-                        text: "新規プロジェクトを作成"
-                        color: parent.palette.buttonText
-                        font: parent.font
-                    }
-                }
                 onClicked: {
                     // 総フレーム数は自動計算されるため、初期値として最小限の値(1)を渡す
                     root.projectSelected("", parseInt(widthField.text), parseInt(heightField.text), parseFloat(fpsField.text), 1);
                     root.close();
                 }
+
+                contentItem: RowLayout {
+                    spacing: 8
+
+                    Common.RinaIcon {
+                        iconName: "file_add_line"
+                        color: parent.palette.buttonText
+                    }
+
+                    Text {
+                        text: "新規プロジェクトを作成"
+                        color: parent.palette.buttonText
+                        font.pixelSize: 13
+                        font.bold: true
+                    }
+
+                }
+
             }
 
             Item {
@@ -252,19 +257,24 @@ Common.RinaWindow {
 
             Button {
                 Layout.fillWidth: true
+                onClicked: fileDialog.open()
+
                 contentItem: RowLayout {
                     spacing: 8
+
                     Common.RinaIcon {
                         iconName: "folder_open_line"
                         color: parent.palette.buttonText
                     }
+
                     Text {
                         text: "既存プロジェクトを開く..."
                         color: parent.palette.buttonText
-                        font: parent.font
+                        font.pixelSize: 13
                     }
+
                 }
-                onClicked: fileDialog.open()
+
             }
 
         }
