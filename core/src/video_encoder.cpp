@@ -7,12 +7,12 @@
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
-#include <libavutil/audio_fifo.h>
 #include <libavutil/hwcontext.h>
 #include <libavutil/imgutils.h>
 #include <libavutil/opt.h>
-#include <libswresample/swresample.h>
 #include <libswscale/swscale.h>
+#include <libswresample/swresample.h>
+#include <libavutil/audio_fifo.h>
 }
 
 namespace Rina::Core {
@@ -154,7 +154,7 @@ bool VideoEncoder::open(const Config &config) {
     }
 
     // ヘッダー書き込みは音声ストリーム追加の機会を与えるため、最初のフレームプッシュまで遅延させる
-
+    
     // 6. フレーム確保
     m_swFrame = av_frame_alloc();
     m_swFrame->format = AV_PIX_FMT_NV12; // SW変換用中間バッファ
@@ -181,8 +181,7 @@ bool VideoEncoder::open(const QVariantMap &configMap) {
 }
 
 bool VideoEncoder::addAudioStream(int sampleRate, int channels, int bitrate) {
-    if (!m_fmtCtx)
-        return false;
+    if (!m_fmtCtx) return false;
 
     const AVCodec *codec = avcodec_find_encoder(AV_CODEC_ID_AAC);
     if (!codec) {
@@ -191,12 +190,10 @@ bool VideoEncoder::addAudioStream(int sampleRate, int channels, int bitrate) {
     }
 
     m_audioStream = avformat_new_stream(m_fmtCtx, codec);
-    if (!m_audioStream)
-        return false;
+    if (!m_audioStream) return false;
 
     m_audioEncCtx = avcodec_alloc_context3(codec);
-    if (!m_audioEncCtx)
-        return false;
+    if (!m_audioEncCtx) return false;
 
     m_audioEncCtx->sample_fmt = codec->sample_fmts ? codec->sample_fmts[0] : AV_SAMPLE_FMT_FLTP;
     m_audioEncCtx->bit_rate = bitrate;
@@ -224,7 +221,10 @@ bool VideoEncoder::addAudioStream(int sampleRate, int channels, int bitrate) {
     av_frame_get_buffer(m_audioFrame, 0);
 
     // 入力(Float Interleaved) -> 出力(Encoder Format, likely FLTP)
-    swr_alloc_set_opts2(&m_swrCtx, &m_audioEncCtx->ch_layout, m_audioEncCtx->sample_fmt, m_audioEncCtx->sample_rate, &m_audioEncCtx->ch_layout, AV_SAMPLE_FMT_FLT, sampleRate, 0, nullptr);
+    swr_alloc_set_opts2(&m_swrCtx,
+                        &m_audioEncCtx->ch_layout, m_audioEncCtx->sample_fmt, m_audioEncCtx->sample_rate,
+                        &m_audioEncCtx->ch_layout, AV_SAMPLE_FMT_FLT, sampleRate,
+                        0, nullptr);
     swr_init(m_swrCtx);
 
     qDebug() << "Audio stream added: AAC" << sampleRate << "Hz";
@@ -232,8 +232,7 @@ bool VideoEncoder::addAudioStream(int sampleRate, int channels, int bitrate) {
 }
 
 bool VideoEncoder::writeHeaderIfNeeded() {
-    if (m_headerWritten)
-        return true;
+    if (m_headerWritten) return true;
     if (avformat_write_header(m_fmtCtx, nullptr) < 0) {
         qWarning() << "Error occurred when opening output file.";
         return false;
@@ -245,9 +244,8 @@ bool VideoEncoder::writeHeaderIfNeeded() {
 bool VideoEncoder::pushFrame(const QImage &img, int64_t pts) {
     if (!m_encCtx)
         return false;
-
-    if (!writeHeaderIfNeeded())
-        return false;
+    
+    if (!writeHeaderIfNeeded()) return false;
 
     // 1. QImage (ARGB32) -> SW Frame (NV12) 変換
     if (!m_swsCtx) {
@@ -318,9 +316,8 @@ bool VideoEncoder::pushFrame(const QImage &img, int64_t pts) {
 bool VideoEncoder::pushTexture(unsigned int textureId, const QSize &size, int64_t pts) {
     if (!m_encCtx)
         return false;
-
-    if (!writeHeaderIfNeeded())
-        return false;
+    
+    if (!writeHeaderIfNeeded()) return false;
 
     // 現在のGLコンテキストを取得 (TimelineController側でmakeCurrentされている前提)
     QOpenGLContext *ctx = QOpenGLContext::currentContext();
@@ -402,8 +399,7 @@ bool VideoEncoder::pushTexture(unsigned int textureId, const QSize &size, int64_
 }
 
 bool VideoEncoder::pushAudio(const float *samples, int sampleCount) {
-    if (!m_audioEncCtx || !m_audioFifo)
-        return false;
+    if (!m_audioEncCtx || !m_audioFifo) return false;
 
     // 1. リサンプリング & フォーマット変換 (Float -> FLTP等)
     // 一時バッファに変換
@@ -416,7 +412,7 @@ bool VideoEncoder::pushAudio(const float *samples, int sampleCount) {
 
     // 2. FIFOに追加
     av_audio_fifo_write(m_audioFifo, (void **)convertedData, sampleCount);
-
+    
     if (convertedData) {
         av_freep(&convertedData[0]);
         free(convertedData);
@@ -424,12 +420,11 @@ bool VideoEncoder::pushAudio(const float *samples, int sampleCount) {
 
     // 3. エンコーダーのフレームサイズ分溜まったらエンコード
     while (av_audio_fifo_size(m_audioFifo) >= m_audioEncCtx->frame_size) {
-        if (av_frame_make_writable(m_audioFrame) < 0)
-            break;
+        if (av_frame_make_writable(m_audioFrame) < 0) break;
 
         // FIFOから読み出し
         av_audio_fifo_read(m_audioFifo, (void **)m_audioFrame->data, m_audioEncCtx->frame_size);
-
+        
         m_audioFrame->pts = m_audioPts;
         m_audioPts += m_audioFrame->nb_samples;
 
@@ -463,7 +458,7 @@ bool VideoEncoder::pushAudio(const float *samples, int sampleCount) {
 void VideoEncoder::close() {
     if (!m_encCtx)
         return;
-
+    
     writeHeaderIfNeeded(); // 何も書き込まれずにcloseされた場合の安全策
 
     // フラッシュ処理

@@ -31,7 +31,6 @@ Common.RinaWindow {
     // グリッド設定ウィンドウ (Loaderによる遅延読み込み)
     Loader {
         id: gridSettingsLoader
-
         active: false
         source: "timeline/GridSettingsWindow.qml"
         onLoaded: item.open(timelineView)
@@ -56,13 +55,11 @@ Common.RinaWindow {
 
                 TabBar {
                     id: sceneTabBar
-
                     // ScrollView内で適切に広がるように設定
                     width: Math.max(parent.width, contentWidth)
 
                     Repeater {
                         id: sceneRepeater
-
                         model: TimelineBridge ? TimelineBridge.scenes : []
 
                         TabButton {
@@ -70,25 +67,11 @@ Common.RinaWindow {
 
                             checked: TimelineBridge && TimelineBridge.currentSceneId === modelData.id
                             onClicked: {
-                                if (TimelineBridge)
-                                    TimelineBridge.switchScene(modelData.id);
-
-                            }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                acceptedButtons: Qt.RightButton
-                                onClicked: {
-                                    var win = WindowManager.getWindow("sceneSettings");
-                                    if (win)
-                                        win.openForScene(modelData.id, modelData.name, modelData.width !== undefined ? modelData.width : 1920, modelData.height !== undefined ? modelData.height : 1080, modelData.fps !== undefined ? modelData.fps : 60, modelData.totalFrames !== undefined ? modelData.totalFrames : 300);
-
-                                }
+                                if (TimelineBridge) TimelineBridge.switchScene(modelData.id)
                             }
 
                             contentItem: RowLayout {
                                 spacing: 4
-
                                 Text {
                                     text: modelData.name
                                     font: tabBtn.font
@@ -98,34 +81,34 @@ Common.RinaWindow {
                                     elide: Text.ElideRight
                                     Layout.maximumWidth: 200
                                 }
-
                                 Button {
                                     flat: true
                                     visible: modelData.id !== 0
                                     Layout.preferredWidth: 20
                                     Layout.preferredHeight: 20
-                                    onClicked: {
-                                        if (TimelineBridge)
-                                            TimelineBridge.removeScene(modelData.id);
-
-                                    }
-
                                     contentItem: Common.RinaIcon {
                                         iconName: "close_line"
                                         size: 14
                                         color: parent.hovered ? parent.palette.highlight : parent.palette.text
                                     }
-
+                                    onClicked: {
+                                        if (TimelineBridge) TimelineBridge.removeScene(modelData.id);
+                                    }
                                 }
-
                             }
 
+                            MouseArea {
+                                anchors.fill: parent
+                                acceptedButtons: Qt.RightButton
+                                onClicked: {
+                                    var win = WindowManager.getWindow("sceneSettings");
+                                    if (win)
+                                        win.openForScene(modelData.id, modelData.name, modelData.width !== undefined ? modelData.width : 1920, modelData.height !== undefined ? modelData.height : 1080, modelData.fps !== undefined ? modelData.fps : 60, modelData.totalFrames !== undefined ? modelData.totalFrames : 300);
+                                }
+                            }
                         }
-
                     }
-
                 }
-
             }
 
             // シーン追加ボタン
@@ -133,16 +116,13 @@ Common.RinaWindow {
                 flat: true
                 Layout.preferredWidth: 40
                 Layout.fillHeight: true
-                onClicked: TimelineBridge.createScene("Scene " + (sceneRepeater.count + 1))
-
                 contentItem: Common.RinaIcon {
                     iconName: "add_line"
                     size: 20
                     color: parent.hovered ? parent.palette.highlight : parent.palette.text
                 }
-
+                onClicked: TimelineBridge.createScene("Scene " + (sceneRepeater.count + 1))
             }
-
         }
 
         // 2. 定規エリア
@@ -200,10 +180,11 @@ Common.RinaWindow {
                     return layerHeader.getLayerLocked(layer);
                 }
                 onGridSettingsRequested: {
-                    if (!gridSettingsLoader.active)
+                    if (!gridSettingsLoader.active) {
                         gridSettingsLoader.active = true;
-                    else
+                    } else {
                         gridSettingsLoader.item.open(timelineView);
+                    }
                 }
             }
 

@@ -75,28 +75,32 @@ void ECS::updateAudioClipState(int clipId, int startFrame, int durationFrames, f
     audio->mute = mute;
 }
 
-const std::unordered_map<int, std::unique_ptr<AudioComponent>> &ECS::getAudioComponents() const { return g_ecsState.audioStates; }
+const std::unordered_map<int, std::unique_ptr<AudioComponent>> &ECS::getAudioComponents() const {
+    return g_ecsState.audioStates;
+}
 
 bool ECS::isRenderGraphDirty() const { return g_ecsState.renderGraphDirty; }
 
 void ECS::markRenderGraphClean() { g_ecsState.renderGraphDirty = false; }
 
-void *ECS::getInternalStatePtr() { return &g_ecsState; }
+void* ECS::getInternalStatePtr() {
+    return &g_ecsState;
+}
 } // namespace Rina::Engine::Timeline
 
 // --- Lua FFI Helper Functions ---
 // 名前マングリングを回避し、Luaから直接シンボル検索できるようにする
 extern "C" {
-// AudioComponentへの生ポインタを取得
-// 注意: 戻り値は Component 継承クラスなので、先頭に vptr があることに注意
-Rina::Engine::Timeline::AudioComponent *get_audio_component_raw(int clipId) {
-    auto &map = Rina::Engine::Timeline::g_ecsState.audioStates;
-    auto it = map.find(clipId);
-    if (it != map.end()) {
-        return it->second.get();
+    // AudioComponentへの生ポインタを取得
+    // 注意: 戻り値は Component 継承クラスなので、先頭に vptr があることに注意
+    Rina::Engine::Timeline::AudioComponent* get_audio_component_raw(int clipId) {
+        auto& map = Rina::Engine::Timeline::g_ecsState.audioStates;
+        auto it = map.find(clipId);
+        if (it != map.end()) {
+            return it->second.get();
+        }
+        return nullptr;
     }
-    return nullptr;
-}
 
-// 必要に応じて TransformComponent 等も同様に追加可能
+    // 必要に応じて TransformComponent 等も同様に追加可能
 }

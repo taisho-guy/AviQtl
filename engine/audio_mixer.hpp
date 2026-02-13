@@ -21,7 +21,7 @@ class AudioMixer : public QObject {
 
     void processFrame(int currentFrame, double fps, int samplesPerFrame);
     void reset();
-
+    
     // エクスポート用に生データを取得するメソッド
     std::vector<float> mix(int currentFrame, double fps, int samplesPerFrame);
 

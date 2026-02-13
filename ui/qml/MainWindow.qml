@@ -26,7 +26,7 @@ ApplicationWindow {
             TimelineBridge.setCompositeView(mainWin);
 
     }
-
+    
     FontLoader {
         source: "qrc:/resources/remixicon.ttf"
     }

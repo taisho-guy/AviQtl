@@ -4,7 +4,8 @@
 
 namespace Rina::Core {
 
-AudioDecoder::AudioDecoder(int clipId, const QUrl &source, QObject *parent) : QObject(parent), m_clipId(clipId) {
+AudioDecoder::AudioDecoder(int clipId, const QUrl &source, QObject *parent)
+    : QObject(parent), m_clipId(clipId) {
 
     m_decoder = new QAudioDecoder(this);
 
@@ -23,7 +24,7 @@ AudioDecoder::AudioDecoder(int clipId, const QUrl &source, QObject *parent) : QO
 
     connect(m_decoder, &QAudioDecoder::bufferReady, this, &AudioDecoder::onBufferReady);
     connect(m_decoder, &QAudioDecoder::finished, this, &AudioDecoder::onFinished);
-    connect(m_decoder, QOverload<QAudioDecoder::Error>::of(&QAudioDecoder::error), this, [this](QAudioDecoder::Error error) {
+    connect(m_decoder, QOverload<QAudioDecoder::Error>::of(&QAudioDecoder::error), this, [this](QAudioDecoder::Error error){
         qWarning() << "[AudioDecoder] Error occurred:" << error;
         onError(error);
     });
@@ -32,7 +33,9 @@ AudioDecoder::AudioDecoder(int clipId, const QUrl &source, QObject *parent) : QO
     m_decoder->start();
 }
 
-void AudioDecoder::seek(qint64 ms) { emit seekRequested(ms); }
+void AudioDecoder::seek(qint64 ms) {
+    emit seekRequested(ms);
+}
 
 void AudioDecoder::onBufferReady() {
     QAudioBuffer buffer = m_decoder->read();
@@ -52,8 +55,7 @@ void AudioDecoder::onBufferReady() {
     // フォーマットに応じてFloatへ変換して格納
     if (fmt.sampleFormat() == QAudioFormat::Float) {
         const float *data = buffer.constData<float>();
-        if (data)
-            m_fullAudioData.insert(m_fullAudioData.end(), data, data + sampleCount);
+        if (data) m_fullAudioData.insert(m_fullAudioData.end(), data, data + sampleCount);
     } else if (fmt.sampleFormat() == QAudioFormat::Int16) {
         const qint16 *data = buffer.constData<qint16>();
         if (data) {
@@ -74,7 +76,9 @@ void AudioDecoder::onFinished() {
     emit ready();
 }
 
-void AudioDecoder::onError(QAudioDecoder::Error error) { qWarning() << "[AudioDecoder] Error occurred:" << error << m_decoder->errorString(); }
+void AudioDecoder::onError(QAudioDecoder::Error error) {
+    qWarning() << "[AudioDecoder] Error occurred:" << error << m_decoder->errorString();
+}
 
 std::vector<float> AudioDecoder::getSamples(double startTime, int count) {
     // 48kHz, Stereo (2ch)
@@ -82,8 +86,7 @@ std::vector<float> AudioDecoder::getSamples(double startTime, int count) {
     size_t startIdx = static_cast<size_t>(startTime * 48000 * 2);
 
     // 偶数アライメント（ステレオのL/Rがずれないように補正）
-    if (startIdx % 2 != 0)
-        startIdx--;
+    if (startIdx % 2 != 0) startIdx--;
 
     if (startIdx >= m_fullAudioData.size()) {
         return std::vector<float>(count, 0.0f);
@@ -92,7 +95,8 @@ std::vector<float> AudioDecoder::getSamples(double startTime, int count) {
     size_t available = m_fullAudioData.size() - startIdx;
     size_t actualCount = std::min(static_cast<size_t>(count), available);
 
-    std::vector<float> result(m_fullAudioData.begin() + startIdx, m_fullAudioData.begin() + startIdx + actualCount);
+    std::vector<float> result(m_fullAudioData.begin() + startIdx,
+                              m_fullAudioData.begin() + startIdx + actualCount);
 
     // 足りない分は0埋め（無音）
     if (result.size() < static_cast<size_t>(count)) {

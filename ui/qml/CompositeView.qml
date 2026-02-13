@@ -1,6 +1,5 @@
 import QtQml 2.15
 import QtQuick 2.15
-import QtQuick.Effects
 import QtQuick3D 6.0
 import "common" as Common
 import "common/Logger.js" as Logger
@@ -41,46 +40,6 @@ Item {
         opacity: 0
         enabled: false
         z: hiddenZ
-    }
-
-    // 動的レンダーパス生成
-    Item {
-        id: compositionRoot
-        anchors.fill: parent
-        visible: false
-        
-        property var renderPasses: []
-        
-        Repeater {
-            model: compositionRoot.renderPasses
-            
-            delegate: Item {
-                id: passContainer
-                anchors.fill: parent
-                
-                ShaderEffectSource {
-                    id: passOutput
-                    sourceItem: passContainer
-                    
-                    // 【重要】
-                    // visible: false にすると、Qtの最適化で更新が止まることがある。
-                    // 確実に更新させるには live: true に加え、
-                    // 「画面外に配置」するか「透明度0で表示」するハックが必要な場合がある。
-                    // ここでは一旦 hideSource: false でテストすることを推奨。
-                    
-                    live: true
-                    hideSource: false // デバッグ: これをfalseにして、重複して表示されるか確認
-                    visible: false    // デバッグ: これをtrueにすると、画面左上に小さく出るはず
-                    
-                    // サイズ明示（必須）
-                    width: compositionRoot.width
-                    height: compositionRoot.height
-                    
-                    // テクスチャ生成のトリガー
-                    recursive: false
-                }
-            }
-        }
     }
 
     // 背景（余白部分）は黒
@@ -165,17 +124,10 @@ Item {
 
         // 動的オブジェクト生成用
         Instantiator {
-            // 2D要素のレンダリングホスト参照を渡す
-            property Item renderHost: offscreenRenderHost
-
             // QVariantListではなく、C++のAbstractListModelを使用
             model: TimelineBridge ? TimelineBridge.clipModel : null
             onObjectAdded: (index, object) => {
                 object.parent = sceneRoot;
-                // renderHostを注入（BaseObjectが期待している場合）
-                if (object.hasOwnProperty("renderHost"))
-                    object.renderHost = offscreenRenderHost;
-
             }
             onObjectRemoved: (index, object) => {
                 object.parent = null;

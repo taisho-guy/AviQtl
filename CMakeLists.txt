@@ -156,8 +156,6 @@ qt_add_qml_module(Rina
         ui/qml/common/Icons.js
         ui/qml/common/RinaIcon.qml
         ui/qml/common/IconMenuItem.qml
-        ui/qml/common/RenderPassGroup.qml
-        ui/qml/objects/FrameBufferObject.qml
         ui/qml/ExportDialog.qml
 
         # 【削除】Objectsは外部読み込みするため、ここ（コンパイル対象）からは外す

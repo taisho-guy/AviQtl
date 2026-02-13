@@ -45,7 +45,7 @@ class BuildWorker(QtCore.QThread):
             cpu_count = multiprocessing.cpu_count()
             j_slots = cpu_count
 
-            self.log_signal.emit(f"リソース割り当て: {j_slots} 並列ジョブ (Host Native)")
+            self.log_signal.emit(f"🚀 リソース割り当て: {j_slots} 並列ジョブ (Host Native)")
             
             name = "Debug" if self.is_debug else "Release"
             self.progress_signal.emit(10, f"{name} ビルド開始")
@@ -54,7 +54,7 @@ class BuildWorker(QtCore.QThread):
             work_dir = self.temp_base / name
             
             # 1. CMake Configuration
-            self.log_signal.emit(f"--- {name} 設定---")
+            self.log_signal.emit(f"--- {name} 設定 (CachyOS Clang Native) ---")
             
             conf_cmd = [
                 "cmake", "-B", str(work_dir), "-G", "Ninja",
@@ -137,10 +137,10 @@ class RinaGui(QtWidgets.QMainWindow):
         layout.addWidget(self.log_view)
         
         btn_layout = QtWidgets.QHBoxLayout()
-        self.btn_full = QtWidgets.QPushButton("最適化ビルド")
+        self.btn_full = QtWidgets.QPushButton("🚀 全てビルド & 圧縮")
         self.btn_full.clicked.connect(self.run_full_build)
         
-        self.btn_debug = QtWidgets.QPushButton("デバッグビルド")
+        self.btn_debug = QtWidgets.QPushButton("🛠 ホストデバッグ")
         self.btn_debug.clicked.connect(self.run_debug_build)
         
         btn_layout.addWidget(self.btn_full)
@@ -202,6 +202,6 @@ if __name__ == "__main__":
         worker.progress_signal.connect(lambda val, msg: print(f"[{val}%] {msg}"))
         worker.finished_signal.connect(lambda success, msg: app.quit() if success else app.exit(1))
         
-        print("CLIデバッグビルドを開始します...")
+        print("🚀 CLIデバッグビルドを開始します...")
         worker.start()
         sys.exit(app.exec())

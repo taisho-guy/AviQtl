@@ -34,8 +34,7 @@ VideoDecoder::VideoDecoder(int clipId, const QUrl &source, VideoFrameStore *stor
 
 void VideoDecoder::seekToFrame(int frame, double fps) {
     m_fps = fps;
-    if (!m_player)
-        return;
+    if (!m_player) return;
 
     // 再生中は setPosition (シーク) を避け、自然な再生に任せる
     // これにより GOP 境界でのフリーズやバッファフラッシュによるカクつきを防ぐ
@@ -49,8 +48,7 @@ void VideoDecoder::seekToFrame(int frame, double fps) {
         return;
     }
 
-    if (frame == m_lastRequestedFrame)
-        return;
+    if (frame == m_lastRequestedFrame) return;
 
     // 1. キャッシュ確認
     if (m_frameCache.contains(frame)) {
@@ -61,7 +59,7 @@ void VideoDecoder::seekToFrame(int frame, double fps) {
 
     const qint64 ms = static_cast<qint64>((frame / fps) * 1000.0);
     m_lastRequestedFrame = frame;
-
+    
     // プリフェッチ: 次のフレーム(frame+1)もキャッシュになければ、デコーダを先行させる
     if (!m_frameCache.contains(frame + 1)) {
         m_player->setPosition(ms);
@@ -69,37 +67,31 @@ void VideoDecoder::seekToFrame(int frame, double fps) {
 }
 
 void VideoDecoder::onVideoFrameChanged(const QVideoFrame &vf) {
-    if (!vf.isValid() || m_lastRequestedFrame < 0)
-        return;
+    if (!vf.isValid() || m_lastRequestedFrame < 0) return;
 
     // タイムスタンプ重複ガード
-    if (vf.startTime() == m_lastFrameTimestamp)
-        return;
-
+    if (vf.startTime() == m_lastFrameTimestamp) return;
+    
     int targetFrame = m_lastRequestedFrame;
     m_lastFrameTimestamp = vf.startTime();
 
     // 重い変換処理の前に、すでにキャッシュされているか再確認（競合防止）
-    if (m_frameCache.contains(targetFrame))
-        return;
+    if (m_frameCache.contains(targetFrame)) return;
 
     // 警告回避しつつ非同期実行。GPUテクスチャが利用可能ならマップを試みる
     auto future = QtConcurrent::run([this, vf, targetFrame]() {
         // GPU->CPUの転送(toImage)を最小化するため、まずはマップ可能かチェック
-        if (const_cast<QVideoFrame &>(vf).map(QVideoFrame::ReadOnly)) {
+        if (const_cast<QVideoFrame&>(vf).map(QVideoFrame::ReadOnly)) {
             QImage img = vf.toImage();
-            const_cast<QVideoFrame &>(vf).unmap();
+            const_cast<QVideoFrame&>(vf).unmap();
 
             if (!img.isNull()) {
-                QMetaObject::invokeMethod(
-                    this,
-                    [this, img, targetFrame]() {
-                        m_store->setFrameSafe(QString::number(m_clipId), img);
-                        if (!m_frameCache.contains(targetFrame)) {
-                            m_frameCache.insert(targetFrame, new QImage(img), img.sizeInBytes());
-                        }
-                    },
-                    Qt::QueuedConnection);
+                QMetaObject::invokeMethod(this, [this, img, targetFrame]() {
+                    m_store->setFrameSafe(QString::number(m_clipId), img);
+                    if (!m_frameCache.contains(targetFrame)) {
+                        m_frameCache.insert(targetFrame, new QImage(img), img.sizeInBytes());
+                    }
+                }, Qt::QueuedConnection);
             }
         }
     });
@@ -108,14 +100,12 @@ void VideoDecoder::onVideoFrameChanged(const QVideoFrame &vf) {
 
 void VideoDecoder::updateCacheSize() {
     int sizeMB = SettingsManager::instance().settings().value("cacheSize", 512).toInt();
-    if (sizeMB < 64)
-        sizeMB = 64; // 安全策: 最小64MB
+    if (sizeMB < 64) sizeMB = 64; // 安全策: 最小64MB
     m_frameCache.setMaxCost(sizeMB * 1024 * 1024);
 }
 
 void VideoDecoder::setPlaying(bool playing) {
-    if (!m_player)
-        return;
+    if (!m_player) return;
     if (playing) {
         m_player->play();
         m_player->setPlaybackRate(1.0);

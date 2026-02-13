@@ -1,6 +1,6 @@
 #include "timeline_controller.hpp"
-#include "../../core/include/audio_decoder.hpp"
 #include "../../core/include/project_serializer.hpp"
+#include "../../core/include/audio_decoder.hpp"
 #include "../../core/include/video_decoder.hpp"
 #include "../../core/include/video_encoder.hpp"
 #include "../../engine/audio_mixer.hpp"
@@ -562,7 +562,7 @@ bool TimelineController::exportVideo(const QString &path, const QString &format,
         emit errorOccurred("エンコーダーの初期化に失敗しました。VA-APIドライバを確認してください。");
         return false;
     }
-
+    
     // 音声ストリーム追加
     encoder.addAudioStream(48000, 2, 192000);
 
@@ -582,7 +582,7 @@ bool TimelineController::exportVideo(const QString &path, const QString &format,
         if (!encoder.pushFrame(renderedFrame, frame)) {
             qWarning() << "Frame encoding failed at:" << frame;
         }
-
+        
         // 音声エンコード
         int samplesNeeded = 48000 / m_project->fps();
         std::vector<float> audioSamples = m_audioMixer->mix(frame, m_project->fps(), samplesNeeded);
@@ -610,7 +610,7 @@ void TimelineController::exportVideoHW(Rina::Core::VideoEncoder *encoder) {
     const int height = m_project->height();
 
     qInfo() << "Starting HW Export (QImage path): 0 to" << endFrame;
-
+    
     // 音声ストリーム追加
     encoder->addAudioStream(48000, 2, 192000);
 
@@ -640,7 +640,7 @@ void TimelineController::exportVideoHW(Rina::Core::VideoEncoder *encoder) {
             qWarning() << "Failed to encode frame" << frame;
             break;
         }
-
+        
         // 音声エンコード
         int samplesNeeded = 48000 / m_project->fps();
         std::vector<float> audioSamples = m_audioMixer->mix(frame, m_project->fps(), samplesNeeded);

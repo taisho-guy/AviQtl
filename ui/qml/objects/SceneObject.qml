@@ -11,9 +11,9 @@ Common.BaseObject {
 
     // TimelineBridge から現在のフレームやシーン情報を取得する前提
     property int targetSceneId: evalParam("scene", "targetSceneId", 0)
-    property real speed: evalParam("scene", "speed", 1)
+    property real speed: evalParam("scene", "speed", 1.0)
     property int offset: evalParam("scene", "offset", 0)
-    property real opacity: evalParam("scene", "opacity", 1)
+    property real opacity: evalParam("scene", "opacity", 1.0)
 
     Rectangle {
         anchors.fill: parent

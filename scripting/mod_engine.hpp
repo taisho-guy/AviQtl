@@ -1,24 +1,24 @@
 #pragma once
-#include <QDir>
-#include <QString>
 #include <lua.hpp>
+#include <QString>
+#include <QDir>
 
 namespace Rina::Scripting {
 
 class ModEngine {
-  public:
-    static ModEngine &instance();
+public:
+    static ModEngine& instance();
 
-    void initialize(void *ecsPtr);
+    void initialize(void* ecsPtr);
     void loadPlugins();
     void onUpdate();
 
-    lua_State *state() { return L; }
+    lua_State* state() { return L; }
 
-  private:
+private:
     ModEngine() = default;
     ~ModEngine();
-    lua_State *L = nullptr;
+    lua_State* L = nullptr;
 };
 
 } // namespace Rina::Scripting

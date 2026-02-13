@@ -53,22 +53,7 @@ Node {
 
     // 【統一API】キーフレーム優先評価（全オブジェクトで使用可能）
     function evalParam(effectId, paramName, fallback) {
-        // 1. EffectModel経由で補間済みパラメータを取得を試みる
-        if (base.rawEffectModels) {
-            for (var i = 0; i < base.rawEffectModels.length; i++) {
-                var eff = base.rawEffectModels[i];
-                if (eff.id === effectId) {
-                    // C++側の補間ロジック(evaluatedParam)を呼び出す
-                    if (eff.evaluatedParam) {
-                        var v = eff.evaluatedParam(paramName, base.relFrame);
-                        if (v !== undefined && v !== null)
-                            return v;
-                    }
-                }
-            }
-        }
-
-        // 2. フォールバック: 静的なパラメータマップ（補間なし）
+        // clipParamsはClipModelから渡されるフラットなパラメータマップ
         if (clipParams && clipParams[paramName] !== undefined)
             return clipParams[paramName];
 
