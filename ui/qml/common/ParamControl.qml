@@ -28,7 +28,7 @@ RowLayout {
         colorGroup: SystemPalette.Active
     }
 
-    // 左側スライダー（開始値）
+    // 左側スライダー（ボックスに追従）
     Slider {
         id: leftSlider
 
@@ -37,35 +37,27 @@ RowLayout {
         from: root.minValue
         to: root.maxValue
         enabled: root.enabled
-        Component.onCompleted: value = root.startValue
+        value: {
+            var val = parseFloat(leftValueField.text);
+            return isNaN(val) ? root.startValue : val;
+        }
         onMoved: {
-            root.startValueModified(decimals === 0 ? Math.round(value) : value);
+            var val = decimals === 0 ? Math.round(value) : value;
+            leftValueField.text = (root.decimals === 0) ? val.toFixed(0) : val.toFixed(root.decimals);
+            root.startValueModified(val);
         }
-
-        Connections {
-            function onStartValueChanged() {
-                if (!leftSlider.pressed)
-                    leftSlider.value = root.startValue;
-
-            }
-
-            target: root
-        }
-
     }
 
-    // 左側数値ボックス
+    // 左側数値ボックス（親）
     TextField {
         id: leftValueField
 
         Layout.preferredWidth: 70
-        // 明示的なプロパティバインディング
-        text: (root.decimals === 0) ? root.startValue.toFixed(0) : root.startValue.toFixed(root.decimals)
+        text: root.decimals === 0 ? root.startValue.toFixed(0) : root.startValue.toFixed(root.decimals)
         horizontalAlignment: TextInput.AlignHCenter
         selectByMouse: true
         enabled: root.enabled
-        onAccepted: {
-            // Enter確定時
+        onEditingFinished: {
             var newVal = parseFloat(text);
             if (!isNaN(newVal))
                 root.startValueModified(newVal);
@@ -73,9 +65,9 @@ RowLayout {
         }
         onActiveFocusChanged: {
             if (!activeFocus)
-                onAccepted();
+                onEditingFinished();
 
-        } // フォーカス外れ時も同期
+        }
 
         validator: DoubleValidator {
             bottom: root.minValue
@@ -100,11 +92,11 @@ RowLayout {
         id: rightValueField
 
         Layout.preferredWidth: 70
-        text: (root.decimals === 0) ? root.endValue.toFixed(0) : root.endValue.toFixed(root.decimals)
+        text: root.decimals === 0 ? root.endValue.toFixed(0) : root.endValue.toFixed(root.decimals)
         horizontalAlignment: TextInput.AlignHCenter
         selectByMouse: true
         enabled: root.enabled
-        onAccepted: {
+        onEditingFinished: {
             var newVal = parseFloat(text);
             if (!isNaN(newVal))
                 root.endValueModified(newVal);
@@ -112,7 +104,7 @@ RowLayout {
         }
         onActiveFocusChanged: {
             if (!activeFocus)
-                onAccepted();
+                onEditingFinished();
 
         }
 
@@ -124,7 +116,7 @@ RowLayout {
 
     }
 
-    // 右側スライダー（終了値）
+    // 右側スライダー（ボックスに追従）
     Slider {
         id: rightSlider
 
@@ -133,21 +125,17 @@ RowLayout {
         from: root.minValue
         to: root.maxValue
         enabled: root.enabled
-        Component.onCompleted: value = root.endValue
+        // ボックスの値をバインディング
+        value: {
+            var val = parseFloat(rightValueField.text);
+            return isNaN(val) ? root.endValue : val;
+        }
         onMoved: {
-            root.endValueModified(decimals === 0 ? Math.round(value) : value);
+            // スライダー操作時はボックスを更新
+            var val = decimals === 0 ? Math.round(value) : value;
+            rightValueField.text = (root.decimals === 0) ? val.toFixed(0) : val.toFixed(root.decimals);
+            root.endValueModified(val);
         }
-
-        Connections {
-            function onEndValueChanged() {
-                if (!rightSlider.pressed)
-                    rightSlider.value = root.endValue;
-
-            }
-
-            target: root
-        }
-
     }
 
 }

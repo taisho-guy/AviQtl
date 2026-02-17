@@ -111,11 +111,14 @@ ScrollView {
             z: -1 // クリップの下に描画
 
             Canvas {
+                // 1フレーム
+
                 id: timelineGrid
 
                 anchors.fill: parent
                 onPaint: {
-                    // 1フレーム
+                    // 1秒
+                    // 10フレーム
 
                     var ctx = getContext("2d");
                     // Canvasをクリア (透明に)
@@ -161,9 +164,6 @@ ScrollView {
                         // 固定フレームモード
                         step = gridSettings.interval;
                     } else {
-                        // 1秒
-                        // 10フレーム
-
                         // Auto (AviUtl風): ズームに応じて間引き
                         if (scale < 0.5)
                             step = Math.ceil(projectFps);
@@ -564,12 +564,12 @@ ScrollView {
                 })(item);
             }
             if (targetType === "timeline") {
+                // 汎用アイコン
+
                 // 背景右クリック：オブジェクト追加メニュー
                 var objectMenu = createSubMenu("オブジェクトを追加");
                 var objects = TimelineBridge.getAvailableObjects();
                 for (var i = 0; i < objects.length; i++) {
-                    // 汎用アイコン
-
                     var obj = objects[i];
                     var objItem = menuItemComp.createObject(null, {
                         "text": obj.name,
