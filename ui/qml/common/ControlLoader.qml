@@ -90,6 +90,7 @@ Loader {
             //    将来的にControlLoader自体がstart/endを受け取るように拡張する必要がある。
             //    ここでは「現在値」を表示する簡易実装とする。
             endValue: startValue 
+            isRangeMode: false
             
             minValue: controlLoader.definition.min !== undefined ? controlLoader.definition.min : -100000
             maxValue: controlLoader.definition.max !== undefined ? controlLoader.definition.max : 100000

@@ -27,10 +27,6 @@ int main(int argc, char *argv[]) {
     // Linux(VAAPI/VDPAU/CUDA), Windows(D3D11VA/DXVA2), macOS(VideoToolbox) を網羅
     qputenv("QT_FFMPEG_DECODING_HW_DEVICE_TYPES", "cuda,vaapi,vdpau,videotoolbox,d3d11va,dxva2");
 
-    // 【追加】描画バックエンドをOpenGLに強制 (FBO/Texture共有のため必須)
-    // これがないとLinux/AMDではVulkanが使われ、GPUパイプラインが壊れます
-    qputenv("QSG_RHI_BACKEND", "opengl");
-
     // 1. アプリケーション初期化
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);

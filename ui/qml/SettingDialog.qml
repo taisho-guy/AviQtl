@@ -42,6 +42,193 @@ Common.RinaWindow {
 
     }
 
+    // uiDefinition(方式A)の「数値」を、X/Y/Zと同じレガシーParamControl実装で編集する
+    Component {
+        id: keyframedParamRow
+
+        ColumnLayout {
+            id: kf
+            Layout.fillWidth: true
+            spacing: 0
+
+            property var effectModel: null
+            property int effIdx: -1
+            property int clipId: -1
+            property string key: ""
+            property var def: ({})
+
+            property var effVal: (effectModel && key) ? effectModel.params[key] : undefined
+            property bool isNumber: typeof effVal === "number"
+
+            property int curRelFrame: (TimelineBridge && TimelineBridge.transport) ? (TimelineBridge.transport.currentFrame - TimelineBridge.clipStartFrame) : 0
+            property int clipDur: TimelineBridge ? TimelineBridge.clipDurationFrames : 100
+            property var tracks: effectModel ? effectModel.keyframeTracks : null
+            property var track: (tracks && key) ? tracks[key] : undefined
+            property var kfs: track || []
+            property bool hasKeyframes: kfs.length > 0
+            property var interval: findInterval(kfs, curRelFrame, clipDur)
+            property int startFrame: interval.start
+            property int endFrame: interval.end
+            property var startVal: isNumber ? (tracks, effVal, effectModel ? effectModel.evaluatedParam(key, startFrame) : effVal) : effVal
+            property var endVal: isNumber ? (tracks, effVal, effectModel ? effectModel.evaluatedParam(key, endFrame) : effVal) : effVal
+            property string interpType: hasKeyframes ? getInterpAt(startFrame) : "constant"
+            property bool isMoving: isNumber && (hasKeyframes || interpType !== "constant")
+
+            function findInterval(kfs, cur, totalDur) {
+                let s = 0, e = totalDur;
+                if (!kfs || kfs.length === 0) return {"start": s, "end": e};
+                let foundStart = false;
+                for (let i = kfs.length - 1; i >= 0; i--) {
+                    if (kfs[i].frame <= cur) {
+                        s = kfs[i].frame;
+                        foundStart = true;
+                        if (i + 1 < kfs.length) e = kfs[i + 1].frame;
+                        else e = totalDur;
+                        break;
+                    }
+                }
+                if (!foundStart) { e = kfs[0].frame; s = 0; }
+                return {"start": s, "end": e};
+            }
+
+            function getInterpAt(f) {
+                if (!kfs) return "linear";
+                for (var i = 0; i < kfs.length; i++) {
+                    if (kfs[i].frame === f) return kfs[i].interp || "linear";
+                }
+                return "linear";
+            }
+
+            function updateParam(frame, val) {
+                if (!hasKeyframes) {
+                    TimelineBridge.updateClipEffectParam(clipId, effIdx, key, val);
+                    return;
+                }
+                let type = "linear";
+                if (frame === startFrame) type = getInterpAt(startFrame);
+                else type = getInterpAt(frame);
+                if (type === "constant") type = "linear";
+                effectModel.setKeyframe(key, frame, val, {"interp": type});
+            }
+
+            Common.ParamControl {
+                Layout.fillWidth: true
+                Layout.margins: 4
+                visible: kf.isNumber
+                enabled: kf.isNumber
+                isRangeMode: kf.isMoving
+
+                paramName: {
+                    var interpLabel = {
+                        "linear": " (直線)",
+                        "ease_in": " (加速)",
+                        "ease_out": " (減速)",
+                        "ease_in_out": " (加減速)",
+                        "bezier": " (ベジェ)"
+                    };
+                    return (kf.def.label || kf.key) + (kf.isMoving ? (interpLabel[kf.interpType] || "") : "");
+                }
+
+                startValue: Number(kf.startVal) || 0
+                endValue: Number(kf.endVal) || 0
+                minValue: (kf.def.min !== undefined) ? kf.def.min : ((kf.key === "scale" || kf.key === "opacity") ? 0 : -1000)
+                maxValue: (kf.def.max !== undefined) ? kf.def.max : ((kf.key === "scale") ? 500 : (kf.key === "opacity" ? 1 : 1000))
+                decimals: (kf.def.decimals !== undefined) ? kf.def.decimals : 2
+
+                onStartValueModified: function(val) {
+                    root.inputting = true;
+                    updateParam(kf.startFrame, val);
+                    root.inputting = false;
+                }
+                onEndValueModified: function(val) {
+                    root.inputting = true;
+                    updateParam(kf.endFrame, val);
+                    root.inputting = false;
+                }
+                onParamButtonClicked: {
+                    if (!kf.hasKeyframes) {
+                        kf.effectModel.setKeyframe(kf.key, kf.startFrame, kf.startVal, {"interp": "linear"});
+                        kf.effectModel.setKeyframe(kf.key, kf.endFrame, kf.endVal, {"interp": "linear"});
+                    }
+                    var dialog = easingDialogComponent.createObject(root, {
+                        "effectModel": kf.effectModel,
+                        "paramName": kf.key,
+                        "keyframeFrame": kf.startFrame
+                    });
+                    dialog.open();
+                }
+            }
+
+            // --- Mini Timeline Bar ---
+            Item {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 10
+                Layout.leftMargin: 4
+                Layout.rightMargin: 4
+                visible: kf.isNumber
+
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: parent.width
+                    height: 2
+                    color: "#555"
+
+                    // Highlight active interval
+                    Rectangle {
+                        height: 4
+                        anchors.verticalCenter: parent.verticalCenter
+                        color: "#4a9eff"
+                        opacity: 0.7
+                        x: (kf.startFrame / kf.clipDur) * parent.width
+                        width: Math.max(0, ((kf.endFrame - kf.startFrame) / kf.clipDur) * parent.width)
+                        visible: kf.clipDur > 0
+                    }
+                }
+
+                // Keyframes
+                Repeater {
+                    model: kf.kfs
+
+                    Rectangle {
+                        width: 4
+                        height: 4
+                        radius: 2
+                        color: "white"
+                        anchors.verticalCenter: parent.verticalCenter
+                        x: (modelData.frame / kf.clipDur) * parent.width - 2
+
+                        MouseArea {
+                            anchors.fill: parent
+                            acceptedButtons: Qt.RightButton
+                            onClicked: kf.effectModel.removeKeyframe(kf.key, modelData.frame)
+                        }
+                    }
+                }
+
+                // Cursor
+                Rectangle {
+                    width: 1
+                    height: parent.height
+                    color: "red"
+                    x: (kf.curRelFrame / kf.clipDur) * parent.width
+                    visible: kf.clipDur > 0
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.LeftButton
+                    onDoubleClicked: (mouse) => {
+                        let f = Math.round((mouse.x / width) * kf.clipDur);
+                        let val = kf.effectModel.evaluatedParam(kf.key, f);
+                        kf.effectModel.setKeyframe(kf.key, f, val, {
+                            "interp": "linear"
+                        });
+                    }
+                }
+            }
+        }
+    }
+
     // 選択変更やデータ更新を監視してモデルをリロード
     Connections {
         function onSelectedClipIdChanged() {
@@ -181,16 +368,149 @@ Common.RinaWindow {
                         Repeater {
                             model: effectRoot.hasExplicitUi ? getUiModel(effectModel) : []
 
-                            delegate: Common.ControlLoader {
+                            delegate: ColumnLayout {
                                 Layout.fillWidth: true
                                 Layout.margins: 4
-                                definition: modelData
-                                value: effectRoot.currentParams[modelData.param || modelData.name]
-                                
-                                onValueModified: function(val) {
-                                    root.inputting = true;
-                                    TimelineBridge.updateClipEffectParam(targetClipId, effectRoot.effectIndex, modelData.param || modelData.name, val);
-                                    root.inputting = false;
+                                spacing: 0
+
+                                property var def: modelData
+                                property string key: def.param || def.name
+                                property var effVal: effectRoot.currentParams[key]
+                                property bool isNumber: typeof effVal === "number"
+
+                                // キーフレーム関連（レガシーと同等）
+                                property var effectModel: effectRoot.effectModel
+                                property int curRelFrame: (TimelineBridge && TimelineBridge.transport) ? (TimelineBridge.transport.currentFrame - TimelineBridge.clipStartFrame) : 0
+                                property int clipDur: TimelineBridge ? TimelineBridge.clipDurationFrames : 100
+                                property var tracks: effectModel ? effectModel.keyframeTracks : null
+                                property var track: (tracks && key) ? tracks[key] : null
+                                property var kfs: track || []
+                                property bool hasKeyframes: kfs.length > 0
+                                property var interval: findInterval(kfs, curRelFrame, clipDur)
+                                property int startFrame: interval.start
+                                property int endFrame: interval.end
+                                property var startVal: isNumber ? (effectModel ? effectModel.evaluatedParam(key, startFrame) : effVal) : effVal
+                                property var endVal: isNumber ? (effectModel ? effectModel.evaluatedParam(key, endFrame) : effVal) : effVal
+                                property string interpType: hasKeyframes ? getInterpAt(startFrame) : "constant"
+                                property bool isMoving: isNumber && (hasKeyframes || interpType !== "constant")
+
+                                function findInterval(kfs, cur, totalDur) {
+                                    let s = 0, e = totalDur;
+                                    if (!kfs || kfs.length === 0) return {"start": s, "end": e};
+                                    let foundStart = false;
+                                    for (let i = kfs.length - 1; i >= 0; i--) {
+                                        if (kfs[i].frame <= cur) {
+                                            s = kfs[i].frame;
+                                            foundStart = true;
+                                            if (i + 1 < kfs.length) e = kfs[i + 1].frame;
+                                            else e = totalDur;
+                                            break;
+                                        }
+                                    }
+                                    if (!foundStart) { e = kfs[0].frame; s = 0; }
+                                    return {"start": s, "end": e};
+                                }
+
+                                function getInterpAt(f) {
+                                    if (!kfs) return "linear";
+                                    for (var i = 0; i < kfs.length; i++) {
+                                        if (kfs[i].frame === f) return kfs[i].interp || "linear";
+                                    }
+                                    return "linear";
+                                }
+
+                                function hasKeyframeAt(f) {
+                                    if (!kfs) return false;
+                                    for (var i = 0; i < kfs.length; i++) {
+                                        if (kfs[i].frame === f) return true;
+                                    }
+                                    return false;
+                                }
+
+                                function ensureKeyframeAt(f) {
+                                    if (!effectModel || !key) return;
+                                    if (hasKeyframeAt(f)) return;
+                                    var v = Number(effectModel.evaluatedParam(key, f));
+                                    if (isNaN(v)) v = 0;
+                                    effectModel.setKeyframe(key, f, v, {"interp": "linear"});
+                                }
+
+                                function ensureRangeKeyframes() {
+                                    // 片側だけ点がある状態だと、評価値が連動してスライダーが追従しやすいので両端を確定させる
+                                    ensureKeyframeAt(startFrame);
+                                    ensureKeyframeAt(endFrame);
+                                }
+
+                                function updateParam(frame, val) {
+                                    if (!effectModel || !key) return;
+                                    if (!hasKeyframes) {
+                                        TimelineBridge.updateClipEffectParam(targetClipId, effectRoot.effectIndex, key, val);
+                                        return;
+                                    }
+                                    let type = "linear";
+                                    if (frame === startFrame) type = getInterpAt(startFrame);
+                                    else type = getInterpAt(frame);
+                                    if (type === "constant") type = "linear";
+                                    effectModel.setKeyframe(key, frame, val, {"interp": type});
+                                }
+
+                                // 数値は“両端編集”ParamControl、非数値は従来ControlLoader
+                                Common.ParamControl {
+                                    visible: isNumber
+                                    Layout.fillWidth: true
+
+                                    paramName: {
+                                        var interpLabel = {
+                                            "linear": " (直線)",
+                                            "ease_in": " (加速)",
+                                            "ease_out": " (減速)",
+                                            "ease_in_out": " (加減速)",
+                                            "bezier": " (ベジェ)"
+                                        };
+                                        return (def.label || key) + (isMoving ? (interpLabel[interpType] || "") : "");
+                                    }
+
+                                    startValue: Number(startVal) || 0
+                                    endValue: Number(endVal) || 0
+                                    minValue: (def.min !== undefined) ? def.min : ((key === "scale" || key === "opacity") ? 0 : -1000)
+                                    maxValue: (def.max !== undefined) ? def.max : ((key === "scale") ? 500 : (key === "opacity" ? 1 : 1000))
+                                    decimals: 2
+                                    enabled: true
+
+                                    onStartValueModified: function(val) {
+                                        root.inputting = true;
+                                        ensureRangeKeyframes();
+                                        updateParam(startFrame, val);
+                                        root.inputting = false;
+                                    }
+                                    onEndValueModified: function(val) {
+                                        root.inputting = true;
+                                        ensureRangeKeyframes();
+                                        updateParam(endFrame, val);
+                                        root.inputting = false;
+                                    }
+                                    onParamButtonClicked: {
+                                        if (!effectModel || !key) return;
+                                        ensureRangeKeyframes();
+                                        var dialog = easingDialogComponent.createObject(root, {
+                                            "effectModel": effectModel,
+                                            "paramName": key,
+                                            "keyframeFrame": startFrame
+                                        });
+                                        if (dialog) dialog.open();
+                                    }
+                                }
+
+                                Common.ControlLoader {
+                                    visible: !isNumber
+                                    Layout.fillWidth: true
+                                    definition: def
+                                    value: effectRoot.currentParams[key]
+                                    onValueModified: function(val) {
+                                        root.inputting = true;
+                                        TimelineBridge.updateClipEffectParam(targetClipId, effectRoot.effectIndex, key, val);
+                                        root.inputting = false;
+                                    }
                                 }
                             }
                         }

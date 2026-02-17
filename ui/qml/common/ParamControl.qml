@@ -36,7 +36,7 @@ RowLayout {
         Layout.preferredWidth: 120
         from: root.minValue
         to: root.maxValue
-        value: root.startValue
+        value: root.startValue // 自動的に追従
         enabled: root.enabled
         onMoved: {
             var newVal = decimals === 0 ? Math.round(value) : value;
@@ -49,16 +49,17 @@ RowLayout {
         id: leftValueField
 
         Layout.preferredWidth: 70
-        text: root.decimals === 0 ? root.startValue.toFixed(0) : root.startValue.toFixed(root.decimals)
+        // 明示的なプロパティバインディング
+        text: (root.decimals === 0 ? root.startValue.toFixed(0) : root.startValue.toFixed(root.decimals))
         horizontalAlignment: TextInput.AlignHCenter
         selectByMouse: true
         enabled: root.enabled
-        onEditingFinished: {
+        onAccepted: { // Enter確定時
             var newVal = parseFloat(text);
             if (!isNaN(newVal))
                 root.startValueModified(newVal);
-
         }
+        onActiveFocusChanged: { if(!activeFocus) onAccepted() } // フォーカス外れ時も同期
 
         validator: DoubleValidator {
             bottom: root.minValue
@@ -83,16 +84,16 @@ RowLayout {
         id: rightValueField
 
         Layout.preferredWidth: 70
-        text: root.decimals === 0 ? root.endValue.toFixed(0) : root.endValue.toFixed(root.decimals)
+        text: (root.decimals === 0 ? root.endValue.toFixed(0) : root.endValue.toFixed(root.decimals))
         horizontalAlignment: TextInput.AlignHCenter
         selectByMouse: true
         enabled: root.enabled
-        onEditingFinished: {
+        onAccepted: {
             var newVal = parseFloat(text);
             if (!isNaN(newVal))
                 root.endValueModified(newVal);
-
         }
+        onActiveFocusChanged: { if(!activeFocus) onAccepted() }
 
         validator: DoubleValidator {
             bottom: root.minValue
