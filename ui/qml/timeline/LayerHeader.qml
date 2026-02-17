@@ -1,7 +1,7 @@
+import "../common" as Common
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
-import "../common" as Common
 
 Rectangle {
     id: headerRoot
@@ -141,18 +141,21 @@ Rectangle {
                             anchors.top: parent.top
                             anchors.margins: 2
                             spacing: 2
+
                             Common.RinaIcon {
                                 visible: layerBtn.isLocked
                                 iconName: "lock_fill"
                                 size: 10
                                 color: "#ffcccc"
                             }
+
                             Common.RinaIcon {
                                 visible: !layerBtn.isVisible
                                 iconName: "eye_off_line"
                                 size: 10
                                 color: palette.mid
                             }
+
                         }
 
                     }

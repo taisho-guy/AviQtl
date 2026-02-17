@@ -123,8 +123,14 @@ def generate_export(output_file="project_context.json", root_dir="."):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Export project source code to a single text file.")
-    parser.add_argument("-o", "--output", default="project_context.json", help="Output filename")
+    parser.add_argument("-o", "--output", help="Output filename")
     parser.add_argument("-d", "--dir", default=".", help="Root directory to scan")
     
     args = parser.parse_args()
-    generate_export(args.output, args.dir)
+
+    output_file = args.output
+    if not output_file:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_file = f"project_context_{timestamp}.json"
+
+    generate_export(output_file, args.dir)

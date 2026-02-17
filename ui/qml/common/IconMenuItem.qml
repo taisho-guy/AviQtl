@@ -4,11 +4,13 @@ import QtQuick.Layouts
 
 MenuItem {
     id: control
+
     property string iconName: ""
 
     // デフォルトのインジケーター（チェックボックス）を無効化し、
     // contentItem内で自前で描画することでアイコンとの重なりを防ぐ
-    indicator: Item {}
+    indicator: Item {
+    }
 
     contentItem: RowLayout {
         spacing: 6
@@ -19,7 +21,7 @@ MenuItem {
             iconName: "check_line"
             size: 18
             color: control.highlighted ? control.palette.highlightedText : control.palette.text
-            opacity: control.checked ? 1.0 : 0.0
+            opacity: control.checked ? 1 : 0
             Layout.alignment: Qt.AlignVCenter
         }
 
@@ -37,7 +39,7 @@ MenuItem {
         Text {
             text: control.text
             font: control.font
-            opacity: enabled ? 1.0 : 0.3
+            opacity: enabled ? 1 : 0.3
             color: control.highlighted ? control.palette.highlightedText : control.palette.text
             horizontalAlignment: Text.AlignLeft
             verticalAlignment: Text.AlignVCenter
@@ -49,12 +51,14 @@ MenuItem {
         Text {
             text: control.action ? control.action.shortcut : ""
             font: control.font
-            opacity: enabled ? 1.0 : 0.3
+            opacity: enabled ? 1 : 0.3
             color: control.highlighted ? control.palette.highlightedText : control.palette.text
             horizontalAlignment: Text.AlignRight
             verticalAlignment: Text.AlignVCenter
             visible: text !== ""
             Layout.leftMargin: 12
         }
+
     }
+
 }

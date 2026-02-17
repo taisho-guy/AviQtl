@@ -1,9 +1,11 @@
+import "../common" as Common
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
-import "../common" as Common
 
 ScrollView {
+    // "Auto", "BPM", "Frame"
+
     id: timelineViewRoot
 
     property alias flickable: timelineFlickable
@@ -23,20 +25,14 @@ ScrollView {
     property bool enableSnap: SettingsManager.settings.enableSnap
     // 末尾に少し余白を持たせる（AviUtl的な「置きやすさ」）
     property int tailPaddingFrames: 120
-    
-    // グリッド設定画面の表示を親に要求するシグナル
-    signal gridSettingsRequested()
-
     // === グリッド設定 (Parametric Grid State) ===
     property var gridSettings: ({
-        mode: "Auto", // "Auto", "BPM", "Frame"
-        bpm: 120,
-        offset: 0.0,
-        interval: 10,
-        subdivision: 4
+        "mode": "Auto",
+        "bpm": 120,
+        "offset": 0,
+        "interval": 10,
+        "subdivision": 4
     })
-    onGridSettingsChanged: timelineGrid.requestPaint()
-
     // === 動的タイムライン長の計算 (AviUtl風) ===
     // クリップ配列の末尾を自動追跡する
     readonly property int maxClipEndFrame: {
@@ -57,6 +53,9 @@ ScrollView {
         return Math.max(projectLength, maxClipEndFrame + tailPaddingFrames);
     }
 
+    // グリッド設定画面の表示を親に要求するシグナル
+    signal gridSettingsRequested()
+
     function clamp(v, lo, hi) {
         return Math.max(lo, Math.min(hi, v));
     }
@@ -68,6 +67,7 @@ ScrollView {
         return Math.max(0, Math.round(frame));
     }
 
+    onGridSettingsChanged: timelineGrid.requestPaint()
     clip: true
     ScrollBar.horizontal.policy: ScrollBar.AlwaysOn
     ScrollBar.vertical.policy: ScrollBar.AlwaysOn
@@ -81,13 +81,23 @@ ScrollView {
 
         // 再描画トリガーの追加
         Connections {
+            function onContentXChanged() {
+                timelineGrid.requestPaint();
+            }
+
+            function onContentYChanged() {
+                timelineGrid.requestPaint();
+            }
+
             target: timelineFlickable
-            function onContentXChanged() { timelineGrid.requestPaint(); }
-            function onContentYChanged() { timelineGrid.requestPaint(); }
         }
+
         Connections {
+            function onTimelineScaleChanged() {
+                timelineGrid.requestPaint();
+            }
+
             target: TimelineBridge ? TimelineBridge : null
-            function onTimelineScaleChanged() { timelineGrid.requestPaint(); }
         }
 
         // グリッド背景
@@ -104,89 +114,85 @@ ScrollView {
                 id: timelineGrid
 
                 anchors.fill: parent
-                
                 onPaint: {
+                    // 1フレーム
+
                     var ctx = getContext("2d");
                     // Canvasをクリア (透明に)
                     ctx.clearRect(0, 0, width, height);
-
                     // 共通設定
                     ctx.lineWidth = 1;
-
                     // --- 1. レイヤー区切り線 (水平) ---
                     ctx.strokeStyle = Qt.rgba(0.5, 0.5, 0.5, 0.2);
                     var startY = timelineFlickable.contentY;
-
                     // レイヤー区切り線
                     for (var i = 0; i < layerCount; i++) {
                         // Canvasの(0,0)はViewportの左上なので、スクロール分を引いて描画位置を計算
                         var y = (i * layerHeight) - startY;
-                        
                         // 画面外ならスキップ
-                        if (y < -layerHeight || y > height) continue;
+                        if (y < -layerHeight || y > height)
+                            continue;
 
                         ctx.beginPath();
                         ctx.moveTo(0, y);
                         ctx.lineTo(width, y);
                         ctx.stroke();
                     }
-
                     // --- 2. 時間軸グリッド (垂直) ---
-                    if (!TimelineBridge) return;
+                    if (!TimelineBridge)
+                        return ;
 
                     var scale = TimelineBridge.timelineScale;
                     var contentX = timelineFlickable.contentX;
-                    var projectFps = (TimelineBridge.project && TimelineBridge.project.fps) ? TimelineBridge.project.fps : 60.0;
-                    
+                    var projectFps = (TimelineBridge.project && TimelineBridge.project.fps) ? TimelineBridge.project.fps : 60;
                     // 描画すべきフレーム範囲を計算
                     var startFrame = Math.floor(contentX / scale);
                     var endFrame = Math.ceil((contentX + width) / scale);
-                    
                     // === グリッド計算ロジック (Strategy) ===
-                    var step = 1.0;
-                    var offsetFrames = 0.0;
+                    var step = 1;
+                    var offsetFrames = 0;
                     var isBpmMode = (gridSettings.mode === "BPM");
-                    
                     if (isBpmMode) {
                         // BPMモード: 1拍あたりのフレーム数を計算
-                        var bps = gridSettings.bpm / 60.0;
+                        var bps = gridSettings.bpm / 60;
                         step = projectFps / bps; // 1拍のフレーム数 (小数含む)
                         offsetFrames = gridSettings.offset * projectFps;
                     } else if (gridSettings.mode === "Frame") {
                         // 固定フレームモード
                         step = gridSettings.interval;
                     } else {
-                        // Auto (AviUtl風): ズームに応じて間引き
-                        if (scale < 0.5) step = Math.ceil(projectFps); // 1秒
-                        else if (scale < 5.0) step = 10;               // 10フレーム
-                        else step = 1;                                 // 1フレーム
-                    }
+                        // 1秒
+                        // 10フレーム
 
+                        // Auto (AviUtl風): ズームに応じて間引き
+                        if (scale < 0.5)
+                            step = Math.ceil(projectFps);
+                        else if (scale < 5)
+                            step = 10;
+                        else
+                            step = 1;
+                    }
                     // グリッド線の描画ループ
                     // 数式: lineX = offset + n * step
                     // startFrame <= offset + n * step を満たす最小の n を求める
                     var startN = Math.ceil((startFrame - offsetFrames) / step);
                     var endN = Math.floor((endFrame - offsetFrames) / step);
-
                     for (var n = startN; n <= endN; n++) {
                         var f = offsetFrames + n * step;
                         // ローカル座標への変換: (フレーム位置 - 現在のスクロール位置)
                         var x = (f * scale) - contentX;
-                        
                         ctx.beginPath();
-                        
                         // 線のスタイリング
                         if (isBpmMode) {
-                             // 小節の頭 (subdivisionで割れる) は濃く
-                             var isMeasure = (n % gridSettings.subdivision === 0);
-                             ctx.strokeStyle = isMeasure ? Qt.rgba(0.5, 0.8, 1.0, 0.5) : Qt.rgba(0.5, 0.5, 0.5, 0.2);
-                             ctx.lineWidth = isMeasure ? 1.5 : 1;
+                            // 小節の頭 (subdivisionで割れる) は濃く
+                            var isMeasure = (n % gridSettings.subdivision === 0);
+                            ctx.strokeStyle = isMeasure ? Qt.rgba(0.5, 0.8, 1, 0.5) : Qt.rgba(0.5, 0.5, 0.5, 0.2);
+                            ctx.lineWidth = isMeasure ? 1.5 : 1;
                         } else {
-                             // 通常モード
-                             ctx.strokeStyle = Qt.rgba(0.5, 0.5, 0.5, 0.15);
-                             ctx.lineWidth = 1;
+                            // 通常モード
+                            ctx.strokeStyle = Qt.rgba(0.5, 0.5, 0.5, 0.15);
+                            ctx.lineWidth = 1;
                         }
-                        
                         ctx.moveTo(x, 0);
                         ctx.lineTo(x, height);
                         ctx.stroke();
@@ -562,10 +568,12 @@ ScrollView {
                 var objectMenu = createSubMenu("オブジェクトを追加");
                 var objects = TimelineBridge.getAvailableObjects();
                 for (var i = 0; i < objects.length; i++) {
+                    // 汎用アイコン
+
                     var obj = objects[i];
                     var objItem = menuItemComp.createObject(null, {
                         "text": obj.name,
-                        "iconName": "shape_line" // 汎用アイコン
+                        "iconName": "shape_line"
                     });
                     (function(id) {
                         objItem.triggered.connect(function() {
