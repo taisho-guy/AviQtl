@@ -68,14 +68,14 @@ class EffectModel : public QObject {
         kf["interp"] = options.value("interp", "linear");
 
         // Add bezier params if provided
-        if (options.contains("bz_x1"))
-            kf["bz_x1"] = options.value("bz_x1");
-        if (options.contains("bz_y1"))
-            kf["bz_y1"] = options.value("bz_y1");
-        if (options.contains("bz_x2"))
-            kf["bz_x2"] = options.value("bz_x2");
-        if (options.contains("bz_y2"))
-            kf["bz_y2"] = options.value("bz_y2");
+        if (options.contains("bzx1"))
+            kf["bzx1"] = options.value("bzx1");
+        if (options.contains("bzy1"))
+            kf["bzy1"] = options.value("bzy1");
+        if (options.contains("bzx2"))
+            kf["bzx2"] = options.value("bzx2");
+        if (options.contains("bzy2"))
+            kf["bzy2"] = options.value("bzy2");
         bool updated = false;
         for (int i = 0; i < track.size(); ++i) {
             const auto m = track[i].toMap();
@@ -180,7 +180,7 @@ class EffectModel : public QObject {
         // ベジェ制御点の取得ヘルパー
         auto getBezierParams = [](const QVariant &v) -> std::array<double, 4> {
             const auto map = v.toMap();
-            return {map.value("bz_x1", 0.33).toDouble(), map.value("bz_y1", 0.0).toDouble(), map.value("bz_x2", 0.66).toDouble(), map.value("bz_y2", 1.0).toDouble()};
+            return {map.value("bzx1", 0.33).toDouble(), map.value("bzy1", 0.0).toDouble(), map.value("bzx2", 0.66).toDouble(), map.value("bzy2", 1.0).toDouble()};
         };
 
         if (frame <= getFrame(track.front()))

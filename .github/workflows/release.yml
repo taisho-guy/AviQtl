@@ -184,26 +184,27 @@ jobs:
             mkdir -p Rina.app/Contents/Resources
 
             # アセットのコピー（存在確認を追加）
-            if [ -d "objects" ]; then
-              cp -r objects Rina.app/Contents/Resources/
-            elif [ -d "../objects" ]; then
-              cp -r ../objects Rina.app/Contents/Resources/
+            # ソースディレクトリから直接コピーして確実性を確保
+            if [ -d "../ui/qml/objects" ]; then
+              cp -R ../ui/qml/objects Rina.app/Contents/Resources/
+            elif [ -d "objects" ]; then
+              cp -R objects Rina.app/Contents/Resources/
             else
               echo "WARNING: objects directory not found, skipping copy."
             fi
 
-            if [ -d "effects" ]; then
-              cp -r effects Rina.app/Contents/Resources/
-            elif [ -d "../effects" ]; then
-              cp -r ../effects Rina.app/Contents/Resources/
+            if [ -d "../ui/qml/effects" ]; then
+              cp -R ../ui/qml/effects Rina.app/Contents/Resources/
+            elif [ -d "effects" ]; then
+              cp -R effects Rina.app/Contents/Resources/
             else
                echo "WARNING: effects directory not found, skipping copy."
             fi
 
-            if [ -d "plugins" ]; then
-              cp -r plugins Rina.app/Contents/Resources/
-            elif [ -d "../plugins" ]; then
-              cp -r ../plugins Rina.app/Contents/Resources/
+            if [ -d "../plugins" ]; then
+              cp -R ../plugins Rina.app/Contents/Resources/
+            elif [ -d "plugins" ]; then
+              cp -R plugins Rina.app/Contents/Resources/
             else
                echo "WARNING: plugins directory not found, skipping copy."
             fi

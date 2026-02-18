@@ -112,14 +112,13 @@ ScrollView {
 
             Canvas {
                 // 1フレーム
+                // 1秒
+                // 10フレーム
 
                 id: timelineGrid
 
                 anchors.fill: parent
                 onPaint: {
-                    // 1秒
-                    // 10フレーム
-
                     var ctx = getContext("2d");
                     // Canvasをクリア (透明に)
                     ctx.clearRect(0, 0, width, height);
@@ -469,6 +468,8 @@ ScrollView {
 
     // コンテキストメニュー（復元版）
     Menu {
+        // 汎用アイコン
+
         id: contextMenu
 
         property string targetType: ""
@@ -564,8 +565,6 @@ ScrollView {
                 })(item);
             }
             if (targetType === "timeline") {
-                // 汎用アイコン
-
                 // 背景右クリック：オブジェクト追加メニュー
                 var objectMenu = createSubMenu("オブジェクトを追加");
                 var objects = TimelineBridge.getAvailableObjects();
