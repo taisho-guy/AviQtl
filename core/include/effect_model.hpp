@@ -13,7 +13,7 @@
 namespace Rina::UI {
 
 // イージング関数シグネチャ: double function(t, params)
-using EasingFunction = std::function<double(double, const std::array<double, 4> &)>;
+using EasingFunction = std::function<double(double, const std::vector<double> &)>;
 
 class EffectModel : public QObject {
     Q_OBJECT
@@ -67,15 +67,8 @@ class EffectModel : public QObject {
         kf["value"] = value;
         kf["interp"] = options.value("interp", "linear");
 
-        // Add bezier params if provided
-        if (options.contains("bzx1"))
-            kf["bzx1"] = options.value("bzx1");
-        if (options.contains("bzy1"))
-            kf["bzy1"] = options.value("bzy1");
-        if (options.contains("bzx2"))
-            kf["bzx2"] = options.value("bzx2");
-        if (options.contains("bzy2"))
-            kf["bzy2"] = options.value("bzy2");
+        if (options.contains("points"))
+            kf["points"] = options.value("points");
         bool updated = false;
         for (int i = 0; i < track.size(); ++i) {
             const auto m = track[i].toMap();
@@ -160,12 +153,37 @@ class EffectModel : public QObject {
                                                                 {"ease_in", [](double t, const auto &) { return t * t; }},
                                                                 {"ease_out", [](double t, const auto &) { return t * (2.0 - t); }},
                                                                 {"ease_in_out", [](double t, const auto &) { return t < 0.5 ? 2.0 * t * t : -1.0 + (4.0 - 2.0 * t) * t; }},
-                                                                {"bezier", [](double x, const auto &p) {
-                                                                     // p = {x1, y1, x2, y2} 制御点
-                                                                     const double t = solveBezierT(x, p[0], p[2]);
-                                                                     const double one_minus_t = 1.0 - t;
-                                                                     // y(t) = 3(1-t)^2 * t * y1 + 3(1-t) * t^2 * y2 + t^3  (3次ベジェ曲線のY座標)
-                                                                     return 3 * one_minus_t * one_minus_t * t * p[1] + 3 * one_minus_t * t * t * p[3] + t * t * t;
+                                                                {"custom", [](double x, const auto &p) {
+                                                                     // p = [cp1x, cp1y, cp2x, cp2y, endX, endY, ...repeat...]
+                                                                     // セグメント構造: 始点(prevX, prevY) -> 制御点1, 制御点2 -> 終点(endX, endY)
+                                                                     double prevX = 0, prevY = 0;
+                                                                     for (size_t i = 0; i < p.size(); i += 6) {
+                                                                         double cp1x = p[i], cp1y = p[i + 1];
+                                                                         double cp2x = p[i + 2], cp2y = p[i + 3];
+                                                                         double endX = p[i + 4], endY = p[i + 5];
+
+                                                                         // 現在のXがこのセグメントに含まれるか、または最後のセグメントなら計算
+                                                                         if (x <= endX || i + 6 >= p.size()) {
+                                                                             // セグメント内の正規化時間 T を求めるために、X座標を [0,1] 区間にマップする
+                                                                             // 簡易化のため、X範囲内での相対位置として解く
+                                                                             double range = endX - prevX;
+                                                                             if (range < 1e-6)
+                                                                                 return endY; // 垂直ジャンプ
+
+                                                                             // ニュートン法のための正規化された制御点
+                                                                             double n_cp1x = (cp1x - prevX) / range;
+                                                                             double n_cp2x = (cp2x - prevX) / range;
+                                                                             double n_x = (x - prevX) / range;
+
+                                                                             double t = solveBezierT(n_x, n_cp1x, n_cp2x);
+                                                                             double one_minus_t = 1.0 - t;
+                                                                             // Y座標の補間
+                                                                             return (1 - t) * (1 - t) * (1 - t) * prevY + 3 * (1 - t) * (1 - t) * t * cp1y + 3 * (1 - t) * t * t * cp2y + t * t * t * endY;
+                                                                         }
+                                                                         prevX = endX;
+                                                                         prevY = endY;
+                                                                     }
+                                                                     return x;
                                                                  }}};
         return funcs;
     }
@@ -178,9 +196,17 @@ class EffectModel : public QObject {
         auto getValue = [](const QVariant &v) { return v.toMap().value("value"); };
         auto getInterp = [](const QVariant &v) { return v.toMap().value("interp").toString(); };
         // ベジェ制御点の取得ヘルパー
-        auto getBezierParams = [](const QVariant &v) -> std::array<double, 4> {
+        auto getBezierParams = [](const QVariant &v) -> std::vector<double> {
             const auto map = v.toMap();
-            return {map.value("bzx1", 0.33).toDouble(), map.value("bzy1", 0.0).toDouble(), map.value("bzx2", 0.66).toDouble(), map.value("bzy2", 1.0).toDouble()};
+            if (map.contains("points")) {
+                QVariantList lst = map.value("points").toList();
+                std::vector<double> pts;
+                for (const auto &val : lst)
+                    pts.push_back(val.toDouble());
+                return pts;
+            }
+            // 旧 bezier 形式を custom 形式に変換 (後方互換)
+            return {map.value("bzx1", 0.33).toDouble(), map.value("bzy1", 0.0).toDouble(), map.value("bzx2", 0.66).toDouble(), map.value("bzy2", 1.0).toDouble(), 1.0, 1.0};
         };
 
         if (frame <= getFrame(track.front()))
@@ -210,11 +236,12 @@ class EffectModel : public QObject {
             const double tRaw = (frame - f0) / double(f1 - f0);
 
             QString type = getInterp(track[i]);
+
             if (!easingFunctions().count(type))
                 type = "linear";
 
-            std::array<double, 4> params = {0, 0, 0, 0};
-            if (type == "bezier") {
+            std::vector<double> params;
+            if (type == "custom") {
                 params = getBezierParams(track[i]);
             }
 
