@@ -163,6 +163,7 @@ Common.RinaWindow {
             }
 
             Button {
+                id: newProjectBtn
                 highlighted: true
                 Layout.fillWidth: true
                 onClicked: {
@@ -176,13 +177,13 @@ Common.RinaWindow {
 
                     Common.RinaIcon {
                         iconName: "file_add_line"
-                        color: parent.palette.buttonText
+                        color: newProjectBtn.palette.buttonText
                     }
 
                     Text {
                         text: "新規プロジェクトを作成"
-                        color: parent.palette.buttonText
-                        font: parent.font
+                        color: newProjectBtn.palette.buttonText
+                        font: newProjectBtn.font
                     }
 
                 }
@@ -255,6 +256,7 @@ Common.RinaWindow {
             }
 
             Button {
+                id: openProjectBtn
                 Layout.fillWidth: true
                 onClicked: fileDialog.open()
 
@@ -263,13 +265,13 @@ Common.RinaWindow {
 
                     Common.RinaIcon {
                         iconName: "folder_open_line"
-                        color: parent.palette.buttonText
+                        color: openProjectBtn.palette.buttonText
                     }
 
                     Text {
                         text: "既存プロジェクトを開く..."
-                        color: parent.palette.buttonText
-                        font: parent.font
+                        color: openProjectBtn.palette.buttonText
+                        font: openProjectBtn.font
                     }
 
                 }

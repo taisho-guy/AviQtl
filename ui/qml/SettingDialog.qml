@@ -11,6 +11,7 @@ Common.RinaWindow {
 
     property int targetClipId: (TimelineBridge && TimelineBridge.selection) ? TimelineBridge.selection.selectedClipId : -1
     property var effectsModel: []
+    property var audioEffectsModel: []
     property bool inputting: false // 入力中フラグ（reloadループ防止用）
 
     function reload() {
@@ -19,10 +20,13 @@ Common.RinaWindow {
 
         var id = TimelineBridge.selection.selectedClipId;
         targetClipId = id;
-        if (id >= 0)
+        if (id >= 0) {
             effectsModel = TimelineBridge.getClipEffectsModel(id);
-        else
+            audioEffectsModel = TimelineBridge.getClipEffectStack(id);
+        } else {
             effectsModel = [];
+            audioEffectsModel = [];
+        }
     }
 
     // UI定義を正規化してリストとして取得するヘルパー
@@ -106,11 +110,11 @@ Common.RinaWindow {
 
     ScrollView {
         anchors.fill: parent
-        contentWidth: parent.width
+        contentWidth: availableWidth
         clip: true
 
         ColumnLayout {
-            width: root.width
+            width: parent.width
             spacing: 1
 
             Repeater {
@@ -430,26 +434,137 @@ Common.RinaWindow {
 
             }
 
+            // --- オーディオプラグインのパラメータ表示セクション ---
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 1
+                visible: TimelineBridge && TimelineBridge.isAudioClip(targetClipId)
+
+                Repeater {
+                    model: audioEffectsModel
+
+                    delegate: ColumnLayout {
+                        id: audioEffectRoot
+                        property int effectIndex: index
+                        Layout.fillWidth: true
+                        spacing: 0
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 24
+                            color: palette.midlight
+
+                            Label {
+                                text: modelData.name + " (" + modelData.format + ")"
+                                color: palette.text
+                                font.bold: true
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.left: parent.left
+                                anchors.leftMargin: 10
+                            }
+
+                            // 削除ボタン
+                            Button {
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
+                                flat: true
+                                width: 24
+                                height: 24
+                                onClicked: TimelineBridge.removeAudioPlugin(targetClipId, audioEffectRoot.effectIndex)
+
+                                contentItem: Common.RinaIcon {
+                                    iconName: "close_line"
+                                    size: 16
+                                    color: parent.hovered ? "red" : parent.palette.text
+                                }
+                            }
+                        }
+
+                        Repeater {
+                            model: TimelineBridge.getEffectParameters(targetClipId, index)
+
+                            delegate: Common.ControlLoader {
+                                Layout.fillWidth: true
+                                Layout.margins: 4
+                                definition: ({
+                                    "type": modelData.type || "slider",
+                                    "label": modelData.name,
+                                    "min": modelData.min,
+                                    "max": modelData.max
+                                })
+                                value: modelData.current
+                                onValueModified: (newValue) => {
+                                    TimelineBridge.setEffectParameter(targetClipId, audioEffectRoot.effectIndex, modelData.pIdx, newValue);
+                                }
+                            }
+
+                        }
+
+                    }
+
+                }
+
+            }
         }
 
     }
 
     menuBar: MenuBar {
         Menu {
+            id: filterMenu
+
             title: "フィルタ"
 
             Repeater {
-                model: TimelineBridge ? TimelineBridge.getAvailableEffects() : []
+                model: (TimelineBridge && !TimelineBridge.isAudioClip(targetClipId)) ? TimelineBridge.getAvailableEffects() : []
 
                 Common.IconMenuItem {
                     text: modelData.name
                     iconName: "magic_line"
                     onTriggered: {
-                        if (TimelineBridge) {
+                        if (TimelineBridge)
                             TimelineBridge.addEffect(targetClipId, modelData.id);
-                            reload();
-                        }
+
                     }
+                }
+
+            }
+
+            // カテゴリごとのサブメニューを生成
+            Instantiator {
+                model: (targetClipId !== -1 && TimelineBridge && TimelineBridge.isAudioClip(targetClipId)) ? TimelineBridge.getPluginCategories() : []
+                onObjectAdded: (index, object) => {
+                    return filterMenu.insertMenu(index, object);
+                }
+                onObjectRemoved: (index, object) => {
+                    return filterMenu.removeMenu(object);
+                }
+
+                delegate: Menu {
+                    id: categoryMenu
+                    title: modelData // カテゴリ名
+
+                    Instantiator {
+                        model: TimelineBridge.getPluginsByCategory(categoryMenu.title)
+                        onObjectAdded: (index, subObj) => {
+                            return categoryMenu.insertItem(index, subObj);
+                        }
+                        onObjectRemoved: (index, subObj) => {
+                            return categoryMenu.removeItem(subObj);
+                        }
+
+                        delegate: Common.IconMenuItem {
+                            text: modelData.name
+                            iconName: "music_line"
+                            onTriggered: {
+                                if (TimelineBridge)
+                                    TimelineBridge.addAudioPlugin(targetClipId, modelData.id);
+
+                            }
+                        }
+
+                    }
+
                 }
 
             }

@@ -613,6 +613,26 @@ ScrollView {
                     effectMenu.addItem(effItem);
                 }
                 contextMenu.addMenu(effectMenu);
+                // オーディオプラグイン追加メニュー
+                var audioPluginMenu = createSubMenu("オーディオプラグイン");
+                var plugins = TimelineBridge.getAvailableAudioPlugins();
+                // 数が多い場合はサブメニュー化などを検討すべきだが、まずはフラットに表示
+                for (var k = 0; k < plugins.length; k++) {
+                    var plug = plugins[k];
+                    var plugItem = menuItemComp.createObject(null, {
+                        "text": "[" + plug.format + "] " + plug.name,
+                        "iconName": "music_line"
+                    });
+                    (function(cId, pId) {
+                        plugItem.triggered.connect(function() {
+                            TimelineBridge.addAudioPlugin(cId, pId);
+                        });
+                    })(targetClipId, plug.id);
+                    audioPluginMenu.addItem(plugItem);
+                }
+                if (plugins.length > 0)
+                    contextMenu.addMenu(audioPluginMenu);
+
             }
         }
 

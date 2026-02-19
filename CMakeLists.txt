@@ -58,6 +58,20 @@ pkg_check_modules(FFMPEG REQUIRED libavcodec libavformat libavutil libswscale li
 
 pkg_check_modules(LUAJIT REQUIRED luajit)
 
+# オーディオプラグイン (ヘッダー探索のみ、リンクは後で行う)
+find_path(LADSPA_INCLUDE_DIR ladspa.h)
+pkg_check_modules(LILV REQUIRED lilv-0)
+find_path(CLAP_INCLUDE_DIR  clap/clap.h)
+find_path(VST3SDK_INCLUDE_DIR pluginterfaces/vst/ivstaudioprocessor.h
+    HINTS /usr/include/vst3sdk)
+
+if(NOT CLAP_INCLUDE_DIR)
+    message(WARNING "clap headers not found. CLAP support disabled.")
+endif()
+if(NOT VST3SDK_INCLUDE_DIR)
+    message(STATUS "VST3 SDK not found. VST3 will be stub-only.")
+endif()
+
 # macOSでのLuaJITリンク問題の修正
 if(APPLE)
     # pkg-configが返す-lluajit-5.1を-lluajitに変更、またはHomebrewの絶対パスを使用
@@ -164,10 +178,23 @@ qt_add_qml_module(Rina
 target_link_libraries(
     Rina PRIVATE Qt6::Core Qt6::Gui Qt6::Quick Qt6::QuickControls2 Qt6::Quick3D Qt6::Widgets Qt6::Svg Qt6::Core5Compat Qt6::Multimedia Qt6::Concurrent Vulkan::Vulkan
                    ${LUAJIT_LIBRARIES}
-                   ${FFMPEG_LIBRARIES})
+                   ${FFMPEG_LIBRARIES}
+                   ${LILV_LIBRARIES})
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_link_libraries(Rina PRIVATE Qt6::WaylandClient)
+endif()
+
+# ターゲットが定義された後にインクルードを追加
+target_include_directories(Rina PRIVATE
+    ${LADSPA_INCLUDE_DIR}
+    ${LILV_INCLUDE_DIRS}
+    ${CLAP_INCLUDE_DIR}
+)
+if(VST3SDK_INCLUDE_DIR)
+    # pluginterfaces/ の親ディレクトリを追加
+    get_filename_component(VST3SDK_ROOT "${VST3SDK_INCLUDE_DIR}" DIRECTORY)
+    target_include_directories(Rina PRIVATE ${VST3SDK_ROOT})
 endif()
 
 # エフェクト/オブジェクト定義JSONをビルドディレクトリにコピー

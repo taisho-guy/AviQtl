@@ -4,6 +4,7 @@
 #include "../../core/include/video_decoder.hpp"
 #include "../../core/include/video_encoder.hpp"
 #include "../../engine/audio_mixer.hpp"
+#include "../../engine/plugin/audio_plugin_manager.hpp"
 #include "../../engine/timeline/ecs.hpp"
 #include "../../scripting/lua_host.hpp"
 #include "clip_model.hpp"
@@ -726,6 +727,91 @@ void TimelineController::addEffect(int clipId, const QString &effectId) {
 void TimelineController::removeEffect(int clipId, int effectIndex) {
     m_timeline->removeEffect(clipId, effectIndex);
     updateActiveClipsList();
+}
+
+QVariantList TimelineController::getAvailableAudioPlugins() const { return Rina::Engine::Plugin::AudioPluginManager::instance().getPluginList(); }
+
+void TimelineController::addAudioPlugin(int clipId, const QString &pluginId) {
+    auto plugin = Rina::Engine::Plugin::AudioPluginManager::instance().createPlugin(pluginId);
+    if (plugin) {
+        qInfo() << "Adding audio plugin:" << plugin->name() << "to clip" << clipId;
+        m_audioMixer->getChain(clipId).add(std::move(plugin));
+        emit clipEffectsChanged(clipId);
+    } else {
+        qWarning() << "Failed to create audio plugin:" << pluginId;
+    }
+}
+
+void TimelineController::removeAudioPlugin(int clipId, int index) {
+    m_audioMixer->getChain(clipId).remove(index);
+    emit clipEffectsChanged(clipId);
+}
+
+QVariantList TimelineController::getPluginCategories() const {
+    // AudioPluginManager から重複のないカテゴリ名リストを抽出
+    return Rina::Engine::Plugin::AudioPluginManager::instance().getCategories();
+}
+
+QVariantList TimelineController::getPluginsByCategory(const QString &category) const {
+    // 特定カテゴリに属するプラグインのみを返す
+    return Rina::Engine::Plugin::AudioPluginManager::instance().getPluginsInCategory(category);
+}
+
+bool TimelineController::isAudioClip(int clipId) const {
+    const auto *clip = m_timeline->findClipById(clipId);
+    return clip && clip->type == "audio";
+}
+
+QVariantList TimelineController::getClipEffectStack(int clipId) const {
+    QVariantList list;
+    if (clipId < 0)
+        return list;
+
+    auto &chain = m_audioMixer->getChain(clipId);
+    for (int i = 0; i < chain.count(); ++i) {
+        auto *plugin = chain.get(i);
+        if (plugin) {
+            QVariantMap effectInfo;
+            effectInfo["name"] = plugin->name();
+            effectInfo["format"] = plugin->format();
+            list.append(effectInfo);
+        }
+    }
+    return list;
+}
+
+QVariantList TimelineController::getEffectParameters(int clipId, int effectIndex) const {
+    QVariantList list;
+    if (clipId < 0)
+        return list;
+
+    auto &chain = m_audioMixer->getChain(clipId);
+    auto *plugin = chain.get(effectIndex);
+    if (plugin) {
+        for (int i = 0; i < plugin->paramCount(); ++i) {
+            QVariantMap paramInfo;
+            paramInfo["pIdx"] = i;
+            paramInfo["name"] = plugin->paramName(i);
+            paramInfo["current"] = plugin->getParam(i);
+            // TODO: min/max/default値の取得はプラグインAPIに依存するため、
+            //       IAudioPluginインターフェースの拡張が必要。一旦固定値を返す。
+            paramInfo["min"] = 0.0f;
+            paramInfo["max"] = 1.0f;
+            paramInfo["type"] = "slider";
+            list.append(paramInfo);
+        }
+    }
+    return list;
+}
+
+void TimelineController::setEffectParameter(int clipId, int effectIndex, int paramIndex, float value) {
+    if (clipId < 0)
+        return;
+    auto &chain = m_audioMixer->getChain(clipId);
+    auto *plugin = chain.get(effectIndex);
+    if (plugin) {
+        plugin->setParam(paramIndex, value);
+    }
 }
 
 void TimelineController::deleteClip(int clipId) {

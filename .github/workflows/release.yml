@@ -41,6 +41,8 @@ jobs:
             mingw-w64-ucrt-x86_64-vulkan-headers
             mingw-w64-ucrt-x86_64-pkg-config
             mingw-w64-ucrt-x86_64-mold
+            mingw-w64-ucrt-x86_64-lilv
+            mingw-w64-ucrt-x86_64-ladspa-sdk
             zip
 
       - name: Build
@@ -136,7 +138,7 @@ jobs:
       - name: Install Dependencies
         run: |
           brew update
-          brew install qt ffmpeg luajit molten-vk ninja pkg-config dylibbundler
+          brew install qt ffmpeg luajit molten-vk ninja pkg-config dylibbundler lilv ladspa-sdk
           
           echo "LDFLAGS=-L$(brew --prefix luajit)/lib -L$(brew --prefix ffmpeg)/lib" >> $GITHUB_ENV
           echo "CPPFLAGS=-I$(brew --prefix luajit)/include/luajit-2.1 -I$(brew --prefix ffmpeg)/include" >> $GITHUB_ENV
@@ -236,7 +238,8 @@ jobs:
             mesa vulkan-headers vulkan-icd-loader \
             libxkbcommon wayland \
             ffmpeg luajit \
-            qt6-base qt6-declarative qt6-shadertools qt6-5compat qt6-svg qt6-multimedia qt6-quick3d
+            qt6-base qt6-declarative qt6-shadertools qt6-5compat qt6-svg qt6-multimedia qt6-quick3d \
+            lilv ladspa clap
 
       - uses: actions/checkout@v4
 

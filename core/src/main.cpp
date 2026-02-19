@@ -1,4 +1,5 @@
 #include "../../engine/timeline/ecs.hpp"
+#include "../../engine/plugin/audio_plugin_manager.hpp"
 #include "../../scripting/mod_engine.hpp"
 #include "effect_registry.hpp"
 #include "rina_context.hpp"
@@ -44,6 +45,10 @@ int main(int argc, char *argv[]) {
 
     // エフェクトレジストリの初期化
     Rina::Core::initializeStandardEffects();
+
+    // オーディオプラグインの初期化 (起動時にスキャン)
+    // これにより、UI表示後のフリーズを防ぎ、スレッドセーフティを向上させる
+    Rina::Engine::Plugin::AudioPluginManager::instance();
 
     // --- Lua MODエンジンの初期化 (Phase 1 & 2) ---
     auto &modEngine = Rina::Scripting::ModEngine::instance();

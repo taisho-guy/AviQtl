@@ -1,4 +1,5 @@
 #pragma once
+#include "plugin/audio_plugin_chain.hpp"
 #include <QAudioSink>
 #include <QIODevice>
 #include <QObject>
@@ -25,10 +26,15 @@ class AudioMixer : public QObject {
     // エクスポート用に生データを取得するメソッド
     std::vector<float> mix(int currentFrame, double fps, int samplesPerFrame);
 
+    // クリップID → プラグインチェーン
+    Plugin::AudioPluginChain &getChain(int clipId);
+    void clearChain(int clipId);
+
   private:
     QAudioSink *m_audioSink = nullptr;
     QIODevice *m_audioOutput = nullptr;
     std::unordered_map<int, Rina::Core::AudioDecoder *> m_decoders;
+    std::unordered_map<int, Plugin::AudioPluginChain> m_chains;
     int m_lastFrame = -1;
 };
 

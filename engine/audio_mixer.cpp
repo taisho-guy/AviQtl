@@ -58,6 +58,10 @@ std::vector<float> AudioMixer::mix(int currentFrame, double fps, int samplesPerF
         auto decoder = m_decoders[clipId];
         std::vector<float> clipSamples = decoder->getSamples(startTime, samplesPerFrame * 2);
 
+        // プラグインチェーンを適用
+        if (m_chains.count(clipId))
+            m_chains[clipId].process(clipSamples.data(), samplesPerFrame);
+
         float leftVol = audio->volume * (audio->pan <= 0 ? 1.0f : 1.0f - audio->pan);
         float rightVol = audio->volume * (audio->pan >= 0 ? 1.0f : 1.0f + audio->pan);
 
@@ -89,6 +93,17 @@ void AudioMixer::reset() {
         m_audioSink->stop();
         m_audioSink->reset();
         m_audioOutput = m_audioSink->start();
+    }
+}
+
+Plugin::AudioPluginChain &AudioMixer::getChain(int clipId) {
+    // m_chains[clipId] will default-construct an AudioPluginChain if it doesn't exist.
+    return m_chains[clipId];
+}
+
+void AudioMixer::clearChain(int clipId) {
+    if (m_chains.count(clipId)) {
+        m_chains.erase(clipId);
     }
 }
 

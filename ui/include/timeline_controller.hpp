@@ -113,6 +113,19 @@ class TimelineController : public QObject {
     Q_INVOKABLE void addEffect(int clipId, const QString &effectId);
     Q_INVOKABLE void removeEffect(int clipId, int effectIndex);
 
+    // オーディオプラグイン操作
+    Q_INVOKABLE QVariantList getAvailableAudioPlugins() const;
+    Q_INVOKABLE void addAudioPlugin(int clipId, const QString &pluginId);
+    Q_INVOKABLE void removeAudioPlugin(int clipId, int index);
+    Q_INVOKABLE QVariantList getPluginCategories() const;
+    Q_INVOKABLE QVariantList getPluginsByCategory(const QString &category) const;
+    Q_INVOKABLE bool isAudioClip(int clipId) const;
+
+    // パラメータ操作用
+    Q_INVOKABLE QVariantList getClipEffectStack(int clipId) const;
+    Q_INVOKABLE QVariantList getEffectParameters(int clipId, int effectIndex) const;
+    Q_INVOKABLE void setEffectParameter(int clipId, int effectIndex, int paramIndex, float value);
+
     // シーン操作 (未実装)
     QVariantList scenes() const;
     int currentSceneId() const;

@@ -31,7 +31,7 @@ RinaはAviUtl 1.10（ExEdit 0.92）の代替を目指すプロジェクトです
 - 依存関係をインストールします
 
 ```
-paru -S --needed fish git cmake ninja qt6 lua-jit vulkan-devel base-devel mold p7zip  fftw wayland-protocols libffi
+paru -S --needed fish git cmake ninja qt6 lua-jit vulkan-devel base-devel mold p7zip  fftw wayland-protocols libffi ladspa lv2 lilv clap vst3sdk
 ```
 
 - リポジトリをクローンします
