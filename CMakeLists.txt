@@ -65,7 +65,9 @@ find_path(CLAP_INCLUDE_DIR  clap/clap.h)
 find_path(VST3SDK_INCLUDE_DIR pluginterfaces/vst/ivstaudioprocessor.h
     HINTS /usr/include/vst3sdk)
 
-if(NOT CLAP_INCLUDE_DIR)
+if(CLAP_INCLUDE_DIR)
+    message(STATUS "Found CLAP headers: ${CLAP_INCLUDE_DIR}")
+else()
     message(WARNING "clap headers not found. CLAP support disabled.")
 endif()
 if(NOT VST3SDK_INCLUDE_DIR)
@@ -189,8 +191,14 @@ endif()
 target_include_directories(Rina PRIVATE
     ${LADSPA_INCLUDE_DIR}
     ${LILV_INCLUDE_DIRS}
-    ${CLAP_INCLUDE_DIR}
 )
+if(CLAP_INCLUDE_DIR)
+    target_include_directories(Rina PRIVATE ${CLAP_INCLUDE_DIR})
+    target_compile_definitions(Rina PRIVATE RINA_HAS_CLAP=1)
+else()
+    target_compile_definitions(Rina PRIVATE RINA_HAS_CLAP=0)
+endif()
+
 if(VST3SDK_INCLUDE_DIR)
     # pluginterfaces/ の親ディレクトリを追加
     get_filename_component(VST3SDK_ROOT "${VST3SDK_INCLUDE_DIR}" DIRECTORY)
