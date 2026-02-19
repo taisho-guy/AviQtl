@@ -13,7 +13,6 @@ if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR "${CMAKE_CXX_COMPILER_ID}" MAT
         -Wall -Wextra -Wpedantic
         -Wno-unused-parameter
         -O3
-        -ffast-math
         -flto
         -fno-semantic-interposition
     )
