@@ -16,6 +16,7 @@
 #include <QQmlContext>
 #include <QQuickStyle> // 追加
 #include <QQuickWindow>
+#include <QSplashScreen>
 #include <QTimer>
 #include <lua.hpp>
 
@@ -41,37 +42,20 @@ int main(int argc, char *argv[]) {
     app.setWindowIcon(QIcon(":/assets/icon.svg"));
 
     // 設定のロード(インスタンス取得時にloadされる)
-    Rina::Core::SettingsManager::instance().settings();
+    QVariantMap settings = Rina::Core::SettingsManager::instance().settings();
 
-    // エフェクトレジストリの初期化
-    Rina::Core::initializeStandardEffects();
-
-    // オーディオプラグインの初期化 (起動時にスキャン)
-    // これにより、UI表示後のフリーズを防ぎ、スレッドセーフティを向上させる
-    Rina::Engine::Plugin::AudioPluginManager::instance();
-
-    // --- Lua MODエンジンの初期化 (Phase 1 & 2) ---
-    auto &modEngine = Rina::Scripting::ModEngine::instance();
-    // ECSのインスタンス（g_ecsState）のアドレスをLuaに渡す
-    void *ecsPtr = Rina::Engine::Timeline::ECS::instance().getInternalStatePtr();
-    modEngine.initialize(ecsPtr);
-
-    // プラグインのロード
-    modEngine.loadPlugins();
+    // スプラッシュスクリーンの表示
+    int splashSize = settings.value("splashSize", 512).toInt();
+    QPixmap splashPixmap = QIcon(":/assets/icon.svg").pixmap(splashSize, splashSize);
+    QSplashScreen splash(splashPixmap);
+    splash.show();
+    app.processEvents();
 
     // Luaフック用のタイマー (約60FPSで同期)
     QTimer luaHookTimer;
+    auto &modEngine = Rina::Scripting::ModEngine::instance();
     QObject::connect(&luaHookTimer, &QTimer::timeout, [&modEngine]() { modEngine.onUpdate(); });
     luaHookTimer.start(16);
-
-    // 外部リソースのロード
-    QString appDir = QCoreApplication::applicationDirPath();
-
-    // 1. Filters (./effects)
-    Rina::Core::EffectRegistry::instance().loadEffectsFromDirectory(appDir + "/effects");
-
-    // 2. Objects (./objects)
-    Rina::Core::EffectRegistry::instance().loadEffectsFromDirectory(appDir + "/objects");
 
     // 1. スタイルの強制適用 (KDE Plasma Native)
     // これにより、システムの色設定（ダークモード等）が自動的にQMLに反映される
@@ -96,8 +80,6 @@ int main(int argc, char *argv[]) {
     // アプリケーション生存期間中維持されるインスタンスを作成
     auto *timelineController = new Rina::UI::TimelineController(&app);
     engine.rootContext()->setContextProperty("TimelineBridge", timelineController);
-    // Lua API に controller を登録 (QML登録後に行う)
-    modEngine.registerController(timelineController);
 
     // TimelineControllerにVideoFrameStoreを渡す
     timelineController->setVideoFrameStore(videoFrameStore);
@@ -105,8 +87,34 @@ int main(int argc, char *argv[]) {
     // WindowManager をQMLから触れるように公開
     engine.rootContext()->setContextProperty("WindowManager", static_cast<QObject *>(&Rina::UI::WindowManager::instance()));
 
-    // ウィンドウ生成（バックグラウンドで生成）
-    Rina::UI::WindowManager::instance().spawnInitialWindows(&engine);
+    // 初期化処理をイベントループ開始後に遅延させることで、スプラッシュスクリーンを確実に描画する
+    QTimer::singleShot(10, [&] {
+        // エフェクトレジストリの初期化
+        Rina::Core::initializeStandardEffects();
+
+        // オーディオプラグインの初期化 (起動時にスキャン)
+        Rina::Engine::Plugin::AudioPluginManager::instance();
+
+        // --- Lua MODエンジンの初期化 ---
+        // ECSのインスタンス（g_ecsState）のアドレスをLuaに渡す
+        void *ecsPtr = Rina::Engine::Timeline::ECS::instance().getInternalStatePtr();
+        modEngine.initialize(ecsPtr);
+        // Lua API に controller を登録
+        modEngine.registerController(timelineController);
+        // プラグインのロード
+        modEngine.loadPlugins();
+
+        // 外部リソースのロード
+        QString appDir = QCoreApplication::applicationDirPath();
+        Rina::Core::EffectRegistry::instance().loadEffectsFromDirectory(appDir + "/effects");
+        Rina::Core::EffectRegistry::instance().loadEffectsFromDirectory(appDir + "/objects");
+
+        // ウィンドウ生成（バックグラウンドで生成）
+        Rina::UI::WindowManager::instance().spawnInitialWindows(&engine);
+
+        // スプラッシュを閉じる
+        splash.finish(nullptr);
+    });
 
     return app.exec();
 }

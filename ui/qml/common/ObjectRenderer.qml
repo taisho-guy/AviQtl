@@ -44,17 +44,27 @@ Item {
                 if ("params"      in item) item.params      = modelData.params;
                 if ("effectModel" in item) item.effectModel = modelData;
                 if ("frame"       in item) item.frame       = renderer.relFrame;
-                if ("width"       in item) item.width       = inputSource.width;
-                if ("height"      in item) item.height      = inputSource.height;
             }
 
             onLoaded:         _syncAll()
             onInputSourceChanged: {
                 if (status === Loader.Ready) {
                     if ("source" in item) item.source = inputSource;
-                    if ("width"  in item) item.width  = inputSource.width;
-                    if ("height" in item) item.height = inputSource.height;
                 }
+            }
+
+            // ソースのサイズ変更を動的に追従させるバインディング
+            Binding {
+                target: effectLoader.item
+                property: "width"
+                value: effectLoader.inputSource ? effectLoader.inputSource.width : 0
+                when: effectLoader.status === Loader.Ready && effectLoader.item && ("width" in effectLoader.item)
+            }
+            Binding {
+                target: effectLoader.item
+                property: "height"
+                value: effectLoader.inputSource ? effectLoader.inputSource.height : 0
+                when: effectLoader.status === Loader.Ready && effectLoader.item && ("height" in effectLoader.item)
             }
 
             // relFrame 変化をエフェクトに伝播
