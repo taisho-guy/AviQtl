@@ -132,16 +132,155 @@ Dialog {
 
                     // evalEasing はここでクロージャとして定義 (bz をキャプチャ)
                     function evalEasing(t) {
+                        // ─── Bounce ────────────────────────────────
+                        function _bounceOut(x) {
+                            var n1 = 7.5625, d1 = 2.75;
+                            if (x < 1 / d1)
+                                return n1 * x * x;
+
+                            if (x < 2 / d1) {
+                                x -= 1.5 / d1;
+                                return n1 * x * x + 0.75;
+                            }
+                            if (x < 2.5 / d1) {
+                                x -= 2.25 / d1;
+                                return n1 * x * x + 0.9375;
+                            }
+                            x -= 2.625 / d1;
+                            return n1 * x * x + 0.984375;
+                        }
+
                         var type = root.selectedType.toLowerCase().replace(/_/g, "");
-                        if (type === "easein")
+                        // ─── Sine ──────────────────────────────────
+                        if (type === "easeinsine")
+                            return 1 - Math.cos(t * Math.PI / 2);
+
+                        if (type === "easeoutsine")
+                            return Math.sin(t * Math.PI / 2);
+
+                        if (type === "easeinoutsine")
+                            return -(Math.cos(Math.PI * t) - 1) / 2;
+
+                        // ─── Quad ──────────────────────────────────
+                        if (type === "easein" || type === "easeinquad")
                             return t * t;
 
-                        if (type === "easeout")
-                            return t * (2 - t);
+                        if (type === "easeout" || type === "easeoutquad")
+                            return 1 - (1 - t) * (1 - t);
 
-                        if (type === "easeinout")
-                            return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+                        if (type === "easeinout" || type === "easeinoutquad")
+                            return t < 0.5 ? 2 * t * t : 1 - ((-2 * t + 2) * (-2 * t + 2)) / 2;
 
+                        // ─── Cubic ─────────────────────────────────
+                        if (type === "easeincubic")
+                            return t * t * t;
+
+                        if (type === "easeoutcubic")
+                            return 1 - (1 - t) * (1 - t) * (1 - t);
+
+                        if (type === "easeinoutcubic")
+                            return t < 0.5 ? 4 * t * t * t : 1 - ((-2 * t + 2) * (-2 * t + 2) * (-2 * t + 2)) / 2;
+
+                        // ─── Quart ─────────────────────────────────
+                        if (type === "easeinquart")
+                            return t * t * t * t;
+
+                        if (type === "easeoutquart")
+                            return 1 - (1 - t) * (1 - t) * (1 - t) * (1 - t);
+
+                        if (type === "easeinoutquart")
+                            return t < 0.5 ? 8 * t * t * t * t : 1 - ((-2 * t + 2) * (-2 * t + 2) * (-2 * t + 2) * (-2 * t + 2)) / 2;
+
+                        // ─── Quint ─────────────────────────────────
+                        if (type === "easeinquint")
+                            return t * t * t * t * t;
+
+                        if (type === "easeoutquint")
+                            return 1 - (1 - t) * (1 - t) * (1 - t) * (1 - t) * (1 - t);
+
+                        if (type === "easeinoutquint")
+                            return t < 0.5 ? 16 * t * t * t * t * t : 1 - ((-2 * t + 2) * (-2 * t + 2) * (-2 * t + 2) * (-2 * t + 2) * (-2 * t + 2)) / 2;
+
+                        // ─── Expo ──────────────────────────────────
+                        if (type === "easeinexpo")
+                            return t === 0 ? 0 : Math.pow(2, 10 * t - 10);
+
+                        if (type === "easeoutexpo")
+                            return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+
+                        if (type === "easeinoutexpo") {
+                            if (t === 0)
+                                return 0;
+
+                            if (t === 1)
+                                return 1;
+
+                            return t < 0.5 ? Math.pow(2, 20 * t - 10) / 2 : (2 - Math.pow(2, -20 * t + 10)) / 2;
+                        }
+                        // ─── Circ ──────────────────────────────────
+                        if (type === "easeincirc")
+                            return 1 - Math.sqrt(1 - t * t);
+
+                        if (type === "easeoutcirc")
+                            return Math.sqrt(1 - (t - 1) * (t - 1));
+
+                        if (type === "easeinoutcirc")
+                            return t < 0.5 ? (1 - Math.sqrt(1 - 4 * t * t)) / 2 : (Math.sqrt(1 - (-2 * t + 2) * (-2 * t + 2)) + 1) / 2;
+
+                        // ─── Back ──────────────────────────────────
+                        if (type === "easeinback") {
+                            var c1 = 1.70158, c3 = c1 + 1;
+                            return c3 * t * t * t - c1 * t * t;
+                        }
+                        if (type === "easeoutback") {
+                            var c1b = 1.70158, c3b = c1b + 1;
+                            return 1 + c3b * (t - 1) * (t - 1) * (t - 1) + c1b * (t - 1) * (t - 1);
+                        }
+                        if (type === "easeinoutback") {
+                            var c2 = 1.70158 * 1.525;
+                            return t < 0.5 ? ((2 * t) * (2 * t) * ((c2 + 1) * 2 * t - c2)) / 2 : ((2 * t - 2) * (2 * t - 2) * ((c2 + 1) * (2 * t - 2) + c2) + 2) / 2;
+                        }
+                        // ─── Elastic ───────────────────────────────
+                        if (type === "easeinelastic") {
+                            var c4 = 2 * Math.PI / 3;
+                            if (t === 0)
+                                return 0;
+
+                            if (t === 1)
+                                return 1;
+
+                            return -Math.pow(2, 10 * t - 10) * Math.sin((10 * t - 10.75) * c4);
+                        }
+                        if (type === "easeoutelastic") {
+                            var c4e = 2 * Math.PI / 3;
+                            if (t === 0)
+                                return 0;
+
+                            if (t === 1)
+                                return 1;
+
+                            return Math.pow(2, -10 * t) * Math.sin((10 * t - 0.75) * c4e) + 1;
+                        }
+                        if (type === "easeinoutelastic") {
+                            var c5 = 2 * Math.PI / 4.5;
+                            if (t === 0)
+                                return 0;
+
+                            if (t === 1)
+                                return 1;
+
+                            return t < 0.5 ? -(Math.pow(2, 20 * t - 10) * Math.sin((20 * t - 11.125) * c5)) / 2 : (Math.pow(2, -20 * t + 10) * Math.sin((20 * t - 11.125) * c5)) / 2 + 1;
+                        }
+                        if (type === "easeoutbounce")
+                            return _bounceOut(t);
+
+                        if (type === "easeinbounce")
+                            return 1 - _bounceOut(1 - t);
+
+                        if (type === "easeinoutbounce")
+                            return t < 0.5 ? (1 - _bounceOut(1 - 2 * t)) / 2 : (1 + _bounceOut(2 * t - 1)) / 2;
+
+                        // ─── カスタムベジェ (既存実装そのまま) ─────
                         if (type === "custom") {
                             var prevX = 0, prevY = 0;
                             for (var i = 0; i < bz.length; i += 6) {

@@ -149,10 +149,108 @@ class EffectModel : public QObject {
   private:
     // Static easing function registry
     static const std::map<QString, EasingFunction> &easingFunctions() {
-        static const std::map<QString, EasingFunction> funcs = {{"linear", [](double t, const auto &) { return t; }},
+        // easeOutBounce を先に定義 (easeInBounce/easeInOutBounce が参照)
+        static auto easeOutBounce = [](double x) -> double {
+            constexpr double n1 = 7.5625, d1 = 2.75;
+            if (x < 1.0 / d1)
+                return n1 * x * x;
+            if (x < 2.0 / d1) {
+                x -= 1.5 / d1;
+                return n1 * x * x + 0.75;
+            }
+            if (x < 2.5 / d1) {
+                x -= 2.25 / d1;
+                return n1 * x * x + 0.9375;
+            }
+            x -= 2.625 / d1;
+            return n1 * x * x + 0.984375;
+        };
+
+        static const std::map<QString, EasingFunction> funcs = {
+                                                                // ─── 既存 (後方互換) ───────────────────────────────────────
+                                                                {"linear", [](double t, const auto &) { return t; }},
                                                                 {"ease_in", [](double t, const auto &) { return t * t; }},
                                                                 {"ease_out", [](double t, const auto &) { return t * (2.0 - t); }},
                                                                 {"ease_in_out", [](double t, const auto &) { return t < 0.5 ? 2.0 * t * t : -1.0 + (4.0 - 2.0 * t) * t; }},
+                                                                // ─── Sine ─────────────────────────────────────────────────
+                                                                {"ease_in_sine", [](double t, const auto &) { return 1.0 - std::cos(t * M_PI / 2.0); }},
+                                                                {"ease_out_sine", [](double t, const auto &) { return std::sin(t * M_PI / 2.0); }},
+                                                                {"ease_in_out_sine", [](double t, const auto &) { return -(std::cos(M_PI * t) - 1.0) / 2.0; }},
+                                                                // ─── Quad ─────────────────────────────────────────────────
+                                                                {"ease_in_quad", [](double t, const auto &) { return t * t; }},
+                                                                {"ease_out_quad", [](double t, const auto &) { return 1.0 - (1.0 - t) * (1.0 - t); }},
+                                                                {"ease_in_out_quad", [](double t, const auto &) { return t < 0.5 ? 2.0 * t * t : 1.0 - ((-2.0 * t + 2.0) * (-2.0 * t + 2.0)) / 2.0; }},
+                                                                // ─── Cubic ────────────────────────────────────────────────
+                                                                {"ease_in_cubic", [](double t, const auto &) { return t * t * t; }},
+                                                                {"ease_out_cubic", [](double t, const auto &) { return 1.0 - (1.0 - t) * (1.0 - t) * (1.0 - t); }},
+                                                                {"ease_in_out_cubic", [](double t, const auto &) { return t < 0.5 ? 4.0 * t * t * t : 1.0 - ((-2.0 * t + 2.0) * (-2.0 * t + 2.0) * (-2.0 * t + 2.0)) / 2.0; }},
+                                                                // ─── Quart ────────────────────────────────────────────────
+                                                                {"ease_in_quart", [](double t, const auto &) { return t * t * t * t; }},
+                                                                {"ease_out_quart", [](double t, const auto &) { return 1.0 - (1.0 - t) * (1.0 - t) * (1.0 - t) * (1.0 - t); }},
+                                                                {"ease_in_out_quart", [](double t, const auto &) { return t < 0.5 ? 8.0 * t * t * t * t : 1.0 - ((-2.0 * t + 2.0) * (-2.0 * t + 2.0) * (-2.0 * t + 2.0) * (-2.0 * t + 2.0)) / 2.0; }},
+                                                                // ─── Quint ────────────────────────────────────────────────
+                                                                {"ease_in_quint", [](double t, const auto &) { return t * t * t * t * t; }},
+                                                                {"ease_out_quint", [](double t, const auto &) { return 1.0 - (1.0 - t) * (1.0 - t) * (1.0 - t) * (1.0 - t) * (1.0 - t); }},
+                                                                {"ease_in_out_quint", [](double t, const auto &) { return t < 0.5 ? 16.0 * t * t * t * t * t : 1.0 - ((-2.0 * t + 2.0) * (-2.0 * t + 2.0) * (-2.0 * t + 2.0) * (-2.0 * t + 2.0) * (-2.0 * t + 2.0)) / 2.0; }},
+                                                                // ─── Expo ─────────────────────────────────────────────────
+                                                                {"ease_in_expo", [](double t, const auto &) { return t == 0.0 ? 0.0 : std::pow(2.0, 10.0 * t - 10.0); }},
+                                                                {"ease_out_expo", [](double t, const auto &) { return t == 1.0 ? 1.0 : 1.0 - std::pow(2.0, -10.0 * t); }},
+                                                                {"ease_in_out_expo", [](double t, const auto &) {
+                                                                     if (t == 0.0)
+                                                                         return 0.0;
+                                                                     if (t == 1.0)
+                                                                         return 1.0;
+                                                                     return t < 0.5 ? std::pow(2.0, 20.0 * t - 10.0) / 2.0 : (2.0 - std::pow(2.0, -20.0 * t + 10.0)) / 2.0;
+                                                                 }},
+                                                                // ─── Circ ─────────────────────────────────────────────────
+                                                                {"ease_in_circ", [](double t, const auto &) { return 1.0 - std::sqrt(1.0 - t * t); }},
+                                                                {"ease_out_circ", [](double t, const auto &) { return std::sqrt(1.0 - (t - 1.0) * (t - 1.0)); }},
+                                                                {"ease_in_out_circ", [](double t, const auto &) {
+                                                                     return t < 0.5 ? (1.0 - std::sqrt(1.0 - 4.0 * t * t)) / 2.0 : (std::sqrt(1.0 - (-2.0 * t + 2.0) * (-2.0 * t + 2.0)) + 1.0) / 2.0;
+                                                                 }},
+                                                                // ─── Back ─────────────────────────────────────────────────
+                                                                {"ease_in_back", [](double t, const auto &) {
+                                                                     constexpr double c1 = 1.70158, c3 = 1.70158 + 1.0;
+                                                                     return c3 * t * t * t - c1 * t * t;
+                                                                 }},
+                                                                {"ease_out_back", [](double t, const auto &) {
+                                                                     constexpr double c1 = 1.70158, c3 = 1.70158 + 1.0;
+                                                                     return 1.0 + c3 * (t - 1.0) * (t - 1.0) * (t - 1.0) + c1 * (t - 1.0) * (t - 1.0);
+                                                                 }},
+                                                                {"ease_in_out_back", [](double t, const auto &) {
+                                                                     constexpr double c2 = 1.70158 * 1.525;
+                                                                     return t < 0.5 ? ((2.0 * t) * (2.0 * t) * ((c2 + 1.0) * 2.0 * t - c2)) / 2.0 : ((2.0 * t - 2.0) * (2.0 * t - 2.0) * ((c2 + 1.0) * (2.0 * t - 2.0) + c2) + 2.0) / 2.0;
+                                                                 }},
+                                                                // ─── Elastic ──────────────────────────────────────────────
+                                                                {"ease_in_elastic", [](double t, const auto &) {
+                                                                     constexpr double c4 = (2.0 * M_PI) / 3.0;
+                                                                     if (t == 0.0)
+                                                                         return 0.0;
+                                                                     if (t == 1.0)
+                                                                         return 1.0;
+                                                                     return -std::pow(2.0, 10.0 * t - 10.0) * std::sin((t * 10.0 - 10.75) * c4);
+                                                                 }},
+                                                                {"ease_out_elastic", [](double t, const auto &) {
+                                                                     constexpr double c4 = (2.0 * M_PI) / 3.0;
+                                                                     if (t == 0.0)
+                                                                         return 0.0;
+                                                                     if (t == 1.0)
+                                                                         return 1.0;
+                                                                     return std::pow(2.0, -10.0 * t) * std::sin((t * 10.0 - 0.75) * c4) + 1.0;
+                                                                 }},
+                                                                {"ease_in_out_elastic", [](double t, const auto &) {
+                                                                     constexpr double c5 = (2.0 * M_PI) / 4.5;
+                                                                     if (t == 0.0)
+                                                                         return 0.0;
+                                                                     if (t == 1.0)
+                                                                         return 1.0;
+                                                                     return t < 0.5 ? -(std::pow(2.0, 20.0 * t - 10.0) * std::sin((20.0 * t - 11.125) * c5)) / 2.0 : (std::pow(2.0, -20.0 * t + 10.0) * std::sin((20.0 * t - 11.125) * c5)) / 2.0 + 1.0;
+                                                                 }},
+                                                                // ─── Bounce ───────────────────────────────────────────────
+                                                                {"ease_out_bounce", [](double t, const auto &) { return easeOutBounce(t); }},
+                                                                {"ease_in_bounce", [](double t, const auto &) { return 1.0 - easeOutBounce(1.0 - t); }},
+                                                                {"ease_in_out_bounce", [](double t, const auto &) { return t < 0.5 ? (1.0 - easeOutBounce(1.0 - 2.0 * t)) / 2.0 : (1.0 + easeOutBounce(2.0 * t - 1.0)) / 2.0; }},
+                                                                // ─── カスタムベジェ ───────────────────────────────────────
                                                                 {"custom", [](double x, const auto &p) {
                                                                      // p = [cp1x, cp1y, cp2x, cp2y, endX, endY, ...repeat...]
                                                                      // セグメント構造: 始点(prevX, prevY) -> 制御点1, 制御点2 -> 終点(endX, endY)
@@ -176,7 +274,6 @@ class EffectModel : public QObject {
                                                                              double n_x = (x - prevX) / range;
 
                                                                              double t = solveBezierT(n_x, n_cp1x, n_cp2x);
-                                                                             double one_minus_t = 1.0 - t;
                                                                              // Y座標の補間
                                                                              return (1 - t) * (1 - t) * (1 - t) * prevY + 3 * (1 - t) * (1 - t) * t * cp1y + 3 * (1 - t) * t * t * cp2y + t * t * t * endY;
                                                                          }
