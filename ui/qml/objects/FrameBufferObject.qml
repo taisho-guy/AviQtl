@@ -1,5 +1,5 @@
-import QtQuick
 import QtQml 2.15
+import QtQuick
 import QtQuick3D
 import "qrc:/qt/qml/Rina/ui/qml/common" as Common
 
@@ -23,6 +23,8 @@ Common.BaseObject {
     property real fbHeight: flattenHost.height
     // ─── 内部: 上位レイヤー収集 ───────────────────────────────────
     property var _capturedOutputs: []
+    // sceneRootRef が設定されたら、全 clipNode の fbRendererOutput を Connections で監視する
+    property var _watchConnections: []
 
     function _rebuildCapture() {
         if (!sceneRootRef || clipLayer < 0) {
@@ -53,17 +55,9 @@ Common.BaseObject {
         _capturedOutputs = sorted;
     }
 
-    onSceneRootRefChanged: _startRebuildWatch()
-    onClipLayerChanged: _startRebuildWatch()
-
-    // sceneRootRef が設定されたら、全 clipNode の fbRendererOutput を Connections で監視する
-    property var _watchConnections: []
-
     function _startRebuildWatch() {
         // 既存の監視を全解除
-        for (var i = 0; i < _watchConnections.length; i++)
-            _watchConnections[i].destroy();
-
+        for (var i = 0; i < _watchConnections.length; i++) _watchConnections[i].destroy()
         _watchConnections = [];
         if (!sceneRootRef)
             return ;
@@ -79,6 +73,8 @@ Common.BaseObject {
         Qt.callLater(_rebuildCapture);
     }
 
+    onSceneRootRefChanged: _startRebuildWatch()
+    onClipLayerChanged: _startRebuildWatch()
     Component.onCompleted: {
         adopt2D(flattenHost);
         adopt2D(fbSourceWrapper);
