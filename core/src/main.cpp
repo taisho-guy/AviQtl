@@ -91,6 +91,8 @@ int main(int argc, char *argv[]) {
     // アプリケーション生存期間中維持されるインスタンスを作成
     auto *timelineController = new Rina::UI::TimelineController(&app);
     engine.rootContext()->setContextProperty("TimelineBridge", timelineController);
+    // Lua API に controller を登録 (QML登録後に行う)
+    modEngine.registerController(timelineController);
 
     // TimelineControllerにVideoFrameStoreを渡す
     timelineController->setVideoFrameStore(videoFrameStore);
