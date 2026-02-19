@@ -445,7 +445,9 @@ Common.RinaWindow {
 
                     delegate: ColumnLayout {
                         id: audioEffectRoot
+
                         property int effectIndex: index
+
                         Layout.fillWidth: true
                         spacing: 0
 
@@ -477,7 +479,9 @@ Common.RinaWindow {
                                     size: 16
                                     color: parent.hovered ? "red" : parent.palette.text
                                 }
+
                             }
+
                         }
 
                         Repeater {
@@ -505,6 +509,7 @@ Common.RinaWindow {
                 }
 
             }
+
         }
 
     }
@@ -542,6 +547,7 @@ Common.RinaWindow {
 
                 delegate: Menu {
                     id: categoryMenu
+
                     title: modelData // カテゴリ名
 
                     Instantiator {

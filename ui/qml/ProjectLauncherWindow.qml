@@ -164,6 +164,7 @@ Common.RinaWindow {
 
             Button {
                 id: newProjectBtn
+
                 highlighted: true
                 Layout.fillWidth: true
                 onClicked: {
@@ -257,6 +258,7 @@ Common.RinaWindow {
 
             Button {
                 id: openProjectBtn
+
                 Layout.fillWidth: true
                 onClicked: fileDialog.open()
 
