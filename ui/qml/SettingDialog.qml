@@ -339,16 +339,16 @@ Common.RinaWindow {
                                 }
                             }
 
-                            // 非数値
-                            TextField {
+                            // 非数値 (ControlLoader で型別UI)
+                            Common.ControlLoader {
                                 Layout.fillWidth: true
                                 Layout.margins: 4
                                 visible: !isNumber
-                                text: String(effVal || "")
-                                selectByMouse: true
-                                onEditingFinished: {
+                                definition: def
+                                value: effVal
+                                onValueModified: function(val) {
                                     root.inputting = true;
-                                    TimelineBridge.updateClipEffectParam(targetClipId, effIdx, key, text);
+                                    TimelineBridge.updateClipEffectParam(targetClipId, effIdx, key, val);
                                     root.inputting = false;
                                 }
                             }

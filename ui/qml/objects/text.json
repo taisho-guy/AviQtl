@@ -6,14 +6,15 @@
     "params": {
         "text": "テキスト",
         "textSize": 64,
-        "color": "#ffffff"
+        "color": "#ffffff",
+        "fontFamily": ""
     },
     "ui": {
-        "group": "object",
         "controls": [
-            { "type": "text", "param": "text", "label": "テキスト" },
-            { "type": "float", "param": "textSize", "label": "サイズ", "min": 1, "max": 500 },
-            { "type": "color", "param": "color", "label": "文字色" }
+            { "type": "string", "param": "text", "label": "テキスト" },
+            { "type": "float", "param": "textSize", "label": "サイズ", "min": 1, "max": 400 },
+            { "type": "color", "param": "color", "label": "色" },
+            { "type": "font", "param": "fontFamily", "label": "フォント" }
         ]
     }
 }

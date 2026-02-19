@@ -11,6 +11,7 @@ Common.BaseObject {
     property string textContent: String(evalParam("text", "text", "テキスト"))
     property int textSize: Number(evalParam("text", "textSize", 64))
     property color color: evalParam("text", "color", "#ffffff")
+    property string fontFamily: String(evalParam("text", "fontFamily", ""))
     property real opacity: 1
 
     function dbg(msg) {
@@ -36,6 +37,7 @@ Common.BaseObject {
             text: root.textContent
             font.pixelSize: root.textSize
             color: root.color
+            font.family: root.fontFamily // 空文字はQtのデフォルトフォントにフォールバック
             style: Text.Outline
             styleColor: "black"
             renderType: Text.QtRendering

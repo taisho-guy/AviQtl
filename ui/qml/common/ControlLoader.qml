@@ -62,6 +62,8 @@ Loader {
             return enumComponent;
         case "combo":
             return comboComponent;
+        case "font":
+            return fontComponent;
         case "header":
             return headerComponent;
         default:
@@ -390,6 +392,44 @@ Loader {
                         controlLoader.valueModified(model[index][valueRole]);
 
                 }
+            }
+
+        }
+
+    }
+
+    // --- font: FontDialog ベースフォントピッカー ─────────────────────
+    Component {
+        id: fontComponent
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 6
+
+            FontDialog {
+                id: fontPickerDialog
+
+                title: controlLoader.definition.label || "フォントを選択"
+                // 現在値をダイアログの初期選択に反映
+                currentFont.family: controlLoader.value || ""
+                onAccepted: controlLoader.valueModified(selectedFont.family)
+            }
+
+            Label {
+                text: controlLoader.definition.label || controlLoader.definition.name
+                color: "white"
+                Layout.preferredWidth: 80
+                elide: Text.ElideRight
+            }
+
+            // 現在のフォント名を表示 + クリックでダイアログを開く
+            Button {
+                Layout.fillWidth: true
+                text: controlLoader.value ? controlLoader.value : "デフォルト"
+                // ボタン自体をそのフォントでプレビュー表示
+                font.family: controlLoader.value || ""
+                font.pixelSize: 13
+                onClicked: fontPickerDialog.open()
             }
 
         }
