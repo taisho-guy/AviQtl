@@ -14,6 +14,23 @@ Node {
     property int clipDurationFrames: 0
     property var clipParams: ({
     })
+    // CompositeView の FB 収集ロジックから参照される公開プロパティ
+    // clipNode (CompositeView の delegate) から layer 番号を注入する
+    // clipNode.clipLayerRole は model.layer と同期、
+    // fbRendererOutput は NodeLoader.onItemChanged で接続される
+    property int clipLayerRole: -1
+    // CompositeView の clipNode から直接セット
+    // FB 収集対象: 変換済み2Dキャプチャアイテム
+    // FB 収集対象: 変換済み2Dキャプチャアイテム (外部から item.fbCaptureItem でアクセス可能)
+    property alias fbCaptureItem: _fbCaptureItemImpl
+    property Item fbRendererOutput: _fbCaptureItemImpl // onRenderHostChanged/onCompleted で fbCaptureItem に接続
+    // CompositeView から注入される変換パラメータ
+    property real clipNodeScaleX: 1
+    property real clipNodeScaleY: 1
+    property real clipNodePosX: 0
+    property real clipNodePosY: 0
+    property real clipNodeRotZ: 0
+    property real clipNodeOpacity: 1
     // 自動計算プロパティ
     property int currentFrame: (TimelineBridge && TimelineBridge.transport) ? TimelineBridge.transport.currentFrame : 0
     readonly property int relFrame: currentFrame - clipStartFrame
@@ -78,12 +95,14 @@ Node {
     onRenderHostChanged: {
         adopt2D(sourceItem);
         adopt2D(rendererInstance);
+        adopt2D(_fbCaptureItemImpl);
     }
     Component.onCompleted: {
         // 各オブジェクト(TextObject/RectObject)が set してくる sourceItem を移す
         adopt2D(base.sourceItem);
         // ObjectRenderer(= ShaderEffectSource/effectsチェーン)も移す
         adopt2D(rendererInstance);
+        adopt2D(_fbCaptureItemImpl);
         refreshEffects();
     }
     Component.onDestruction: {
@@ -100,9 +119,11 @@ Node {
     onClipIdChanged: refreshEffects()
     // sourceItem は常に非表示（renderer.output のみ表示）
     onSourceItemChanged: {
-        if (sourceItem)
-            sourceItem.visible = false;
-
+        if (sourceItem) {
+            // キャプチャ安定化のためvisibleは落とさず、不可視化はopacityで行う
+            sourceItem.visible = true;
+            sourceItem.opacity = 0;
+        }
     }
 
     Connections {
@@ -117,6 +138,39 @@ Node {
         }
 
         target: TimelineBridge
+    }
+
+    // ─── 2D変換済みキャプチャアイテム ─────────────────────────────
+    // View3D の clipNode が持つ transform を 2D 空間で再現し、
+    // FB が「変換後の最終見た目」を収集できるようにする
+    Item {
+        id: _fbCaptureItemImpl
+
+        width: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.width : 1920
+        height: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.height : 1080
+        visible: true // SceneGraph に残すため true (opacity は renderHost 側で 0)
+
+        Item {
+            id: fbTransformItem
+
+            // テクスチャサイズをスケール適用後のサイズに設定
+            width: (renderer.output.sourceItem ? renderer.output.sourceItem.width : 1) * base.clipNodeScaleX
+            height: (renderer.output.sourceItem ? renderer.output.sourceItem.height : 1) * base.clipNodeScaleY
+            // AviUtl 座標系: 中心(0,0)、Y下プラス → Qt2D: 中心 = parent の center + offset
+            x: _fbCaptureItemImpl.width / 2 + base.clipNodePosX - width / 2
+            y: _fbCaptureItemImpl.height / 2 - base.clipNodePosY - height / 2
+            rotation: -base.clipNodeRotZ
+            opacity: base.clipNodeOpacity
+
+            ShaderEffectSource {
+                anchors.fill: parent
+                sourceItem: renderer.finalItem
+                live: true
+                hideSource: true // finalItem (opacity:0 かもしれないが) を隠す
+            }
+
+        }
+
     }
 
     // レンダラー自動配置

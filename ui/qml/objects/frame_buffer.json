@@ -1,0 +1,18 @@
+{
+    "id": "frame_buffer",
+    "name": "フレームバッファ",
+    "category": "object",
+    "qml": "FrameBufferObject.qml",
+    "params": {
+        "clearBelow": false
+    },
+    "ui": {
+        "controls": [
+            {
+                "param": "clearBelow",
+                "label": "下位レイヤーをクリア",
+                "type": "bool"
+            }
+        ]
+    }
+}

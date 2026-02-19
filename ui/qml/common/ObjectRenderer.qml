@@ -3,30 +3,23 @@ import QtQuick.Effects
 
 Item {
     id: renderer
-    
-    // 入力: 元となる映像ソース（TextやRectangleなど）
+
     required property Item originalSource
-    
-    // 入力: 適用するエフェクトのリスト (filterModels)
     required property list<QtObject> effectModels
     required property int relFrame
 
-    // フォールバック用ダミー（確実に有効な Item）
-    width: originalSource ? originalSource.width : 1
+    width:  originalSource ? originalSource.width  : 1
     height: originalSource ? originalSource.height : 1
 
     Item {
         id: fallbackItem
-        width: 1
-        height: 1
-        visible: true   // テクスチャ化のために可視である必要がある
-        opacity: 0.0    // ただし見えないようにする
+        width: 1; height: 1
+        visible: true; opacity: 0.0
     }
 
-    // 出力: 最終的にレンダリングされたテクスチャソース（Modelで使用）
     property alias output: textureSource
+    readonly property Item finalItem: textureSource.sourceItem
 
-    // 内部: チェーンの構築
     Repeater {
         id: effectChain
         model: renderer.effectModels
@@ -35,60 +28,82 @@ Item {
             id: effectLoader
             active: modelData.enabled
             source: modelData.qmlSource
-            
-            // 前段の出力を取得 (index 0 なら originalSource)
+
             property Item inputSource: {
                 if (index === 0) return renderer.originalSource;
-                var prevLoader = effectChain.itemAt(index - 1);
-                if (prevLoader && prevLoader.status === Loader.Ready) {
-                    return prevLoader.item;
-                }
-                return renderer.originalSource; // Fallback
+                var prev = effectChain.itemAt(index - 1);
+                if (prev && prev.status === Loader.Ready) return prev.item;
+                return renderer.originalSource;
             }
 
-            // 【重要】宣言的Bindingによる堅牢な同期
-            Binding { target: effectLoader.item; property: "source"; value: effectLoader.inputSource; when: effectLoader.status === Loader.Ready }
-            Binding { target: effectLoader.item; property: "params"; value: modelData.params; when: effectLoader.status === Loader.Ready }
-            Binding { target: effectLoader.item; property: "effectModel"; value: modelData; when: effectLoader.status === Loader.Ready }
-            // キーフレーム評価用（全エフェクト共通）
-            Binding { target: effectLoader.item; property: "frame"; value: renderer.relFrame; when: effectLoader.status === Loader.Ready }
-            
-            // サイズ同期: 前段のサイズを引き継ぐ（エフェクト側で拡張も可能）
-            Binding { target: effectLoader.item; property: "width"; value: effectLoader.inputSource.width; when: effectLoader.status === Loader.Ready }
-            Binding { target: effectLoader.item; property: "height"; value: effectLoader.inputSource.height; when: effectLoader.status === Loader.Ready }
+            // ─── 命令的同期 (Binding.when ループを回避) ──────────────
+            function _syncAll() {
+                if (!item) return;
+                // "in" 演算子で宣言プロパティの存在を確認してからセット
+                if ("source"      in item) item.source      = inputSource;
+                if ("params"      in item) item.params      = modelData.params;
+                if ("effectModel" in item) item.effectModel = modelData;
+                if ("frame"       in item) item.frame       = renderer.relFrame;
+                if ("width"       in item) item.width       = inputSource.width;
+                if ("height"      in item) item.height      = inputSource.height;
+            }
+
+            onLoaded:         _syncAll()
+            onInputSourceChanged: {
+                if (status === Loader.Ready) {
+                    if ("source" in item) item.source = inputSource;
+                    if ("width"  in item) item.width  = inputSource.width;
+                    if ("height" in item) item.height = inputSource.height;
+                }
+            }
+
+            // relFrame 変化をエフェクトに伝播
+            Connections {
+                target: renderer
+                function onRelFrameChanged() {
+                    if (effectLoader.status === Loader.Ready && effectLoader.item
+                            && "frame" in effectLoader.item)
+                        effectLoader.item.frame = renderer.relFrame;
+                }
+            }
+
+            // modelData.params 変化をエフェクトに伝播
+            Connections {
+                target: modelData
+                function onParamsChanged() {
+                    if (effectLoader.status === Loader.Ready && effectLoader.item
+                            && "params" in effectLoader.item)
+                        effectLoader.item.params = modelData.params;
+                }
+            }
         }
     }
 
-    // 最終段の出力
     ShaderEffectSource {
         id: textureSource
         sourceItem: {
-            // originalSource が無効な場合は fallbackItem を使用
-            if (!renderer.originalSource || renderer.originalSource.width <= 0 || renderer.originalSource.height <= 0) 
+            if (!renderer.originalSource
+                    || renderer.originalSource.width  <= 0
+                    || renderer.originalSource.height <= 0)
                 return fallbackItem;
-            if (effectChain.count > 0) return findFinalOutput(renderer.originalSource);
+            if (effectChain.count > 0)
+                return findFinalOutput(renderer.originalSource);
             return renderer.originalSource;
         }
-
-        // 2D側への描画を確実に止める（3DのTexture.sourceItemとしては機能する）
-        visible: false
+        visible:   false
+        live:      true
+        hideSource: true
+        recursive: false
 
         function findFinalOutput(defaultSource) {
-            var count = effectChain.count;
-            for (var i = count - 1; i >= 0; i--) {
+            for (var i = effectChain.count - 1; i >= 0; i--) {
                 var loader = effectChain.itemAt(i);
-                if (loader) {
-                    if (loader.status === Loader.Ready && loader.active && loader.item && loader.item.width > 0 && loader.item.height > 0) {
-                        return loader.item;
-                    }
-                }
+                if (loader && loader.status === Loader.Ready
+                        && loader.active && loader.item
+                        && loader.item.width > 0 && loader.item.height > 0)
+                    return loader.item;
             }
             return defaultSource;
         }
-
-        // 念のため：出力更新を止めない（既定でtrueだが明示）
-        live: true
-        hideSource: true
-        recursive: false
     }
 }

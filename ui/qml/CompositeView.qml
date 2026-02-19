@@ -136,6 +136,9 @@ Item {
             delegate: Node {
                 id: clipNode
 
+                // FB 収集用: BaseObject が参照できるよう layer を公開
+                property int clipLayerRole: model.layer
+                property Item fbRendererOutput: null // NodeLoader 完了後に接続
                 // モデルロールから直接値を取得
                 // パラメータを一度だけ取得してキャッシュ (undefinedチェックのオーバーヘッド削減)
                 readonly property var p: model.params || {
@@ -178,11 +181,44 @@ Item {
                 scale.z: baseScale
                 // 不透明度 (全体)
                 opacity: pOpacity
+                // params 変化 (scale/pos/rot/opacity) → BaseObject の fbCaptureItem を同期
+                onPxChanged: objectContainer._syncTransformToItem()
+                onPyChanged: objectContainer._syncTransformToItem()
+                onPRotZChanged: objectContainer._syncTransformToItem()
+                onBaseScaleChanged: objectContainer._syncTransformToItem()
+                onAspectXChanged: objectContainer._syncTransformToItem()
+                onAspectYChanged: objectContainer._syncTransformToItem()
+                onPOpacityChanged: objectContainer._syncTransformToItem()
 
                 // Loader (2D) は 3D シーン内では機能しないため、
                 // Qt.createComponent を使用して Node 派生クラスを動的に生成する
                 Common.NodeLoader {
                     id: objectContainer
+
+                    // clipNode の transform が変わるたびに BaseObject へ同期
+                    function _syncTransformToItem() {
+                        if (!item)
+                            return ;
+
+                        if ("clipNodeScaleX" in item)
+                            item.clipNodeScaleX = clipNode.baseScale * clipNode.aspectX;
+
+                        if ("clipNodeScaleY" in item)
+                            item.clipNodeScaleY = clipNode.baseScale * clipNode.aspectY;
+
+                        if ("clipNodePosX" in item)
+                            item.clipNodePosX = clipNode.px;
+
+                        if ("clipNodePosY" in item)
+                            item.clipNodePosY = clipNode.py;
+
+                        if ("clipNodeRotZ" in item)
+                            item.clipNodeRotZ = clipNode.pRotZ;
+
+                        if ("clipNodeOpacity" in item)
+                            item.clipNodeOpacity = clipNode.pOpacity;
+
+                    }
 
                     source: model.qmlSource || ""
                     properties: {
@@ -197,6 +233,23 @@ Item {
                         })
                     }
                     componentFactory: root.getCachedComponent
+                    // NodeLoader 完了後に fbRendererOutput を clipNode へ接続
+                    onItemChanged: {
+                        // FB専用プロパティは FrameBufferObject にのみ注入
+                        if (item) {
+                            // fbCaptureItem は BaseObject の property alias として公開済み
+                            clipNode.fbRendererOutput = item.fbCaptureItem ?? null;
+                            // clipLayer と sceneRootRef は FB のみが持つプロパティ
+                            if (typeof item.clipLayer !== "undefined")
+                                item.clipLayer = model.layer;
+
+                            if (typeof item.sceneRootRef !== "undefined")
+                                item.sceneRootRef = sceneRoot;
+
+                            // 変換パラメータを注入 (初期値)
+                            _syncTransformToItem();
+                        }
+                    }
                 }
 
             }

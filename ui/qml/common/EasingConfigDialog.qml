@@ -130,6 +130,57 @@ Dialog {
                         return result;
                     }
 
+                    // evalEasing はここでクロージャとして定義 (bz をキャプチャ)
+                    function evalEasing(t) {
+                        var type = root.selectedType.toLowerCase().replace(/_/g, "");
+                        if (type === "easein")
+                            return t * t;
+
+                        if (type === "easeout")
+                            return t * (2 - t);
+
+                        if (type === "easeinout")
+                            return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+
+                        if (type === "custom") {
+                            var prevX = 0, prevY = 0;
+                            for (var i = 0; i < bz.length; i += 6) {
+                                var cp1x = bz[i], cp1y = bz[i + 1];
+                                var cp2x = bz[i + 2], cp2y = bz[i + 3];
+                                var endX = bz[i + 4], endY = bz[i + 5];
+                                if (t <= endX || i + 6 >= bz.length) {
+                                    var range = endX - prevX;
+                                    if (range < 0.0001)
+                                        return endY;
+
+                                    var nx = (t - prevX) / range;
+                                    var nc1x = (cp1x - prevX) / range;
+                                    var nc2x = (cp2x - prevX) / range;
+                                    var T = nx;
+                                    for (var k = 0; k < 8; k++) {
+                                        var u = 1 - T;
+                                        var cx = 3 * u * u * T * nc1x + 3 * u * T * T * nc2x + T * T * T;
+                                        var err = cx - nx;
+                                        if (Math.abs(err) < 0.0001)
+                                            break;
+
+                                        var dcx = 3 * u * u * nc1x + 6 * u * T * (nc2x - nc1x) + 3 * T * T * (1 - nc2x);
+                                        if (Math.abs(dcx) < 1e-06)
+                                            break;
+
+                                        T -= err / dcx;
+                                    }
+                                    T = Math.max(0, Math.min(1, T));
+                                    var u2 = 1 - T;
+                                    return u2 * u2 * u2 * prevY + 3 * u2 * u2 * T * cp1y + 3 * u2 * T * T * cp2y + T * T * T * endY;
+                                }
+                                prevX = endX;
+                                prevY = endY;
+                            }
+                        }
+                        return t;
+                    }
+
                     anchors.fill: parent
                     onPaint: {
                         var ctx = getContext("2d");
@@ -213,57 +264,6 @@ Dialog {
                             }
                         }
                     }
-                    // evalEasing はここでクロージャとして定義 (bz をキャプチャ)
-                    function evalEasing(t) {
-                        var type = root.selectedType.toLowerCase().replace(/_/g, "");
-                        if (type === "easein")
-                            return t * t;
-
-                        if (type === "easeout")
-                            return t * (2 - t);
-
-                        if (type === "easeinout")
-                            return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
-
-                        if (type === "custom") {
-                            var prevX = 0, prevY = 0;
-                            for (var i = 0; i < bz.length; i += 6) {
-                                var cp1x = bz[i], cp1y = bz[i + 1];
-                                var cp2x = bz[i + 2], cp2y = bz[i + 3];
-                                var endX = bz[i + 4], endY = bz[i + 5];
-                                if (t <= endX || i + 6 >= bz.length) {
-                                    var range = endX - prevX;
-                                    if (range < 0.0001)
-                                        return endY;
-
-                                    var nx = (t - prevX) / range;
-                                    var nc1x = (cp1x - prevX) / range;
-                                    var nc2x = (cp2x - prevX) / range;
-                                    var T = nx;
-                                    for (var k = 0; k < 8; k++) {
-                                        var u = 1 - T;
-                                        var cx = 3 * u * u * T * nc1x + 3 * u * T * T * nc2x + T * T * T;
-                                        var err = cx - nx;
-                                        if (Math.abs(err) < 0.0001)
-                                            break;
-
-                                        var dcx = 3 * u * u * nc1x + 6 * u * T * (nc2x - nc1x) + 3 * T * T * (1 - nc2x);
-                                        if (Math.abs(dcx) < 1e-06)
-                                            break;
-
-                                        T -= err / dcx;
-                                    }
-                                    T = Math.max(0, Math.min(1, T));
-                                    var u2 = 1 - T;
-                                    return u2 * u2 * u2 * prevY + 3 * u2 * u2 * T * cp1y + 3 * u2 * T * T * cp2y + T * T * T * endY;
-                                }
-                                prevX = endX;
-                                prevY = endY;
-                            }
-                        }
-                        return t;
-                    }
-
                 }
 
                 // ドラッグ編集用 MouseArea
