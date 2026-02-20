@@ -4,11 +4,18 @@
 #include "lv2_plugin.hpp"
 #include "vst3_plugin.hpp"
 #include <QDebug>
-#include <QDir>
 #include <QDirIterator>
 #include <QLibrary>
+#include <QSet>
 #include <algorithm> // for std::sort
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnullability-extension"
+#endif
 #include <lilv/lilv.h>
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 // LADSPAヘッダー定義 (スキャン用)
 typedef const LADSPA_Descriptor *(*LADSPA_Descriptor_Function)(unsigned long Index);
@@ -89,8 +96,10 @@ std::unique_ptr<IAudioPlugin> AudioPluginManager::createPlugin(const QString &id
         plugin = std::make_unique<ClapPlugin>();
         plugin->load(info.path, info.index);
     } else if (info.format == "VST3") {
+#ifdef RINA_USE_VST3
         plugin = std::make_unique<Vst3Plugin>();
         plugin->load(info.path);
+#endif
     }
 
     return plugin;
@@ -101,52 +110,11 @@ void AudioPluginManager::scanPlugins() {
     m_pluginMap.clear();
     qInfo() << "[AudioPluginManager] Scanning plugins...";
 
-    scanLadspa();
     scanLv2();
-    scanClap();
-    // scanVst3();
+
+    scanVst3();
 
     qInfo() << "[AudioPluginManager] Scan complete. Found" << m_plugins.size() << "plugins.";
-}
-
-void AudioPluginManager::scanLadspa() {
-    QStringList paths = {"/usr/lib/ladspa", "/usr/local/lib/ladspa"};
-    if (qEnvironmentVariableIsSet("LADSPA_PATH")) {
-        paths = QString::fromLocal8Bit(qgetenv("LADSPA_PATH")).split(':');
-    }
-
-    for (const auto &path : paths) {
-        QDir dir(path);
-        if (!dir.exists())
-            continue;
-
-        for (const auto &fileInfo : dir.entryInfoList(QDir::Files)) {
-            if (!fileInfo.fileName().endsWith(".so"))
-                continue;
-
-            QLibrary lib(fileInfo.absoluteFilePath());
-            if (!lib.load())
-                continue;
-
-            auto fn = (LADSPA_Descriptor_Function)lib.resolve("ladspa_descriptor");
-            if (!fn)
-                continue;
-
-            unsigned long idx = 0;
-            while (const LADSPA_Descriptor *desc = fn(idx)) {
-                PluginInfo info;
-                info.name = desc->Name;
-                info.path = fileInfo.absoluteFilePath();
-                info.index = (int)idx;
-                info.format = "LADSPA";
-                info.category = "LADSPA"; // Default category
-                info.id = QString("ladspa:%1:%2").arg(info.path).arg(idx);
-                registerPlugin(info);
-                idx++;
-            }
-            lib.unload();
-        }
-    }
 }
 
 void AudioPluginManager::scanLv2() {
@@ -238,7 +206,40 @@ void AudioPluginManager::scanClap() {
 }
 
 void AudioPluginManager::scanVst3() {
-    // Stub
+#ifdef RINA_USE_VST3
+    QStringList paths = {"/usr/lib/vst3", "/usr/local/lib/vst3", QDir::homePath() + "/.vst3"};
+    if (qEnvironmentVariableIsSet("VST3_PATH")) {
+        paths = QString::fromLocal8Bit(qgetenv("VST3_PATH")).split(':');
+    }
+
+    for (const auto &path : paths) {
+        QDir dir(path);
+        if (!dir.exists())
+            continue;
+
+        // VST3は通常ディレクトリ（バンドル）として配布される
+        QDirIterator it(path, {"*.vst3"}, QDir::AllDirs | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+        while (it.hasNext()) {
+            QString bundlePath = it.next();
+            QFileInfo fi(bundlePath);
+
+            // Linux VST3 Bundle構造: Plugin.vst3/Contents/x86_64-linux/Plugin.so
+            QString binaryPath = bundlePath + "/Contents/x86_64-linux/" + fi.baseName() + ".so";
+
+            if (QFile::exists(binaryPath)) {
+                PluginInfo info;
+                info.name = fi.baseName(); // 仮の名前（ロード時に正式名取得）
+                info.path = binaryPath;    // ローダーにはバイナリの実パスを渡す
+                info.format = "VST3";
+                info.id = "vst3:" + binaryPath;
+                info.category = "VST3";
+                registerPlugin(info);
+            }
+        }
+    }
+#else
+    qInfo() << "[AudioPluginManager] VST3 support is disabled (SDK not found at build time).";
+#endif
 }
 
 } // namespace Rina::Engine::Plugin
