@@ -6,6 +6,9 @@
 
 namespace Rina::Engine::Plugin {
 
+// LADSPA記述子取得関数の型定義
+typedef const LADSPA_Descriptor *(*LADSPA_Descriptor_Function)(unsigned long Index);
+
 class LadspaPlugin : public IAudioPlugin {
   public:
     ~LadspaPlugin() override { release(); }
@@ -21,21 +24,23 @@ class LadspaPlugin : public IAudioPlugin {
     QString paramName(int i) const override;
     float getParam(int i) const override;
     void setParam(int i, float v) override;
+    ParamInfo getParamInfo(int i) const override;
 
   private:
     QLibrary m_lib;
     const LADSPA_Descriptor *m_desc = nullptr;
-    LADSPA_Handle m_handle = nullptr;
+    std::vector<LADSPA_Handle> m_handles;
 
     // ポートインデックスの分類結果
-    int m_audioInPort = -1;
-    int m_audioOutPort = -1;
+    std::vector<int> m_audioInPorts;
+    std::vector<int> m_audioOutPorts;
     std::vector<int> m_ctrlPorts;
     std::vector<float> m_ctrlValues;
+    std::vector<ParamInfo> m_paramInfos;
 
     // process 用の作業バッファ
-    std::vector<float> m_inBuf;
-    std::vector<float> m_outBuf;
+    std::vector<float> m_inBufL, m_inBufR;
+    std::vector<float> m_outBufL, m_outBufR;
     int m_blockSize = 0;
 };
 

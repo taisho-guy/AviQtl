@@ -17,9 +17,6 @@
 #pragma clang diagnostic pop
 #endif
 
-// LADSPAヘッダー定義 (スキャン用)
-typedef const LADSPA_Descriptor *(*LADSPA_Descriptor_Function)(unsigned long Index);
-
 // CLAPヘッダー定義 (スキャン用)
 #include <clap/clap.h>
 
