@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
         Rina::Core::initializeStandardEffects();
 
         // オーディオプラグインの初期化 (起動時にスキャン)
-        Rina::Engine::Plugin::AudioPluginManager::instance();
+        Rina::Engine::Plugin::AudioPluginManager::instance().scanPlugins();
 
         // --- Lua MODエンジンの初期化 ---
         // ECSのインスタンス（g_ecsState）のアドレスをLuaに渡す

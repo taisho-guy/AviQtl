@@ -96,10 +96,8 @@ std::unique_ptr<IAudioPlugin> AudioPluginManager::createPlugin(const QString &id
         plugin = std::make_unique<ClapPlugin>();
         plugin->load(info.path, info.index);
     } else if (info.format == "VST3") {
-#ifdef RINA_USE_VST3
         plugin = std::make_unique<Vst3Plugin>();
         plugin->load(info.path);
-#endif
     }
 
     return plugin;
@@ -110,11 +108,49 @@ void AudioPluginManager::scanPlugins() {
     m_pluginMap.clear();
     qInfo() << "[AudioPluginManager] Scanning plugins...";
 
+    scanLadspa();
     scanLv2();
+    scanClap();
 
     scanVst3();
-
     qInfo() << "[AudioPluginManager] Scan complete. Found" << m_plugins.size() << "plugins.";
+}
+
+void AudioPluginManager::scanLadspa() {
+    QStringList paths = {"/usr/lib/ladspa", "/usr/local/lib/ladspa", QDir::homePath() + "/.ladspa"};
+    if (qEnvironmentVariableIsSet("LADSPA_PATH")) {
+        paths = QString::fromLocal8Bit(qgetenv("LADSPA_PATH")).split(':');
+    }
+
+    for (const auto &path : paths) {
+        QDir dir(path);
+        if (!dir.exists())
+            continue;
+
+        QDirIterator it(path, {"*.so"}, QDir::Files, QDirIterator::Subdirectories);
+        while (it.hasNext()) {
+            QString filePath = it.next();
+            QLibrary lib(filePath);
+            if (!lib.load())
+                continue;
+
+            auto descriptorFn = (LADSPA_Descriptor_Function)lib.resolve("ladspa_descriptor");
+            if (!descriptorFn)
+                continue;
+
+            unsigned long i = 0;
+            while (const LADSPA_Descriptor *desc = descriptorFn(i++)) {
+                PluginInfo info;
+                info.name = QString(desc->Name);
+                info.path = filePath;
+                info.index = (int)(i - 1);
+                info.format = "LADSPA";
+                info.id = QString("ladspa:%1:%2").arg(info.path).arg(info.index);
+                info.category = "LADSPA";
+                registerPlugin(info);
+            }
+        }
+    }
 }
 
 void AudioPluginManager::scanLv2() {
@@ -206,7 +242,6 @@ void AudioPluginManager::scanClap() {
 }
 
 void AudioPluginManager::scanVst3() {
-#ifdef RINA_USE_VST3
     QStringList paths = {"/usr/lib/vst3", "/usr/local/lib/vst3", QDir::homePath() + "/.vst3"};
     if (qEnvironmentVariableIsSet("VST3_PATH")) {
         paths = QString::fromLocal8Bit(qgetenv("VST3_PATH")).split(':');
@@ -237,9 +272,6 @@ void AudioPluginManager::scanVst3() {
             }
         }
     }
-#else
-    qInfo() << "[AudioPluginManager] VST3 support is disabled (SDK not found at build time).";
-#endif
 }
 
 } // namespace Rina::Engine::Plugin

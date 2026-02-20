@@ -1,8 +1,19 @@
 #pragma once
 #include <QString>
+#include <QtGlobal>
 #include <vector>
 
 namespace Rina::Engine::Plugin {
+
+struct ParamInfo {
+    QString name;
+    float min = 0.0f;
+    float max = 1.0f;
+    float defaultValue = 0.0f;
+    bool isLog = false;
+    bool isInteger = false;
+    bool isToggle = false;
+};
 
 class IAudioPlugin {
   public:
@@ -13,14 +24,23 @@ class IAudioPlugin {
     virtual void prepare(double sampleRate, int maxBlockSize) = 0;
     // インターリーブステレオ (L,R,L,R...) float をインプレース処理
     virtual void process(float *buf, int frameCount) = 0;
+    virtual bool active() const { return true; }
     virtual void release() = 0;
 
     virtual QString name() const = 0;
     virtual QString format() const = 0;
     virtual int paramCount() const = 0;
+
     virtual QString paramName(int i) const = 0;
     virtual float getParam(int i) const = 0;
     virtual void setParam(int i, float v) = 0;
+    virtual ParamInfo getParamInfo(int i) const { return {paramName(i)}; }
+
+    // GUI
+    virtual bool hasEditor() const { return false; }
+    virtual void openEditor(qintptr parentId) {}
+    virtual void closeEditor() {}
+    virtual void onEditorIdle() {}
 };
 
 } // namespace Rina::Engine::Plugin

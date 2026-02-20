@@ -1,8 +1,11 @@
 #pragma once
 #include "plugin/audio_plugin_chain.hpp"
+#include <QAudioFormat>
 #include <QAudioSink>
+#include <QHash>
 #include <QIODevice>
 #include <QObject>
+#include <memory>
 #include <unordered_map>
 
 namespace Rina::Core {
@@ -23,6 +26,9 @@ class AudioMixer : public QObject {
     void processFrame(int currentFrame, double fps, int samplesPerFrame);
     void reset();
 
+    void processChain(float *buffer, int samples, const Plugin::AudioPluginChain &chain);
+    void mix(float *output, const float *input, float volume, int samples);
+
     // エクスポート用に生データを取得するメソッド
     std::vector<float> mix(int currentFrame, double fps, int samplesPerFrame);
 
@@ -33,8 +39,9 @@ class AudioMixer : public QObject {
   private:
     QAudioSink *m_audioSink = nullptr;
     QIODevice *m_audioOutput = nullptr;
+    QAudioFormat m_format;
     std::unordered_map<int, Rina::Core::AudioDecoder *> m_decoders;
-    std::unordered_map<int, Plugin::AudioPluginChain> m_chains;
+    QHash<int, std::shared_ptr<Plugin::AudioPluginChain>> m_chains;
     int m_lastFrame = -1;
 };
 
