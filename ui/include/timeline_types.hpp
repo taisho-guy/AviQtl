@@ -17,6 +17,12 @@ struct Keyframe {
     int interpolationType; // 0: 線形
 };
 
+struct AudioPluginState {
+    QString id;
+    bool enabled = true;
+    QVariantMap params;
+};
+
 struct ClipData {
     int id;
     int sceneId = 0;
@@ -27,6 +33,7 @@ struct ClipData {
 
     // ハイブリッド設計: EffectModelは振る舞いを持つためポインタで保持する
     QList<EffectModel *> effects;
+    QList<AudioPluginState> audioPlugins;
 };
 
 struct SceneData {

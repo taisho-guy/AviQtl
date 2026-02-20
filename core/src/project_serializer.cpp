@@ -53,6 +53,16 @@ bool ProjectSerializer::save(const QString &fileUrl, const UI::TimelineService *
             clipObj["duration"] = clip.durationFrames;
             clipObj["layer"] = clip.layer;
 
+            QJsonArray audioPluginsArray;
+            for (const auto &plugin : clip.audioPlugins) {
+                QJsonObject pObj;
+                pObj["id"] = plugin.id;
+                pObj["enabled"] = plugin.enabled;
+                pObj["params"] = QJsonObject::fromVariantMap(plugin.params);
+                audioPluginsArray.append(pObj);
+            }
+            clipObj["audioPlugins"] = audioPluginsArray;
+
             QJsonArray effArray;
             for (const auto *eff : clip.effects) {
                 QJsonObject eObj;
@@ -167,6 +177,18 @@ bool ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
             clip.startFrame = c["start"].toInt();
             clip.durationFrames = c["duration"].toInt();
             clip.layer = c["layer"].toInt();
+
+            if (c.contains("audioPlugins")) {
+                QJsonArray arr = c["audioPlugins"].toArray();
+                for (const auto &val : arr) {
+                    QJsonObject pObj = val.toObject();
+                    UI::AudioPluginState state;
+                    state.id = pObj["id"].toString();
+                    state.enabled = pObj["enabled"].toBool(true);
+                    state.params = pObj["params"].toObject().toVariantMap();
+                    clip.audioPlugins.append(state);
+                }
+            }
 
             if (c.contains("effects")) {
                 QJsonArray effArr = c["effects"].toArray();
