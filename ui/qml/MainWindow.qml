@@ -14,14 +14,14 @@ ApplicationWindow {
     x: 100
     y: 100
     title: "Rina - プレビュー"
-    // 本体を閉じたら全部消す（＝全終了）
+    // お前はこれで死ねぇ！！！！！
     onClosing: (close) => {
         if (WindowManager)
             WindowManager.requestQuit();
 
         close.accepted = true;
     }
-    // 【追加】起動時に自分自身(Window)をコントローラーに渡す
+    // 起動時に自分自身(Window)をコントローラーに渡す
     Component.onCompleted: {
         if (TimelineBridge)
             TimelineBridge.setCompositeView(mainWin);
@@ -333,7 +333,7 @@ ApplicationWindow {
 
     }
 
-    // 重要: View3D の背後に黒背景を強制
+    // View3D の背後に黒背景を強制
     background: Rectangle {
         color: "#000000"
     }

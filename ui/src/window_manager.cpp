@@ -9,10 +9,8 @@
 
 namespace Rina::UI {
 
-// コンストラクタ定義
 WindowManager::WindowManager(QObject *parent) : QObject(parent) {}
 
-// 実装: シングルトンインスタンス
 WindowManager &WindowManager::instance() {
     static WindowManager inst(nullptr);
     return inst;
@@ -21,22 +19,12 @@ WindowManager &WindowManager::instance() {
 void WindowManager::spawnInitialWindows(QQmlEngine *engine) {
     m_engine = engine;
 
-    // プロジェクトランチャーのみを表示
     QQmlComponent component(engine, QUrl("qrc:/qt/qml/Rina/ui/qml/ProjectLauncherWindow.qml"));
     QObject *obj = component.create();
 
-    if (component.status() != QQmlComponent::Ready) {
-        qWarning() << "ProjectLauncherWindowの作成に失敗:" << component.errorString();
-        // フォールバック: 従来通りすぐに編集画面を開く
-        spawnWindow(engine, "main", "qrc:/qt/qml/Rina/ui/qml/MainWindow.qml", "Rina Main Preview", 640, 480, 100, 100, true);
-        spawnWindow(engine, "timeline", "qrc:/qt/qml/Rina/ui/qml/TimelineWindow.qml", "Timeline", 1280, 300, 100, 600, true);
-        spawnWindow(engine, "objectSettings", "qrc:/qt/qml/Rina/ui/qml/SettingDialog.qml", "Object Settings", 400, 600, 800, 420, false);
-        return;
-    }
-
     QQuickWindow *launcher = qobject_cast<QQuickWindow *>(obj);
     if (launcher) {
-        // プロジェクトが選択されたら、メインウィンドウを開く
+        // プロジェクトが選択されたらメインウィンドウを開く
         QObject::connect(launcher, SIGNAL(projectSelected(QString, int, int, double)), this, SLOT(onProjectSelected(QString, int, int, double)));
         registerWindow("launcher", launcher);
         launcher->show();
@@ -105,7 +93,7 @@ void WindowManager::spawnWindow(QQmlEngine *engine, const QString &id, const QSt
         else
             win->hide();
     } else {
-        // QQuickWindowではなかった場合 (View3D直置きなど)、ウィンドウを作る
+        // QQuickWindowではなかった場合
         auto window = new QQuickWindow();
         window->setTitle(title);
         window->resize(w, h);
@@ -127,14 +115,14 @@ void WindowManager::spawnWindow(QQmlEngine *engine, const QString &id, const QSt
 void WindowManager::registerWindow(const QString &id, QQuickWindow *win) {
     m_windows[id] = win;
 
-    // ユーザーが×で閉じたり、hide/showした場合の同期
+    // hide/showした場合の同期
     connect(win, &QQuickWindow::visibleChanged, this, [this, id]() { emitVisibilityChanged(id); });
     connect(win, &QObject::destroyed, this, [this, id]() {
         m_windows.remove(id);
         emitVisibilityChanged(id);
     });
 
-    // メインが閉じられたら「全終了」
+    // メインが閉じられたら全終了
     if (id == "main") {
         connect(win, &QQuickWindow::closing, this, [this](QQuickCloseEvent *e) {
             Q_UNUSED(e);
@@ -186,7 +174,7 @@ void WindowManager::raiseWindow(const QString &id) {
 QObject *WindowManager::getWindow(const QString &id) const { return m_windows.value(id); }
 
 void WindowManager::requestQuit() {
-    // 全Windowを閉じる（main自身も含めてOK）
+    // 全Windowを閉じる
     for (auto it = m_windows.begin(); it != m_windows.end(); ++it) {
         if (it.value())
             it.value()->close();

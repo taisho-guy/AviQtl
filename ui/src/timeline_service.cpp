@@ -7,7 +7,6 @@
 
 namespace Rina::UI {
 
-// === Commands Implementation ===
 AddClipCommand::AddClipCommand(TimelineService *service, int clipId, const QString &type, int startFrame, int layer, const QString &clipName)
     : m_service(service), m_clipId(clipId), m_type(type), m_startFrame(startFrame), m_layer(layer), m_clipName(clipName) {
     setText(QString("クリップ追加: %1").arg(clipName));
@@ -81,7 +80,7 @@ void SplitClipCommand::redo() {
     int firstHalfDuration = m_splitFrame - it->startFrame;
     int secondHalfDuration = m_originalDuration - firstHalfDuration;
 
-    // 後半部分のクリップを作成（エフェクトなどをディープコピー）
+    // 後半部分のクリップを作成
     ClipData newClip = m_service->deepCopyClip(*it);
     newClip.id = m_newClipId;
     newClip.startFrame = m_splitFrame;
@@ -91,17 +90,15 @@ void SplitClipCommand::redo() {
     m_service->addClipDirectInternal(newClip);
 }
 
-// === TimelineService Implementation ===
-
 TimelineService::TimelineService(SelectionService *selection, QObject *parent) : QObject(parent), m_undoStack(new QUndoStack(this)), m_selection(selection) {
     // 初期シーンを作成
     SceneData rootScene;
     rootScene.id = 0;
     rootScene.name = "Root";
-    rootScene.width = 1920; // プロジェクト設定と同期推奨
-    rootScene.height = 1080;
-    rootScene.fps = 60.0;
-    rootScene.totalFrames = 3600;
+    const auto &settings = Rina::Core::SettingsManager::instance().settings();
+    rootScene.width = settings.value("defaultProjectWidth", 1920).toInt();
+    rootScene.height = settings.value("defaultProjectHeight", 1080).toInt();
+    rootScene.fps = settings.value("defaultProjectFps", 60.0).toDouble();
     m_scenes.append(rootScene);
     m_currentSceneId = 0;
 }
@@ -148,7 +145,7 @@ void TimelineService::createClipInternal(int clipId, const QString &type, int st
     connect(tm, &EffectModel::keyframeTracksChanged, this, &TimelineService::clipsChanged);
     newClip.effects.append(tm);
 
-    // オブジェクト固有のエフェクト (例: テキスト、図形)
+    // オブジェクト固有のエフェクト
     auto meta = Rina::Core::EffectRegistry::instance().getEffect(type);
     auto *cm = new EffectModel(meta.id.isEmpty() ? "unknown" : meta.id, meta.name.isEmpty() ? "Unknown" : meta.name, meta.defaultParams, meta.qmlSource, meta.uiDefinition, this);
     connect(cm, &EffectModel::keyframeTracksChanged, this, &TimelineService::clipsChanged);
@@ -198,7 +195,7 @@ void TimelineService::updateClipInternal(int id, int layer, int startFrame, int 
                 clip.startFrame = startFrame;
                 clip.durationFrames = duration;
                 emit clipsChanged();
-                // 選択中のクリップであれば、SelectionServiceのキャッシュも更新する
+                // 選択中のクリップであればSelectionServiceのキャッシュも更新する
                 if (m_selection->selectedClipId() == id) {
                     QVariantMap data = m_selection->selectedClipData();
                     data["layer"] = layer;
@@ -522,14 +519,11 @@ void TimelineService::createScene(const QString &name) {
     newScene.id = m_nextSceneId++;
     newScene.name = name;
 
-    // 現在のプロジェクト設定（あるいはRootシーン）の設定を継承
-    // ※本来はSettingsManagerやProjectServiceから取得すべきだが、
-    //   ここでは既存のシーン0の値をデフォルトとして採用する
-    const SceneData &base = m_scenes.first();
-    newScene.width = base.width;
-    newScene.height = base.height;
-    newScene.fps = base.fps;
-    newScene.totalFrames = base.totalFrames;
+    // プロジェクト設定と同期
+    const auto &settings = Rina::Core::SettingsManager::instance().settings();
+    newScene.width = settings.value("defaultProjectWidth", 1920).toInt();
+    newScene.height = settings.value("defaultProjectHeight", 1080).toInt();
+    newScene.fps = settings.value("defaultProjectFps", 60.0).toDouble();
 
     m_scenes.append(newScene);
     emit scenesChanged();
@@ -603,9 +597,9 @@ QList<ClipData *> TimelineService::resolvedActiveClipsAt(int frame) const {
     if (!currentScenePtr)
         return result;
 
-    // 2. 現在シーン内のクリップを走査
+    // 現在シーン内のクリップを走査
     for (auto &clip : currentScenePtr->clips) {
-        // 通常クリップ: シンプルな矩形判定
+        // 通常クリップ
         if (clip.type != "scene") {
             if (frame >= clip.startFrame && frame < clip.startFrame + clip.durationFrames) {
                 result.append(const_cast<ClipData *>(&clip));
@@ -613,7 +607,7 @@ QList<ClipData *> TimelineService::resolvedActiveClipsAt(int frame) const {
             continue;
         }
 
-        // 3. シーンオブジェクトの場合: 子シーンのクリップをフラットに解決
+        // シーンオブジェクトの場合
         int parentLocal = frame - clip.startFrame;
         if (parentLocal < 0 || parentLocal >= clip.durationFrames)
             continue;
@@ -623,8 +617,8 @@ QList<ClipData *> TimelineService::resolvedActiveClipsAt(int frame) const {
         double speed = 1.0;
         int offset = 0;
         if (!clip.effects.isEmpty()) {
-            // 先頭エフェクト(Transform)の次、あるいはIDで検索すべきだが、
-            // 現状の実装パターンに従いエフェクトリストからパラメータを取得
+            // 先頭エフェクト(Transform)の次、あるいはIDで検索すべきだけど
+            // 確実にエフェクトリストからパラメータを取得
             for (auto *eff : clip.effects) {
                 if (eff->id() == "scene") {
                     QVariantMap p = eff->params();
@@ -651,7 +645,7 @@ QList<ClipData *> TimelineService::resolvedActiveClipsAt(int frame) const {
         if (!targetScene)
             continue;
 
-        // 4. 対象シーン内のクリップを、親シーンの座標系に射影して追加
+        // 対象シーン内のクリップを、親シーンの座標系に射影して追加
         for (auto &child : targetScene->clips) {
             if (childLocal >= child.startFrame && childLocal < child.startFrame + child.durationFrames) {
                 // グローバル時間で見た start は「親のstart + 子のstart」

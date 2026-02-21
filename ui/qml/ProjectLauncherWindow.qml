@@ -5,8 +5,6 @@ import QtQuick.Layouts 1.15
 import "common" as Common
 
 Common.RinaWindow {
-    // Not "カスタム"
-
     id: root
 
     // プロジェクトが選択されたら他のウィンドウを開く
@@ -47,7 +45,7 @@ Common.RinaWindow {
         anchors.margins: 20
         spacing: 20
 
-        // 左側: 新規プロジェクト
+        // 左側：新規プロジェクト
         ColumnLayout {
             Layout.fillHeight: true
             Layout.preferredWidth: parent.width * 0.45
@@ -196,7 +194,7 @@ Common.RinaWindow {
 
         }
 
-        // 右側: 最近使ったプロジェクト
+        // 右側：最近使ったプロジェクト
         ColumnLayout {
             Layout.fillHeight: true
             Layout.fillWidth: true

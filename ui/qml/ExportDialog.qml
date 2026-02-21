@@ -2,7 +2,7 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Dialogs 6.3
 import QtQuick.Layouts 1.15
-import Rina.Core 1.0 // C++で登録したモジュール
+import Rina.Core 1.0
 
 Dialog {
     id: root
@@ -12,7 +12,7 @@ Dialog {
     readonly property var project: TimelineBridge ? TimelineBridge.project : null
     readonly property int pWidth: project ? project.width : 1920
     readonly property int pHeight: project ? project.height : 1080
-    // ProjectServiceはfps(double)を持っているので、そこから簡易的にnum/denを作る
+    // ProjectServiceはfps(double)を持っているのでそっからnum/denを作る
     readonly property double pFps: project ? project.fps : 60
     readonly property int pFpsNum: Math.round(pFps * 1000)
     readonly property int pFpsDen: 1000
@@ -39,7 +39,7 @@ Dialog {
             "codecName": codec,
             "outputUrl": filePathField.text
         });
-        // 先に閉じる (UIの重なりを防ぐ & UIスレッドを身軽にする)
+        // 先に閉じる
         root.close();
         // 少し待ってから開始 (閉じるアニメーションの完了待ち)
         var timer = Qt.createQmlObject("import QtQuick 2.0; Timer { interval: 200; repeat: false; running: true; }", root);
@@ -159,7 +159,6 @@ Dialog {
 
         }
 
-        // Spacer
         Item {
             Layout.fillHeight: true
         }

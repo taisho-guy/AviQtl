@@ -28,7 +28,7 @@ Common.RinaWindow {
     width: 1280
     height: 300
 
-    // グリッド設定ウィンドウ (Loaderによる遅延読み込み)
+    // グリッド設定ウィンドウ
     Loader {
         id: gridSettingsLoader
 
@@ -41,7 +41,7 @@ Common.RinaWindow {
         anchors.fill: parent
         spacing: 0
 
-        // 1. シーンタブ (TabBar)
+        // 1. シーンタブ
         RowLayout {
             Layout.fillWidth: true
             Layout.preferredHeight: sceneTabHeight
@@ -145,7 +145,7 @@ Common.RinaWindow {
 
         }
 
-        // 2. 定規エリア
+        // 2. 定規
         Ruler {
             targetFlickable: timelineView.flickable
             rulerHeight: timelineWindow.rulerHeight
@@ -153,7 +153,7 @@ Common.RinaWindow {
             fps: TimelineBridge && TimelineBridge.project ? TimelineBridge.project.fps : 60
         }
 
-        // 3. メインエリア (左：ヘッダー、右：タイムライン)
+        // 3. メインエリア
         RowLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true

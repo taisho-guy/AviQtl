@@ -6,7 +6,7 @@ import "common" as Common
 Common.RinaWindow {
     id: root
 
-    // C++のSettingsManagerとバインド (初期値としてコピーを取得)
+    // C++のSettingsManagerとバインド
     property var settings: SettingsManager ? SettingsManager.settings : ({
     })
     property alias currentTabIndex: bar.currentIndex
@@ -263,7 +263,7 @@ Common.RinaWindow {
 
             }
 
-            // --- パフォーマンス設定 ---
+            // パフォーマンス設定
             ScrollView {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
@@ -517,7 +517,7 @@ Common.RinaWindow {
 
             }
 
-            // --- タイムライン設定 ---
+            // タイムライン設定
             ScrollView {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
@@ -617,7 +617,7 @@ Common.RinaWindow {
 
             }
 
-            // --- 外観設定 ---
+            // 外観設定
             ScrollView {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
@@ -654,7 +654,7 @@ Common.RinaWindow {
 
             }
 
-            // --- デフォルトプロジェクト設定 ---
+            // デフォルトプロジェクト設定
             ScrollView {
                 Layout.fillWidth: true
                 Layout.fillHeight: true

@@ -33,7 +33,7 @@ Common.RinaWindow {
     function getUiModel(effectModel) {
         var ui = effectModel.uiDefinition;
         if (ui) {
-            // 1. 標準形式: { controls: [...] }
+            // 1. 標準形式：{ controls: [...] }
             if (ui.controls && typeof ui.controls.length === 'number')
                 return ui.controls;
 
@@ -51,7 +51,7 @@ Common.RinaWindow {
                 return list;
             }
         }
-        // 3. フォールバック: paramsから自動生成
+        // 3. paramsから自動生成
         var params = effectModel.params;
         var pKeys = Object.keys(params).sort();
         var autoList = [];
@@ -178,7 +178,7 @@ Common.RinaWindow {
                             property bool isNumber: typeof effVal === "number"
                             property var effectModel: effectRoot.effectModel
                             property int effIdx: effectRoot.effectIndex
-                            // キーフレームロジック
+                            // キーフレーム
                             property int curRelFrame: (TimelineBridge && TimelineBridge.transport) ? (TimelineBridge.transport.currentFrame - TimelineBridge.clipStartFrame) : 0
                             property int clipDur: TimelineBridge ? TimelineBridge.clipDurationFrames : 100
                             property var tracks: effectModel ? effectModel.keyframeTracks : null
@@ -434,7 +434,7 @@ Common.RinaWindow {
 
             }
 
-            // --- オーディオプラグインのパラメータ表示セクション ---
+            // オーディオプラグインのパラメータ表示
             ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 1

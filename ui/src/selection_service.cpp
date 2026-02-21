@@ -12,7 +12,7 @@ void SelectionService::select(int id, const QVariantMap &data) {
         m_selectedClipId = id;
         emit selectedClipIdChanged();
     }
-    // データは常に更新通知（パラメータ変更の反映のため）
+    // データは常に更新通知
     m_selectedClipData = data;
     emit selectedClipDataChanged();
 }

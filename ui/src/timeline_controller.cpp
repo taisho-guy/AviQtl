@@ -30,7 +30,7 @@
 #include <QtGlobal>
 #include <algorithm>
 
-namespace Rina::UI { // namespace開始
+namespace Rina::UI {
 
 TimelineController::TimelineController(QObject *parent) : QObject(parent) {
     // サービスの初期化
@@ -40,7 +40,7 @@ TimelineController::TimelineController(QObject *parent) : QObject(parent) {
     m_timeline = new TimelineService(m_selection, this);
     m_audioMixer = new Rina::Engine::AudioMixer(this);
 
-    // Phase 1: 初期状態の明示的設定
+    // 初期状態の設定
     m_selection->select(-1, QVariantMap());
 
     m_clipModel = new ClipModel(m_transport, this);
@@ -65,7 +65,7 @@ TimelineController::TimelineController(QObject *parent) : QObject(parent) {
     connect(m_timeline, &TimelineService::currentSceneIdChanged, this, &TimelineController::currentSceneIdChanged);
     connect(m_timeline, &TimelineService::clipEffectsChanged, this, &TimelineController::clipEffectsChanged);
 
-    // サービス間の連携: FPSが変更されたら再生タイマーの間隔を更新
+    // FPSが変更されたら再生タイマーの間隔を更新
     connect(m_project, &ProjectService::fpsChanged, [this]() { m_transport->updateTimerInterval(m_project->fps()); });
     m_transport->updateTimerInterval(m_project->fps());
 
@@ -83,11 +83,11 @@ TimelineController::TimelineController(QObject *parent) : QObject(parent) {
         // ループ再生ロジック
         if (nextFrame > m_timelineDuration && m_timelineDuration > 0) {
             m_transport->setCurrentFrame(0);
-            // 音声エンジンのリセットとデコーダのシーク（バッファフラッシュ）
+            // 音声エンジンのリセットとデコーダのシーク
             for (auto *decoder : m_audioDecoders) {
                 decoder->seek(0);
             }
-            return; // ループ時はここで処理を切り上げ、再帰呼び出し先(0フレーム目)に任せる
+            return; // ループ時はここで処理を切り上げ、0フレーム目に任せる
         }
         updateClipActiveState();
 
@@ -99,7 +99,7 @@ TimelineController::TimelineController(QObject *parent) : QObject(parent) {
             }
         }
 
-        // 音声処理 (再生中のみ)
+        // 音声処理
         if (m_transport->isPlaying()) {
             // 1フレーム分のサンプル数 (48kHz / fps)
             int samples = 48000 / m_project->fps();
@@ -135,7 +135,7 @@ void TimelineController::setTimelineScale(double scale) {
     }
 }
 
-// --- 汎用プロパティアクセサ ---
+// プロパティアクセサ
 void TimelineController::setClipProperty(const QString &name, const QVariant &value) {
     int id = m_selection->selectedClipId();
     if (id == -1)
@@ -143,18 +143,14 @@ void TimelineController::setClipProperty(const QString &name, const QVariant &va
 
     for (auto &clip : m_timeline->clipsMutable()) {
         if (clip.id == id) {
-            // 暫定対応: プロパティ名に応じて適切なエフェクトのパラメータを更新する
-            // POD化に伴い、直接書き込みではなくService経由で更新する
+            // 暫定対応：プロパティ名に応じて適切なエフェクトのパラメータを更新する
             bool found = false;
             for (int i = 0; i < clip.effects.size(); ++i) {
                 if (clip.effects[i]->params().contains(name)) {
                     // Undo/Redo対応のためコマンド経由で更新
                     updateClipEffectParam(id, i, name, value);
 
-                    // キャッシュ更新 (現在のUI用のフラット化されたビュー)
-                    // updateClipEffectParam内でSelection更新も行われるため削除
-
-                    // Update preview
+                    // プレビューをアップデート
                     updateActiveClipsList();
                     found = true;
                     break;
@@ -163,7 +159,7 @@ void TimelineController::setClipProperty(const QString &name, const QVariant &va
 
             if (!found && !clip.effects.isEmpty()) {
                 int targetIndex = 0;
-                // "transform" に属するキーかどうかで対象エフェクトを振り分け
+                // transform に属するキーかどうかで対象エフェクトを振り分け
                 static const QStringList transformKeys = {"x", "y", "z", "scale", "aspect", "rotationX", "rotationY", "rotationZ", "opacity"};
                 if (!transformKeys.contains(name) && clip.effects.size() > 1) {
                     targetIndex = 1;
@@ -217,7 +213,7 @@ void TimelineController::updateClipActiveState() {
     int current = m_transport->currentFrame();
     int start = clipStartFrame();
     int duration = clipDurationFrames();
-    // シンプルな矩形判定: Start <= Current < Start + Duration
+    // 矩形判定
     bool active = (current >= start) && (current < start + duration);
     if (m_isClipActive != active) {
         m_isClipActive = active;
@@ -277,8 +273,8 @@ QVariantList TimelineController::clips() const {
                 map["qmlSource"] = "file:objects/RectObject.qml";
         }
 
-        // Include some properties for list view if needed
-        // 暫定: テキストエフェクトがあればそのテキストを表示
+        // クリップの種類やID以外に表示したい情報があればここに追加する
+        // テキストエフェクトがあればそのテキストを表示
         for (auto *eff : clip.effects) {
             if (eff->id() == "text") {
                 QVariantMap params = eff->params();
@@ -298,7 +294,7 @@ void TimelineController::updateActiveClipsList() {
     // ネスト解決済みのクリップリストを取得
     QList<ClipData *> active = m_timeline->resolvedActiveClipsAt(current);
 
-    // レイヤー順 (昇順) にソート
+    // レイヤー順にソート
     std::sort(active.begin(), active.end(), [](const ClipData *a, const ClipData *b) { return a->layer < b->layer; });
 
     m_clipModel->updateClips(active);
@@ -309,7 +305,7 @@ void TimelineController::updateActiveClipsList() {
             float vol = 1.0f;
             float pan = 0.0f;
             bool mute = false;
-            // パラメータ取得 (audioエフェクトは通常index 0または1)
+            // パラメータ取得
             for (auto *eff : clip->effects) {
                 if (eff->id() == "audio") {
                     vol = eff->evaluatedParam("volume", m_transport->currentFrame() - clip->startFrame).toFloat();
@@ -345,7 +341,7 @@ void TimelineController::updateMediaDecoders() {
     QSet<int> currentVideoClipIds;
     QSet<int> currentAudioClipIds;
 
-    // 新規・既存の動画クリップをチェック
+    // 新規、既存の動画クリップをチェック
     for (const auto &clip : clips) {
         if (clip.type == "video") {
             currentVideoClipIds.insert(clip.id);
@@ -490,7 +486,7 @@ bool TimelineController::exportMedia(const QString &fileUrl, const QString &form
 bool TimelineController::exportImageSequence(const QString &dir, int quality) {
     int totalFrames = m_timelineDuration;
     // ディレクトリ作成等の処理は省略（ファイル名として渡される前提）
-    // 実際は連番ファイル名を生成するロジックが必要
+    // 連番ファイル名を生成するロジックが必要だけどいいや☆
     QString baseName = dir;
     if (baseName.endsWith(".png"))
         baseName.chop(4);
@@ -499,11 +495,11 @@ bool TimelineController::exportImageSequence(const QString &dir, int quality) {
     for (int frame = 0; frame < totalFrames; ++frame) {
         m_transport->setCurrentFrame(frame);
 
-        // GPU→CPUコピーを最小化: QMLシーングラフから直接キャプチャ
+        // QMLシーングラフから直接キャプチャ
         QImage renderedFrame;
 
         if (m_compositeView) {
-            // QQuickWindow::grabWindow() (推奨): GPU→CPUコピーは1回のみで効率的
+            // GPU→CPUコピーは1回のみで効率的
             renderedFrame = m_compositeView->grabWindow();
 
             // プロジェクト解像度にリサイズ（必要な場合）
@@ -538,10 +534,10 @@ bool TimelineController::exportVideo(const QString &path, const QString &format,
     config.height = m_project->height();
     config.fps_num = static_cast<int>(m_project->fps() * 1000);
     config.fps_den = 1000;
-    // ビットレート計算 (簡易): 1080p60fps -> 12Mbps 程度を目安に
+    // ビットレート計算 (簡易): 1080p60fps -> 12Mbps 程度？
     config.bitrate = static_cast<int>(config.width * config.height * m_project->fps() * 0.15);
     config.outputUrl = path;
-    config.codecName = "h264_vaapi"; // AMD Radeon 780M 推奨
+    config.codecName = "h264_vaapi";
 
     if (!encoder.open(config)) {
         emit errorOccurred("エンコーダーの初期化に失敗しました。VA-APIドライバを確認してください。");
@@ -609,10 +605,9 @@ void TimelineController::exportVideoHW(Rina::Core::VideoEncoder *encoder) {
         QTimer::singleShot(1000, &loop, &QEventLoop::quit);
         loop.exec();
 
-        // 安定した方法でフレーム取得
         QImage img = m_compositeView->grabWindow();
 
-        // 【修正】フォーマットを明示的に変換 (これでメモリ配列が R, G, B, A の順になる)
+        // フォーマットを明示的に変換
         if (img.format() != QImage::Format_RGBA8888) {
             img = img.convertToFormat(QImage::Format_RGBA8888);
         }
@@ -643,11 +638,11 @@ void TimelineController::exportVideoHW(Rina::Core::VideoEncoder *encoder) {
 }
 
 QImage TimelineController::renderCurrentFrame() const {
-    // DEPRECATED: この実装はCPU転送を伴うため非効率
-    // 代わりに exportImageSequence() 内の m_compositeView->grabWindow() を使用すべき
+    // この実装はCPU転送を伴うため非効率
+    // 代わりに m_compositeView->grabWindow() を使用すべき
 
     qWarning() << "[パフォーマンス警告] CPUベースのフォールバックレンダリングが使用されました。" << "GPUアクセラレーションを利用するgrabWindow()の使用を検討してください。";
-    // フォールバック: 空画像を返す
+    // 実装しません
     QImage img(m_project->width(), m_project->height(), QImage::Format_ARGB32);
     img.fill(Qt::black);
     return img;
@@ -658,7 +653,7 @@ void TimelineController::selectClip(int id) {
         m_timeline->selectClip(id);
 }
 
-// === エフェクト・オブジェクト操作 ===
+// エフェクト・オブジェクト操作
 
 QVariantList TimelineController::getAvailableEffects() const {
     QVariantList list;
@@ -732,7 +727,7 @@ void TimelineController::removeAudioPlugin(int clipId, int index) {
 }
 
 QVariantList TimelineController::getPluginCategories() const {
-    // AudioPluginManager から重複のないカテゴリ名リストを抽出
+    // AudioPluginManagerから重複のないカテゴリ名リストを抽出
     return Rina::Engine::Plugin::AudioPluginManager::instance().getCategories();
 }
 
@@ -774,14 +769,21 @@ QVariantList TimelineController::getEffectParameters(int clipId, int effectIndex
     if (plugin) {
         for (int i = 0; i < plugin->paramCount(); ++i) {
             QVariantMap paramInfo;
+            auto info = plugin->getParamInfo(i);
+
             paramInfo["pIdx"] = i;
-            paramInfo["name"] = plugin->paramName(i);
+            paramInfo["name"] = info.name;
             paramInfo["current"] = plugin->getParam(i);
-            // TODO: min/max/default値の取得はプラグインAPIに依存するため、
-            //       IAudioPluginインターフェースの拡張が必要。一旦固定値を返す。
-            paramInfo["min"] = 0.0f;
-            paramInfo["max"] = 1.0f;
-            paramInfo["type"] = "slider";
+            paramInfo["min"] = info.min;
+            paramInfo["max"] = info.max;
+
+            if (info.isToggle)
+                paramInfo["type"] = "bool";
+            else if (info.isInteger)
+                paramInfo["type"] = "int";
+            else
+                paramInfo["type"] = "slider";
+
             list.append(paramInfo);
         }
     }
@@ -856,8 +858,8 @@ QVariantList TimelineController::getSceneClips(int sceneId) const {
         for (auto *eff : clip.effects) {
             if (!eff->isEnabled())
                 continue;
-            // ここではキーフレーム評価を行わず、生パラメータまたはデフォルト値を渡す
-            // (SceneObject内で時間に応じて評価されるため)
+            // キーフレーム評価を行わず生パラメータまたはデフォルト値を渡す
+            // SceneObject内で時間に応じて評価されるため
             QVariantMap p = eff->params();
             for (auto it = p.begin(); it != p.end(); ++it)
                 params.insert(it.key(), it.value());
