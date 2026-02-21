@@ -7,7 +7,7 @@ Common.RinaWindow {
     id: root
 
     width: 450
-    height: 250
+    height: 200
     title: "プロジェクト設定"
     // ウィンドウが表示されたときに現在の値をUIに反映
     onVisibleChanged: {

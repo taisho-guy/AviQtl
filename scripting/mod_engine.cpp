@@ -176,11 +176,6 @@ static int l_project_get_fps(lua_State *L) {
     lua_pushnumber(L, g_ctrl->project()->fps());
     return 1;
 }
-static int l_project_get_total_frames(lua_State *L) {
-    _checkCtrl(L);
-    lua_pushinteger(L, g_ctrl->project()->totalFrames());
-    return 1;
-}
 static int l_project_save(lua_State *L) {
     _checkCtrl(L);
     bool ok = g_ctrl->saveProject(QString::fromUtf8(luaL_checkstring(L, 1)));
@@ -277,7 +272,6 @@ void ModEngine::_registerRinaAPI() {
     lua_register(L, "rina_project_width", l_project_get_width);
     lua_register(L, "rina_project_height", l_project_get_height);
     lua_register(L, "rina_project_fps", l_project_get_fps);
-    lua_register(L, "rina_project_total_frames", l_project_get_total_frames);
     lua_register(L, "rina_project_save", l_project_save);
     lua_register(L, "rina_project_load", l_project_load);
     // undo/redo
@@ -319,7 +313,6 @@ rina = {
         width        = rina_project_width,
         height       = rina_project_height,
         fps          = rina_project_fps,
-        total_frames = rina_project_total_frames,
         save         = rina_project_save,
         load         = rina_project_load,
     },

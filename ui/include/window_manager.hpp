@@ -19,7 +19,7 @@ class WindowManager : public QObject {
     void spawnWindow(QQmlEngine *engine, const QString &id, const QString &urlStr, const QString &title, int w, int h, int x, int y, bool visible = true);
 
   public slots:
-    void onProjectSelected(const QString &path, int width, int height, double fps, int totalFrames);
+    void onProjectSelected(const QString &path, int width, int height, double fps);
 
     Q_INVOKABLE bool isVisible(const QString &id) const;
     Q_INVOKABLE void setVisible(const QString &id, bool visible);

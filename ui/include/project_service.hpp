@@ -9,14 +9,12 @@ class ProjectService : public QObject {
     Q_PROPERTY(int width READ width WRITE setWidth NOTIFY widthChanged)
     Q_PROPERTY(int height READ height WRITE setHeight NOTIFY heightChanged)
     Q_PROPERTY(double fps READ fps WRITE setFps NOTIFY fpsChanged)
-    Q_PROPERTY(int totalFrames READ totalFrames WRITE setTotalFrames NOTIFY totalFramesChanged)
   public:
     explicit ProjectService(QObject *parent = nullptr) : QObject(parent) {
         const auto &settings = Rina::Core::SettingsManager::instance().settings();
         m_width = settings.value("defaultProjectWidth", 1920).toInt();
         m_height = settings.value("defaultProjectHeight", 1080).toInt();
         m_fps = settings.value("defaultProjectFps", 60.0).toDouble();
-        m_totalFrames = settings.value("defaultProjectFrames", 3600).toInt();
     }
 
     int width() const { return m_width; }
@@ -43,24 +41,14 @@ class ProjectService : public QObject {
         emit fpsChanged();
     }
 
-    int totalFrames() const { return m_totalFrames; }
-    void setTotalFrames(int f) {
-        if (m_totalFrames == f)
-            return;
-        m_totalFrames = f;
-        emit totalFramesChanged();
-    }
-
   signals:
     void widthChanged();
     void heightChanged();
     void fpsChanged();
-    void totalFramesChanged();
 
   private:
     int m_width;
     int m_height;
     double m_fps;
-    int m_totalFrames;
 };
 } // namespace Rina::UI

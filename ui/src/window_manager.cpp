@@ -37,7 +37,7 @@ void WindowManager::spawnInitialWindows(QQmlEngine *engine) {
     QQuickWindow *launcher = qobject_cast<QQuickWindow *>(obj);
     if (launcher) {
         // プロジェクトが選択されたら、メインウィンドウを開く
-        QObject::connect(launcher, SIGNAL(projectSelected(QString, int, int, double, int)), this, SLOT(onProjectSelected(QString, int, int, double, int)));
+        QObject::connect(launcher, SIGNAL(projectSelected(QString, int, int, double)), this, SLOT(onProjectSelected(QString, int, int, double)));
         registerWindow("launcher", launcher);
         launcher->show();
     } else {
@@ -45,7 +45,7 @@ void WindowManager::spawnInitialWindows(QQmlEngine *engine) {
     }
 }
 
-void WindowManager::onProjectSelected(const QString &path, int w, int h, double fps, int frames) {
+void WindowManager::onProjectSelected(const QString &path, int w, int h, double fps) {
     if (!m_engine) {
         qWarning() << "onProjectSelectedでQMLエンジンが利用できません";
         return;
@@ -76,7 +76,6 @@ void WindowManager::onProjectSelected(const QString &path, int w, int h, double 
                 project->setProperty("width", w);
                 project->setProperty("height", h);
                 project->setProperty("fps", fps);
-                project->setProperty("totalFrames", frames);
             }
         }
     }

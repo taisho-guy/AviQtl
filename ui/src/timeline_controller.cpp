@@ -49,9 +49,6 @@ TimelineController::TimelineController(QObject *parent) : QObject(parent) {
     connect(m_timeline, &TimelineService::clipsChanged, this, [this]() {
         rebuildClipIndex();
 
-        // 【追加】最終フレームを自動計算して更新
-        recalculateTotalFrames();
-
         emit clipsChanged();
         updateMediaDecoders();
         updateActiveClipsList();
@@ -84,7 +81,7 @@ TimelineController::TimelineController(QObject *parent) : QObject(parent) {
     connect(m_transport, &TransportService::currentFrameChanged, this, [this]() {
         int nextFrame = m_transport->currentFrame();
         // ループ再生ロジック
-        if (nextFrame > m_project->totalFrames()) {
+        if (nextFrame > m_timelineDuration && m_timelineDuration > 0) {
             m_transport->setCurrentFrame(0);
             // 音声エンジンのリセットとデコーダのシーク（バッファフラッシュ）
             for (auto *decoder : m_audioDecoders) {
@@ -328,12 +325,17 @@ void TimelineController::updateActiveClipsList() {
 void TimelineController::rebuildClipIndex() {
     m_sortedClips.clear();
     m_maxDuration = 0;
+    m_timelineDuration = 0;
     auto &clips = m_timeline->clipsMutable();
     m_sortedClips.reserve(clips.size());
     for (auto &clip : clips) {
         m_sortedClips.push_back(&clip);
         if (clip.durationFrames > m_maxDuration)
             m_maxDuration = clip.durationFrames;
+
+        int end = clip.startFrame + clip.durationFrames;
+        if (end > m_timelineDuration)
+            m_timelineDuration = end;
     }
     std::sort(m_sortedClips.begin(), m_sortedClips.end(), [](const ClipData *a, const ClipData *b) { return a->startFrame < b->startFrame; });
 }
@@ -421,24 +423,6 @@ void TimelineController::updateMediaDecoders() {
     }
 }
 
-void TimelineController::recalculateTotalFrames() {
-    int maxEndFrame = 0;
-
-    // 現在のシーンの全クリップを走査
-    // m_timeline->clips() は現在のシーンのクリップリストを返す
-    for (const auto &clip : m_timeline->clips()) {
-        int endFrame = clip.startFrame + clip.durationFrames;
-        if (endFrame > maxEndFrame) {
-            maxEndFrame = endFrame;
-        }
-    }
-
-    // プロジェクト設定を更新
-    // 無限ループを防ぐため、値が変わった時だけセットされる(ProjectService側でチェック済み)
-    // 最低でも1フレームは確保する
-    m_project->setTotalFrames(std::max(1, maxEndFrame));
-}
-
 void TimelineController::log(const QString &msg) { qDebug() << "[TimelineBridge] " << msg; }
 
 void TimelineController::updateClip(int id, int layer, int startFrame, int duration) { m_timeline->updateClip(id, layer, startFrame, duration); }
@@ -504,7 +488,7 @@ bool TimelineController::exportMedia(const QString &fileUrl, const QString &form
 }
 
 bool TimelineController::exportImageSequence(const QString &dir, int quality) {
-    int totalFrames = m_project->totalFrames();
+    int totalFrames = m_timelineDuration;
     // ディレクトリ作成等の処理は省略（ファイル名として渡される前提）
     // 実際は連番ファイル名を生成するロジックが必要
     QString baseName = dir;
@@ -567,7 +551,7 @@ bool TimelineController::exportVideo(const QString &path, const QString &format,
     // 音声ストリーム追加
     encoder.addAudioStream(48000, 2, 192000);
 
-    int totalFrames = m_project->totalFrames();
+    int totalFrames = m_timelineDuration;
     for (int frame = 0; frame < totalFrames; ++frame) {
         m_transport->setCurrentFrame(frame);
 
@@ -606,7 +590,7 @@ void TimelineController::exportVideoHW(Rina::Core::VideoEncoder *encoder) {
         return;
     }
 
-    const int endFrame = m_project->totalFrames();
+    const int endFrame = m_timelineDuration;
     const int width = m_project->width();
     const int height = m_project->height();
 

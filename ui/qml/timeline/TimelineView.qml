@@ -49,8 +49,7 @@ ScrollView {
     }
     // プロジェクト尺とクリップ末尾のうち長い方 + 余白
     readonly property int timelineLengthFrames: {
-        var projectLength = (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.totalFrames : 3600;
-        return Math.max(projectLength, maxClipEndFrame + tailPaddingFrames);
+        return Math.max(100, maxClipEndFrame + tailPaddingFrames);
     }
 
     // グリッド設定画面の表示を親に要求するシグナル

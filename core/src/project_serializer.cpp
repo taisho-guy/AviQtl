@@ -22,7 +22,6 @@ bool ProjectSerializer::save(const QString &fileUrl, const UI::TimelineService *
     settings["width"] = project->width();
     settings["height"] = project->height();
     settings["fps"] = project->fps();
-    settings["totalFrames"] = project->totalFrames();
     root["settings"] = settings;
 
     // --- シーン情報の保存 ---
@@ -121,7 +120,6 @@ bool ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
     auto defaults = Rina::Core::SettingsManager::instance().settings();
     int pWidth = defaults.value("defaultProjectWidth", 1920).toInt();
     int pHeight = defaults.value("defaultProjectHeight", 1080).toInt();
-    int pTotalFrames = defaults.value("defaultProjectFrames", 300).toInt();
     double pFps = defaults.value("defaultProjectFps", 60.0).toDouble();
 
     if (hasSettings) {
@@ -129,7 +127,6 @@ bool ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
         pWidth = s["width"].toInt(pWidth);
         pHeight = s["height"].toInt(pHeight);
         pFps = s["fps"].toDouble(pFps);
-        pTotalFrames = s["totalFrames"].toInt(pTotalFrames);
     }
 
     // Scenes (読み込み)
@@ -145,7 +142,7 @@ bool ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
             scene.width = s["width"].toInt(pWidth);
             scene.height = s["height"].toInt(pHeight);
             scene.fps = s["fps"].toDouble(pFps);
-            scene.totalFrames = s["totalFrames"].toInt(pTotalFrames);
+            scene.totalFrames = s["totalFrames"].toInt(300); // SceneDataには残るがプロジェクト設定からは分離
             scene.startFrame = s["start"].toInt(0);
             scene.durationFrames = s["duration"].toInt(0);
             tempScenes.append(scene);
@@ -217,7 +214,6 @@ bool ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
         project->setWidth(pWidth);
         project->setHeight(pHeight);
         project->setFps(pFps);
-        project->setTotalFrames(pTotalFrames);
     }
 
     // クリップを各シーンに分配

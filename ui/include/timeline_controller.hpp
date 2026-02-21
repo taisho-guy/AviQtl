@@ -171,6 +171,9 @@ class TimelineController : public QObject {
             m_audioMixer->setPlaybackSpeed(speed);
     }
 
+    // 動的に計算されたタイムラインの長さ（最後のクリップの末尾フレーム）
+    int timelineDuration() const { return m_timelineDuration; }
+
   signals:
     void timelineScaleChanged();
     void clipStartFrameChanged();
@@ -191,7 +194,6 @@ class TimelineController : public QObject {
     void rebuildClipIndex();
     void updateVideoDecoders();
     void updateMediaDecoders(); // Video/Audio両対応へ変更
-    void recalculateTotalFrames();
 
     ClipModel *m_clipModel;       // アクティブなクリップをQMLに公開するためのモデル
     double m_timelineScale = 1.0; // タイムラインの表示倍率 (1.0 = 1フレームあたり1ピクセル)
@@ -216,6 +218,7 @@ class TimelineController : public QObject {
     // 最適化: O(log N) での検索のためのソート済みインデックス
     QList<ClipData *> m_sortedClips; // vector<ClipData*> ではなく QList<ClipData>
     int m_maxDuration = 0;
+    int m_timelineDuration = 0; // タイムライン全体の長さ
 
     // エクスポート用ヘルパー
     bool exportImageSequence(const QString &dir, int quality);

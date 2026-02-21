@@ -10,7 +10,7 @@ Common.RinaWindow {
     id: root
 
     // プロジェクトが選択されたら他のウィンドウを開く
-    signal projectSelected(string projectPath, int width, int height, double fps, int totalFrames)
+    signal projectSelected(string projectPath, int width, int height, double fps)
 
     width: 700
     height: 500
@@ -168,8 +168,7 @@ Common.RinaWindow {
                 highlighted: true
                 Layout.fillWidth: true
                 onClicked: {
-                    // 総フレーム数は自動計算されるため、初期値として最小限の値(1)を渡す
-                    root.projectSelected("", parseInt(widthField.text), parseInt(heightField.text), parseFloat(fpsField.text), 1);
+                    root.projectSelected("", parseInt(widthField.text), parseInt(heightField.text), parseFloat(fpsField.text));
                     root.close();
                 }
 
@@ -224,7 +223,7 @@ Common.RinaWindow {
                         width: recentListView.width
                         height: 60
                         onClicked: {
-                            root.projectSelected(model.path, model.width, model.height, model.fps, model.totalFrames);
+                            root.projectSelected(model.path, model.width, model.height, model.fps);
                             root.close();
                         }
 
@@ -293,7 +292,6 @@ Common.RinaWindow {
             var width = 1920;
             var height = 1080;
             var fps = 60;
-            var totalFrames = 3600;
             if (TimelineBridge) {
                 var info = TimelineBridge.getProjectInfo(fileDialog.selectedFile);
                 if (info.width !== undefined)
@@ -305,11 +303,8 @@ Common.RinaWindow {
                 if (info.fps !== undefined)
                     fps = info.fps;
 
-                if (info.totalFrames !== undefined)
-                    totalFrames = info.totalFrames;
-
             }
-            root.projectSelected(fileDialog.selectedFile, width, height, fps, totalFrames);
+            root.projectSelected(fileDialog.selectedFile, width, height, fps);
             root.close();
         }
     }
