@@ -36,9 +36,7 @@ int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
     app.setApplicationName("Rina");
 
-    // 【追加】アプリケーションアイコンの設定
-    // Qtのリソースシステム (:prefix) から読み込みます
-    // SVGをアイコンに設定すると、ウィンドウマネージャ(KDE/Wayland)が適切にラスタライズしてくれます
+    // アプリケーションアイコンの設定
     app.setWindowIcon(QIcon(":/assets/icon.svg"));
 
     // 設定のロード(インスタンス取得時にloadされる)
@@ -46,22 +44,18 @@ int main(int argc, char *argv[]) {
 
     // スプラッシュスクリーンの表示
     int splashSize = settings.value("splashSize", 512).toInt();
-    QPixmap splashPixmap = QIcon(":/assets/icon.svg").pixmap(splashSize, splashSize);
+    QPixmap splashPixmap = QIcon(":/assets/splash.svg").pixmap(splashSize, splashSize);
     QSplashScreen splash(splashPixmap);
     splash.show();
     app.processEvents();
 
-    // Luaフック用のタイマー (約60FPSで同期)
+    // Luaフック用のタイマー
     QTimer luaHookTimer;
     auto &modEngine = Rina::Scripting::ModEngine::instance();
     QObject::connect(&luaHookTimer, &QTimer::timeout, [&modEngine]() { modEngine.onUpdate(); });
     luaHookTimer.start(16);
 
-    // 1. スタイルの強制適用 (KDE Plasma Native)
-    // これにより、システムの色設定（ダークモード等）が自動的にQMLに反映される
-    // 削除: Windows等で "org.kde.desktop" がない場合にクラッシュする原因となる
-    // Qtデフォルトの自動判定に任せることで、OSごとのネイティブスタイル(WindowsVista等)が適用される
-    QQuickStyle::setFallbackStyle("Fusion"); // Fallback for environments without a native style
+    QQuickStyle::setFallbackStyle("Fusion");
 
     QQmlApplicationEngine engine;
 
@@ -92,10 +86,10 @@ int main(int argc, char *argv[]) {
         // エフェクトレジストリの初期化
         Rina::Core::initializeStandardEffects();
 
-        // オーディオプラグインの初期化 (起動時にスキャン)
+        // オーディオプラグインの初期化
         Rina::Engine::Plugin::AudioPluginManager::instance().scanPlugins();
 
-        // --- Lua MODエンジンの初期化 ---
+        // Luaエンジンの初期化
         // ECSのインスタンス（g_ecsState）のアドレスをLuaに渡す
         void *ecsPtr = Rina::Engine::Timeline::ECS::instance().getInternalStatePtr();
         modEngine.initialize(ecsPtr);

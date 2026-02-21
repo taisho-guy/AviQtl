@@ -118,9 +118,16 @@ void VideoDecoder::setPlaying(bool playing) {
         return;
     if (playing) {
         m_player->play();
-        m_player->setPlaybackRate(1.0);
+        m_player->setPlaybackRate(m_playbackRate);
     } else {
         m_player->pause();
+    }
+}
+
+void VideoDecoder::setPlaybackRate(double rate) {
+    m_playbackRate = rate;
+    if (m_player && m_player->playbackState() == QMediaPlayer::PlayingState) {
+        m_player->setPlaybackRate(rate);
     }
 }
 

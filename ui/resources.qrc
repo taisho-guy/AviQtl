@@ -1,7 +1,8 @@
+<!DOCTYPE RCC>
 <RCC>
-    <qresource prefix="/">
-        <file>../assets/icon.svg</file>
-        <file>../assets/icon.png</file>
-        <file>resources/remixicon.ttf</file>
-    </qresource>
+  <qresource prefix="/">
+    <file>../assets/icon.svg</file>
+    <file>../assets/splash.svg</file>
+    <file>resources/remixicon.ttf</file>
+  </qresource>
 </RCC>

@@ -36,6 +36,8 @@ class AudioMixer : public QObject {
     Plugin::AudioPluginChain &getChain(int clipId);
     void clearChain(int clipId);
 
+    void setPlaybackSpeed(double speed) { m_playbackSpeed = speed; }
+
   private:
     QAudioSink *m_audioSink = nullptr;
     QIODevice *m_audioOutput = nullptr;
@@ -43,6 +45,7 @@ class AudioMixer : public QObject {
     std::unordered_map<int, Rina::Core::AudioDecoder *> m_decoders;
     QHash<int, std::shared_ptr<Plugin::AudioPluginChain>> m_chains;
     int m_lastFrame = -1;
+    double m_playbackSpeed = 1.0;
 };
 
 } // namespace Rina::Engine

@@ -36,6 +36,8 @@ class AudioDecoder;
 namespace Rina::Engine {
 class AudioMixer;
 }
+#include "../../engine/audio_mixer.hpp"
+#include "../../core/include/video_decoder.hpp"
 
 namespace Rina::UI { // 元のnamespaceに戻す
 class TimelineController : public QObject {
@@ -158,6 +160,16 @@ class TimelineController : public QObject {
     Q_INVOKABLE void pasteClip(int frame, int layer);
 
     void updateActiveClipsList();
+
+    // 再生速度の同期 (QMLからTransportServiceの変更通知を受けて呼び出す)
+    Q_INVOKABLE void syncPlaybackSpeed() {
+        double speed = m_transport->playbackSpeed();
+        for (auto *decoder : m_videoDecoders) {
+            decoder->setPlaybackRate(speed);
+        }
+        if (m_audioMixer)
+            m_audioMixer->setPlaybackSpeed(speed);
+    }
 
   signals:
     void timelineScaleChanged();

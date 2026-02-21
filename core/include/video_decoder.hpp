@@ -17,6 +17,7 @@ class VideoDecoder : public QObject {
 
     Q_INVOKABLE void seekToFrame(int frame, double fps);
     Q_INVOKABLE void setPlaying(bool playing);
+    Q_INVOKABLE void setPlaybackRate(double rate);
 
   private slots:
     void onVideoFrameChanged(const QVideoFrame &frame);
@@ -34,5 +35,6 @@ class VideoDecoder : public QObject {
     int m_lastRequestedFrame = -1;
     qint64 m_lastFrameTimestamp = -1; // 重複フレームチェック用
     double m_fps = 60.0;
+    double m_playbackRate = 1.0;
 };
 } // namespace Rina::Core

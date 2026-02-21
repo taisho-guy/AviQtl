@@ -82,8 +82,34 @@ std::vector<float> AudioMixer::mix(int currentFrame, double fps, int samplesPerF
             continue;
 
         double startTime = (double)(currentFrame - audio->startFrame) / fps;
+
+        // 速度変更対応:
+        // 再生速度が速い場合、同じ実時間(1フレーム分)でより多くのソースサンプルを消費する
+        // 例: 2倍速なら、1フレームの間に2フレーム分の音声が進む必要がある
+        int neededSamples = static_cast<int>(samplesPerFrame * m_playbackSpeed);
+
         auto decoder = m_decoders[clipId];
-        std::vector<float> clipSamples = decoder->getSamples(startTime, samplesPerFrame * 2);
+        std::vector<float> rawSamples = decoder->getSamples(startTime, neededSamples * 2); // Stereo
+        std::vector<float> clipSamples;
+
+        // 簡易リサンプリング (線形補間)
+        // rawSamples (neededSamples) -> clipSamples (samplesPerFrame)
+        if (std::abs(m_playbackSpeed - 1.0) > 0.01 && !rawSamples.empty()) {
+            clipSamples.resize(samplesPerFrame * 2);
+            for (int i = 0; i < samplesPerFrame; ++i) {
+                double srcIdx = i * m_playbackSpeed;
+                int idx0 = static_cast<int>(srcIdx);
+                int idx1 = std::min(idx0 + 1, neededSamples - 1);
+                double t = srcIdx - idx0;
+
+                // L ch
+                clipSamples[i * 2] = rawSamples[idx0 * 2] * (1.0 - t) + rawSamples[idx1 * 2] * t;
+                // R ch
+                clipSamples[i * 2 + 1] = rawSamples[idx0 * 2 + 1] * (1.0 - t) + rawSamples[idx1 * 2 + 1] * t;
+            }
+        } else {
+            clipSamples = std::move(rawSamples);
+        }
 
         // プラグインチェーンを適用
         if (m_chains.contains(clipId))

@@ -42,7 +42,7 @@ Common.RinaWindow {
             }
 
             TabButton {
-                text: "デフォルト"
+                text: "新規プロジェクト"
             }
 
         }

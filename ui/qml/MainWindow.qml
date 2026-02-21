@@ -1,6 +1,7 @@
 import Qt.labs.platform 1.1 as Platform
 import QtQuick 2.15
 import QtQuick.Controls 2.15
+import QtQuick.Layouts 1.15
 import QtQuick.Window 2.15
 import "common" as Common
 
@@ -120,6 +121,23 @@ ApplicationWindow {
         target: TimelineBridge
     }
 
+    // FPSと再生速度の同期設定
+    Binding {
+        target: TimelineBridge ? TimelineBridge.transport : null
+        property: "fps"
+        value: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.fps : 60
+    }
+
+    Connections {
+        function onPlaybackSpeedChanged() {
+            if (TimelineBridge)
+                TimelineBridge.syncPlaybackSpeed();
+
+        }
+
+        target: TimelineBridge ? TimelineBridge.transport : null
+    }
+
     Platform.FileDialog {
         id: saveDialog
 
@@ -151,18 +169,167 @@ ApplicationWindow {
         anchors.centerIn: parent
     }
 
-    CompositeView {
-        id: compositeView
-
+    ColumnLayout {
         anchors.fill: parent
-        // タイムラインウィンドウからレイヤー状態を取得
-        getLayerVisible: function(layer) {
-            var tlWin = WindowManager.getWindow("timeline");
-            if (tlWin && tlWin.getLayerVisible)
-                return tlWin.getLayerVisible(layer);
+        spacing: 0
 
-            return true;
+        CompositeView {
+            id: compositeView
+
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            // タイムラインウィンドウからレイヤー状態を取得
+            getLayerVisible: function(layer) {
+                var tlWin = WindowManager.getWindow("timeline");
+                if (tlWin && tlWin.getLayerVisible)
+                    return tlWin.getLayerVisible(layer);
+
+                return true;
+            }
         }
+
+        // 再生コントロールバー
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 38
+            color: mainWin.palette.window
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: 10
+                anchors.rightMargin: 10
+                spacing: 10
+
+                // シークバー
+                Slider {
+                    id: seekSlider
+
+                    Layout.fillWidth: true
+                    from: 0
+                    to: {
+                        if (TimelineBridge && TimelineBridge.scenes) {
+                            var scenes = TimelineBridge.scenes;
+                            var curId = TimelineBridge.currentSceneId;
+                            for (var i = 0; i < scenes.length; i++) {
+                                if (scenes[i].id === curId)
+                                    return scenes[i].totalFrames;
+
+                            }
+                        }
+                        return (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.totalFrames : 100;
+                    }
+                    value: (TimelineBridge && TimelineBridge.transport) ? TimelineBridge.transport.currentFrame : 0
+                    onMoved: {
+                        if (TimelineBridge && TimelineBridge.transport)
+                            TimelineBridge.transport.currentFrame = value;
+
+                    }
+                }
+
+                Label {
+                    text: seekSlider.value + " / " + seekSlider.to
+                    font.pixelSize: 12
+                    color: mainWin.palette.text
+                }
+
+                // 操作ボタン
+                RowLayout {
+                    spacing: 0
+
+                    Button {
+                        Layout.preferredWidth: 32
+                        Layout.preferredHeight: 32
+                        flat: true
+                        onClicked: {
+                            if (TimelineBridge && TimelineBridge.transport)
+                                TimelineBridge.transport.currentFrame = Math.max(0, TimelineBridge.transport.currentFrame - 1);
+
+                        }
+
+                        contentItem: Common.RinaIcon {
+                            iconName: "arrow_left_s_line"
+                            size: 24
+                            color: parent.hovered ? parent.palette.highlight : parent.palette.text
+                        }
+
+                    }
+
+                    Button {
+                        Layout.preferredWidth: 32
+                        Layout.preferredHeight: 32
+                        flat: true
+                        onClicked: {
+                            if (TimelineBridge && TimelineBridge.transport)
+                                TimelineBridge.transport.togglePlay();
+
+                        }
+
+                        contentItem: Common.RinaIcon {
+                            iconName: (TimelineBridge && TimelineBridge.transport && TimelineBridge.transport.isPlaying) ? "pause_fill" : "play_fill"
+                            size: 24
+                            color: parent.hovered ? parent.palette.highlight : parent.palette.text
+                        }
+
+                    }
+
+                    Button {
+                        Layout.preferredWidth: 32
+                        Layout.preferredHeight: 32
+                        flat: true
+                        onClicked: {
+                            if (TimelineBridge && TimelineBridge.transport)
+                                TimelineBridge.transport.currentFrame = TimelineBridge.transport.currentFrame + 1;
+
+                        }
+
+                        contentItem: Common.RinaIcon {
+                            iconName: "arrow_right_s_line"
+                            size: 24
+                            color: parent.hovered ? parent.palette.highlight : parent.palette.text
+                        }
+
+                    }
+
+                }
+
+                // 再生速度
+                RowLayout {
+                    spacing: 5
+
+                    Label {
+                        text: "速度"
+                        color: mainWin.palette.text
+                        font.pixelSize: 12
+                    }
+
+                    SpinBox {
+                        from: 10
+                        to: 400
+                        stepSize: 10
+                        editable: true
+                        Layout.preferredWidth: 80
+                        Layout.preferredHeight: 28
+                        // 値のバインディング
+                        value: (TimelineBridge && TimelineBridge.transport) ? Math.round(TimelineBridge.transport.playbackSpeed * 100) : 100
+                        onValueModified: {
+                            if (TimelineBridge && TimelineBridge.transport)
+                                TimelineBridge.transport.playbackSpeed = value / 100;
+
+                        }
+                        textFromValue: function(value, locale) {
+                            return (value / 100).toFixed(1) + "x";
+                        }
+                        valueFromText: function(text, locale) {
+                            return Number.fromLocaleString(locale, text.replace("x", "")) * 100;
+                        }
+                    }
+
+                }
+
+            }
+
+        }
+
     }
 
     // 重要: View3D の背後に黒背景を強制
@@ -263,38 +430,14 @@ ApplicationWindow {
         }
 
         Menu {
-            title: "設定"
+            title: "プロジェクト"
 
             Common.IconMenuItem {
-                text: "サイズの変更"
-                iconName: "aspect_ratio_line"
+                text: "プロジェクト設定..."
+                iconName: "settings_4_line"
                 onTriggered: {
                     if (WindowManager)
                         WindowManager.projectSettingsVisible = true;
-
-                }
-            }
-
-            Common.IconMenuItem {
-                text: "フレームレートの変更"
-                iconName: "speed_line"
-                onTriggered: {
-                    if (WindowManager)
-                        WindowManager.projectSettingsVisible = true;
-
-                }
-            }
-
-            MenuSeparator {
-            }
-
-            Common.IconMenuItem {
-                text: "環境設定"
-                iconName: "settings_3_line"
-                onTriggered: {
-                    if (WindowManager)
-                        WindowManager.systemSettingsVisible = true;
-
                 }
             }
 

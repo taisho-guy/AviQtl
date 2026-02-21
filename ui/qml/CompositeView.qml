@@ -25,13 +25,8 @@ Item {
         return c;
     }
 
-    anchors.fill: parent
-
     // 2Dレンダー（sourceItem/effects/ShaderEffectSource）を必ずQQuickWindow配下に置くためのホスト
     // visible:false でもWindow配下に居ればSceneGraph/Timerが正常に動く
-    // 重要:
-    // visible:false は SceneGraph から外れる → ShaderEffectSource の更新が止まりやすい。
-    // 表示を消したいだけなら visible:true のまま opacity:0 に寄せる。
     Item {
         id: offscreenRenderHost
 
@@ -42,24 +37,23 @@ Item {
         z: hiddenZ
     }
 
-    // 背景（余白部分）は黒
+    // 背景
     Rectangle {
         anchors.fill: parent
         color: "black"
         z: -2
     }
 
-    // プレビューコンテナ（アスペクト比維持）
+    // プレビューコンテナ
     View3D {
         id: view
 
-        // プロジェクト設定の解像度を取得（未設定時はFHD）
+        // プロジェクト設定の解像度を取得
         property int projW: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.width : 1920
         property int projH: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.height : 1080
         // アスペクト比計算
         property double aspect: projW / projH
         // 現在のクリップ内での相対時間 (0.0 ~ 1.0)
-        // 他のコンポーネントから参照される可能性を考慮して定義
         property double currentClipTimeRatio: (TimelineBridge && TimelineBridge.transport) ? Math.max(0, Math.min(1, (TimelineBridge.transport.currentFrame - TimelineBridge.clipStartFrame) / TimelineBridge.clipDurationFrames)) : 0
 
         camera: mainCamera
@@ -81,7 +75,7 @@ Item {
             z: -1
         }
 
-        // カメラ設定 (必須)
+        // カメラ設定
         PerspectiveCamera {
             id: mainCamera
 
@@ -108,7 +102,6 @@ Item {
                 visible: false // 邪魔なので一旦隠す
 
                 materials: DefaultMaterial {
-                    // 枠線だけ表示したいが、簡易的に半透明の黒背景として表示
                     diffuseColor: "#22000000"
                 }
                 // 奥に配置
@@ -124,7 +117,6 @@ Item {
 
         // 動的オブジェクト生成用
         Instantiator {
-            // QVariantListではなく、C++のAbstractListModelを使用
             model: TimelineBridge ? TimelineBridge.clipModel : null
             onObjectAdded: (index, object) => {
                 object.parent = sceneRoot;
@@ -140,7 +132,7 @@ Item {
                 property int clipLayerRole: model.layer
                 property Item fbRendererOutput: null // NodeLoader 完了後に接続
                 // モデルロールから直接値を取得
-                // パラメータを一度だけ取得してキャッシュ (undefinedチェックのオーバーヘッド削減)
+                // パラメータを一度だけ取得してキャッシュ
                 readonly property var p: model.params || {
                 }
                 readonly property real px: p.x || 0
