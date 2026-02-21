@@ -36,8 +36,8 @@ class AudioDecoder;
 namespace Rina::Engine {
 class AudioMixer;
 }
-#include "../../engine/audio_mixer.hpp"
 #include "../../core/include/video_decoder.hpp"
+#include "../../engine/audio_mixer.hpp"
 
 namespace Rina::UI { // 元のnamespaceに戻す
 class TimelineController : public QObject {

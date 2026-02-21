@@ -207,16 +207,17 @@ ApplicationWindow {
                     Layout.fillWidth: true
                     from: 0
                     to: {
-                        if (TimelineBridge && TimelineBridge.scenes) {
-                            var scenes = TimelineBridge.scenes;
-                            var curId = TimelineBridge.currentSceneId;
-                            for (var i = 0; i < scenes.length; i++) {
-                                if (scenes[i].id === curId)
-                                    return scenes[i].totalFrames;
+                        // クリップの末尾を取得して動的に拡張
+                        var maxEnd = 0;
+                        var clipList = (TimelineBridge && TimelineBridge.clips) ? TimelineBridge.clips : [];
+                        for (var j = 0; j < clipList.length; j++) {
+                            var clip = clipList[j];
+                            var end = clip.startFrame + clip.durationFrames;
+                            if (end > maxEnd)
+                                maxEnd = end;
 
-                            }
                         }
-                        return (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.totalFrames : 100;
+                        return Math.max(1, maxEnd + 1);
                     }
                     value: (TimelineBridge && TimelineBridge.transport) ? TimelineBridge.transport.currentFrame : 0
                     onMoved: {
@@ -227,7 +228,7 @@ ApplicationWindow {
                 }
 
                 Label {
-                    text: seekSlider.value + " / " + seekSlider.to
+                    text: Math.floor(seekSlider.value) + " / " + Math.floor(seekSlider.to)
                     font.pixelSize: 12
                     color: mainWin.palette.text
                 }
@@ -430,14 +431,38 @@ ApplicationWindow {
         }
 
         Menu {
-            title: "プロジェクト"
+            title: "設定"
 
             Common.IconMenuItem {
-                text: "プロジェクト設定..."
-                iconName: "settings_4_line"
+                text: "サイズの変更"
+                iconName: "aspect_ratio_line"
                 onTriggered: {
                     if (WindowManager)
                         WindowManager.projectSettingsVisible = true;
+
+                }
+            }
+
+            Common.IconMenuItem {
+                text: "フレームレートの変更"
+                iconName: "speed_line"
+                onTriggered: {
+                    if (WindowManager)
+                        WindowManager.projectSettingsVisible = true;
+
+                }
+            }
+
+            MenuSeparator {
+            }
+
+            Common.IconMenuItem {
+                text: "環境設定"
+                iconName: "settings_3_line"
+                onTriggered: {
+                    if (WindowManager)
+                        WindowManager.systemSettingsVisible = true;
+
                 }
             }
 
