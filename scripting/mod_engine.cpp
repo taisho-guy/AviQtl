@@ -1,5 +1,5 @@
 #include "mod_engine.hpp"
-#include "../ui/include/timeline_controller.hpp" // TimelineController
+#include "../ui/include/timeline_controller.hpp"
 #include <QCoreApplication>
 #include <QDebug>
 #include <QMetaObject>
@@ -10,7 +10,75 @@ namespace Rina::Scripting {
 // Lua から参照できるグローバルポインタ
 static Rina::UI::TimelineController *g_ctrl = nullptr;
 
-// ── ヘルパー ──────────────────────────────────────────────────────
+// C API Wrappers for HostApiTable
+extern "C" {
+static void api_log(const char *msg) {
+    if (g_ctrl)
+        g_ctrl->log(QString::fromUtf8(msg));
+}
+static void api_transport_play() {
+    if (g_ctrl && !g_ctrl->transport()->isPlaying())
+        g_ctrl->transport()->togglePlay();
+}
+static void api_transport_pause() {
+    if (g_ctrl && g_ctrl->transport()->isPlaying())
+        g_ctrl->transport()->togglePlay();
+}
+static void api_transport_toggle() {
+    if (g_ctrl)
+        g_ctrl->transport()->togglePlay();
+}
+static void api_transport_seek(int frame) {
+    if (g_ctrl)
+        g_ctrl->transport()->setCurrentFrame(frame);
+}
+static int api_transport_get_frame() { return (g_ctrl) ? g_ctrl->transport()->currentFrame() : 0; }
+static int api_transport_is_playing() { return (g_ctrl) ? (int)g_ctrl->transport()->isPlaying() : 0; }
+
+static void api_clip_create(const char *type, int start, int layer) {
+    if (g_ctrl)
+        g_ctrl->createObject(QString::fromUtf8(type), start, layer);
+}
+static void api_clip_delete(int id) {
+    if (g_ctrl)
+        g_ctrl->deleteClip(id);
+}
+static void api_clip_update(int id, int layer, int start, int dur) {
+    if (g_ctrl)
+        g_ctrl->updateClip(id, layer, start, dur);
+}
+static void api_clip_select(int id) {
+    if (g_ctrl)
+        g_ctrl->selectClip(id);
+}
+
+static int api_project_get_width() { return (g_ctrl) ? g_ctrl->project()->width() : 0; }
+static int api_project_get_height() { return (g_ctrl) ? g_ctrl->project()->height() : 0; }
+static double api_project_get_fps() { return (g_ctrl) ? g_ctrl->project()->fps() : 0.0; }
+
+static void api_scene_create(const char *name) {
+    if (g_ctrl)
+        g_ctrl->createScene(QString::fromUtf8(name));
+}
+static void api_scene_switch(int id) {
+    if (g_ctrl)
+        g_ctrl->switchScene(id);
+}
+
+static void api_command_begin_group(const char *text) {
+    if (g_ctrl && g_ctrl->timeline())
+        g_ctrl->timeline()->undoStack()->beginMacro(QString::fromUtf8(text));
+}
+static void api_command_end_group() {
+    if (g_ctrl && g_ctrl->timeline())
+        g_ctrl->timeline()->undoStack()->endMacro();
+}
+}
+
+static HostApiTable g_hostApi = {api_log,         api_transport_play, api_transport_pause,   api_transport_toggle,   api_transport_seek,  api_transport_get_frame, api_transport_is_playing, api_clip_create,         api_clip_delete,
+                                 api_clip_update, api_clip_select,    api_project_get_width, api_project_get_height, api_project_get_fps, api_scene_create,        api_scene_switch,         api_command_begin_group, api_command_end_group};
+
+// ヘルパー
 static int _checkCtrl(lua_State *L) {
     if (!g_ctrl) {
         lua_pushstring(L, "[RinaAPI] controller not ready");
@@ -19,7 +87,7 @@ static int _checkCtrl(lua_State *L) {
     return 0;
 }
 
-// ── transport ─────────────────────────────────────────────────────
+// transport
 static int l_transport_play(lua_State *L) {
     _checkCtrl(L);
     if (!g_ctrl->transport()->isPlaying())
@@ -54,7 +122,7 @@ static int l_transport_is_playing(lua_State *L) {
     return 1;
 }
 
-// ── clip ──────────────────────────────────────────────────────────
+// clip
 static int l_clip_create(lua_State *L) {
     _checkCtrl(L);
     // rina_clip_create(type, startFrame, layer)
@@ -132,7 +200,7 @@ static int l_clip_list(lua_State *L) {
     return 1;
 }
 
-// ── effect ────────────────────────────────────────────────────────
+// effect
 static int l_effect_add(lua_State *L) {
     _checkCtrl(L);
     g_ctrl->addEffect((int)luaL_checkinteger(L, 1), QString::fromUtf8(luaL_checkstring(L, 2)));
@@ -160,7 +228,7 @@ static int l_effect_set_param(lua_State *L) {
     return 0;
 }
 
-// ── project ───────────────────────────────────────────────────────
+// project
 static int l_project_get_width(lua_State *L) {
     _checkCtrl(L);
     lua_pushinteger(L, g_ctrl->project()->width());
@@ -189,7 +257,7 @@ static int l_project_load(lua_State *L) {
     return 1;
 }
 
-// ── undo/redo ─────────────────────────────────────────────────────
+// undo/redo
 static int l_undo(lua_State *L) {
     _checkCtrl(L);
     g_ctrl->undo();
@@ -201,7 +269,7 @@ static int l_redo(lua_State *L) {
     return 0;
 }
 
-// ── scene ─────────────────────────────────────────────────────────
+// scene
 static int l_scene_create(lua_State *L) {
     _checkCtrl(L);
     g_ctrl->createScene(QString::fromUtf8(luaL_checkstring(L, 1)));
@@ -215,6 +283,21 @@ static int l_scene_remove(lua_State *L) {
 static int l_scene_switch(lua_State *L) {
     _checkCtrl(L);
     g_ctrl->switchScene((int)luaL_checkinteger(L, 1));
+    return 0;
+}
+
+// command
+static int l_command_begin_group(lua_State *L) {
+    _checkCtrl(L);
+    const char *text = luaL_checkstring(L, 1);
+    if (g_ctrl->timeline())
+        g_ctrl->timeline()->undoStack()->beginMacro(QString::fromUtf8(text));
+    return 0;
+}
+static int l_command_end_group(lua_State *L) {
+    _checkCtrl(L);
+    if (g_ctrl->timeline())
+        g_ctrl->timeline()->undoStack()->endMacro();
     return 0;
 }
 
@@ -242,8 +325,13 @@ void ModEngine::initialize(void *ecsPtr) {
 
 void ModEngine::registerController(void *controller) {
     g_ctrl = static_cast<Rina::UI::TimelineController *>(controller);
-    if (L)
+    if (L) {
         _registerRinaAPI();
+
+        // Export Host API Table
+        lua_pushlightuserdata(L, &g_hostApi);
+        lua_setglobal(L, "RINA_HOST_API");
+    }
 }
 
 void ModEngine::_registerRinaAPI() {
@@ -281,6 +369,9 @@ void ModEngine::_registerRinaAPI() {
     lua_register(L, "rina_scene_create", l_scene_create);
     lua_register(L, "rina_scene_remove", l_scene_remove);
     lua_register(L, "rina_scene_switch", l_scene_switch);
+    // command
+    lua_register(L, "rina_command_begin_group", l_command_begin_group);
+    lua_register(L, "rina_command_end_group", l_command_end_group);
 
     // rina.xxx() 形式のテーブルAPIをLua側で構築
     const char *rina_table = R"(
@@ -320,6 +411,10 @@ rina = {
         create = rina_scene_create,
         remove = rina_scene_remove,
         switch = rina_scene_switch,
+    },
+    command = {
+        begin_group = rina_command_begin_group,
+        end_group = rina_command_end_group,
     },
     undo = rina_undo,
     redo = rina_redo,

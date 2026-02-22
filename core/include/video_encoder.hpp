@@ -1,5 +1,6 @@
 #pragma once
 
+#include "gpu_texture_handle.hpp"
 #include <QImage>
 #include <QObject>
 #include <QSize>
@@ -39,8 +40,8 @@ class VideoEncoder : public QObject {
 
     bool open(const Config &config);
     Q_INVOKABLE bool open(const QVariantMap &config);
-    bool pushFrame(const QImage &img, int64_t pts);                           // Temporary: CPU -> HW Upload
-    bool pushTexture(unsigned int textureId, const QSize &size, int64_t pts); // GL Texture -> HW Upload
+    bool pushFrame(const QImage &img, int64_t pts);                // CPU -> HW Upload
+    bool pushTexture(const GpuTextureHandle &handle, int64_t pts); // GPU Texture -> HW Upload
     bool addAudioStream(int sampleRate = 48000, int channels = 2, int bitrate = 128000);
     bool pushAudio(const float *samples, int sampleCount);
     void close();

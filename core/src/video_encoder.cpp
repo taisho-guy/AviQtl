@@ -315,12 +315,20 @@ bool VideoEncoder::pushFrame(const QImage &img, int64_t pts) {
     return true;
 }
 
-bool VideoEncoder::pushTexture(unsigned int textureId, const QSize &size, int64_t pts) {
+bool VideoEncoder::pushTexture(const GpuTextureHandle &handle, int64_t pts) {
     if (!m_encCtx)
         return false;
 
     if (!writeHeaderIfNeeded())
         return false;
+
+    // 現在はOpenGLテクスチャからのCPUリードバックのみをサポート
+    if (handle.api != GpuApiType::OpenGL) {
+        qWarning() << "Unsupported GpuApiType in pushTexture. Only OpenGL is supported for now.";
+        return false;
+    }
+    const unsigned int textureId = static_cast<unsigned int>(handle.textureId);
+    const QSize size(handle.width, handle.height);
 
     // 現在のGLコンテキストを取得 (TimelineController側でmakeCurrentされている前提)
     QOpenGLContext *ctx = QOpenGLContext::currentContext();

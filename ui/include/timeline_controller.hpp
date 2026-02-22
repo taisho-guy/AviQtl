@@ -72,6 +72,7 @@ class TimelineController : public QObject {
     ProjectService *project() const { return m_project; }
     TransportService *transport() const { return m_transport; }
     SelectionService *selection() const { return m_selection; }
+    TimelineService *timeline() const { return m_timeline; }
 
     double timelineScale() const;
     void setTimelineScale(double scale);
