@@ -10,234 +10,234 @@ permissions:
   contents: write
 
 jobs:
-  build-windows:
-    name: Windows (x86_64)
-    runs-on: windows-latest
-    defaults:
-      run:
-        shell: msys2 {0}
-    steps:
-      - uses: actions/checkout@v4
-      
-      - uses: msys2/setup-msys2@v2
-        with:
-          msystem: UCRT64
-          update: true
-          install: >-
-            mingw-w64-ucrt-x86_64-toolchain
-            mingw-w64-ucrt-x86_64-cmake
-            mingw-w64-ucrt-x86_64-ninja
-            git
-            mingw-w64-ucrt-x86_64-qt6-base
-            mingw-w64-ucrt-x86_64-qt6-declarative
-            mingw-w64-ucrt-x86_64-qt6-quick3d
-            mingw-w64-ucrt-x86_64-qt6-multimedia
-            mingw-w64-ucrt-x86_64-qt6-shadertools
-            mingw-w64-ucrt-x86_64-qt6-svg
-            mingw-w64-ucrt-x86_64-qt6-5compat
-            mingw-w64-ucrt-x86_64-qt6-tools
-            mingw-w64-ucrt-x86_64-ffmpeg
-            mingw-w64-ucrt-x86_64-luajit
-            mingw-w64-ucrt-x86_64-vulkan-loader
-            mingw-w64-ucrt-x86_64-vulkan-headers
-            mingw-w64-ucrt-x86_64-pkg-config
-            mingw-w64-ucrt-x86_64-mold
-            mingw-w64-ucrt-x86_64-lilv
-            mingw-w64-ucrt-x86_64-ladspa-sdk
-            mingw-w64-ucrt-x86_64-curl
-            zip
+#  build-windows:
+#    name: Windows (x86_64)
+#    runs-on: windows-latest
+#    defaults:
+#      run:
+#        shell: msys2 {0}
+#    steps:
+#      - uses: actions/checkout@v4
+#      
+#      - uses: msys2/setup-msys2@v2
+#        with:
+#          msystem: UCRT64
+#          update: true
+#          install: >-
+#            mingw-w64-ucrt-x86_64-toolchain
+#            mingw-w64-ucrt-x86_64-cmake
+#            mingw-w64-ucrt-x86_64-ninja
+#            git
+#            mingw-w64-ucrt-x86_64-qt6-base
+#            mingw-w64-ucrt-x86_64-qt6-declarative
+#            mingw-w64-ucrt-x86_64-qt6-quick3d
+#            mingw-w64-ucrt-x86_64-qt6-multimedia
+#            mingw-w64-ucrt-x86_64-qt6-shadertools
+#            mingw-w64-ucrt-x86_64-qt6-svg
+#            mingw-w64-ucrt-x86_64-qt6-5compat
+#            mingw-w64-ucrt-x86_64-qt6-tools
+#            mingw-w64-ucrt-x86_64-ffmpeg
+#            mingw-w64-ucrt-x86_64-luajit
+#            mingw-w64-ucrt-x86_64-vulkan-loader
+#            mingw-w64-ucrt-x86_64-vulkan-headers
+#            mingw-w64-ucrt-x86_64-pkg-config
+#            mingw-w64-ucrt-x86_64-mold
+#            mingw-w64-ucrt-x86_64-lilv
+#            mingw-w64-ucrt-x86_64-ladspa-sdk
+#            mingw-w64-ucrt-x86_64-curl
+#            zip
+#
+#      - name: Install Audio Plugin SDKs
+#        run: |
+#          git clone https://github.com/steinberg-public/vst3sdk.git --depth 1
+#          git clone https://github.com/free-audio/clap.git --depth 1
+#
+#      - name: Build
+#        run: |
+#          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+#            -DVST3_SDK_DIR=$(pwd)/vst3sdk \
+#            -DCLAP_SDK_DIR=$(pwd)/clap
+#          cmake --build build
+#
+#      - name: Package
+#        run: |
+#          mkdir dist
+#          cd build
+#          
+#          # パスをWindows形式の絶対パスに変換
+#          QML_DIR=$(cygpath -w "$(pwd)/../ui/qml")
+#          EXE_PATH=$(cygpath -w "$(pwd)/../dist/Rina.exe")
+#          DIST_DIR=$(cygpath -w "$(pwd)/../dist")
+#          
+#          # windeployqtの翻訳ファイルエラー回避のため、先にexeをコピー
+#          cp Rina.exe ../dist/
+#          
+#          # qmlimportscannerの場所を特定し、PATHに追加することでwindeployqtから見えるようにする
+#          echo "Locating qmlimportscanner..."
+#          SCANNER_PATH=$(dirname "$(find /ucrt64 -name "qmlimportscanner.exe" 2>/dev/null | head -n 1)")
+#          
+#          if [ -n "$SCANNER_PATH" ]; then
+#            echo "Adding $SCANNER_PATH to PATH"
+#            export PATH="$SCANNER_PATH:$PATH"
+#          else
+#            echo "WARNING: qmlimportscanner.exe not found. windeployqt might fail."
+#          fi
+#          
+#          # Qt依存関係のデプロイ
+#          windeployqt --qmldir "$QML_DIR" --no-translations --no-compiler-runtime --release "$EXE_PATH" --dir "$DIST_DIR"
+#          
+#          # qt.confを作成してプラグイン検索パスをカレントディレクトリに固定
+#          echo "[Paths]" > ../dist/qt.conf
+#          echo "Plugins = ." >> ../dist/qt.conf
+#          
+#          # プラットフォームプラグインの存在確認と明示的コピー
+#          echo "Verifying Qt platform plugins..."
+#          if [ ! -d "../dist/platforms" ]; then
+#            echo "WARNING: platforms directory not created by windeployqt, copying manually..."
+#            mkdir -p ../dist/platforms
+#            QT_PLUGINS_DIR=$(dirname $(which qmake))/../share/qt6/plugins
+#            if [ -f "$QT_PLUGINS_DIR/platforms/qwindows.dll" ]; then
+#              cp -v "$QT_PLUGINS_DIR/platforms/qwindows.dll" ../dist/platforms/
+#            else
+#              echo "ERROR: qwindows.dll not found in $QT_PLUGINS_DIR/platforms/"
+#              exit 1
+#            fi
+#          fi
+#          
+#          # 2. 非Qt依存関係（FFmpeg, LuaJIT, ランタイム）の自動収集
+#          echo "Collecting non-Qt dependencies..."
+#          ldd ../dist/Rina.exe | grep -iv 'system32' | grep -iv 'windows' | grep '=> /' | awk '{print $3}' | while read -r dll_path; do
+#            # すでにdist内にあるファイルはスキップ
+#            if [[ "$dll_path" != *"dist/"* ]]; then
+#               cp -vu "$dll_path" ../dist/ || true
+#            fi
+#          done
+#
+#          # 3. 再帰的な依存関係の解決
+#          find ../dist -name "*.dll" -exec ldd {} + | grep -iv 'system32' | grep -iv 'windows' | grep '=> /' | awk '{print $3}' | sort -u | while read -r dll_path; do
+#            # すでにdist内にあるファイルはスキップ
+#            if [[ "$dll_path" != *"dist/"* ]]; then
+#               cp -vu "$dll_path" ../dist/ || true
+#            fi
+#          done
+#
+#          # アセットのコピー（存在確認を追加）
+#          # 存在すればコピー、なければ空ディレクトリを作成してクラッシュを回避
+#          # CMakeのfile(COPY)によりビルドディレクトリ(.)に配置されたアセットを使用
+#          if [ -d "objects" ]; then cp -r objects ../dist/; else echo "WARNING: objects dir not found in build dir"; fi
+#          if [ -d "effects" ]; then cp -r effects ../dist/; else echo "WARNING: effects dir not found in build dir"; fi
+#          if [ -d "plugins" ]; then cp -r plugins ../dist/; else echo "WARNING: plugins dir not found in build dir"; fi
+#          
+#          # アーカイブ作成
+#          cd ../dist
+#          zip -r Rina-Windows-x64.zip .
+#
+#      - name: Upload Artifact
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: windows-build
+#          path: dist/Rina-Windows-x64.zip
 
-      - name: Install Audio Plugin SDKs
-        run: |
-          git clone https://github.com/steinberg-public/vst3sdk.git --depth 1
-          git clone https://github.com/free-audio/clap.git --depth 1
-
-      - name: Build
-        run: |
-          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
-            -DVST3_SDK_DIR=$(pwd)/vst3sdk \
-            -DCLAP_SDK_DIR=$(pwd)/clap
-          cmake --build build
-
-      - name: Package
-        run: |
-          mkdir dist
-          cd build
-          
-          # パスをWindows形式の絶対パスに変換
-          QML_DIR=$(cygpath -w "$(pwd)/../ui/qml")
-          EXE_PATH=$(cygpath -w "$(pwd)/../dist/Rina.exe")
-          DIST_DIR=$(cygpath -w "$(pwd)/../dist")
-          
-          # windeployqtの翻訳ファイルエラー回避のため、先にexeをコピー
-          cp Rina.exe ../dist/
-          
-          # qmlimportscannerの場所を特定し、PATHに追加することでwindeployqtから見えるようにする
-          echo "Locating qmlimportscanner..."
-          SCANNER_PATH=$(dirname "$(find /ucrt64 -name "qmlimportscanner.exe" 2>/dev/null | head -n 1)")
-          
-          if [ -n "$SCANNER_PATH" ]; then
-            echo "Adding $SCANNER_PATH to PATH"
-            export PATH="$SCANNER_PATH:$PATH"
-          else
-            echo "WARNING: qmlimportscanner.exe not found. windeployqt might fail."
-          fi
-          
-          # Qt依存関係のデプロイ
-          windeployqt --qmldir "$QML_DIR" --no-translations --no-compiler-runtime --release "$EXE_PATH" --dir "$DIST_DIR"
-          
-          # qt.confを作成してプラグイン検索パスをカレントディレクトリに固定
-          echo "[Paths]" > ../dist/qt.conf
-          echo "Plugins = ." >> ../dist/qt.conf
-          
-          # プラットフォームプラグインの存在確認と明示的コピー
-          echo "Verifying Qt platform plugins..."
-          if [ ! -d "../dist/platforms" ]; then
-            echo "WARNING: platforms directory not created by windeployqt, copying manually..."
-            mkdir -p ../dist/platforms
-            QT_PLUGINS_DIR=$(dirname $(which qmake))/../share/qt6/plugins
-            if [ -f "$QT_PLUGINS_DIR/platforms/qwindows.dll" ]; then
-              cp -v "$QT_PLUGINS_DIR/platforms/qwindows.dll" ../dist/platforms/
-            else
-              echo "ERROR: qwindows.dll not found in $QT_PLUGINS_DIR/platforms/"
-              exit 1
-            fi
-          fi
-          
-          # 2. 非Qt依存関係（FFmpeg, LuaJIT, ランタイム）の自動収集
-          echo "Collecting non-Qt dependencies..."
-          ldd ../dist/Rina.exe | grep -iv 'system32' | grep -iv 'windows' | grep '=> /' | awk '{print $3}' | while read -r dll_path; do
-            # すでにdist内にあるファイルはスキップ
-            if [[ "$dll_path" != *"dist/"* ]]; then
-               cp -vu "$dll_path" ../dist/ || true
-            fi
-          done
-
-          # 3. 再帰的な依存関係の解決
-          find ../dist -name "*.dll" -exec ldd {} + | grep -iv 'system32' | grep -iv 'windows' | grep '=> /' | awk '{print $3}' | sort -u | while read -r dll_path; do
-            # すでにdist内にあるファイルはスキップ
-            if [[ "$dll_path" != *"dist/"* ]]; then
-               cp -vu "$dll_path" ../dist/ || true
-            fi
-          done
-
-          # アセットのコピー（存在確認を追加）
-          # 存在すればコピー、なければ空ディレクトリを作成してクラッシュを回避
-          # CMakeのfile(COPY)によりビルドディレクトリ(.)に配置されたアセットを使用
-          if [ -d "objects" ]; then cp -r objects ../dist/; else echo "WARNING: objects dir not found in build dir"; fi
-          if [ -d "effects" ]; then cp -r effects ../dist/; else echo "WARNING: effects dir not found in build dir"; fi
-          if [ -d "plugins" ]; then cp -r plugins ../dist/; else echo "WARNING: plugins dir not found in build dir"; fi
-          
-          # アーカイブ作成
-          cd ../dist
-          zip -r Rina-Windows-x64.zip .
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-build
-          path: dist/Rina-Windows-x64.zip
-
-  build-macos:
-    name: macOS (ARM64)
-    runs-on: macos-14
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install Dependencies
-        run: |
-          brew update
-          brew install qt ffmpeg luajit molten-vk ninja pkg-config dylibbundler lilv ladspa-sdk
-          
-          echo "LDFLAGS=-L$(brew --prefix luajit)/lib -L$(brew --prefix ffmpeg)/lib" >> $GITHUB_ENV
-          echo "CPPFLAGS=-I$(brew --prefix luajit)/include/luajit-2.1 -I$(brew --prefix ffmpeg)/include" >> $GITHUB_ENV
-          echo "PKG_CONFIG_PATH=$(brew --prefix ffmpeg)/lib/pkgconfig:$(brew --prefix luajit)/lib/pkgconfig" >> $GITHUB_ENV
-          echo "CMAKE_PREFIX_PATH=$(brew --prefix qt)" >> $GITHUB_ENV
-          echo "VULKAN_SDK=$(brew --prefix molten-vk)" >> $GITHUB_ENV
-          echo "VK_ICD_FILENAMES=$(brew --prefix molten-vk)/share/vulkan/icd.d/MoltenVK_icd.json" >> $GITHUB_ENV
-
-      - name: Install Audio Plugin SDKs
-        run: |
-          git clone https://github.com/steinberg-public/vst3sdk.git --depth 1
-          git clone https://github.com/free-audio/clap.git --depth 1
-
-      - name: Build
-        run: |
-          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
-            -DVulkan_LIBRARY=$(brew --prefix molten-vk)/lib/libMoltenVK.dylib \
-            -DVulkan_INCLUDE_DIR=$(brew --prefix molten-vk)/include \
-            -DVST3_SDK_DIR=$(pwd)/vst3sdk \
-            -DCLAP_SDK_DIR=$(pwd)/clap
-          cmake --build build
-
-      - name: Package
-        run: |
-          mkdir dist
-          cd build
-          
-          if [ -d "Rina.app" ]; then
-            $(brew --prefix qt)/bin/macdeployqt Rina.app -qmldir=../ui/qml -verbose=1 || true
-            
-            # dylibbundler: サードパーティ製ライブラリと不足Qtライブラリのバンドル
-            dylibbundler -of -cd -b -x Rina.app/Contents/MacOS/Rina \
-              -d Rina.app/Contents/Frameworks \
-              -p @executable_path/../Frameworks/ \
-              -s $(brew --prefix qt)/lib \
-              -s $(brew --prefix ffmpeg)/lib \
-              -s $(brew --prefix luajit)/lib \
-              -s /opt/homebrew/lib
-            
-            # QMLプラグイン内の依存関係修正
-            find Rina.app/Contents -name "*.dylib" -o -name "*.so" | while read lib; do
-              dylibbundler -of -b -x "$lib" \
-                -d Rina.app/Contents/Frameworks \
-                -p @executable_path/../Frameworks/ \
-                -s $(brew --prefix qt)/lib \
-                -s $(brew --prefix ffmpeg)/lib \
-                -s $(brew --prefix luajit)/lib \
-                -s /opt/homebrew/lib || true
-            done
-            
-            # Resourcesディレクトリを作成（macdeployqtが作成しなかった場合のため）
-            mkdir -p Rina.app/Contents/Resources
-
-            # アセットのコピー（存在確認を追加）
-            # ソースディレクトリから直接コピーして確実性を確保
-            if [ -d "../ui/qml/objects" ]; then
-              cp -R ../ui/qml/objects Rina.app/Contents/Resources/
-            elif [ -d "objects" ]; then
-              cp -R objects Rina.app/Contents/Resources/
-            else
-              echo "WARNING: objects directory not found, skipping copy."
-            fi
-
-            if [ -d "../ui/qml/effects" ]; then
-              cp -R ../ui/qml/effects Rina.app/Contents/Resources/
-            elif [ -d "effects" ]; then
-              cp -R effects Rina.app/Contents/Resources/
-            else
-               echo "WARNING: effects directory not found, skipping copy."
-            fi
-
-            if [ -d "../plugins" ]; then
-              cp -R ../plugins Rina.app/Contents/Resources/
-            elif [ -d "plugins" ]; then
-              cp -R plugins Rina.app/Contents/Resources/
-            else
-               echo "WARNING: plugins directory not found, skipping copy."
-            fi
-
-            zip -r ../dist/Rina-macOS-ARM64.zip Rina.app
-          else
-            echo "Error: Rina.app not found!"
-            exit 1
-          fi
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: macos-build
-          path: dist/Rina-macOS-ARM64.zip
+#  build-macos:
+#    name: macOS (ARM64)
+#    runs-on: macos-14
+#    steps:
+#      - uses: actions/checkout@v4
+#      
+#      - name: Install Dependencies
+#        run: |
+#          brew update
+#          brew install qt ffmpeg luajit molten-vk ninja pkg-config dylibbundler lilv ladspa-sdk
+#          
+#          echo "LDFLAGS=-L$(brew --prefix luajit)/lib -L$(brew --prefix ffmpeg)/lib" >> $GITHUB_ENV
+#          echo "CPPFLAGS=-I$(brew --prefix luajit)/include/luajit-2.1 -I$(brew --prefix ffmpeg)/include" >> $GITHUB_ENV
+#          echo "PKG_CONFIG_PATH=$(brew --prefix ffmpeg)/lib/pkgconfig:$(brew --prefix luajit)/lib/pkgconfig" >> $GITHUB_ENV
+#          echo "CMAKE_PREFIX_PATH=$(brew --prefix qt)" >> $GITHUB_ENV
+#          echo "VULKAN_SDK=$(brew --prefix molten-vk)" >> $GITHUB_ENV
+#          echo "VK_ICD_FILENAMES=$(brew --prefix molten-vk)/share/vulkan/icd.d/MoltenVK_icd.json" >> $GITHUB_ENV
+#
+#      - name: Install Audio Plugin SDKs
+#        run: |
+#          git clone https://github.com/steinberg-public/vst3sdk.git --depth 1
+#          git clone https://github.com/free-audio/clap.git --depth 1
+#
+#      - name: Build
+#        run: |
+#          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+#            -DVulkan_LIBRARY=$(brew --prefix molten-vk)/lib/libMoltenVK.dylib \
+#            -DVulkan_INCLUDE_DIR=$(brew --prefix molten-vk)/include \
+#            -DVST3_SDK_DIR=$(pwd)/vst3sdk \
+#            -DCLAP_SDK_DIR=$(pwd)/clap
+#          cmake --build build
+#
+#      - name: Package
+#        run: |
+#          mkdir dist
+#          cd build
+#          
+#          if [ -d "Rina.app" ]; then
+#            $(brew --prefix qt)/bin/macdeployqt Rina.app -qmldir=../ui/qml -verbose=1 || true
+#            
+#            # dylibbundler: サードパーティ製ライブラリと不足Qtライブラリのバンドル
+#            dylibbundler -of -cd -b -x Rina.app/Contents/MacOS/Rina \
+#              -d Rina.app/Contents/Frameworks \
+#              -p @executable_path/../Frameworks/ \
+#              -s $(brew --prefix qt)/lib \
+#              -s $(brew --prefix ffmpeg)/lib \
+#              -s $(brew --prefix luajit)/lib \
+#              -s /opt/homebrew/lib
+#            
+#            # QMLプラグイン内の依存関係修正
+#            find Rina.app/Contents -name "*.dylib" -o -name "*.so" | while read lib; do
+#              dylibbundler -of -b -x "$lib" \
+#                -d Rina.app/Contents/Frameworks \
+#                -p @executable_path/../Frameworks/ \
+#                -s $(brew --prefix qt)/lib \
+#                -s $(brew --prefix ffmpeg)/lib \
+#                -s $(brew --prefix luajit)/lib \
+#                -s /opt/homebrew/lib || true
+#            done
+#            
+#            # Resourcesディレクトリを作成（macdeployqtが作成しなかった場合のため）
+#            mkdir -p Rina.app/Contents/Resources
+#
+#            # アセットのコピー（存在確認を追加）
+#            # ソースディレクトリから直接コピーして確実性を確保
+#            if [ -d "../ui/qml/objects" ]; then
+#              cp -R ../ui/qml/objects Rina.app/Contents/Resources/
+#            elif [ -d "objects" ]; then
+#              cp -R objects Rina.app/Contents/Resources/
+#            else
+#              echo "WARNING: objects directory not found, skipping copy."
+#            fi
+#
+#            if [ -d "../ui/qml/effects" ]; then
+#              cp -R ../ui/qml/effects Rina.app/Contents/Resources/
+#            elif [ -d "effects" ]; then
+#              cp -R effects Rina.app/Contents/Resources/
+#            else
+#               echo "WARNING: effects directory not found, skipping copy."
+#            fi
+#
+#            if [ -d "../plugins" ]; then
+#              cp -R ../plugins Rina.app/Contents/Resources/
+#            elif [ -d "plugins" ]; then
+#              cp -R plugins Rina.app/Contents/Resources/
+#            else
+#               echo "WARNING: plugins directory not found, skipping copy."
+#            fi
+#
+#            zip -r ../dist/Rina-macOS-ARM64.zip Rina.app
+#          else
+#            echo "Error: Rina.app not found!"
+#            exit 1
+#          fi
+#
+#      - name: Upload Artifact
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: macos-build
+#          path: dist/Rina-macOS-ARM64.zip
 
   build-linux:
     name: Linux (x86_64)
@@ -252,8 +252,8 @@ jobs:
           pacman -S --noconfirm \
             base-devel git cmake ninja clang mold zip \
             mesa vulkan-headers vulkan-icd-loader \
-            libxkbcommon wayland \
-            ffmpeg luajit \
+            libxkbcommon wayland wayland-protocols libffi \
+            ffmpeg luajit fftw \
             qt6-base qt6-declarative qt6-shadertools qt6-5compat qt6-svg qt6-multimedia qt6-quick3d \
             lilv ladspa clap
 
@@ -308,7 +308,7 @@ jobs:
           path: dist/Rina-Linux-x86_64-v3.zip
 
   release:
-    needs: [build-windows, build-macos, build-linux]
+    needs: [build-linux]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     steps:
