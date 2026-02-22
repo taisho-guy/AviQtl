@@ -153,10 +153,17 @@ ScrollView {
                     var step = 1;
                     var offsetFrames = 0;
                     var isBpmMode = (gridSettings.mode === "BPM");
+                    var bpmDiv = 1;
                     if (isBpmMode) {
                         // BPMモード: 1拍あたりのフレーム数を計算
                         var bps = gridSettings.bpm / 60;
-                        step = projectFps / bps; // 1拍のフレーム数 (小数含む)
+                        var beatFrames = projectFps / bps; // 1拍のフレーム数 (小数含む)
+                        // ズームに応じて分割 (1拍 -> 8分 -> 16分)
+                        if (scale > 3)
+                            bpmDiv = 4;
+                        else if (scale > 1.5)
+                            bpmDiv = 2;
+                        step = beatFrames / bpmDiv;
                         offsetFrames = gridSettings.offset * projectFps;
                     } else if (gridSettings.mode === "Frame") {
                         // 固定フレームモード
@@ -165,8 +172,10 @@ ScrollView {
                         // Auto (AviUtl風): ズームに応じて間引き
                         if (scale < 0.5)
                             step = Math.ceil(projectFps);
-                        else if (scale < 5)
+                        else if (scale < 1.5)
                             step = 10;
+                        else if (scale < 3)
+                            step = 5;
                         else
                             step = 1;
                     }
@@ -182,10 +191,20 @@ ScrollView {
                         ctx.beginPath();
                         // 線のスタイリング
                         if (isBpmMode) {
-                            // 小節の頭 (subdivisionで割れる) は濃く
-                            var isMeasure = (n % gridSettings.subdivision === 0);
-                            ctx.strokeStyle = isMeasure ? Qt.rgba(0.5, 0.8, 1, 0.5) : Qt.rgba(0.5, 0.5, 0.5, 0.2);
-                            ctx.lineWidth = isMeasure ? 1.5 : 1;
+                            // 小節の頭
+                            var isMeasure = (n % (gridSettings.subdivision * bpmDiv) === 0);
+                            // 拍の頭
+                            var isBeat = (n % bpmDiv === 0);
+                            if (isMeasure) {
+                                ctx.strokeStyle = Qt.rgba(0.5, 0.8, 1, 0.5);
+                                ctx.lineWidth = 1.5;
+                            } else if (isBeat) {
+                                ctx.strokeStyle = Qt.rgba(0.5, 0.5, 0.5, 0.3);
+                                ctx.lineWidth = 1;
+                            } else {
+                                ctx.strokeStyle = Qt.rgba(0.5, 0.5, 0.5, 0.15);
+                                ctx.lineWidth = 1;
+                            }
                         } else {
                             // 通常モード
                             ctx.strokeStyle = Qt.rgba(0.5, 0.5, 0.5, 0.15);
