@@ -8,8 +8,6 @@ Common.BaseObject {
 
     // CompositeView から注入 (properties ではなく onItemChanged で動的セット)
     property var sceneRootRef: null
-    // clipLayer は BaseObject 側の clipLayerRole を流用せず FB 専用で持つ
-    property int clipLayer: -1
     // onItemChanged で item.clipLayer = model.layer される
     property bool clearBelow: Boolean(evalParam("frame_buffer", "clearBelow", false))
     // ObjectRenderer の Binding が要求するダミープロパティ (警告抑制)

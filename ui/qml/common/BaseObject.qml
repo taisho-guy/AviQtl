@@ -19,6 +19,8 @@ Node {
     // clipNode.clipLayerRole は model.layer と同期、
     // fbRendererOutput は NodeLoader.onItemChanged で接続される
     property int clipLayerRole: -1
+    // NodeLoader.onItemChanged で注入されるレイヤー番号
+    property int clipLayer: -1
     // CompositeView の clipNode から直接セット
     // FB 収集対象: 変換済み2Dキャプチャアイテム
     // FB 収集対象: 変換済み2Dキャプチャアイテム (外部から item.fbCaptureItem でアクセス可能)

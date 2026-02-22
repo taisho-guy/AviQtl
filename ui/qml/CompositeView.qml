@@ -15,6 +15,8 @@ Item {
     // Component cache to prevent redundant Qt.createComponent calls
     property var _componentCache: ({
     })
+    // ─── グループ制御管理 ─────────────────────────────────────────
+    property var groupControls: []
 
     function getCachedComponent(url) {
         if (_componentCache[url])
@@ -23,6 +25,30 @@ Item {
         var c = Qt.createComponent(url, Component.Asynchronous);
         _componentCache[url] = c;
         return c;
+    }
+
+    function registerGroupControl(gc) {
+        for (var i = 0; i < groupControls.length; ++i) {
+            if (groupControls[i] === gc)
+                return ;
+
+        }
+        groupControls.push(gc);
+        groupControlsChanged(); // 配列変更を通知して再計算を促す
+    }
+
+    function unregisterGroupControl(gc) {
+        var idx = -1;
+        for (var i = 0; i < groupControls.length; ++i) {
+            if (groupControls[i] === gc) {
+                idx = i;
+                break;
+            }
+        }
+        if (idx !== -1) {
+            groupControls.splice(idx, 1);
+            groupControlsChanged();
+        }
     }
 
     // 2Dレンダー（sourceItem/effects/ShaderEffectSource）を必ずQQuickWindow配下に置くためのホスト
@@ -148,6 +174,48 @@ Item {
                 readonly property real baseScale: pScale * 0.01
                 readonly property real aspectX: pAspect >= 0 ? (1 + pAspect) : 1
                 readonly property real aspectY: pAspect < 0 ? (1 - pAspect) : 1
+                // ─── 実効トランスフォーム計算 (グループ制御適用) ───────────
+                property var effectiveTransform: {
+                    // 依存関係を明示的に登録 (groupControlsの変更を検知)
+                    var _gcList = root.groupControls;
+                    var t = {
+                        "x": px,
+                        "y": py,
+                        "z": pz,
+                        "rx": pRotX,
+                        "ry": pRotY,
+                        "rz": pRotZ,
+                        "sx": baseScale * aspectX,
+                        "sy": baseScale * aspectY,
+                        "sz": baseScale,
+                        "opacity": pOpacity
+                    };
+                    // アクティブなグループ制御を走査して適用
+                    for (var i = 0; i < root.groupControls.length; ++i) {
+                        var gc = root.groupControls[i];
+                        if (!gc)
+                            continue;
+
+                        // 適用条件: グループ制御より下のレイヤー かつ 範囲内
+                        // AviUtl仕様: 対象レイヤー数Nの場合、自身の次のレイヤーからN個が対象
+                        if (gc.clipLayer < model.layer && model.layer <= (gc.clipLayer + gc.layerCount)) {
+                            // 座標・回転は加算
+                            t.x += gc.x;
+                            t.y += gc.y;
+                            t.z += gc.z;
+                            t.rx += gc.rotationX;
+                            t.ry += gc.rotationY;
+                            t.rz += gc.rotationZ;
+                            // 拡大率・不透明度は乗算
+                            var s = gc.scale / 100;
+                            t.sx *= s;
+                            t.sy *= s;
+                            t.sz *= s;
+                            t.opacity *= gc.opacity;
+                        }
+                    }
+                    return t;
+                }
 
                 function dbg(msg) {
                     Logger.log("[CompositeView][clipId=" + model.id + "][type=" + model.type + "] " + msg, TimelineBridge);
@@ -159,20 +227,20 @@ Item {
                 }
                 // 座標変換: 中心(0,0)、Y軸下プラス(AviUtl互換)
                 // Qt3DはY上がプラスなので、入力を反転させる
-                x: px
-                y: -py
-                z: pz + (model.layer * 5)
+                x: effectiveTransform.x
+                y: -effectiveTransform.y
+                z: effectiveTransform.z + (model.layer * 5)
                 // 中心座標 (Pivot)
                 pivot: Qt.vector3d(p.anchorX || 0, -(p.anchorY || 0), p.anchorZ || 0)
                 // 3軸回転
-                eulerRotation.x: pRotX
-                eulerRotation.y: -pRotY
-                eulerRotation.z: -pRotZ
-                scale.x: baseScale * aspectX
-                scale.y: baseScale * aspectY
-                scale.z: baseScale
+                eulerRotation.x: effectiveTransform.rx
+                eulerRotation.y: -effectiveTransform.ry
+                eulerRotation.z: -effectiveTransform.rz
+                scale.x: effectiveTransform.sx
+                scale.y: effectiveTransform.sy
+                scale.z: effectiveTransform.sz
                 // 不透明度 (全体)
-                opacity: pOpacity
+                opacity: effectiveTransform.opacity
                 // params 変化 (scale/pos/rot/opacity) → BaseObject の fbCaptureItem を同期
                 onPxChanged: objectContainer._syncTransformToItem()
                 onPyChanged: objectContainer._syncTransformToItem()
@@ -237,6 +305,14 @@ Item {
 
                             if (typeof item.sceneRootRef !== "undefined")
                                 item.sceneRootRef = sceneRoot;
+
+                            // レイヤー番号を注入 (グループ制御判定用)
+                            if ("clipLayer" in item)
+                                item.clipLayer = model.layer;
+
+                            // グループ制御オブジェクトなら登録
+                            if (item.isGroupControl && root.registerGroupControl)
+                                root.registerGroupControl(item);
 
                             // 変換パラメータを注入 (初期値)
                             _syncTransformToItem();
