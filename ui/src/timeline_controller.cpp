@@ -23,6 +23,7 @@
 #include <QOpenGLFramebufferObject>
 #include <QQmlContext>
 #include <QQuickRenderTarget>
+#include <QQuickItemGrabResult>
 #include <QQuickView>
 #include <QQuickWindow>
 #include <QSurfaceFormat>
@@ -499,13 +500,15 @@ bool TimelineController::exportImageSequence(const QString &dir, int quality) {
         QImage renderedFrame;
 
         if (m_compositeView) {
-            // GPU→CPUコピーは1回のみで効率的
-            renderedFrame = m_compositeView->grabWindow();
-
-            // プロジェクト解像度にリサイズ（必要な場合）
-            QSize targetSize(m_project->width(), m_project->height());
-            if (renderedFrame.size() != targetSize) {
-                renderedFrame = renderedFrame.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+            // QQuickItem::grabToImage を使用してプレビュー部分のみをキャプチャ
+            auto grabResult = m_compositeView->grabToImage(QSize(m_project->width(), m_project->height()));
+            if (grabResult) {
+                QEventLoop loop;
+                connect(grabResult.get(), &QQuickItemGrabResult::ready, &loop, &QEventLoop::quit);
+                // タイムアウト設定 (無限待ち防止)
+                QTimer::singleShot(2000, &loop, &QEventLoop::quit);
+                loop.exec();
+                renderedFrame = grabResult->image();
             }
         } else {
             qWarning() << "CompositeViewが設定されていません。フォールバックレンダリングを使用します。";
@@ -554,7 +557,14 @@ bool TimelineController::exportVideo(const QString &path, const QString &format,
         // QMLシーングラフからキャプチャ (CPUメモリへのダウンロード発生)
         QImage renderedFrame;
         if (m_compositeView) {
-            renderedFrame = m_compositeView->grabWindow();
+            auto grabResult = m_compositeView->grabToImage(QSize(m_project->width(), m_project->height()));
+            if (grabResult) {
+                QEventLoop loop;
+                connect(grabResult.get(), &QQuickItemGrabResult::ready, &loop, &QEventLoop::quit);
+                QTimer::singleShot(2000, &loop, &QEventLoop::quit);
+                loop.exec();
+                renderedFrame = grabResult->image();
+            }
         } else {
             renderedFrame = renderCurrentFrame();
         }
@@ -598,22 +608,15 @@ void TimelineController::exportVideoHW(Rina::Core::VideoEncoder *encoder) {
     for (int frame = 0; frame < endFrame; ++frame) {
         m_transport->setCurrentFrame(frame);
 
-        // 描画完了待ち
-        QEventLoop loop;
-        QObject::connect(m_compositeView, &QQuickWindow::afterRendering, &loop, &QEventLoop::quit);
-        m_compositeView->update();
-        QTimer::singleShot(1000, &loop, &QEventLoop::quit);
-        loop.exec();
-
-        QImage img = m_compositeView->grabWindow();
-
-        // フォーマットを明示的に変換
-        if (img.format() != QImage::Format_RGBA8888) {
-            img = img.convertToFormat(QImage::Format_RGBA8888);
-        }
-
-        if (img.size() != QSize(width, height)) {
-            img = img.scaled(width, height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        // grabToImage はレンダリングをスケジュールし、完了を通知する
+        QImage img;
+        auto grabResult = m_compositeView->grabToImage(QSize(width, height));
+        if (grabResult) {
+            QEventLoop loop;
+            connect(grabResult.get(), &QQuickItemGrabResult::ready, &loop, &QEventLoop::quit);
+            QTimer::singleShot(2000, &loop, &QEventLoop::quit);
+            loop.exec();
+            img = grabResult->image();
         }
 
         if (!encoder->pushFrame(img, frame)) {

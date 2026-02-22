@@ -173,13 +173,27 @@ void Vst3Plugin::process(float *buf, int frameCount) {
     if (!m_processor)
         return;
 
+    // バッファサイズ不足時の安全策 (動的リサイズ)
+    if (frameCount > (int)m_inL.size()) {
+        m_inL.resize(frameCount);
+        m_inR.resize(frameCount);
+        m_outL.resize(frameCount);
+        m_outR.resize(frameCount);
+
+        m_inPtrs[0] = m_inL.data();
+        m_inPtrs[1] = m_inR.data();
+        m_outPtrs[0] = m_outL.data();
+        m_outPtrs[1] = m_outR.data();
+    }
+
     // De-interleave
     for (int i = 0; i < frameCount; ++i) {
         m_inL[i] = buf[i * 2];
         m_inR[i] = buf[i * 2 + 1];
     }
 
-    Steinberg::Vst::ProcessData data;
+    // 【重要】構造体をゼロ初期化しないと、未定義のポインタ(eventHandlers等)にアクセスされクラッシュする
+    Steinberg::Vst::ProcessData data = {};
     data.processMode = Steinberg::Vst::kRealtime;
     data.symbolicSampleSize = Steinberg::Vst::kSample32;
     data.numSamples = frameCount;

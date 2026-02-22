@@ -19,6 +19,9 @@ class VideoDecoder : public QObject {
     Q_INVOKABLE void setPlaying(bool playing);
     Q_INVOKABLE void setPlaybackRate(double rate);
 
+  signals:
+    void frameDecoded(int frame);
+
   private slots:
     void onVideoFrameChanged(const QVideoFrame &frame);
     void updateCacheSize();

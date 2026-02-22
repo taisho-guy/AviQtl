@@ -74,7 +74,12 @@ void AudioDecoder::onFinished() {
     emit ready();
 }
 
-void AudioDecoder::onError(QAudioDecoder::Error error) { qWarning() << "[AudioDecoder] Error occurred:" << error << m_decoder->errorString(); }
+void AudioDecoder::onError(QAudioDecoder::Error error) {
+    qWarning() << "[AudioDecoder] Error occurred:" << error << m_decoder->errorString();
+    // エラー時もReadyとしてマークし、無限待ちを回避する
+    m_isReady = true;
+    emit ready();
+}
 
 std::vector<float> AudioDecoder::getSamples(double startTime, int count) {
     // 48kHz, Stereo (2ch)

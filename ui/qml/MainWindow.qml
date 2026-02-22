@@ -24,7 +24,7 @@ ApplicationWindow {
     // 起動時に自分自身(Window)をコントローラーに渡す
     Component.onCompleted: {
         if (TimelineBridge)
-            TimelineBridge.setCompositeView(mainWin);
+            TimelineBridge.setCompositeView(compositeView);
 
     }
 

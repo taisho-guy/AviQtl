@@ -26,6 +26,9 @@ int main(int argc, char *argv[]) {
     // 1. バックエンドをFFmpegに固定（Rinaのロジック依存のため）
     qputenv("QT_MEDIA_BACKEND", "ffmpeg");
 
+    // 2. レンダリングバックエンドをVulkanに統一
+    qputenv("QSG_RHI_BACKEND", "vulkan");
+
     // 2. 優先するHWデコーダリストを指定（環境依存のドライバ名は指定しない）
     // Linux(VAAPI/VDPAU/CUDA), Windows(D3D11VA/DXVA2), macOS(VideoToolbox) を網羅
     qputenv("QT_FFMPEG_DECODING_HW_DEVICE_TYPES", "cuda,vaapi,vdpau,videotoolbox,d3d11va,dxva2");

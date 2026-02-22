@@ -14,6 +14,7 @@
 #include <QJsonObject>
 #include <QObject>
 #include <QPointer>
+#include <QQuickItem>
 #include <QQuickRenderControl>
 #include <QQuickWindow>
 #include <QVariant>
@@ -66,7 +67,7 @@ class TimelineController : public QObject {
 
     void setVideoFrameStore(Rina::Core::VideoFrameStore *store);
 
-    Q_INVOKABLE void setCompositeView(QQuickWindow *view) { m_compositeView = view; }
+    Q_INVOKABLE void setCompositeView(QQuickItem *view) { m_compositeView = view; }
 
     // サービスアクセサ
     ProjectService *project() const { return m_project; }
@@ -232,6 +233,6 @@ class TimelineController : public QObject {
     Q_INVOKABLE QString debugRunLua(const QString &script);
 
   private:
-    QPointer<QQuickWindow> m_compositeView; // CompositeViewへの参照
+    QPointer<QQuickItem> m_compositeView; // CompositeViewへの参照
 };
 } // namespace Rina::UI

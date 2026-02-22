@@ -1,8 +1,5 @@
 #include "video_encoder.hpp"
 #include <QDebug>
-#include <QOpenGLContext>
-#include <QOpenGLFunctions_3_3_Core>
-#include <QOpenGLVersionFunctionsFactory>
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -63,13 +60,36 @@ void VideoEncoder::cleanup() {
 
 bool VideoEncoder::initHardware(const QString &codecName) {
     int err = 0;
-    // VA-API デバイスの作成 (Linux/Wayland/AMD)
-    // 通常は /dev/dri/renderD128 等を自動検出
-    if ((err = av_hwdevice_ctx_create(&m_hwDeviceCtx, AV_HWDEVICE_TYPE_VAAPI, nullptr, nullptr, 0)) < 0) {
-        qWarning() << "Failed to create VAAPI device context:" << err;
+    AVHWDeviceType type = AV_HWDEVICE_TYPE_NONE;
+
+    // コーデック名から適切なHWデバイスタイプを推論
+    if (codecName.contains("nvenc")) {
+        type = AV_HWDEVICE_TYPE_CUDA;
+    } else if (codecName.contains("vaapi")) {
+        type = AV_HWDEVICE_TYPE_VAAPI;
+    } else if (codecName.contains("qsv")) {
+        type = AV_HWDEVICE_TYPE_QSV;
+    } else if (codecName.contains("d3d11")) {
+        type = AV_HWDEVICE_TYPE_D3D11VA;
+    } else if (codecName.contains("dxva2")) {
+        type = AV_HWDEVICE_TYPE_DXVA2;
+    } else if (codecName.contains("videotoolbox")) {
+        type = AV_HWDEVICE_TYPE_VIDEOTOOLBOX;
+    } else if (codecName.contains("amf")) {
+        // AMFは通常DX11/Vulkanコンテキストを内部で作るが、FFmpeg上では明示的なデバイス作成が不要な場合が多い
+        // 必要に応じて AV_HWDEVICE_TYPE_D3D11VA 等を割り当てる
+        type = AV_HWDEVICE_TYPE_NONE;
+    }
+
+    if (type == AV_HWDEVICE_TYPE_NONE) {
+        return true; // SWエンコードまたはデバイス不要
+    }
+
+    if ((err = av_hwdevice_ctx_create(&m_hwDeviceCtx, type, nullptr, nullptr, 0)) < 0) {
+        qWarning() << "Failed to create HW device context for" << codecName << "Error:" << err;
         return false;
     }
-    qDebug() << "VAAPI hardware device initialized successfully.";
+    qDebug() << "Hardware device initialized:" << av_hwdevice_get_type_name(type);
     return true;
 }
 
@@ -100,26 +120,33 @@ bool VideoEncoder::open(const Config &config) {
     if (!m_encCtx)
         return false;
 
-    // 3. ハードウェア初期化 (VA-API)
-    if (config.codecName.contains("vaapi")) {
-        if (!initHardware(config.codecName))
-            return false;
+    // 3. ハードウェア初期化
+    if (!initHardware(config.codecName))
+        return false;
 
+    if (m_hwDeviceCtx) {
         // ハードウェアフレームコンテキストの設定
         AVBufferRef *hw_frames_ref = av_hwframe_ctx_alloc(m_hwDeviceCtx);
         AVHWFramesContext *frames_ctx = (AVHWFramesContext *)(hw_frames_ref->data);
-        frames_ctx->format = AV_PIX_FMT_VAAPI;
-        frames_ctx->sw_format = AV_PIX_FMT_NV12; // VAAPIの一般的な入力フォーマット
+
+        // コーデックに応じたピクセルフォーマット設定
+        if (config.codecName.contains("vaapi")) {
+            frames_ctx->format = AV_PIX_FMT_VAAPI;
+            frames_ctx->sw_format = AV_PIX_FMT_NV12;
+        } else if (config.codecName.contains("nvenc")) {
+            frames_ctx->format = AV_PIX_FMT_CUDA;
+            frames_ctx->sw_format = AV_PIX_FMT_NV12; // or YUV420P
+        } else if (config.codecName.contains("qsv")) {
+            frames_ctx->format = AV_PIX_FMT_QSV;
+            frames_ctx->sw_format = AV_PIX_FMT_NV12;
+        }
+
         frames_ctx->width = config.width;
         frames_ctx->height = config.height;
-        frames_ctx->initial_pool_size = 32; // プールサイズを増加 (20 -> 32)
+        frames_ctx->initial_pool_size = 32;
 
-        if (av_hwframe_ctx_init(hw_frames_ref) < 0) {
-            qWarning() << "Failed to initialize VAAPI frame context.";
-            av_buffer_unref(&hw_frames_ref);
-            return false;
-        }
-        m_encCtx->hw_frames_ctx = hw_frames_ref;
+        if (av_hwframe_ctx_init(hw_frames_ref) >= 0)
+            m_encCtx->hw_frames_ctx = hw_frames_ref;
     }
 
     // 4. エンコーダパラメータ設定
@@ -127,7 +154,16 @@ bool VideoEncoder::open(const Config &config) {
     m_encCtx->height = config.height;
     m_encCtx->time_base = {config.fps_den, config.fps_num};
     m_stream->time_base = m_encCtx->time_base;
-    m_encCtx->pix_fmt = AV_PIX_FMT_VAAPI; // HWエンコード用フォーマット
+
+    // ピクセルフォーマットの自動選択
+    if (m_encCtx->hw_frames_ctx) {
+        m_encCtx->pix_fmt = ((AVHWFramesContext *)m_encCtx->hw_frames_ctx->data)->format;
+    } else {
+        // SWエンコードのデフォルト
+        m_encCtx->pix_fmt = AV_PIX_FMT_YUV420P;
+        if (codec->pix_fmts)
+            m_encCtx->pix_fmt = codec->pix_fmts[0];
+    }
 
     // ビットレート制御 (CBR/VBR) - 簡易設定
     m_encCtx->bit_rate = config.bitrate;
@@ -201,7 +237,7 @@ bool VideoEncoder::addAudioStream(int sampleRate, int channels, int bitrate) {
     m_audioEncCtx->sample_fmt = codec->sample_fmts ? codec->sample_fmts[0] : AV_SAMPLE_FMT_FLTP;
     m_audioEncCtx->bit_rate = bitrate;
     m_audioEncCtx->sample_rate = sampleRate;
-    m_audioEncCtx->ch_layout = (channels == 2) ? (AVChannelLayout)AV_CHANNEL_LAYOUT_STEREO : (AVChannelLayout)AV_CHANNEL_LAYOUT_MONO;
+    av_channel_layout_default(&m_audioEncCtx->ch_layout, channels);
     m_audioStream->time_base = {1, sampleRate};
 
     if (m_fmtCtx->oformat->flags & AVFMT_GLOBALHEADER)
@@ -249,9 +285,16 @@ bool VideoEncoder::pushFrame(const QImage &img, int64_t pts) {
     if (!writeHeaderIfNeeded())
         return false;
 
+    // 色味修正: 入力画像を RGBA8888 (R-G-B-A) に統一
+    // ARGB32 (B-G-R-A on LE) のままだと sws_scale で赤青が反転するため
+    QImage sourceImg = img;
+    if (sourceImg.format() != QImage::Format_RGBA8888) {
+        sourceImg = sourceImg.convertToFormat(QImage::Format_RGBA8888);
+    }
+
     // 1. QImage (ARGB32) -> SW Frame (NV12) 変換
     if (!m_swsCtx) {
-        m_swsCtx = sws_getContext(img.width(), img.height(), AV_PIX_FMT_RGBA, // 【重要】入力はRGBA
+        m_swsCtx = sws_getContext(sourceImg.width(), sourceImg.height(), AV_PIX_FMT_RGBA, // 【重要】入力はRGBA
                                   m_config.width, m_config.height, AV_PIX_FMT_NV12, SWS_BILINEAR, nullptr, nullptr, nullptr);
     }
 
@@ -260,33 +303,36 @@ bool VideoEncoder::pushFrame(const QImage &img, int64_t pts) {
         return false;
 
     // QImageのメモリレイアウトに合わせる
-    const uint8_t *srcData[1] = {img.bits()};
-    int srcLinesize[1] = {static_cast<int>(img.bytesPerLine())};
+    const uint8_t *srcData[1] = {sourceImg.bits()};
+    int srcLinesize[1] = {static_cast<int>(sourceImg.bytesPerLine())};
 
     // 変換実行
-    sws_scale(m_swsCtx, srcData, srcLinesize, 0, img.height(), m_swFrame->data, m_swFrame->linesize);
+    sws_scale(m_swsCtx, srcData, srcLinesize, 0, sourceImg.height(), m_swFrame->data, m_swFrame->linesize);
     m_swFrame->pts = pts;
 
-    // 2. SW Frame -> HW Frame 転送 (CPU -> GPU Upload)
-    // ここがボトルネックだが、QImageベースである以上回避不可。
-    // 将来的にはここを dmabuf import に置き換える。
-    if (av_hwframe_get_buffer(m_encCtx->hw_frames_ctx, m_hwFrame, 0) < 0) {
-        qWarning() << "Failed to allocate HW frame.";
-        return false;
+    AVFrame *encodeFrame = m_swFrame;
+
+    // 2. HWエンコードの場合: SW Frame -> HW Frame 転送 (CPU -> GPU Upload)
+    if (m_encCtx->hw_frames_ctx) {
+        if (av_hwframe_get_buffer(m_encCtx->hw_frames_ctx, m_hwFrame, 0) < 0) {
+            qWarning() << "Failed to allocate HW frame.";
+            return false;
+        }
+        if (av_hwframe_transfer_data(m_hwFrame, m_swFrame, 0) < 0) {
+            qWarning() << "Failed to transfer data to GPU.";
+            av_frame_unref(m_hwFrame);
+            return false;
+        }
+        m_hwFrame->pts = pts;
+        encodeFrame = m_hwFrame;
     }
-    if (av_hwframe_transfer_data(m_hwFrame, m_swFrame, 0) < 0) {
-        qWarning() << "Failed to transfer data to GPU.";
-        av_frame_unref(m_hwFrame); // 転送失敗時も参照を解放
-        return false;
-    }
-    m_hwFrame->pts = pts;
 
     // 3. エンコード
-    int ret = avcodec_send_frame(m_encCtx, m_hwFrame);
+    int ret = avcodec_send_frame(m_encCtx, encodeFrame);
 
-    // 【重要】送信したHWフレームはエンコーダー内部で参照されるため、
-    // 呼び出し元（ここ）での参照を解放してプールに戻す必要がある。
-    av_frame_unref(m_hwFrame);
+    if (encodeFrame == m_hwFrame) {
+        av_frame_unref(m_hwFrame);
+    }
 
     if (ret < 0) {
         qWarning() << "Error sending frame to codec.";
@@ -316,97 +362,11 @@ bool VideoEncoder::pushFrame(const QImage &img, int64_t pts) {
 }
 
 bool VideoEncoder::pushTexture(const GpuTextureHandle &handle, int64_t pts) {
-    if (!m_encCtx)
-        return false;
-
-    if (!writeHeaderIfNeeded())
-        return false;
-
-    // 現在はOpenGLテクスチャからのCPUリードバックのみをサポート
-    if (handle.api != GpuApiType::OpenGL) {
-        qWarning() << "Unsupported GpuApiType in pushTexture. Only OpenGL is supported for now.";
-        return false;
-    }
-    const unsigned int textureId = static_cast<unsigned int>(handle.textureId);
-    const QSize size(handle.width, handle.height);
-
-    // 現在のGLコンテキストを取得 (TimelineController側でmakeCurrentされている前提)
-    QOpenGLContext *ctx = QOpenGLContext::currentContext();
-    if (!ctx) {
-        qWarning() << "No active OpenGL context for texture readback";
-        return false;
-    }
-    // 【修正】ファクトリー経由で安全に取得
-    auto *f = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_3_3_Core>(ctx);
-    if (!f) {
-        qWarning() << "Could not obtain OpenGL 3.3 Core functions. Context version:" << ctx->format().version();
-        return false;
-    }
-    f->initializeOpenGLFunctions();
-
-    // 1. SWフレームの準備 (NV12変換用バッファとしてRGBAを受け取る)
-    if (!m_swsCtx) {
-        m_swsCtx = sws_getContext(size.width(), size.height(), AV_PIX_FMT_RGBA, // OpenGL texture is RGBA
-                                  m_config.width, m_config.height, AV_PIX_FMT_NV12, SWS_BILINEAR, nullptr, nullptr, nullptr);
-    }
-    if (!m_swsCtx)
-        return false;
-
-    // 一時的なRGBAバッファ (初回のみ確保)
-    static std::vector<uint8_t> rgbaBuffer;
-    size_t neededSize = size.width() * size.height() * 4;
-    if (rgbaBuffer.size() < neededSize)
-        rgbaBuffer.resize(neededSize);
-
-    // 2. GPU Texture -> CPU Buffer (Raw Read)
-    f->glBindTexture(GL_TEXTURE_2D, textureId);
-    f->glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, rgbaBuffer.data());
-    f->glBindTexture(GL_TEXTURE_2D, 0);
-
-    // 3. RGBA -> NV12 (SwsScale)
-    if (av_frame_make_writable(m_swFrame) < 0)
-        return false;
-
-    const int in_linesize[1] = {static_cast<int>(size.width() * 4)};
-    const uint8_t *in_data[1] = {rgbaBuffer.data()};
-
-    sws_scale(m_swsCtx, in_data, in_linesize, 0, size.height(), m_swFrame->data, m_swFrame->linesize);
-    m_swFrame->pts = pts;
-
-    // 4. HW Upload (VAAPI)
-    if (av_hwframe_get_buffer(m_encCtx->hw_frames_ctx, m_hwFrame, 0) < 0)
-        return false;
-    if (av_hwframe_transfer_data(m_hwFrame, m_swFrame, 0) < 0) {
-        av_frame_unref(m_hwFrame);
-        return false;
-    }
-    m_hwFrame->pts = pts;
-
-    // 5. Encode
-    int ret = avcodec_send_frame(m_encCtx, m_hwFrame);
-    av_frame_unref(m_hwFrame);
-    if (ret < 0)
-        return false;
-
-    AVPacket *pkt = av_packet_alloc();
-    if (!pkt)
-        return false;
-
-    while (ret >= 0) {
-        ret = avcodec_receive_packet(m_encCtx, pkt);
-        if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
-            break;
-        } else if (ret < 0) {
-            av_packet_free(&pkt);
-            return false;
-        }
-        av_packet_rescale_ts(pkt, m_encCtx->time_base, m_stream->time_base);
-        pkt->stream_index = m_stream->index;
-        av_interleaved_write_frame(m_fmtCtx, pkt);
-        av_packet_unref(pkt);
-    }
-    av_packet_free(&pkt);
-    return true;
+    // Vulkanバックエンドへの移行に伴い、OpenGL依存のテクスチャ読み出しは廃止。
+    // 代わりに pushFrame(QImage) を使用してください。
+    // 将来的には Vulkan Interop によるゼロコピー転送を実装予定。
+    qWarning() << "pushTexture is deprecated in Vulkan backend. Use pushFrame instead.";
+    return false;
 }
 
 bool VideoEncoder::pushAudio(const float *samples, int sampleCount) {

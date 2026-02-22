@@ -56,6 +56,7 @@ void VideoDecoder::seekToFrame(int frame, double fps) {
     if (m_frameCache.contains(frame)) {
         m_store->setFrameSafe(QString::number(m_clipId), *m_frameCache[frame]);
         m_lastRequestedFrame = frame;
+        emit frameDecoded(frame); // キャッシュヒット時も完了通知を送る
         return;
     }
 
@@ -90,6 +91,11 @@ void VideoDecoder::onVideoFrameChanged(const QVideoFrame &vf) {
             QImage img = vf.toImage();
             const_cast<QVideoFrame &>(vf).unmap();
 
+            // 色味修正: FFmpegやShaderが期待する RGBA 順序に統一する
+            if (img.format() != QImage::Format_RGBA8888) {
+                img = img.convertToFormat(QImage::Format_RGBA8888);
+            }
+
             if (!img.isNull()) {
                 QMetaObject::invokeMethod(
                     this,
@@ -98,6 +104,7 @@ void VideoDecoder::onVideoFrameChanged(const QVideoFrame &vf) {
                         if (!m_frameCache.contains(targetFrame)) {
                             m_frameCache.insert(targetFrame, new QImage(img), img.sizeInBytes());
                         }
+                        emit frameDecoded(targetFrame); // デコード完了通知
                     },
                     Qt::QueuedConnection);
             }

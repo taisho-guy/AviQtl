@@ -23,6 +23,9 @@ class AudioMixer : public QObject {
     void registerDecoder(int clipId, Rina::Core::AudioDecoder *decoder);
     void unregisterDecoder(int clipId);
 
+    // 全てのデコーダーが読み込み完了しているか確認
+    bool isReady() const;
+
     void processFrame(int currentFrame, double fps, int samplesPerFrame);
     void reset();
 

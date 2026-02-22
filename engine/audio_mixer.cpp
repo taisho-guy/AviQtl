@@ -65,6 +65,14 @@ void AudioMixer::registerDecoder(int clipId, Rina::Core::AudioDecoder *decoder) 
 
 void AudioMixer::unregisterDecoder(int clipId) { m_decoders.erase(clipId); }
 
+bool AudioMixer::isReady() const {
+    for (const auto &[id, decoder] : m_decoders) {
+        if (!decoder || !decoder->isReady())
+            return false;
+    }
+    return true;
+}
+
 std::vector<float> AudioMixer::mix(int currentFrame, double fps, int samplesPerFrame) {
     // 1. マスターバッファの初期化（無音）
     std::vector<float> masterBuffer(samplesPerFrame * 2, 0.0f);

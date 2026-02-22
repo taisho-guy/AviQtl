@@ -16,6 +16,53 @@ Dialog {
     readonly property double pFps: project ? project.fps : 60
     readonly property int pFpsNum: Math.round(pFps * 1000)
     readonly property int pFpsDen: 1000
+    // コーデック定義
+    property var codecModel: [{
+        "text": "H.264 (Software / libx264)",
+        "value": "libx264"
+    }, {
+        "text": "H.264 (NVIDIA NVENC)",
+        "value": "h264_nvenc"
+    }, {
+        "text": "H.264 (AMD AMF)",
+        "value": "h264_amf"
+    }, {
+        "text": "H.264 (Intel QSV)",
+        "value": "h264_qsv"
+    }, {
+        "text": "H.264 (VAAPI)",
+        "value": "h264_vaapi"
+    }, {
+        "text": "HEVC (Software / libx265)",
+        "value": "libx265"
+    }, {
+        "text": "HEVC (NVIDIA NVENC)",
+        "value": "hevc_nvenc"
+    }, {
+        "text": "HEVC (AMD AMF)",
+        "value": "hevc_amf"
+    }, {
+        "text": "HEVC (Intel QSV)",
+        "value": "hevc_qsv"
+    }, {
+        "text": "HEVC (VAAPI)",
+        "value": "hevc_vaapi"
+    }, {
+        "text": "AV1 (Software / libaom)",
+        "value": "libaom-av1"
+    }, {
+        "text": "AV1 (NVIDIA NVENC)",
+        "value": "av1_nvenc"
+    }, {
+        "text": "AV1 (AMD AMF)",
+        "value": "av1_amf"
+    }, {
+        "text": "AV1 (Intel QSV)",
+        "value": "av1_qsv"
+    }, {
+        "text": "AV1 (VAAPI)",
+        "value": "av1_vaapi"
+    }]
 
     title: "メディアの書き出し"
     modal: true
@@ -26,7 +73,7 @@ Dialog {
         if (filePathField.text === "")
             return ;
 
-        var codec = codecCombo.currentIndex === 0 ? "h264_vaapi" : "libx264";
+        var codec = codecModel[codecCombo.currentIndex].value;
         var bitrateVal = bitrateSpin.value * 1e+06;
         console.log("Starting Export: " + root.pWidth + "x" + root.pHeight + " @ " + codec);
         // C++側の処理を開始
@@ -130,7 +177,9 @@ Dialog {
                 ComboBox {
                     id: codecCombo
 
-                    model: ["h264_vaapi (Hardware)", "libx264 (Software)"]
+                    model: root.codecModel.map((x) => {
+                        return x.text;
+                    })
                     currentIndex: 0
                 }
 
