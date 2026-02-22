@@ -8,12 +8,26 @@
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
+#include <libavutil/hwcontext.h>
 #include <libavutil/imgutils.h>
 #include <libavutil/time.h>
 #include <libswscale/swscale.h>
 }
 
 namespace Rina::Core {
+
+enum AVPixelFormat VideoDecoder::get_hw_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts) {
+    const enum AVPixelFormat *p;
+    auto *decoder = reinterpret_cast<VideoDecoder *>(ctx->opaque);
+
+    for (p = pix_fmts; *p != -1; p++) {
+        if (*p == decoder->m_hwPixFmt) {
+            return *p;
+        }
+    }
+    // フォールバック
+    return avcodec_default_get_format(ctx, pix_fmts);
+}
 
 VideoDecoder::VideoDecoder(int clipId, const QUrl &source, VideoFrameStore *store, QObject *parent) : QObject(parent), m_clipId(clipId), m_store(store) {
     QString path = source.toLocalFile();
@@ -57,14 +71,52 @@ bool VideoDecoder::open(const QString &path) {
     m_decCtx = avcodec_alloc_context3(codec);
     avcodec_parameters_to_context(m_decCtx, m_stream->codecpar);
 
-    // マルチスレッドデコード設定
-    // "Late SEI is not implemented" 警告とフリーズ回避のため、フレームスレッドを無効化(1)する
-    // m_decCtx->thread_count = 1;
+    // ハードウェアデコーダーの初期化試行
+    m_hwPixFmt = -1; // AV_PIX_FMT_NONE
+    const char *hw_type_names[] = {"cuda", "vaapi", "d3d11va", "dxva2", "videotoolbox", nullptr};
+
+    for (const char **name = hw_type_names; *name; name++) {
+        enum AVHWDeviceType type = av_hwdevice_find_type_by_name(*name);
+        if (type == AV_HWDEVICE_TYPE_NONE)
+            continue;
+
+        // コーデックがこのHWデバイス設定をサポートしているか確認
+        for (int i = 0;; i++) {
+            const AVCodecHWConfig *config = avcodec_get_hw_config(codec, i);
+            if (!config)
+                break;
+
+            if (config->methods & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX && config->device_type == type) {
+                // デバイス作成
+                if (av_hwdevice_ctx_create(&m_hwDeviceCtx, type, nullptr, nullptr, 0) >= 0) {
+                    qDebug() << "[VideoDecoder] Hardware device initialized:" << *name;
+                    m_hwPixFmt = config->pix_fmt;
+                    m_decCtx->hw_device_ctx = av_buffer_ref(m_hwDeviceCtx);
+                    m_decCtx->get_format = get_hw_format;
+                    m_decCtx->opaque = this;
+                    goto hw_init_done;
+                }
+            }
+        }
+    }
+
+hw_init_done:
+    if (!m_hwDeviceCtx) {
+        // HW初期化に失敗した場合はSWマルチスレッドを使用
+        if (codec->capabilities & AV_CODEC_CAP_FRAME_THREADS) {
+            m_decCtx->thread_type = FF_THREAD_FRAME;
+            m_decCtx->thread_count = 0;
+        } else if (codec->capabilities & AV_CODEC_CAP_SLICE_THREADS) {
+            m_decCtx->thread_type = FF_THREAD_SLICE;
+            m_decCtx->thread_count = 0;
+        }
+    }
+
     if (avcodec_open2(m_decCtx, codec, nullptr) < 0)
         return false;
 
     m_frame = av_frame_alloc();
-    m_rgbFrame = av_frame_alloc();
+    m_swFrame = av_frame_alloc();
     m_pkt = av_packet_alloc();
 
     // インデックス構築 (L-SMASH Worksライクな挙動)
@@ -81,6 +133,13 @@ bool VideoDecoder::buildIndex() {
     // ファイル先頭へシーク
     if (av_seek_frame(m_fmtCtx, m_streamIndex, 0, AVSEEK_FLAG_BACKWARD) < 0) {
         av_seek_frame(m_fmtCtx, -1, 0, AVSEEK_FLAG_BACKWARD);
+    }
+
+    // メモリ再確保のコストを削減
+    if (m_stream->nb_frames > 0) {
+        m_index.reserve(m_stream->nb_frames);
+    } else {
+        m_index.reserve(108000); // 推定: 1時間の動画 @ 30fps
     }
 
     AVPacket *pkt = av_packet_alloc();
@@ -111,8 +170,12 @@ void VideoDecoder::close() {
     if (m_frame) {
         av_frame_free(&m_frame);
     }
-    if (m_rgbFrame) {
-        av_frame_free(&m_rgbFrame);
+    if (m_swFrame) {
+        av_frame_free(&m_swFrame);
+    }
+    if (m_hwDeviceCtx) {
+        av_buffer_unref(&m_hwDeviceCtx);
+        m_hwDeviceCtx = nullptr;
     }
     if (m_pkt) {
         av_packet_free(&m_pkt);
@@ -167,7 +230,8 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) {
     bool needSeek = true;
     // 修正: 多少のフレーム飛び（ドロップ）があっても、直近ならシークせずにデコードを進める
     // これにより、GOP先頭への巻き戻しと再デコードによるフリーズ（処理落ち）を防ぐ
-    if (m_lastDecodedFrame != -1 && targetFrame > m_lastDecodedFrame && targetFrame <= m_lastDecodedFrame + 12) {
+    // 閾値を30フレーム(60fpsで0.5秒)まで緩和し、シーケンシャル読み込みを優先する
+    if (m_lastDecodedFrame != -1 && targetFrame > m_lastDecodedFrame && targetFrame <= m_lastDecodedFrame + 30) {
         needSeek = false;
     }
 
@@ -245,29 +309,28 @@ process_frame:
     av_packet_unref(m_pkt);
 
     if (frameFound) {
-        // YUV -> RGB 変換
-        if (!m_swsCtx || m_decCtx->width != m_rgbFrame->width || m_decCtx->height != m_rgbFrame->height) {
+        AVFrame *srcFrame = m_frame;
 
-            if (m_swsCtx)
-                sws_freeContext(m_swsCtx);
-
-            // QImage::Format_RGBA8888 に合わせる
-            m_swsCtx = sws_getContext(m_decCtx->width, m_decCtx->height, m_decCtx->pix_fmt, m_decCtx->width, m_decCtx->height, AV_PIX_FMT_RGBA, SWS_BILINEAR, nullptr, nullptr, nullptr);
-
-            // RGBフレームバッファ確保
-            av_frame_unref(m_rgbFrame);
-            m_rgbFrame->width = m_decCtx->width;
-            m_rgbFrame->height = m_decCtx->height;
-            m_rgbFrame->format = AV_PIX_FMT_RGBA;
-            av_frame_get_buffer(m_rgbFrame, 32);
+        // HWフレームの場合はCPUメモリへ転送(ダウンロード)する
+        if (m_frame->format == m_hwPixFmt) {
+            if (av_hwframe_transfer_data(m_swFrame, m_frame, 0) < 0) {
+                qWarning() << "[VideoDecoder] Error transferring frame data to CPU";
+                return;
+            }
+            srcFrame = m_swFrame;
         }
 
-        // 変換実行
-        sws_scale(m_swsCtx, m_frame->data, m_frame->linesize, 0, m_decCtx->height, m_rgbFrame->data, m_rgbFrame->linesize);
+        // YUV -> RGB 変換
+        // srcFrame->format を使用する (HWデコード時はNV12などがここに入っている)
+        m_swsCtx = sws_getCachedContext(m_swsCtx, m_decCtx->width, m_decCtx->height, (AVPixelFormat)srcFrame->format, m_decCtx->width, m_decCtx->height, AV_PIX_FMT_RGBA, SWS_FAST_BILINEAR, nullptr, nullptr, nullptr);
 
-        // QImage作成 (ディープコピーしてキャッシュへ)
-        QImage img(m_rgbFrame->data[0], m_decCtx->width, m_decCtx->height, m_rgbFrame->linesize[0], QImage::Format_RGBA8888);
-        QImage result = img.copy(); // Detach from AVFrame buffer
+        // QImageを直接確保し、sws_scaleの出力先として指定することで中間バッファとコピーを排除 (Zero-copy write)
+        QImage result(m_decCtx->width, m_decCtx->height, QImage::Format_RGBA8888);
+        uint8_t *dstData[4] = {result.bits(), nullptr, nullptr, nullptr};
+        int dstLinesize[4] = {static_cast<int>(result.bytesPerLine()), 0, 0, 0};
+
+        // 変換実行
+        sws_scale(m_swsCtx, srcFrame->data, srcFrame->linesize, 0, m_decCtx->height, dstData, dstLinesize);
 
         // メインスレッドへ通知
         QMetaObject::invokeMethod(this, [this, result, targetFrame]() {

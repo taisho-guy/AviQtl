@@ -14,6 +14,8 @@ struct AVStream;
 struct AVFrame;
 struct AVPacket;
 struct SwsContext;
+struct AVBufferRef;
+#include <libavutil/pixfmt.h>
 }
 
 namespace Rina::Core {
@@ -56,9 +58,11 @@ class VideoDecoder : public QObject {
     AVStream *m_stream = nullptr;
     int m_streamIndex = -1;
     AVFrame *m_frame = nullptr;
-    AVFrame *m_rgbFrame = nullptr;
+    AVFrame *m_swFrame = nullptr; // HW download用
     AVPacket *m_pkt = nullptr;
     SwsContext *m_swsCtx = nullptr;
+    AVBufferRef *m_hwDeviceCtx = nullptr;
+    int m_hwPixFmt = -1; // AV_PIX_FMT_NONE
 
     // State
     int m_lastDecodedFrame = -1;
@@ -69,5 +73,7 @@ class VideoDecoder : public QObject {
     // インスタンスごとにキャッシュを持つ
     QCache<int, QImage> m_frameCache;
     std::atomic<int> m_lastRequestedFrame = -1;
+
+    static enum AVPixelFormat get_hw_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts);
 };
 } // namespace Rina::Core
