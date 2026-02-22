@@ -112,6 +112,14 @@ ApplicationWindow {
         buttons: Platform.MessageDialog.Ok
     }
 
+    Platform.MessageDialog {
+        id: aboutDialog
+
+        title: "Rinaについて"
+        text: "Rina (Rolling Release)\n\nRina is not AviUtl.\n\nこのソフトウェアはGNU Affero General Public License Version 3に基づいて公開されています。\n\nhttps://codeberg.org/taisho-guy/Rina"
+        buttons: Platform.MessageDialog.Ok
+    }
+
     Connections {
         function onErrorOccurred(message) {
             errorDialog.text = message;
@@ -415,19 +423,6 @@ ApplicationWindow {
                 }
             }
 
-            MenuSeparator {
-            }
-
-            Common.IconMenuItem {
-                text: "全てのエフェクトをOFFにする"
-                iconName: "eye_off_line"
-                enabled: TimelineBridge && TimelineBridge.selection && TimelineBridge.selection.selectedClipId >= 0
-                onTriggered: {
-                    // TODO: Implement disableAllEffects in TimelineBridge
-                    console.log("Disable all effects triggered");
-                }
-            }
-
         }
 
         Menu {
@@ -481,54 +476,10 @@ ApplicationWindow {
                 iconName: "arrow_go_forward_line"
             }
 
-            MenuSeparator {
-            }
-
-            Common.IconMenuItem {
-                text: "すべてのフレームを選択"
-                iconName: "checkbox_multiple_line"
-                enabled: false
-            }
-
-            Common.IconMenuItem {
-                text: "選択範囲のフレームを削除"
-                iconName: "delete_bin_line"
-                enabled: false
-            }
-
-            MenuSeparator {
-            }
-
-            Common.IconMenuItem {
-                text: "再生速度の情報を変更"
-                iconName: "speed_mini_line"
-                enabled: false
-            }
-
         }
 
         Menu {
             title: "表示"
-
-            Menu {
-                title: "拡大表示"
-
-                Common.IconMenuItem {
-                    text: "ウィンドウサイズ"
-                    iconName: "fullscreen_line"
-                }
-
-                Common.IconMenuItem {
-                    text: "100%"
-                    iconName: "zoom_in_line"
-                    onTriggered: {
-                    }
-                }
-
-            }
-
-            MenuSeparator {
-            }
 
             Common.IconMenuItem {
                 text: "再生ウィンドウの表示"
@@ -564,17 +515,7 @@ ApplicationWindow {
             Common.IconMenuItem {
                 text: "バージョン情報"
                 iconName: "information_line"
-                onTriggered: console.log("Rina version 0.1")
-            }
-
-            MenuSeparator {
-            }
-
-            Common.IconMenuItem {
-                text: "未実装機能の非表示"
-                iconName: "eye_close_line"
-                checkable: true
-                checked: true
+                onTriggered: aboutDialog.open()
             }
 
         }
