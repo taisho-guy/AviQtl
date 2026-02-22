@@ -493,15 +493,20 @@ bool TimelineController::exportImageSequence(const QString &dir, int quality) {
         baseName.chop(4);
 
     const int sequencePadding = Rina::Core::SettingsManager::instance().settings().value("exportSequencePadding", 6).toInt();
+
+    if (m_compositeView)
+        m_compositeView->setProperty("exportMode", true);
+    QQuickItem *view3D = m_compositeView ? m_compositeView->property("view3D").value<QQuickItem *>() : nullptr;
+    QQuickItem *targetItem = view3D ? view3D : (m_compositeView ? m_compositeView.data() : nullptr);
+
     for (int frame = 0; frame < totalFrames; ++frame) {
         m_transport->setCurrentFrame(frame);
 
         // QMLシーングラフから直接キャプチャ
         QImage renderedFrame;
 
-        if (m_compositeView) {
-            // QQuickItem::grabToImage を使用してプレビュー部分のみをキャプチャ
-            auto grabResult = m_compositeView->grabToImage(QSize(m_project->width(), m_project->height()));
+        if (targetItem) {
+            auto grabResult = targetItem->grabToImage(QSize(m_project->width(), m_project->height()));
             if (grabResult) {
                 QEventLoop loop;
                 connect(grabResult.get(), &QQuickItemGrabResult::ready, &loop, &QEventLoop::quit);
@@ -525,6 +530,8 @@ bool TimelineController::exportImageSequence(const QString &dir, int quality) {
         emit exportProgressChanged((frame * 100) / totalFrames);
     }
 
+    if (m_compositeView)
+        m_compositeView->setProperty("exportMode", false);
     emit exportProgressChanged(100);
     return true;
 }
@@ -550,14 +557,19 @@ bool TimelineController::exportVideo(const QString &path, const QString &format,
     // 音声ストリーム追加
     encoder.addAudioStream(48000, 2, 192000);
 
+    if (m_compositeView)
+        m_compositeView->setProperty("exportMode", true);
+    QQuickItem *view3D = m_compositeView ? m_compositeView->property("view3D").value<QQuickItem *>() : nullptr;
+    QQuickItem *targetItem = view3D ? view3D : (m_compositeView ? m_compositeView.data() : nullptr);
+
     int totalFrames = m_timelineDuration;
     for (int frame = 0; frame < totalFrames; ++frame) {
         m_transport->setCurrentFrame(frame);
 
         // QMLシーングラフからキャプチャ (CPUメモリへのダウンロード発生)
         QImage renderedFrame;
-        if (m_compositeView) {
-            auto grabResult = m_compositeView->grabToImage(QSize(m_project->width(), m_project->height()));
+        if (targetItem) {
+            auto grabResult = targetItem->grabToImage(QSize(m_project->width(), m_project->height()));
             if (grabResult) {
                 QEventLoop loop;
                 connect(grabResult.get(), &QQuickItemGrabResult::ready, &loop, &QEventLoop::quit);
@@ -582,6 +594,8 @@ bool TimelineController::exportVideo(const QString &path, const QString &format,
         emit exportProgressChanged((frame * 100) / totalFrames);
     }
 
+    if (m_compositeView)
+        m_compositeView->setProperty("exportMode", false);
     encoder.close();
     emit exportProgressChanged(100);
     return true;
@@ -605,12 +619,16 @@ void TimelineController::exportVideoHW(Rina::Core::VideoEncoder *encoder) {
     // 音声ストリーム追加
     encoder->addAudioStream(48000, 2, 192000);
 
+    m_compositeView->setProperty("exportMode", true);
+    QQuickItem *view3D = m_compositeView->property("view3D").value<QQuickItem *>();
+    QQuickItem *targetItem = view3D ? view3D : m_compositeView.data();
+
     for (int frame = 0; frame < endFrame; ++frame) {
         m_transport->setCurrentFrame(frame);
 
         // grabToImage はレンダリングをスケジュールし、完了を通知する
         QImage img;
-        auto grabResult = m_compositeView->grabToImage(QSize(width, height));
+        auto grabResult = targetItem->grabToImage(QSize(width, height));
         if (grabResult) {
             QEventLoop loop;
             connect(grabResult.get(), &QQuickItemGrabResult::ready, &loop, &QEventLoop::quit);
@@ -635,6 +653,7 @@ void TimelineController::exportVideoHW(Rina::Core::VideoEncoder *encoder) {
         }
     }
 
+    m_compositeView->setProperty("exportMode", false);
     encoder->close();
     emit exportProgressChanged(100);
     qInfo() << "HW Export finished.";

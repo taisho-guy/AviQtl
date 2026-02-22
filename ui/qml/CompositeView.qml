@@ -20,6 +20,8 @@ Item {
     // Component cache to prevent redundant Qt.createComponent calls
     property var _componentCache: ({
     })
+    property bool exportMode: false
+    property alias view3D: view
     // ─── グループ制御管理 ─────────────────────────────────────────
     property var groupControls: []
 
@@ -89,8 +91,8 @@ Item {
 
         camera: mainCamera
         // 親に収まる最大サイズを計算 (Letterboxing)
-        width: Math.min(parent.width, parent.height * aspect)
-        height: Math.min(parent.height, parent.width / aspect)
+        width: root.exportMode ? projW : Math.min(parent.width, parent.height * aspect)
+        height: root.exportMode ? projH : Math.min(parent.height, parent.width / aspect)
         anchors.centerIn: parent
         focus: true
         Keys.onSpacePressed: {
