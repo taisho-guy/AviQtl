@@ -396,10 +396,16 @@ ScrollView {
                     radius: 4
 
                     Text {
-                        anchors.centerIn: parent
+                        id: clipLabel
+                        anchors.verticalCenter: parent.verticalCenter
                         text: modelData.type + " (" + modelData.id + ")"
                         color: "white"
                         font.pixelSize: 10
+                        elide: Text.ElideRight
+                        readonly property int padding: 4
+                        property real stickyX: Math.max(0, timelineFlickable.contentX - clipDelegate.x)
+                        x: Math.min(stickyX, parent.width - width - padding) + padding
+                        width: Math.min(implicitWidth, parent.width - padding * 2)
                     }
 
                     // クリップ操作（選択・移動）
