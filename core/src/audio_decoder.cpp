@@ -49,6 +49,8 @@ void AudioDecoder::onBufferReady() {
         loggedFormat = true;
     }
 
+    std::lock_guard<std::mutex> lock(m_mutex);
+
     // フォーマットに応じてFloatへ変換して格納
     if (fmt.sampleFormat() == QAudioFormat::Float) {
         const float *data = buffer.constData<float>();
@@ -82,6 +84,8 @@ void AudioDecoder::onError(QAudioDecoder::Error error) {
 }
 
 std::vector<float> AudioDecoder::getSamples(double startTime, int count) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
     // 48kHz, Stereo (2ch)
     // startTime (秒) * 48000 (サンプル/秒) * 2 (チャンネル)
     size_t startIdx = static_cast<size_t>(startTime * 48000 * 2);

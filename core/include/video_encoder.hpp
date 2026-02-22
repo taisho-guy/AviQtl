@@ -7,6 +7,7 @@
 #include <QString>
 #include <QVariantMap>
 #include <memory>
+#include <mutex>
 
 // FFmpeg forward declarations to keep header clean
 extern "C" {
@@ -64,6 +65,7 @@ class VideoEncoder : public QObject {
     AVFrame *m_audioFrame = nullptr;
     int64_t m_audioPts = 0;
     bool m_headerWritten = false;
+    std::mutex m_mutex;
 
     bool initHardware(const QString &codecName);
     bool writeHeaderIfNeeded();

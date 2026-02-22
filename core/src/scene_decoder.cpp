@@ -3,6 +3,7 @@
 #include <QQmlComponent>
 #include <QQmlEngine>
 #include <QQuickItem>
+#include <QQuickItemGrabResult>
 
 namespace Rina::Core {
 
@@ -103,12 +104,16 @@ void SceneDecoder::updateRender() {
         m_offscreenWindow->resize(w, h);
     }
 
-    // レンダリングとキャプチャ
-    // 注意: grabWindowは重い処理なので、実運用ではFBO共有などを検討すべき
-    QImage img = m_offscreenWindow->grabWindow();
-
-    if (!img.isNull()) {
-        m_store->setFrame(frameKey(), img);
+    // 非同期キャプチャに変更 (grabWindowは重いため廃止)
+    // QQuickItem::grabToImage はレンダリングスレッドで処理され、結果をコールバックで返す
+    const QString key = frameKey();
+    auto result = m_rootItem->grabToImage();
+    if (result) {
+        connect(result.data(), &QQuickItemGrabResult::ready, this, [this, key, result]() {
+            if (result && !result->image().isNull() && m_store) {
+                m_store->setFrame(key, result->image());
+            }
+        });
     }
 }
 

@@ -3,6 +3,7 @@
 #include <QAudioDecoder>
 #include <QObject>
 #include <QUrl>
+#include <mutex>
 #include <vector>
 
 namespace Rina::Core {
@@ -36,6 +37,7 @@ class AudioDecoder : public QObject {
     QAudioDecoder *m_decoder;
     std::vector<float> m_fullAudioData; // インターリーブされたPCMデータ (L, R, L, R...)
     bool m_isReady = false;
+    mutable std::mutex m_mutex;
 };
 
 } // namespace Rina::Core

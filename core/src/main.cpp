@@ -19,19 +19,39 @@
 #include <QQuickWindow>
 #include <QSplashScreen>
 #include <QTimer>
+#include <cstdio>
+#include <cstring>
 #include <lua.hpp>
 
+extern "C" {
+#include <libavutil/log.h>
+}
+
+static void rina_ffmpeg_log_callback(void *ptr, int level, const char *fmt, va_list vl) {
+    // メッセージ内容をチェックするために一時バッファに展開
+    char line[1024];
+    va_list vl_copy;
+    va_copy(vl_copy, vl);
+    vsnprintf(line, sizeof(line), fmt, vl_copy);
+    va_end(vl_copy);
+
+    // "Late SEI is not implemented" は FFmpeg H.264デコーダの既知の制限（スレッド処理時）による警告
+    // 再生自体には影響が少ないため、ログスパムを防ぐために抑制する
+    if (strstr(line, "Late SEI is not implemented")) {
+        return;
+    }
+
+    // デフォルトのログハンドラに委譲
+    av_log_default_callback(ptr, level, fmt, vl);
+}
+
 int main(int argc, char *argv[]) {
-    // --- マルチプラットフォーム対応 ハードウェアデコード設定 ---
-    // 1. バックエンドをFFmpegに固定（Rinaのロジック依存のため）
-    qputenv("QT_MEDIA_BACKEND", "ffmpeg");
 
-    // 2. レンダリングバックエンドをVulkanに統一
-    qputenv("QSG_RHI_BACKEND", "vulkan");
+    // 1. バックエンド指定を削除 (Qtの自動選択に任せる / FFmpeg優先)
+    // qputenv("QT_MEDIA_BACKEND", "gstreamer");
 
-    // 2. 優先するHWデコーダリストを指定（環境依存のドライバ名は指定しない）
-    // Linux(VAAPI/VDPAU/CUDA), Windows(D3D11VA/DXVA2), macOS(VideoToolbox) を網羅
-    qputenv("QT_FFMPEG_DECODING_HW_DEVICE_TYPES", "cuda,vaapi,vdpau,videotoolbox,d3d11va,dxva2");
+    // 2. レンダリングバックエンドの強制を解除 (No RHI backend 警告対策)
+    // qputenv("QSG_RHI_BACKEND", "vulkan");
 
     // 1. アプリケーション初期化
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -39,6 +59,9 @@ int main(int argc, char *argv[]) {
 #endif
     QApplication app(argc, argv);
     app.setApplicationName("Rina");
+
+    // FFmpegのログコールバックを設定（ノイズ除去）
+    av_log_set_callback(rina_ffmpeg_log_callback);
 
     // アプリケーションアイコンの設定
     app.setWindowIcon(QIcon(":/assets/icon.svg"));

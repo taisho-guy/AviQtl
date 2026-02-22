@@ -94,6 +94,7 @@ bool VideoEncoder::initHardware(const QString &codecName) {
 }
 
 bool VideoEncoder::open(const Config &config) {
+    std::lock_guard<std::mutex> lock(m_mutex);
     cleanup();
     m_config = config;
     m_headerWritten = false;
@@ -154,6 +155,8 @@ bool VideoEncoder::open(const Config &config) {
     m_encCtx->height = config.height;
     m_encCtx->time_base = {config.fps_den, config.fps_num};
     m_stream->time_base = m_encCtx->time_base;
+    m_stream->avg_frame_rate = {config.fps_num, config.fps_den};
+    m_stream->r_frame_rate = m_stream->avg_frame_rate;
 
     // ピクセルフォーマットの自動選択
     if (m_encCtx->hw_frames_ctx) {
@@ -217,6 +220,7 @@ bool VideoEncoder::open(const QVariantMap &configMap) {
 }
 
 bool VideoEncoder::addAudioStream(int sampleRate, int channels, int bitrate) {
+    std::lock_guard<std::mutex> lock(m_mutex);
     if (!m_fmtCtx)
         return false;
 
@@ -279,6 +283,7 @@ bool VideoEncoder::writeHeaderIfNeeded() {
 }
 
 bool VideoEncoder::pushFrame(const QImage &img, int64_t pts) {
+    std::lock_guard<std::mutex> lock(m_mutex);
     if (!m_encCtx)
         return false;
 
@@ -330,12 +335,39 @@ bool VideoEncoder::pushFrame(const QImage &img, int64_t pts) {
     // 3. エンコード
     int ret = avcodec_send_frame(m_encCtx, encodeFrame);
 
+    // EAGAINハンドリング: 入力バッファがいっぱいの場合、出力を読み出して空ける
+    while (ret == AVERROR(EAGAIN)) {
+        bool packetRead = false;
+        while (true) {
+            AVPacket *pkt = av_packet_alloc();
+            int rxRet = avcodec_receive_packet(m_encCtx, pkt);
+            if (rxRet == AVERROR(EAGAIN) || rxRet == AVERROR_EOF) {
+                av_packet_free(&pkt);
+                break;
+            } else if (rxRet < 0) {
+                av_packet_free(&pkt);
+                return false;
+            }
+
+            if (pkt->duration == 0)
+                pkt->duration = 1;
+            av_packet_rescale_ts(pkt, m_encCtx->time_base, m_stream->time_base);
+            pkt->stream_index = m_stream->index;
+            av_interleaved_write_frame(m_fmtCtx, pkt);
+            av_packet_free(&pkt);
+            packetRead = true;
+        }
+        if (!packetRead)
+            break; // 進展がない場合は抜ける
+        ret = avcodec_send_frame(m_encCtx, encodeFrame);
+    }
+
     if (encodeFrame == m_hwFrame) {
         av_frame_unref(m_hwFrame);
     }
 
     if (ret < 0) {
-        qWarning() << "Error sending frame to codec.";
+        qWarning() << "Error sending frame to codec:" << ret;
         return false;
     }
 
@@ -349,6 +381,11 @@ bool VideoEncoder::pushFrame(const QImage &img, int64_t pts) {
             qWarning() << "Error during encoding.";
             av_packet_free(&pkt);
             return false;
+        }
+
+        // durationが設定されていない場合のフォールバック (固定フレームレート)
+        if (pkt->duration == 0) {
+            pkt->duration = 1;
         }
 
         av_packet_rescale_ts(pkt, m_encCtx->time_base, m_stream->time_base);
@@ -370,6 +407,7 @@ bool VideoEncoder::pushTexture(const GpuTextureHandle &handle, int64_t pts) {
 }
 
 bool VideoEncoder::pushAudio(const float *samples, int sampleCount) {
+    std::lock_guard<std::mutex> lock(m_mutex);
     if (!m_audioEncCtx || !m_audioFifo)
         return false;
 
@@ -403,8 +441,34 @@ bool VideoEncoder::pushAudio(const float *samples, int sampleCount) {
 
         // エンコード
         int ret = avcodec_send_frame(m_audioEncCtx, m_audioFrame);
+
+        // EAGAINハンドリング
+        while (ret == AVERROR(EAGAIN)) {
+            bool packetRead = false;
+            while (true) {
+                AVPacket *pkt = av_packet_alloc();
+                int rxRet = avcodec_receive_packet(m_audioEncCtx, pkt);
+                if (rxRet == AVERROR(EAGAIN) || rxRet == AVERROR_EOF) {
+                    av_packet_free(&pkt);
+                    break;
+                } else if (rxRet < 0) {
+                    av_packet_free(&pkt);
+                    return false;
+                }
+
+                av_packet_rescale_ts(pkt, m_audioEncCtx->time_base, m_audioStream->time_base);
+                pkt->stream_index = m_audioStream->index;
+                av_interleaved_write_frame(m_fmtCtx, pkt);
+                av_packet_free(&pkt);
+                packetRead = true;
+            }
+            if (!packetRead)
+                break;
+            ret = avcodec_send_frame(m_audioEncCtx, m_audioFrame);
+        }
+
         if (ret < 0) {
-            qWarning() << "Error sending audio frame to codec.";
+            qWarning() << "Error sending audio frame to codec:" << ret;
             return false;
         }
 
@@ -429,6 +493,7 @@ bool VideoEncoder::pushAudio(const float *samples, int sampleCount) {
 }
 
 void VideoEncoder::close() {
+    std::lock_guard<std::mutex> lock(m_mutex);
     if (!m_encCtx)
         return;
 

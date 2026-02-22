@@ -36,13 +36,11 @@ QImage VideoFrameStore::frame(const QString &key) const {
 
     // デバッグ用: キーがない場合は動的に画像を生成して返す
     // これで「プロバイダは動いているがデータがない」のか「プロバイダ自体が死んでいる」のか判別可能
-    qWarning() << "[VideoFrameStore] フレームが見つかりません。キー:" << key << "。デバッグ画像を生成します。";
-    QImage debugImg(320, 180, QImage::Format_ARGB32);
-    debugImg.fill(Qt::darkMagenta);
-    QPainter p(&debugImg);
-    p.setPen(Qt::white);
-    p.drawText(debugImg.rect(), Qt::AlignCenter, "No Frame\nKey: " + key);
-    return debugImg;
+    // 修正: 再生開始直後などにマゼンタ色がチラつくのを防ぐため、透明画像を返す
+    // qWarning() << "[VideoFrameStore] フレームが見つかりません。キー:" << key;
+    QImage emptyImg(1, 1, QImage::Format_ARGB32_Premultiplied);
+    emptyImg.fill(Qt::transparent);
+    return emptyImg;
 }
 
 } // namespace Rina::Core

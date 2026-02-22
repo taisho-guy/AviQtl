@@ -22,8 +22,8 @@
 #include <QOpenGLContext>
 #include <QOpenGLFramebufferObject>
 #include <QQmlContext>
-#include <QQuickRenderTarget>
 #include <QQuickItemGrabResult>
+#include <QQuickRenderTarget>
 #include <QQuickView>
 #include <QQuickWindow>
 #include <QSurfaceFormat>
