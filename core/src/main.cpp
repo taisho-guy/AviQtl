@@ -3,6 +3,7 @@
 #include "../../scripting/mod_engine.hpp"
 #include "effect_registry.hpp"
 #include "rina_context.hpp"
+#include "scene_decoder.hpp" // 追加
 #include "settings_manager.hpp"
 #include "timeline_controller.hpp"
 #include "video_encoder.hpp"
@@ -66,6 +67,9 @@ int main(int argc, char *argv[]) {
 
     // VideoEncoderをQMLでインスタンス化可能な型として登録
     qmlRegisterType<Rina::Core::VideoEncoder>("Rina.Core", 1, 0, "VideoEncoder");
+
+    // SceneDecoderをQMLでインスタンス化可能な型として登録
+    qmlRegisterType<Rina::Core::SceneDecoder>("Rina.Core", 1, 0, "SceneDecoder");
 
     // SettingsManager の登録
     engine.rootContext()->setContextProperty("SettingsManager", &Rina::Core::SettingsManager::instance());

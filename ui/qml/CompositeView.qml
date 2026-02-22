@@ -11,6 +11,11 @@ Item {
     property var getLayerVisible: function(layer) {
         return true;
     }
+    // 外部から注入可能なプロパティ (デフォルトはTimelineBridgeから取得)
+    property var clipModel: TimelineBridge ? TimelineBridge.clipModel : null
+    property int projectWidth: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.width : 1920
+    property int projectHeight: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.height : 1080
+    property int currentFrame: (TimelineBridge && TimelineBridge.transport) ? TimelineBridge.transport.currentFrame : 0
     readonly property int hiddenZ: -9999
     // Component cache to prevent redundant Qt.createComponent calls
     property var _componentCache: ({
@@ -75,12 +80,12 @@ Item {
         id: view
 
         // プロジェクト設定の解像度を取得
-        property int projW: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.width : 1920
-        property int projH: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.height : 1080
+        property int projW: root.projectWidth
+        property int projH: root.projectHeight
         // アスペクト比計算
         property double aspect: projW / projH
         // 現在のクリップ内での相対時間 (0.0 ~ 1.0)
-        property double currentClipTimeRatio: (TimelineBridge && TimelineBridge.transport) ? Math.max(0, Math.min(1, (TimelineBridge.transport.currentFrame - TimelineBridge.clipStartFrame) / TimelineBridge.clipDurationFrames)) : 0
+        property double currentClipTimeRatio: (TimelineBridge) ? Math.max(0, Math.min(1, (root.currentFrame - TimelineBridge.clipStartFrame) / TimelineBridge.clipDurationFrames)) : 0
 
         camera: mainCamera
         // 親に収まる最大サイズを計算 (Letterboxing)
@@ -123,7 +128,7 @@ Item {
             // 画面中央を (0,0) としたときの枠
             Model {
                 source: "#Rectangle"
-                scale: Qt.vector3d((TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.width / 100 : 19.2, (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.height / 100 : 10.8, 1)
+                scale: Qt.vector3d(root.projectWidth / 100, root.projectHeight / 100, 1)
                 position: Qt.vector3d(0, 0, -10)
                 visible: false // 邪魔なので一旦隠す
 
@@ -145,7 +150,7 @@ Item {
         Instantiator {
             // 拡大率は親の影響を受けず自身のサイズとして適用（AviUtl仕様依存）
 
-            model: TimelineBridge ? TimelineBridge.clipModel : null
+            model: root.clipModel
             onObjectAdded: (index, object) => {
                 object.parent = sceneRoot;
             }
@@ -156,12 +161,14 @@ Item {
             delegate: Node {
                 id: clipNode
 
+                // C++モデル(model)とJS配列(modelData)の両方に対応
+                property var _clipData: (typeof modelData !== "undefined") ? modelData : model
                 // FB 収集用: BaseObject が参照できるよう layer を公開
-                property int clipLayerRole: model.layer
+                property int clipLayerRole: _clipData.layer
                 property Item fbRendererOutput: null // NodeLoader 完了後に接続
                 // モデルロールから直接値を取得
                 // パラメータを一度だけ取得してキャッシュ
-                readonly property var p: model.params || {
+                readonly property var p: _clipData.params || {
                 }
                 readonly property real px: p.x || 0
                 readonly property real py: p.y || 0
@@ -187,7 +194,7 @@ Item {
                         if (!gc)
                             continue;
 
-                        if (gc.clipLayer < model.layer && model.layer <= (gc.clipLayer + gc.layerCount))
+                        if (gc.clipLayer < _clipData.layer && _clipData.layer <= (gc.clipLayer + gc.layerCount))
                             activeGroups.push(gc);
 
                     }
@@ -240,18 +247,18 @@ Item {
                 }
 
                 function dbg(msg) {
-                    Logger.log("[CompositeView][clipId=" + model.id + "][type=" + model.type + "] " + msg, TimelineBridge);
+                    Logger.log("[CompositeView][clipId=" + _clipData.id + "][type=" + _clipData.type + "] " + msg, TimelineBridge);
                 }
 
                 // レイヤーが非表示の場合は描画しない
                 visible: {
-                    return root.getLayerVisible(model.layer);
+                    return root.getLayerVisible(_clipData.layer);
                 }
                 // 座標変換: 中心(0,0)、Y軸下プラス(AviUtl互換)
                 // Qt3DはY上がプラスなので、入力を反転させる
                 x: effectiveTransform.x
                 y: -effectiveTransform.y
-                z: effectiveTransform.z + (model.layer * 5)
+                z: effectiveTransform.z + (_clipData.layer * 5)
                 // 中心座標 (Pivot)
                 pivot: Qt.vector3d(p.anchorX || 0, -(p.anchorY || 0), p.anchorZ || 0)
                 // 3軸回転
@@ -302,15 +309,15 @@ Item {
 
                     }
 
-                    source: model.qmlSource || ""
+                    source: _clipData.qmlSource || ""
                     properties: {
                         "opacity": clipNode.pOpacity,
-                        "clipId": model.id,
-                        "clipStartFrame": model.startFrame,
-                        "clipDurationFrames": model.durationFrames,
+                        "clipId": _clipData.id,
+                        "clipStartFrame": _clipData.startFrame,
+                        "clipDurationFrames": _clipData.durationFrames,
                         "renderHost": offscreenRenderHost,
                         "clipParams": Qt.binding(function() {
-                            return model.params || {
+                            return _clipData.params || {
                             };
                         })
                     }
@@ -323,14 +330,14 @@ Item {
                             clipNode.fbRendererOutput = item.fbCaptureItem ?? null;
                             // clipLayer と sceneRootRef は FB のみが持つプロパティ
                             if (typeof item.clipLayer !== "undefined")
-                                item.clipLayer = model.layer;
+                                item.clipLayer = _clipData.layer;
 
                             if (typeof item.sceneRootRef !== "undefined")
                                 item.sceneRootRef = sceneRoot;
 
                             // レイヤー番号を注入 (グループ制御判定用)
                             if ("clipLayer" in item)
-                                item.clipLayer = model.layer;
+                                item.clipLayer = _clipData.layer;
 
                             // グループ制御オブジェクトなら登録
                             if (item.isGroupControl && root.registerGroupControl)
