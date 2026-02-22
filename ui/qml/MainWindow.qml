@@ -333,9 +333,9 @@ ApplicationWindow {
 
     }
 
-    // View3D の背後に黒背景を強制
+    // View3D の背後に黒背景を強制しない
     background: Rectangle {
-        color: "#000000"
+        color: mainWin.palette.window
     }
 
     menuBar: MenuBar {

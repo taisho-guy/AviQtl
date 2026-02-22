@@ -66,7 +66,7 @@ Item {
     // 背景
     Rectangle {
         anchors.fill: parent
-        color: "black"
+        color: "transparent"
         z: -2
     }
 

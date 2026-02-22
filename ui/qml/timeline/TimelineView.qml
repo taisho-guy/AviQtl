@@ -324,6 +324,17 @@ ScrollView {
                 // グループ制御情報
                 property int groupLayerCount: 0
                 property var groupEffectModel: null
+                // クリップ表示名
+                property string clipDisplayName: modelData.type
+
+                function updateClipDisplayName() {
+                    if (modelData.type === "text" && TimelineBridge) {
+                        // modelData.params は ClipModel から提供されるフラットなパラメータマップ
+                        clipDisplayName = (modelData.params && modelData.params["text"]) ? modelData.params["text"] : "テキスト";
+                        return ;
+                    }
+                    clipDisplayName = modelData.type;
+                }
 
                 function updateGroupInfo() {
                     groupLayerCount = 0;
@@ -397,13 +408,15 @@ ScrollView {
 
                     Text {
                         id: clipLabel
+
+                        readonly property int padding: 4
+                        property real stickyX: Math.max(0, timelineFlickable.contentX - clipDelegate.x)
+
                         anchors.verticalCenter: parent.verticalCenter
-                        text: modelData.type + " (" + modelData.id + ")"
+                        text: clipDelegate.clipDisplayName + " (" + modelData.id + ")"
                         color: "white"
                         font.pixelSize: 10
                         elide: Text.ElideRight
-                        readonly property int padding: 4
-                        property real stickyX: Math.max(0, timelineFlickable.contentX - clipDelegate.x)
                         x: Math.min(stickyX, parent.width - width - padding) + padding
                         width: Math.min(implicitWidth, parent.width - padding * 2)
                     }
