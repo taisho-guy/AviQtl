@@ -175,7 +175,7 @@ Common.RinaWindow {
                             property var def: modelData
                             property string key: def.param || def.name
                             property var effVal: effectRoot.currentParams[key]
-                            property bool isNumber: typeof effVal === "number"
+                            property bool isNumber: typeof effVal === "number" && (!def.type || ["float", "number", "slider", "spinner"].indexOf(def.type) !== -1)
                             property var effectModel: effectRoot.effectModel
                             property int effIdx: effectRoot.effectIndex
                             // キーフレーム

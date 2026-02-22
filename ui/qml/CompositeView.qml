@@ -143,6 +143,8 @@ Item {
 
         // 動的オブジェクト生成用
         Instantiator {
+            // 拡大率は親の影響を受けず自身のサイズとして適用（AviUtl仕様依存）
+
             model: TimelineBridge ? TimelineBridge.clipModel : null
             onObjectAdded: (index, object) => {
                 object.parent = sceneRoot;
@@ -178,42 +180,62 @@ Item {
                 property var effectiveTransform: {
                     // 依存関係を明示的に登録 (groupControlsの変更を検知)
                     var _gcList = root.groupControls;
-                    var t = {
-                        "x": px,
-                        "y": py,
-                        "z": pz,
-                        "rx": pRotX,
-                        "ry": pRotY,
-                        "rz": pRotZ,
-                        "sx": baseScale * aspectX,
-                        "sy": baseScale * aspectY,
-                        "sz": baseScale,
-                        "opacity": pOpacity
-                    };
-                    // アクティブなグループ制御を走査して適用
+                    // 1. 適用可能なグループ制御を抽出
+                    var activeGroups = [];
                     for (var i = 0; i < root.groupControls.length; ++i) {
                         var gc = root.groupControls[i];
                         if (!gc)
                             continue;
 
-                        // 適用条件: グループ制御より下のレイヤー かつ 範囲内
-                        // AviUtl仕様: 対象レイヤー数Nの場合、自身の次のレイヤーからN個が対象
-                        if (gc.clipLayer < model.layer && model.layer <= (gc.clipLayer + gc.layerCount)) {
-                            // 座標・回転は加算
-                            t.x += gc.x;
-                            t.y += gc.y;
-                            t.z += gc.z;
-                            t.rx += gc.rotationX;
-                            t.ry += gc.rotationY;
-                            t.rz += gc.rotationZ;
-                            // 拡大率・不透明度は乗算
-                            var s = gc.scale / 100;
-                            t.sx *= s;
-                            t.sy *= s;
-                            t.sz *= s;
-                            t.opacity *= gc.opacity;
-                        }
+                        if (gc.clipLayer < model.layer && model.layer <= (gc.clipLayer + gc.layerCount))
+                            activeGroups.push(gc);
+
                     }
+                    // 2. レイヤー順（親→子）にソート
+                    // 上位レイヤー(数値が小さい)ほど親として振る舞う
+                    activeGroups.sort(function(a, b) {
+                        return a.clipLayer - b.clipLayer;
+                    });
+                    // 3. 行列による階層的な座標計算
+                    // グローバル座標系での変換行列を作成
+                    var m = Qt.matrix4x4();
+                    var totalOpacity = pOpacity;
+                    var totalRotX = 0;
+                    var totalRotY = 0;
+                    var totalRotZ = 0;
+                    // 親グループから順に変換を適用
+                    for (var j = 0; j < activeGroups.length; ++j) {
+                        var g = activeGroups[j];
+                        // AviUtl互換座標系 (Y下プラス) で計算するため、Y軸反転などは最終出力時に行う
+                        m.translate(Qt.vector3d(g.x, g.y, g.z));
+                        m.rotate(g.rotationX, Qt.vector3d(1, 0, 0));
+                        m.rotate(g.rotationY, Qt.vector3d(0, 1, 0));
+                        m.rotate(g.rotationZ, Qt.vector3d(0, 0, 1));
+                        var s = g.scale / 100;
+                        m.scale(s, s, s);
+                        totalOpacity *= g.opacity;
+                        // 回転の単純加算（近似値。厳密な3D回転合成ではないが、AviUtl的な挙動としては十分）
+                        totalRotX += g.rotationX;
+                        totalRotY += g.rotationY;
+                        totalRotZ += g.rotationZ;
+                    }
+                    // 最後にオブジェクト自身のローカル座標を適用
+                    m.translate(Qt.vector3d(px, py, pz));
+                    // 行列から最終的な位置を取得 (translation vector)
+                    // column(3) は平行移動成分 (x, y, z, w)
+                    var pos = m.column(3);
+                    var t = {
+                        "x": pos.x,
+                        "y": pos.y,
+                        "z": pos.z,
+                        "rx": pRotX + totalRotX,
+                        "ry": pRotY + totalRotY,
+                        "rz": pRotZ + totalRotZ,
+                        "sx": baseScale * aspectX,
+                        "sy": baseScale * aspectY,
+                        "sz": baseScale,
+                        "opacity": totalOpacity
+                    };
                     return t;
                 }
 

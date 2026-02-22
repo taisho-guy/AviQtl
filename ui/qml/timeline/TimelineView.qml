@@ -219,12 +219,100 @@ ScrollView {
 
         }
 
+        // グループ制御の有効範囲表示 (カーテン)
+        Item {
+            id: groupControlCurtain
+
+            property int selectedClipId: (TimelineBridge && TimelineBridge.selection) ? TimelineBridge.selection.selectedClipId : -1
+            property var targetEffect: null
+            property int layerCount: 0
+            property var clipData: null
+
+            function update() {
+                targetEffect = null;
+                clipData = null;
+                layerCount = 0;
+                if (selectedClipId < 0 || !TimelineBridge)
+                    return ;
+
+                // クリップデータを検索
+                var clips = TimelineBridge.clips;
+                for (var i = 0; i < clips.length; i++) {
+                    if (clips[i].id === selectedClipId) {
+                        clipData = clips[i];
+                        break;
+                    }
+                }
+                if (!clipData)
+                    return ;
+
+                // GroupControlエフェクトを検索
+                var effects = TimelineBridge.getClipEffectsModel(selectedClipId);
+                for (var j = 0; j < effects.length; j++) {
+                    if (effects[j].id === "GroupControl") {
+                        targetEffect = effects[j];
+                        layerCount = targetEffect.params["layerCount"] || 0;
+                        break;
+                    }
+                }
+            }
+
+            z: -0.5 // クリップの下、グリッドの上
+            visible: targetEffect !== null && layerCount > 0
+            // 位置とサイズ: クリップの開始時間、直下のレイヤーから開始
+            x: clipData ? clipData.startFrame * (TimelineBridge ? TimelineBridge.timelineScale : 1) : 0
+            y: clipData ? (clipData.layer + 1) * timelineViewRoot.layerHeight : 0
+            width: clipData ? clipData.durationFrames * (TimelineBridge ? TimelineBridge.timelineScale : 1) : 0
+            height: layerCount * timelineViewRoot.layerHeight
+
+            Connections {
+                function onSelectedClipIdChanged() {
+                    groupControlCurtain.update();
+                }
+
+                target: TimelineBridge ? TimelineBridge.selection : null
+            }
+
+            Connections {
+                function onClipsChanged() {
+                    groupControlCurtain.update();
+                }
+
+                function onClipEffectsChanged(clipId) {
+                    if (clipId === groupControlCurtain.selectedClipId)
+                        groupControlCurtain.update();
+
+                }
+
+                target: TimelineBridge
+            }
+
+            Connections {
+                function onParamsChanged() {
+                    if (groupControlCurtain.targetEffect)
+                        groupControlCurtain.layerCount = groupControlCurtain.targetEffect.params["layerCount"] || 0;
+
+                }
+
+                target: groupControlCurtain.targetEffect
+                ignoreUnknownSignals: true
+            }
+
+            Rectangle {
+                anchors.fill: parent
+                color: Qt.rgba(0, 0.8, 0, 0.15) // AviUtl風の緑色半透明
+                border.color: Qt.rgba(0, 0.8, 0, 0.4)
+                border.width: 1
+            }
+
+        }
+
         // クリップ一覧
         Repeater {
             model: TimelineBridge ? TimelineBridge.clips : []
 
-            delegate: Rectangle {
-                id: clipRect
+            delegate: Item {
+                id: clipDelegate
 
                 property double scale: TimelineBridge ? TimelineBridge.timelineScale : 1
                 // 選択状態を監視 (AviUtl風の視覚フィードバック)
@@ -233,186 +321,257 @@ ScrollView {
                 }
                 // レイヤーがロックされているか確認
                 readonly property bool isLayerLocked: getLayerLocked(modelData.layer)
+                // グループ制御情報
+                property int groupLayerCount: 0
+                property var groupEffectModel: null
 
+                function updateGroupInfo() {
+                    groupLayerCount = 0;
+                    groupEffectModel = null;
+                    if (!isSelected || !TimelineBridge)
+                        return ;
+
+                    var effects = TimelineBridge.getClipEffectsModel(modelData.id);
+                    for (var i = 0; i < effects.length; i++) {
+                        if (effects[i].id === "GroupControl") {
+                            groupEffectModel = effects[i];
+                            groupLayerCount = groupEffectModel.params["layerCount"] || 0;
+                            break;
+                        }
+                    }
+                }
+
+                onIsSelectedChanged: updateGroupInfo()
+                Component.onCompleted: updateGroupInfo()
                 x: modelData.startFrame * scale
                 y: modelData.layer * layerHeight
                 width: modelData.durationFrames * scale
-                height: layerHeight - 2
-                // 選択時は背景を明るく、枠をオレンジに
-                color: isSelected ? "#77ccbb" : "#66aa99"
-                border.color: isSelected ? "#ff8800" : "#ffffff"
-                border.width: isSelected ? 2 : 1
-                opacity: 0.8
-                radius: 4
+                height: layerHeight
+                z: modelData.layer // レイヤー順に重ね合わせ
 
-                Text {
-                    anchors.centerIn: parent
-                    text: modelData.type + " (" + modelData.id + ")"
-                    color: "white"
-                    font.pixelSize: 10
+                Connections {
+                    function onClipEffectsChanged(clipId) {
+                        if (clipId === modelData.id)
+                            updateGroupInfo();
+
+                    }
+
+                    target: TimelineBridge
                 }
 
-                // クリップ操作（選択・移動）
-                MouseArea {
-                    id: moveArea
+                Connections {
+                    function onParamsChanged() {
+                        if (clipDelegate.groupEffectModel)
+                            clipDelegate.groupLayerCount = clipDelegate.groupEffectModel.params["layerCount"] || 0;
+
+                    }
+
+                    target: clipDelegate.groupEffectModel
+                    ignoreUnknownSignals: true
+                }
+
+                // グループ制御の有効範囲表示 (カーテン)
+                Rectangle {
+                    visible: clipDelegate.isSelected && clipDelegate.groupLayerCount > 0
+                    x: 0
+                    y: layerHeight
+                    width: parent.width
+                    height: clipDelegate.groupLayerCount * layerHeight
+                    color: Qt.rgba(0, 0.8, 0, 0.15)
+                    border.color: Qt.rgba(0, 0.8, 0, 0.4)
+                    border.width: 1
+                    z: -1 // クリップの下
+                }
+
+                Rectangle {
+                    id: clipRect
 
                     anchors.fill: parent
-                    anchors.rightMargin: clipResizeHandleWidth
-                    // ロックされたレイヤーではドラッグ不可
-                    drag.target: clipRect.isLayerLocked ? null : clipRect
-                    drag.axis: Drag.XAndYAxis
-                    drag.smoothed: false
-                    acceptedButtons: Qt.LeftButton | Qt.RightButton
-                    cursorShape: clipRect.isLayerLocked ? Qt.ForbiddenCursor : Qt.OpenHandCursor
-                    onPressed: {
-                        if (clipRect.isLayerLocked)
-                            return ;
+                    anchors.bottomMargin: 2
+                    // 選択時は背景を明るく、枠をオレンジに
+                    color: isSelected ? "#77ccbb" : "#66aa99"
+                    border.color: isSelected ? "#ff8800" : "#ffffff"
+                    border.width: isSelected ? 2 : 1
+                    opacity: 0.8
+                    radius: 4
 
-                        if (TimelineBridge)
-                            TimelineBridge.selectClip(modelData.id);
-
+                    Text {
+                        anchors.centerIn: parent
+                        text: modelData.type + " (" + modelData.id + ")"
+                        color: "white"
+                        font.pixelSize: 10
                     }
-                    onReleased: {
-                        if (TimelineBridge) {
-                            var newStart = timelineViewRoot.snapFrame(clipRect.x / clipRect.scale);
-                            var newLayer = Math.round(clipRect.y / layerHeight);
-                            TimelineBridge.updateClip(modelData.id, newLayer, newStart, modelData.durationFrames);
-                        }
-                    }
-                    // 右クリックメニュー
-                    onDoubleClicked: {
-                        // ダブルクリックでオブジェクト設定ダイアログを開く
-                        if (WindowManager)
-                            WindowManager.raiseWindow("objectSettings");
 
-                    }
-                    onClicked: (mouse) => {
-                        if (mouse.button === Qt.RightButton) {
-                            var frame = timelineViewRoot.snapFrame((clipRect.x + mouse.x) / clipRect.scale);
-                            contextMenu.openAt(mouse.x, mouse.y, "clip", frame, modelData.layer, modelData.id);
-                        }
-                    }
-                }
-
-                // クリップリサイズハンドル（左端） - [Optimized UX: Left Edge Resize]
-                Rectangle {
-                    width: clipResizeHandleWidth
-                    height: parent.height
-                    anchors.left: parent.left
-                    color: "transparent"
-                    z: 10
-
+                    // クリップ操作（選択・移動）
                     MouseArea {
-                        property int startX: 0
-                        property int startFrame: 0
-                        property int startDuration: 0
-                        property bool resizing: false
+                        id: moveArea
 
                         anchors.fill: parent
-                        cursorShape: Qt.SizeHorCursor
-                        hoverEnabled: true
-                        preventStealing: true
-                        onPressed: (mouse) => {
-                            if (clipRect.isLayerLocked)
+                        anchors.rightMargin: clipResizeHandleWidth
+                        // ロックされたレイヤーではドラッグ不可
+                        drag.target: clipDelegate.isLayerLocked ? null : clipDelegate
+                        drag.axis: Drag.XAndYAxis
+                        drag.smoothed: false
+                        acceptedButtons: Qt.LeftButton | Qt.RightButton
+                        cursorShape: clipDelegate.isLayerLocked ? Qt.ForbiddenCursor : Qt.OpenHandCursor
+                        onPressed: {
+                            if (clipDelegate.isLayerLocked)
                                 return ;
 
-                            startX = mouseX;
-                            startFrame = modelData.startFrame;
-                            startDuration = modelData.durationFrames;
-                            resizing = true;
                             if (TimelineBridge)
                                 TimelineBridge.selectClip(modelData.id);
 
-                            mouse.accepted = true;
                         }
-                        onPositionChanged: (mouse) => {
-                            if (resizing) {
-                                var deltaX = mouseX - startX;
-                                var currentScale = clipRect.scale;
-                                var deltaFrames = Math.round(deltaX / currentScale);
-                                // ガード: 持続時間が5フレーム未満にならないように
-                                if (startDuration - deltaFrames < 5)
+                        onReleased: {
+                            if (TimelineBridge) {
+                                var newStart = timelineViewRoot.snapFrame(clipDelegate.x / clipDelegate.scale);
+                                var newLayer = Math.round(clipDelegate.y / layerHeight);
+                                TimelineBridge.updateClip(modelData.id, newLayer, newStart, modelData.durationFrames);
+                                // バインディング復元
+                                clipDelegate.x = Qt.binding(function() {
+                                    return modelData.startFrame * clipDelegate.scale;
+                                });
+                                clipDelegate.y = Qt.binding(function() {
+                                    return modelData.layer * layerHeight;
+                                });
+                            }
+                        }
+                        // 右クリックメニュー
+                        onDoubleClicked: {
+                            // ダブルクリックでオブジェクト設定ダイアログを開く
+                            if (WindowManager)
+                                WindowManager.raiseWindow("objectSettings");
+
+                        }
+                        onClicked: (mouse) => {
+                            if (mouse.button === Qt.RightButton) {
+                                var frame = timelineViewRoot.snapFrame((clipDelegate.x + mouse.x) / clipDelegate.scale);
+                                contextMenu.openAt(mouse.x, mouse.y, "clip", frame, modelData.layer, modelData.id);
+                            }
+                        }
+                    }
+
+                    // クリップリサイズハンドル（左端） - [Optimized UX: Left Edge Resize]
+                    Rectangle {
+                        width: clipResizeHandleWidth
+                        height: parent.height
+                        anchors.left: parent.left
+                        color: "transparent"
+                        z: 10
+
+                        MouseArea {
+                            property int startX: 0
+                            property int startFrame: 0
+                            property int startDuration: 0
+                            property bool resizing: false
+
+                            anchors.fill: parent
+                            cursorShape: Qt.SizeHorCursor
+                            hoverEnabled: true
+                            preventStealing: true
+                            onPressed: (mouse) => {
+                                if (clipDelegate.isLayerLocked)
                                     return ;
 
-                                // プレビュー更新 (即時反映)
-                                var newStart = startFrame + deltaFrames;
-                                var newDur = startDuration - deltaFrames;
-                                clipRect.x = newStart * currentScale;
-                                clipRect.width = newDur * currentScale;
+                                startX = mouseX;
+                                startFrame = modelData.startFrame;
+                                startDuration = modelData.durationFrames;
+                                resizing = true;
+                                if (TimelineBridge)
+                                    TimelineBridge.selectClip(modelData.id);
+
+                                mouse.accepted = true;
+                            }
+                            onPositionChanged: (mouse) => {
+                                if (resizing) {
+                                    var deltaX = mouseX - startX;
+                                    var currentScale = clipDelegate.scale;
+                                    var deltaFrames = Math.round(deltaX / currentScale);
+                                    // ガード: 持続時間が5フレーム未満にならないように
+                                    if (startDuration - deltaFrames < 5)
+                                        return ;
+
+                                    // プレビュー更新 (即時反映)
+                                    var newStart = startFrame + deltaFrames;
+                                    var newDur = startDuration - deltaFrames;
+                                    clipDelegate.x = newStart * currentScale;
+                                    clipDelegate.width = newDur * currentScale;
+                                }
+                            }
+                            onReleased: {
+                                resizing = false;
+                                if (TimelineBridge) {
+                                    var currentScale = clipDelegate.scale;
+                                    // 最終的な座標からフレームを逆算（スナップ含む）
+                                    var finalStart = timelineViewRoot.snapFrame(clipDelegate.x / currentScale);
+                                    // Startがズレた分、Durationを補正してEndを維持する
+                                    var endFrame = startFrame + startDuration;
+                                    var finalDur = endFrame - finalStart;
+                                    TimelineBridge.updateClip(modelData.id, modelData.layer, finalStart, finalDur);
+                                    // バインディングが切れたプロパティを復元
+                                    clipDelegate.x = Qt.binding(function() {
+                                        return modelData.startFrame * clipDelegate.scale;
+                                    });
+                                    clipDelegate.width = Qt.binding(function() {
+                                        return modelData.durationFrames * clipDelegate.scale;
+                                    });
+                                }
                             }
                         }
-                        onReleased: {
-                            resizing = false;
-                            if (TimelineBridge) {
-                                var currentScale = clipRect.scale;
-                                // 最終的な座標からフレームを逆算（スナップ含む）
-                                var finalStart = timelineViewRoot.snapFrame(clipRect.x / currentScale);
-                                // Startがズレた分、Durationを補正してEndを維持する
-                                var endFrame = startFrame + startDuration;
-                                var finalDur = endFrame - finalStart;
-                                TimelineBridge.updateClip(modelData.id, modelData.layer, finalStart, finalDur);
-                                // バインディングが切れたプロパティを復元
-                                clipRect.x = Qt.binding(function() {
-                                    return modelData.startFrame * clipRect.scale;
-                                });
-                                clipRect.width = Qt.binding(function() {
-                                    return modelData.durationFrames * clipRect.scale;
-                                });
-                            }
-                        }
+
                     }
 
-                }
+                    // クリップリサイズハンドル（右端）
+                    Rectangle {
+                        width: clipResizeHandleWidth
+                        height: parent.height
+                        anchors.right: parent.right
+                        color: "transparent"
 
-                // クリップリサイズハンドル（右端）
-                Rectangle {
-                    width: clipResizeHandleWidth
-                    height: parent.height
-                    anchors.right: parent.right
-                    color: "transparent"
+                        MouseArea {
+                            property int startX: 0
+                            property int startWidth: 0
+                            property bool resizing: false
 
-                    MouseArea {
-                        property int startX: 0
-                        property int startWidth: 0
-                        property bool resizing: false
+                            anchors.fill: parent
+                            cursorShape: Qt.SizeHorCursor
+                            hoverEnabled: true
+                            preventStealing: true
+                            onPressed: {
+                                if (clipDelegate.isLayerLocked)
+                                    return ;
 
-                        anchors.fill: parent
-                        cursorShape: Qt.SizeHorCursor
-                        hoverEnabled: true
-                        preventStealing: true
-                        onPressed: {
-                            if (clipRect.isLayerLocked)
-                                return ;
+                                startX = mouseX;
+                                startWidth = clipDelegate.width;
+                                resizing = true;
+                                if (TimelineBridge)
+                                    TimelineBridge.selectClip(modelData.id);
 
-                            startX = mouseX;
-                            startWidth = clipRect.width;
-                            resizing = true;
-                            if (TimelineBridge)
-                                TimelineBridge.selectClip(modelData.id);
+                            }
+                            onPositionChanged: {
+                                if (resizing) {
+                                    var delta = mouseX - startX;
+                                    var newW = startWidth + delta;
+                                    if (newW < 5)
+                                        newW = 5;
 
-                        }
-                        onPositionChanged: {
-                            if (resizing) {
-                                var delta = mouseX - startX;
-                                var newW = startWidth + delta;
-                                if (newW < 5)
-                                    newW = 5;
-
-                                clipRect.width = newW;
+                                    clipDelegate.width = newW;
+                                }
+                            }
+                            onReleased: {
+                                resizing = false;
+                                if (TimelineBridge) {
+                                    var scale = TimelineBridge.timelineScale;
+                                    var newDur = Math.round(clipDelegate.width / scale);
+                                    TimelineBridge.updateClip(modelData.id, modelData.layer, modelData.startFrame, newDur);
+                                }
+                                // バインディング復元
+                                clipDelegate.width = Qt.binding(function() {
+                                    return modelData.durationFrames * clipDelegate.scale;
+                                });
                             }
                         }
-                        onReleased: {
-                            resizing = false;
-                            if (TimelineBridge) {
-                                var scale = TimelineBridge.timelineScale;
-                                var newDur = Math.round(clipRect.width / scale);
-                                TimelineBridge.updateClip(modelData.id, modelData.layer, modelData.startFrame, newDur);
-                            }
-                            // バインディング復元
-                            clipRect.width = Qt.binding(function() {
-                                return modelData.durationFrames * clipRect.scale;
-                            });
-                        }
+
                     }
 
                 }
