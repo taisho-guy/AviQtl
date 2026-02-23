@@ -207,6 +207,22 @@ bool ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
                     clip.effects.append(eff);
                 }
             }
+
+            // 後方互換性: transform エフェクトがなければ追加
+            bool hasTransform = false;
+            for (const auto *eff : clip.effects) {
+                if (eff->id() == "transform") {
+                    hasTransform = true;
+                    break;
+                }
+            }
+            if (!hasTransform) {
+                EffectMetadata meta = EffectRegistry::instance().getEffect("transform");
+                if (!meta.id.isEmpty()) {
+                    auto *eff = new UI::EffectModel(meta.id, meta.name, meta.defaultParams, meta.qmlSource, meta.uiDefinition, nullptr);
+                    clip.effects.prepend(eff); // 慣例的に先頭に追加
+                }
+            }
             tempClips.append(clip);
         }
     }

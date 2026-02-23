@@ -40,7 +40,7 @@ Common.BaseObject {
 
         materials: DefaultMaterial {
             lighting: DefaultMaterial.NoLighting
-            blendMode: DefaultMaterial.SourceOver
+            blendMode: root.blendMode
 
             diffuseMap: Texture {
                 sourceItem: renderer.output

@@ -1,0 +1,31 @@
+{
+    "id": "transform",
+    "name": "座標",
+    "category": "object",
+    "qml": "Transform.qml",
+    "params": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 100,
+        "rotationX": 0,
+        "rotationY": 0,
+        "rotationZ": 0,
+        "opacity": 1.0,
+        "blendMode": "通常"
+    },
+    "ui": {
+        "group": "object",
+        "controls": [
+            { "type": "float", "param": "x", "label": "X", "min": -4000, "max": 4000 },
+            { "type": "float", "param": "y", "label": "Y", "min": -4000, "max": 4000 },
+            { "type": "float", "param": "z", "label": "Z", "min": -4000, "max": 4000 },
+            { "type": "float", "param": "scale", "label": "拡大率", "min": 0, "max": 5000 },
+            { "type": "float", "param": "rotationX", "label": "X軸回転", "min": -3600, "max": 3600 },
+            { "type": "float", "param": "rotationY", "label": "Y軸回転", "min": -3600, "max": 3600 },
+            { "type": "float", "param": "rotationZ", "label": "Z軸回転", "min": -3600, "max": 3600 },
+            { "type": "slider", "param": "opacity", "label": "不透明度", "min": 0, "max": 1, "step": 0.01 },
+            { "type": "enum", "param": "blendMode", "label": "合成モード", "options": ["通常", "スクリーン", "乗算", "オーバーレイ", "焼き込み", "覆い焼き"] }
+        ]
+    }
+}

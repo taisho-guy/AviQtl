@@ -140,19 +140,12 @@ void TimelineService::createClipInternal(int clipId, const QString &type, int st
     newClip.durationFrames = defaultDuration;
     newClip.layer = layer;
 
-    // Transformエフェクトは全クリップに必須
-    auto *tm = new EffectModel("transform", "座標", {{"x", 0}, {"y", 0}, {"z", 0}, {"scale", 100.0}, {"aspect", 0.0}, {"rotationX", 0.0}, {"rotationY", 0.0}, {"rotationZ", 0.0}, {"opacity", 1.0}}, "", {}, this);
-    connect(tm, &EffectModel::keyframeTracksChanged, this, &TimelineService::clipsChanged);
-    newClip.effects.append(tm);
-
-    // オブジェクト固有のエフェクト
-    auto meta = Rina::Core::EffectRegistry::instance().getEffect(type);
-    auto *cm = new EffectModel(meta.id.isEmpty() ? "unknown" : meta.id, meta.name.isEmpty() ? "Unknown" : meta.name, meta.defaultParams, meta.qmlSource, meta.uiDefinition, this);
-    connect(cm, &EffectModel::keyframeTracksChanged, this, &TimelineService::clipsChanged);
-    newClip.effects.append(cm);
-
     currentClips.append(newClip);
-    emit clipsChanged();
+
+    // デフォルトで transform エフェクトを追加
+    addEffectInternal(clipId, "transform");
+    addEffectInternal(clipId, type);
+
     emit clipCreated(newClip.id, newClip.layer, newClip.startFrame, newClip.durationFrames, newClip.type);
 }
 

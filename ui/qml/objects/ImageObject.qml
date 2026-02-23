@@ -21,7 +21,7 @@ Common.BaseObject {
 
         materials: DefaultMaterial {
             lighting: DefaultMaterial.NoLighting
-            blendMode: DefaultMaterial.SourceOver
+            blendMode: base.blendMode
 
             diffuseMap: Texture {
                 sourceItem: renderer.output
