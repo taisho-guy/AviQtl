@@ -1,4 +1,4 @@
-import QtQml 2.15
+import QtQml
 import QtQuick
 import QtQuick3D
 import "qrc:/qt/qml/Rina/ui/qml/common" as Common

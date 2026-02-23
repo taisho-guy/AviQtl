@@ -1,6 +1,6 @@
 import "../common" as Common
-import QtQuick 2.15
-import QtQuick.Shapes 1.15
+import QtQuick
+import QtQuick.Shapes
 import QtQuick3D
 import Rina 1.0
 import Rina.Core 1.0

@@ -1,6 +1,6 @@
-import QtQml 2.15
-import QtQuick 2.15
-import QtQuick3D 6.0
+import QtQml
+import QtQuick
+import QtQuick3D
 import "common" as Common
 import "common/Logger.js" as Logger
 

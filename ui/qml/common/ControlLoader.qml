@@ -1,8 +1,8 @@
 import "." as Common // 同じディレクトリ内のコンポーネント(ParamControl)を参照
-import QtQuick 2.15
-import QtQuick.Controls 2.15
+import QtQuick
+import QtQuick.Controls
 import QtQuick.Dialogs
-import QtQuick.Layouts 1.15
+import QtQuick.Layouts
 
 Loader {
     // ===============================================

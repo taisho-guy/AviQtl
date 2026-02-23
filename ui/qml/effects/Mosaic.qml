@@ -1,4 +1,4 @@
-import QtQuick 2.15
+import QtQuick
 import "qrc:/qt/qml/Rina/ui/qml/common" as Common
 
 Common.BaseEffect {

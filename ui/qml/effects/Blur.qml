@@ -1,5 +1,5 @@
-import Qt5Compat.GraphicalEffects 1.0
-import QtQuick 2.15
+import Qt5Compat.GraphicalEffects
+import QtQuick
 import "qrc:/qt/qml/Rina/ui/qml/common" as Common
 
 Common.BaseEffect {
