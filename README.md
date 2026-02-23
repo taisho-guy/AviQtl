@@ -20,18 +20,19 @@ RinaはAviUtl 1.10（ExEdit 0.92）の代替を目指すプロジェクトです
 
 ## ダウンロード
 
-### [Linux(x86_64) / Windows(x86_64) / macOS(ARM64)](https://codeberg.org/taisho-guy/Rina/releases)
+### [Linux(x86_64)](https://codeberg.org/taisho-guy/Rina/releases)
 
 > [!NOTE]
 > - Linux版は依存関係を同梱しておりません。Qt6, LuaJIT, Vulkan, FFmpegをインストールしてください。
-> - Arch Linux上でビルドしているため、最新のランタイムが利用できないディストリビューション（Ubuntu等）では動作しない場合がございます。ローリングリリースのディストリビューション（CachyOS等）でご利用頂くことを推奨致します。
+> - Arch Linux上でビルドしているため、最新のランタイムが利用できないディストリビューションでは動作しない場合がございます。ローリングリリースのディストリビューションでご利用頂くことを推奨致します。
+> - Windows / macOS版はβ版からバイナリを配布する予定です。現在はα未満です。
 
-## ビルド手順(CachyOS推奨)
+## ビルド手順(CachyOS)
 
 - 依存関係をインストールします
 
 ```
-paru -S --needed fish git cmake ninja qt6 lua-jit vulkan-devel base-devel mold p7zip fftw wayland-protocols libffi ladspa lv2 lilv clap vst3sdk
+paru -S --needed base-devel git cmake ninja clang mold zip mesa vulkan-devel libxkbcommon wayland wayland-protocols libffi ffmpeg luajit fftw qt6 lilv ladspa clap vst3sdk
 ```
 
 - リポジトリをクローンします
@@ -44,7 +45,7 @@ git clone https://codeberg.org/taisho-guy/Rina.git
 
 ```
 cd Rina
-python BUILD.py
+python BUILD.py --gui
 ```
 
 - 実行します
@@ -55,7 +56,7 @@ python BUILD.py
 
 ## サードパーティー製の埋め込みリソース
 
-- [Remix Icon](https://github.com/Remix-Design/RemixIcon) (MIT License)
+- [Remix Icon](https://github.com/Remix-Design/RemixIcon) ([Remix Icon License v1.0](https://raw.githubusercontent.com/Remix-Design/RemixIcon/refs/heads/master/License))
 
 ## ライセンス
 

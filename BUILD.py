@@ -5,8 +5,6 @@ import shutil
 import multiprocessing
 from pathlib import Path
 from PySide6 import QtWidgets, QtCore, QtGui
-
-# psutilは必須とする（開発環境なので）
 import psutil
 
 class BuildWorker(QtCore.QThread):
@@ -22,7 +20,6 @@ class BuildWorker(QtCore.QThread):
         self.is_debug = is_debug
 
     def _run_cmd(self, cmd):
-        # 開発者向けにコマンドをログ出力
         self.log_signal.emit(f"Run: {' '.join(cmd)}")
         process = subprocess.Popen(
             cmd,
@@ -40,17 +37,14 @@ class BuildWorker(QtCore.QThread):
 
     def run(self):
         try:
-            # 1. リソース割り当て: Ryzen 8840U (16 threads) をフル活用
-            # 開発機なので容赦なく全スレッドを使う
             cpu_count = multiprocessing.cpu_count()
             j_slots = cpu_count
 
-            self.log_signal.emit(f"🚀 リソース割り当て: {j_slots} 並列ジョブ (Host Native)")
+            self.log_signal.emit(f"リソース割り当て: {j_slots} 並列ジョブ")
             
             name = "Debug" if self.is_debug else "Release"
             self.progress_signal.emit(10, f"{name} ビルド開始")
             
-            # ビルドディレクトリを保持 (インクリメンタルビルドのため削除しない)
             work_dir = self.temp_base / name
             
             # 1. CMake Configuration
@@ -64,7 +58,6 @@ class BuildWorker(QtCore.QThread):
                 "-DCMAKE_CXX_COMPILER=clang++",
             ]
 
-            # 究極のローカル最適化フラグ
             if not self.is_debug:
                 conf_cmd.append("-DCMAKE_CXX_FLAGS=-O3 -march=native -mtune=native -flto=thin -fno-semantic-interposition")
                 conf_cmd.append("-DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld -Wl,--as-needed")
@@ -73,13 +66,12 @@ class BuildWorker(QtCore.QThread):
             self._run_cmd(conf_cmd)
 
             # 3. Build
-            self.log_signal.emit(f"🔨 {name} コンパイル中...")
-            # nice値は削除し、最高優先度で実行
+            self.log_signal.emit(f"{name} コンパイル中...")
             build_cmd = ["cmake", "--build", str(work_dir), "-j", str(j_slots)]
             self._run_cmd(build_cmd)
 
             # 4. 配布処理 (.build_tmp -> build)
-            self.log_signal.emit(f"📂 成果物を {self.output_dir} にコピー中...")
+            self.log_signal.emit(f"成果物を {self.output_dir} にコピー中...")
             self.output_dir.mkdir(parents=True, exist_ok=True)
 
             dest_bin = self.output_dir / "Rina"
@@ -102,11 +94,11 @@ class BuildWorker(QtCore.QThread):
                 if plugins_dest.exists(): shutil.rmtree(plugins_dest)
                 shutil.copytree(plugins_src, plugins_dest)
 
-            self.log_signal.emit(f"✅ ビルド完了: {dest_bin}")
-            self.log_signal.emit("ヒント: ./BUILD.py --run で直ちに起動できます")
+            self.log_signal.emit(f"ビルド完了：{dest_bin}")
+            self.log_signal.emit("ヒント：python BUILD.py --runで直ちに起動できます")
             
             self.progress_signal.emit(100, "完了")
-            self.finished_signal.emit(True, f"ビルド成功: {dest_bin}")
+            self.finished_signal.emit(True, f"ビルド成功：{dest_bin}")
         except Exception as e:
             self.finished_signal.emit(False, str(e))
 
@@ -126,7 +118,7 @@ class RinaGui(QtWidgets.QMainWindow):
         central = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout(central)
         
-        self.status_label = QtWidgets.QLabel("ステータス: 準備完了")
+        self.status_label = QtWidgets.QLabel("ステータス：準備完了")
         layout.addWidget(self.status_label)
         
         self.progress_bar = QtWidgets.QProgressBar()
@@ -137,10 +129,10 @@ class RinaGui(QtWidgets.QMainWindow):
         layout.addWidget(self.log_view)
         
         btn_layout = QtWidgets.QHBoxLayout()
-        self.btn_full = QtWidgets.QPushButton("🚀 全てビルド & 圧縮")
+        self.btn_full = QtWidgets.QPushButton("リリースビルド")
         self.btn_full.clicked.connect(self.run_full_build)
         
-        self.btn_debug = QtWidgets.QPushButton("🛠 ホストデバッグ")
+        self.btn_debug = QtWidgets.QPushButton("デバッグビルド")
         self.btn_debug.clicked.connect(self.run_debug_build)
         
         btn_layout.addWidget(self.btn_full)
@@ -175,7 +167,7 @@ class RinaGui(QtWidgets.QMainWindow):
         if success:
             QtWidgets.QMessageBox.information(self, "成功", "ビルドが完了しました！")
         else:
-            self.log_view.appendPlainText(f"\n❌ エラー: {msg}")
+            self.log_view.appendPlainText(f"\nエラー: {msg}")
 
     def set_ui_enabled(self, enabled):
         self.btn_full.setEnabled(enabled)
@@ -202,6 +194,6 @@ if __name__ == "__main__":
         worker.progress_signal.connect(lambda val, msg: print(f"[{val}%] {msg}"))
         worker.finished_signal.connect(lambda success, msg: app.quit() if success else app.exit(1))
         
-        print("🚀 CLIデバッグビルドを開始します...")
+        print("デバッグビルドを開始します...")
         worker.start()
         sys.exit(app.exec())

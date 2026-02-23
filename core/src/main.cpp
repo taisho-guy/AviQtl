@@ -50,8 +50,8 @@ int main(int argc, char *argv[]) {
     // 1. バックエンド指定を削除 (Qtの自動選択に任せる / FFmpeg優先)
     // qputenv("QT_MEDIA_BACKEND", "gstreamer");
 
-    // 2. レンダリングバックエンドの強制を解除 (No RHI backend 警告対策)
-    // qputenv("QSG_RHI_BACKEND", "vulkan");
+    // 2. レンダリングバックエンドをVulkanに強制
+    qputenv("QSG_RHI_BACKEND", "vulkan");
 
     // 1. アプリケーション初期化
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)

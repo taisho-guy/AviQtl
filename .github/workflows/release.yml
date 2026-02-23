@@ -245,25 +245,14 @@ jobs:
     container:
       image: archlinux:latest
     steps:
-      - name: Install System Dependencies
+      - name: 依存関係をインストール
         run: |
           pacman -Syu --noconfirm
-          # ビルドと実行に必要なパッケージをすべてシステムに入れる
-          pacman -S --noconfirm \
-            base-devel git cmake ninja clang mold zip \
-            mesa vulkan-headers vulkan-icd-loader \
-            libxkbcommon wayland wayland-protocols libffi \
-            ffmpeg luajit fftw \
-            qt6-base qt6-declarative qt6-shadertools qt6-5compat qt6-svg qt6-multimedia qt6-quick3d \
-            lilv ladspa clap
+          pacman -S --noconfirm --needed base-devel git cmake ninja clang mold zip mesa vulkan-devel libxkbcommon wayland wayland-protocols libffi ffmpeg luajit fftw qt6 lilv ladspa clap vst3sdk
 
       - uses: actions/checkout@v4
 
-      - name: Install VST3 SDK
-        run: |
-          git clone https://github.com/steinberg-public/vst3sdk.git --depth 1
-
-      - name: Build
+      - name: ビルド
         env:
           CC: clang
           CXX: clang++
@@ -274,12 +263,11 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_CXX_FLAGS="-O3 -march=x86-64-v3 -flto -fno-semantic-interposition" \
             -DCMAKE_POLICY_DEFAULT_CMP0056=NEW \
-            -DCMAKE_SKIP_INSTALL_RPATH=ON \
-            -DVST3_SDK_DIR=$(pwd)/vst3sdk
+            -DCMAKE_SKIP_INSTALL_RPATH=ON
             
           cmake --build build
 
-      - name: Package
+      - name: 圧縮
         run: |
           mkdir dist
           cd build
@@ -301,7 +289,7 @@ jobs:
           cd ../dist
           zip -r Rina-Linux-x86_64-v3.zip .
 
-      - name: Upload Artifact
+      - name: アップロード
         uses: actions/upload-artifact@v4
         with:
           name: linux-arch-build
