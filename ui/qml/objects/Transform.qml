@@ -23,7 +23,16 @@ Common.BaseEffect {
         // Z軸の回転方向が逆
         return Qt.vector3d(rx, ry, -rz);
     }
+    readonly property vector3d outputPivot: {
+        const cx = evalNumber("cx", 0);
+        const cy = evalNumber("cy", 0);
+        const cz = evalNumber("cz", 0);
+        return Qt.vector3d(cx, -cy, cz);
+    }
     readonly property real outputOpacity: evalNumber("opacity", 1)
+    readonly property int outputCullMode: {
+        return evalParam("backfaceVisible", true) ? DefaultMaterial.NoCulling : DefaultMaterial.BackFaceCulling;
+    }
     // 計算結果を保持するプロパティ (2D FrameBufferキャプチャ用)
     readonly property real output2dScale: Math.max(0, evalNumber("scale", 100)) / 100
     readonly property real output2dX: evalNumber("x", 0)

@@ -307,7 +307,8 @@ Common.RinaWindow {
                                         "ease_in_out": " (加減速)",
                                         "bezier": " (ベジェ)"
                                     };
-                                    return key + (isMoving ? (interpLabel[interpType] || "") : "");
+                                    var name = (def.label && def.label !== "") ? def.label : key;
+                                    return name + (isMoving ? (interpLabel[interpType] || "") : "");
                                 }
                                 startValue: Number(startVal) || 0
                                 endValue: Number(endVal) || 0

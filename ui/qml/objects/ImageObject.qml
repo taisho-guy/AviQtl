@@ -22,6 +22,7 @@ Common.BaseObject {
         materials: DefaultMaterial {
             lighting: DefaultMaterial.NoLighting
             blendMode: base.blendMode
+            cullMode: base.cullMode
 
             diffuseMap: Texture {
                 sourceItem: renderer.output

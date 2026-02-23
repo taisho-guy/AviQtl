@@ -78,7 +78,7 @@ Loader {
         id: floatComponent
 
         Common.ParamControl {
-            paramName: controlLoader.definition.label || controlLoader.definition.param || controlLoader.definition.name || "Param"
+            paramName: (controlLoader.definition.label && controlLoader.definition.label !== "") ? controlLoader.definition.label : (controlLoader.definition.param || controlLoader.definition.name || "Param")
             // 値の初期化 (null/undefinedチェック)
             startValue: (controlLoader.value !== undefined && controlLoader.value !== null) ? Number(controlLoader.value) : (controlLoader.definition.default || 0)
             // ※ 現状のControlLoaderは単一値(value)しか受け取っていないため、endValueはstartValueと同じにするか、
@@ -115,7 +115,7 @@ Loader {
             spacing: 8
 
             Label {
-                text: controlLoader.definition.label || controlLoader.definition.name
+                text: (controlLoader.definition.label && controlLoader.definition.label !== "") ? controlLoader.definition.label : (controlLoader.definition.param || controlLoader.definition.name || "Param")
                 color: "white"
                 Layout.preferredWidth: 80
                 elide: Text.ElideRight
@@ -171,7 +171,7 @@ Loader {
             }
 
             Label {
-                text: controlLoader.definition.label || controlLoader.definition.name
+                text: (controlLoader.definition.label && controlLoader.definition.label !== "") ? controlLoader.definition.label : (controlLoader.definition.param || controlLoader.definition.name || "Param")
                 color: "white"
                 Layout.preferredWidth: 80
             }
@@ -215,7 +215,7 @@ Loader {
             spacing: 8
 
             Label {
-                text: controlLoader.definition.label || controlLoader.definition.name
+                text: (controlLoader.definition.label && controlLoader.definition.label !== "") ? controlLoader.definition.label : (controlLoader.definition.param || controlLoader.definition.name || "Param")
                 color: "white"
                 Layout.preferredWidth: 80
             }
@@ -262,7 +262,7 @@ Loader {
             }
 
             Label {
-                text: controlLoader.definition.label || controlLoader.definition.name
+                text: (controlLoader.definition.label && controlLoader.definition.label !== "") ? controlLoader.definition.label : (controlLoader.definition.param || controlLoader.definition.name || "Param")
                 color: "white"
                 Layout.preferredWidth: 80
             }
@@ -296,7 +296,7 @@ Loader {
             spacing: 8
 
             Label {
-                text: controlLoader.definition.label || controlLoader.definition.name
+                text: (controlLoader.definition.label && controlLoader.definition.label !== "") ? controlLoader.definition.label : (controlLoader.definition.param || controlLoader.definition.name || "Param")
                 color: "white"
                 Layout.preferredWidth: 80
             }
@@ -322,7 +322,7 @@ Loader {
             spacing: 8
 
             Label {
-                text: controlLoader.definition.label || controlLoader.definition.name
+                text: (controlLoader.definition.label && controlLoader.definition.label !== "") ? controlLoader.definition.label : (controlLoader.definition.param || controlLoader.definition.name || "Param")
                 color: "white"
                 Layout.preferredWidth: 80
             }
@@ -353,7 +353,7 @@ Loader {
             spacing: 8
 
             Label {
-                text: controlLoader.definition.label || controlLoader.definition.name
+                text: (controlLoader.definition.label && controlLoader.definition.label !== "") ? controlLoader.definition.label : (controlLoader.definition.param || controlLoader.definition.name || "Param")
                 color: "white"
                 Layout.preferredWidth: 80
             }
@@ -416,7 +416,7 @@ Loader {
             }
 
             Label {
-                text: controlLoader.definition.label || controlLoader.definition.name
+                text: (controlLoader.definition.label && controlLoader.definition.label !== "") ? controlLoader.definition.label : (controlLoader.definition.param || controlLoader.definition.name || "Param")
                 color: "white"
                 Layout.preferredWidth: 80
                 elide: Text.ElideRight

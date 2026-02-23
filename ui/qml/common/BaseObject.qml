@@ -61,6 +61,8 @@ Node {
 
         return DefaultMaterial.SourceOver;
     }
+    // カリングモード (Transform.qmlから取得)
+    readonly property int cullMode: hasTransform ? transformLoader.item.outputCullMode : DefaultMaterial.NoCulling
     // 自動計算プロパティ
     property int currentFrame: (TimelineBridge && TimelineBridge.transport) ? TimelineBridge.transport.currentFrame : 0
     readonly property int relFrame: currentFrame - clipStartFrame
@@ -127,6 +129,7 @@ Node {
     // NodeのプロパティをtransformModelにバインド
     position: hasTransform ? transformLoader.item.outputPosition : Qt.vector3d(0, 0, 0)
     eulerRotation: hasTransform ? transformLoader.item.outputRotation : Qt.vector3d(0, 0, 0)
+    pivot: hasTransform ? transformLoader.item.outputPivot : Qt.vector3d(0, 0, 0)
     scale: Qt.vector3d(1, 1, 1) // 下のModelで個別に設定
     // renderHost が後からセットされても確実に移送する
     onRenderHostChanged: {
