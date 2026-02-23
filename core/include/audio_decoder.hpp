@@ -20,6 +20,7 @@ class AudioDecoder : public QObject {
 
     bool isReady() const { return m_isReady; }
 
+    void setSampleRate(int sampleRate);
   public slots:
     void seek(qint64 ms);
 
@@ -33,11 +34,13 @@ class AudioDecoder : public QObject {
     void onError(QAudioDecoder::Error error);
 
   private:
+    void startDecoding();
     int m_clipId;
     QAudioDecoder *m_decoder;
     std::vector<float> m_fullAudioData; // インターリーブされたPCMデータ (L, R, L, R...)
     bool m_isReady = false;
     mutable std::mutex m_mutex;
+    int m_sampleRate = 48000;
 };
 
 } // namespace Rina::Core

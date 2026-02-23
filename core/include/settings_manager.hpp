@@ -18,6 +18,9 @@ class SettingsManager : public QObject {
     Q_INVOKABLE void load();
     Q_INVOKABLE void save();
 
+    Q_INVOKABLE void setValue(const QString &key, const QVariant &value);
+    Q_INVOKABLE QVariant value(const QString &key, const QVariant &defaultValue = QVariant()) const;
+
   signals:
     void settingsChanged();
 

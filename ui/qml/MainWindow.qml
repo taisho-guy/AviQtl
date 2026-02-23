@@ -146,6 +146,16 @@ ApplicationWindow {
         target: TimelineBridge ? TimelineBridge.transport : null
     }
 
+    Connections {
+        function onSampleRateChanged() {
+            if (TimelineBridge)
+                TimelineBridge.updateAudioSampleRate();
+
+        }
+
+        target: TimelineBridge ? TimelineBridge.project : null
+    }
+
     Platform.FileDialog {
         id: saveDialog
 

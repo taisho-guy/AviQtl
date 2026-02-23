@@ -249,6 +249,9 @@ jobs:
         run: |
           pacman -Syu --noconfirm
           pacman -S --noconfirm --needed base-devel git cmake ninja clang mold zip mesa vulkan-devel libxkbcommon wayland wayland-protocols libffi ffmpeg luajit fftw qt6 lilv ladspa clap vst3sdk
+          
+          # qsbコマンドへのシンボリックリンクを作成 (Qt6 Shader Tools)
+          ln -s /usr/lib/qt6/bin/qsb /usr/local/bin/qsb
 
       - uses: actions/checkout@v4
 

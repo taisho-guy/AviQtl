@@ -40,6 +40,7 @@ class AudioMixer : public QObject {
     void clearChain(int clipId);
 
     void setPlaybackSpeed(double speed) { m_playbackSpeed = speed; }
+    void setSampleRate(int sampleRate);
 
   private:
     QAudioSink *m_audioSink = nullptr;

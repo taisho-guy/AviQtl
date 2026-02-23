@@ -82,12 +82,19 @@ Node {
     // ぼかしパディング自動計算（全オブジェクト共通）
     function getBlurPadding() {
         for (let i = 0; i < rawEffectModels.length; i++) {
-            if (rawEffectModels[i].id === "blur" && rawEffectModels[i].enabled) {
+            if ((rawEffectModels[i].id === "blur" || rawEffectModels[i].id === "border_blur" || rawEffectModels[i].id === "glow" || rawEffectModels[i].id === "flash" || rawEffectModels[i].id === "diffuse_light") && rawEffectModels[i].enabled) {
                 var v = rawEffectModels[i].evaluatedParam ? rawEffectModels[i].evaluatedParam("size", relFrame) : undefined;
                 if (v === undefined || v === null)
-                    v = rawEffectModels[i].params["size"];
+                    v = rawEffectModels[i].evaluatedParam ? rawEffectModels[i].evaluatedParam("diffusion", relFrame) : undefined;
 
-                return Number(v || 0);
+                if (v === undefined || v === null)
+                    v = rawEffectModels[i].evaluatedParam ? rawEffectModels[i].evaluatedParam("strength", relFrame) : undefined;
+
+                if (v === undefined || v === null)
+                    v = rawEffectModels[i].params["size"] || rawEffectModels[i].params["diffusion"] || rawEffectModels[i].params["strength"];
+
+                // FastBlurの特性上、半径の3倍程度の余白がないと端が切れて不自然になるため広めに確保する
+                return Number(v || 0) * 3;
             }
         }
         return 0;

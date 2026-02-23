@@ -5,17 +5,19 @@ import "qrc:/qt/qml/Rina/ui/qml/common" as Common
 Common.BaseEffect {
     id: root
 
-    // saturation 相当
+    // Hue, Saturation, Lightness
     HueSaturation {
         id: hs
 
         anchors.fill: parent
         source: root.source
+        hue: root.evalNumber("hue", 0) / 180
         saturation: (root.evalNumber("saturation", 100) - 100) / 100
+        lightness: (root.evalNumber("lightness", 100) - 100) / 100
         visible: root.source !== null && root.width > 0 && root.height > 0
     }
 
-    // brightness/contrast 相当
+    // Brightness, Contrast
     BrightnessContrast {
         anchors.fill: parent
         source: hs

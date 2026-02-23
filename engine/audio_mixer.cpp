@@ -1,5 +1,6 @@
 #include "audio_mixer.hpp"
 #include "core/include/audio_decoder.hpp"
+#include "core/include/settings_manager.hpp"
 #include "engine/timeline/ecs.hpp"
 #include <QAudioFormat>
 #include <QDebug>
@@ -18,7 +19,8 @@ void AudioMixer::processChain(float *buffer, int samples, const Plugin::AudioPlu
 }
 
 AudioMixer::AudioMixer(QObject *parent) : QObject(parent) {
-    m_format.setSampleRate(48000);
+    int sampleRate = Rina::Core::SettingsManager::instance().value("_runtime_projectSampleRate", 48000).toInt();
+    m_format.setSampleRate(sampleRate);
     m_format.setChannelCount(2);
     m_format.setSampleFormat(QAudioFormat::Float);
 
@@ -43,7 +45,7 @@ AudioMixer::AudioMixer(QObject *parent) : QObject(parent) {
 
     m_audioSink = new QAudioSink(device, m_format, this);
     // 低レイテンシを目指しつつ、音飛びしない程度のバッファサイズ (例: 100ms)
-    m_audioSink->setBufferSize(48000 * 2 * sizeof(float) / 10);
+    m_audioSink->setBufferSize(sampleRate * 2 * sizeof(float) / 10);
     m_audioOutput = m_audioSink->start();
     if (!m_audioOutput) {
         qWarning() << "[AudioMixer] Failed to start audio output! Device:" << device.description();
@@ -54,6 +56,24 @@ void AudioMixer::mix(float *output, const float *input, float volume, int sample
     for (int i = 0; i < samples; ++i) {
         output[i] += input[i] * volume;
     }
+}
+
+void AudioMixer::setSampleRate(int sampleRate) {
+    if (m_format.sampleRate() == sampleRate)
+        return;
+
+    qDebug() << "[AudioMixer] Changing sample rate to" << sampleRate;
+    m_format.setSampleRate(sampleRate);
+
+    if (m_audioSink) {
+        m_audioSink->stop();
+        delete m_audioSink;
+    }
+
+    QAudioDevice device = QMediaDevices::defaultAudioOutput();
+    m_audioSink = new QAudioSink(device, m_format, this);
+    m_audioSink->setBufferSize(sampleRate * 2 * sizeof(float) / 10);
+    m_audioOutput = m_audioSink->start();
 }
 
 AudioMixer::~AudioMixer() {

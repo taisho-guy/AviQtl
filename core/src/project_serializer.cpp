@@ -22,6 +22,7 @@ bool ProjectSerializer::save(const QString &fileUrl, const UI::TimelineService *
     settings["width"] = project->width();
     settings["height"] = project->height();
     settings["fps"] = project->fps();
+    settings["sampleRate"] = project->sampleRate();
     root["settings"] = settings;
 
     // --- シーン情報の保存 ---
@@ -121,12 +122,14 @@ bool ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
     int pWidth = defaults.value("defaultProjectWidth", 1920).toInt();
     int pHeight = defaults.value("defaultProjectHeight", 1080).toInt();
     double pFps = defaults.value("defaultProjectFps", 60.0).toDouble();
+    int pSampleRate = defaults.value("defaultProjectSampleRate", 48000).toInt();
 
     if (hasSettings) {
         QJsonObject s = root["settings"].toObject();
         pWidth = s["width"].toInt(pWidth);
         pHeight = s["height"].toInt(pHeight);
         pFps = s["fps"].toDouble(pFps);
+        pSampleRate = s["sampleRate"].toInt(pSampleRate);
     }
 
     // Scenes (読み込み)
@@ -214,6 +217,7 @@ bool ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
         project->setWidth(pWidth);
         project->setHeight(pHeight);
         project->setFps(pFps);
+        project->setSampleRate(pSampleRate);
     }
 
     // クリップを各シーンに分配

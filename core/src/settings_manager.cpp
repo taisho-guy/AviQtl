@@ -31,6 +31,7 @@ SettingsManager::SettingsManager(QObject *parent) : QObject(parent) {
                   {"defaultProjectHeight", 1080},
                   {"defaultProjectFps", 60.0},
                   {"defaultProjectFrames", 3600},
+                  {"defaultProjectSampleRate", 48000},
                   {"defaultClipDuration", 100},
                   // Timeline UI
                   {"timeUnit", "frame"},
@@ -124,5 +125,18 @@ void SettingsManager::save() {
     file.write(doc.toJson());
     qDebug() << "設定を保存しました:" << path;
 }
+
+void SettingsManager::setValue(const QString &key, const QVariant &value) {
+    if (m_settings.value(key) != value) {
+        m_settings[key] = value;
+        emit settingsChanged();
+        // Runtime keys starting with "_" are not saved to disk
+        if (!key.startsWith("_")) {
+            save();
+        }
+    }
+}
+
+QVariant SettingsManager::value(const QString &key, const QVariant &defaultValue) const { return m_settings.value(key, defaultValue); }
 
 } // namespace Rina::Core

@@ -37,6 +37,7 @@ class AudioDecoder;
 namespace Rina::Engine {
 class AudioMixer;
 }
+#include "../../core/include/audio_decoder.hpp"
 #include "../../core/include/video_decoder.hpp"
 #include "../../engine/audio_mixer.hpp"
 
@@ -171,6 +172,16 @@ class TimelineController : public QObject {
         }
         if (m_audioMixer)
             m_audioMixer->setPlaybackSpeed(speed);
+    }
+
+    // サンプリングレートの更新 (ProjectServiceの変更通知を受けて呼び出す)
+    Q_INVOKABLE void updateAudioSampleRate() {
+        int rate = m_project->sampleRate();
+        if (m_audioMixer)
+            m_audioMixer->setSampleRate(rate);
+        for (auto *decoder : m_audioDecoders) {
+            decoder->setSampleRate(rate);
+        }
     }
 
     // 動的に計算されたタイムラインの長さ（最後のクリップの末尾フレーム）

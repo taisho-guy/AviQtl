@@ -15,6 +15,7 @@ Common.RinaWindow {
             widthField.text = TimelineBridge.project.width;
             heightField.text = TimelineBridge.project.height;
             fpsField.text = TimelineBridge.project.fps;
+            sampleRateField.text = TimelineBridge.project.sampleRate;
         }
     }
 
@@ -75,6 +76,22 @@ Common.RinaWindow {
 
             }
 
+            Label {
+                text: "サンプリングレート:"
+            }
+
+            TextField {
+                id: sampleRateField
+
+                selectByMouse: true
+
+                validator: IntValidator {
+                    bottom: 8000
+                    top: 192000
+                }
+
+            }
+
         }
 
         RowLayout {
@@ -88,6 +105,7 @@ Common.RinaWindow {
                         TimelineBridge.project.width = parseInt(widthField.text);
                         TimelineBridge.project.height = parseInt(heightField.text);
                         TimelineBridge.project.fps = parseFloat(fpsField.text);
+                        TimelineBridge.project.sampleRate = parseInt(sampleRateField.text);
                         root.hide();
                     }
                 }

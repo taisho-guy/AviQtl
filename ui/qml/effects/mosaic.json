@@ -1,0 +1,13 @@
+{
+    "id": "mosaic",
+    "name": "モザイク",
+    "qml": "Mosaic.qml",
+    "params": {
+        "size": 10
+    },
+    "ui": {
+        "controls": [
+            { "type": "float", "param": "size", "label": "サイズ", "min": 1, "max": 200 }
+        ]
+    }
+}

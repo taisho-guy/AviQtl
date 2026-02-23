@@ -25,6 +25,7 @@ Common.RinaWindow {
             widthField.text = SettingsManager.settings.defaultProjectWidth || "1920";
             heightField.text = SettingsManager.settings.defaultProjectHeight || "1080";
             fpsField.text = SettingsManager.settings.defaultProjectFps || "60";
+            sampleRateField.text = SettingsManager.settings.defaultProjectSampleRate || "48000";
             // テンプレートに応じて更新
             if (templateCombo.currentIndex !== 4)
                 templateCombo.activated(templateCombo.currentIndex);
@@ -156,6 +157,22 @@ Common.RinaWindow {
 
                     }
 
+                    Label {
+                        text: "サンプリングレート:"
+                    }
+
+                    TextField {
+                        id: sampleRateField
+
+                        Layout.fillWidth: true
+
+                        validator: IntValidator {
+                            bottom: 8000
+                            top: 192000
+                        }
+
+                    }
+
                 }
 
             }
@@ -166,6 +183,9 @@ Common.RinaWindow {
                 highlighted: true
                 Layout.fillWidth: true
                 onClicked: {
+                    if (TimelineBridge && TimelineBridge.project)
+                        TimelineBridge.project.sampleRate = parseInt(sampleRateField.text);
+
                     root.projectSelected("", parseInt(widthField.text), parseInt(heightField.text), parseFloat(fpsField.text));
                     root.close();
                 }

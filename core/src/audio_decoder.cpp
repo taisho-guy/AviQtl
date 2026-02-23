@@ -1,4 +1,5 @@
 #include "audio_decoder.hpp"
+#include "settings_manager.hpp"
 #include <QAudioBuffer>
 #include <QDebug>
 
@@ -6,16 +7,25 @@ namespace Rina::Core {
 
 AudioDecoder::AudioDecoder(int clipId, const QUrl &source, QObject *parent) : QObject(parent), m_clipId(clipId) {
 
-    m_decoder = new QAudioDecoder(this);
+    // プロジェクト設定からサンプリングレートを取得
+    m_sampleRate = SettingsManager::instance().value("_runtime_projectSampleRate", 48000).toInt();
 
-    // プロジェクト標準の音声フォーマット（48kHz, Stereo, Float）
+    m_decoder = new QAudioDecoder(this);
+    m_decoder->setSource(source);
+
+    startDecoding();
+}
+
+void AudioDecoder::startDecoding() {
+    m_isReady = false;
+    m_fullAudioData.clear();
+
     QAudioFormat format;
-    format.setSampleRate(48000);
+    format.setSampleRate(m_sampleRate);
     format.setChannelCount(2);
     format.setSampleFormat(QAudioFormat::Float);
 
     m_decoder->setAudioFormat(format);
-    m_decoder->setSource(source);
 
     // 修正: ループ時のデコーダリセット処理を削除。
     // AudioDecoderはファイルを一度だけ全読み込みし、メモリ上に保持し続ける設計とします。
@@ -28,8 +38,18 @@ AudioDecoder::AudioDecoder(int clipId, const QUrl &source, QObject *parent) : QO
         onError(error);
     });
 
-    qDebug() << "[AudioDecoder] Decoding started for clip" << clipId << source;
+    qDebug() << "[AudioDecoder] Decoding started for clip" << m_clipId << "Rate:" << m_sampleRate;
     m_decoder->start();
+}
+
+void AudioDecoder::setSampleRate(int sampleRate) {
+    if (m_sampleRate == sampleRate)
+        return;
+
+    m_sampleRate = sampleRate;
+    m_decoder->stop();
+    // 再デコード開始
+    startDecoding();
 }
 
 void AudioDecoder::seek(qint64 ms) { emit seekRequested(ms); }
@@ -86,9 +106,9 @@ void AudioDecoder::onError(QAudioDecoder::Error error) {
 std::vector<float> AudioDecoder::getSamples(double startTime, int count) {
     std::lock_guard<std::mutex> lock(m_mutex);
 
-    // 48kHz, Stereo (2ch)
-    // startTime (秒) * 48000 (サンプル/秒) * 2 (チャンネル)
-    size_t startIdx = static_cast<size_t>(startTime * 48000 * 2);
+    // m_sampleRate, Stereo (2ch)
+    // startTime (秒) * m_sampleRate (サンプル/秒) * 2 (チャンネル)
+    size_t startIdx = static_cast<size_t>(startTime * m_sampleRate * 2);
 
     // 偶数アライメント（ステレオのL/Rがずれないように補正）
     if (startIdx % 2 != 0)

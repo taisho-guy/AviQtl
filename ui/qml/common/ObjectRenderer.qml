@@ -53,20 +53,6 @@ Item {
                 }
             }
 
-            // ソースのサイズ変更を動的に追従させるバインディング
-            Binding {
-                target: effectLoader.item
-                property: "width"
-                value: effectLoader.inputSource ? effectLoader.inputSource.width : 0
-                when: effectLoader.status === Loader.Ready && effectLoader.item && ("width" in effectLoader.item)
-            }
-            Binding {
-                target: effectLoader.item
-                property: "height"
-                value: effectLoader.inputSource ? effectLoader.inputSource.height : 0
-                when: effectLoader.status === Loader.Ready && effectLoader.item && ("height" in effectLoader.item)
-            }
-
             // relFrame 変化をエフェクトに伝播
             Connections {
                 target: renderer

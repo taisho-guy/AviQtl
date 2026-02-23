@@ -1,0 +1,25 @@
+{
+    "id": "glow",
+    "name": "発光",
+    "qml": "Glow.qml",
+    "params": {
+        "strength": 100,
+        "diffusion": 10,
+        "threshold": 10,
+        "speed": 0,
+        "useOriginalColor": true,
+        "color": "#ffffff",
+        "fixedSize": false
+    },
+    "ui": {
+        "controls": [
+            { "type": "float", "param": "strength", "label": "強さ", "min": 0, "max": 2000 },
+            { "type": "float", "param": "diffusion", "label": "拡散", "min": 0, "max": 200 },
+            { "type": "float", "param": "threshold", "label": "しきい値", "min": 0, "max": 100 },
+            { "type": "float", "param": "speed", "label": "拡散速度", "min": 0, "max": 100 },
+            { "type": "bool", "param": "useOriginalColor", "label": "元の色を使用" },
+            { "type": "color", "param": "color", "label": "光色" },
+            { "type": "bool", "param": "fixedSize", "label": "サイズ固定" }
+        ]
+    }
+}
