@@ -35,35 +35,54 @@ Common.BaseEffect {
     ShaderEffect {
         id: hPass
 
-        property variant source: root.source
+        property variant source: root.sourceProxy
         property vector2d direction: Qt.vector2d(1, 0)
         property real radius: root.hLen
+        property real targetWidth: root.width
+        property real targetHeight: root.height
 
         anchors.fill: parent
-        visible: false // テクスチャとしてのみ使用
-        layer.enabled: true
-        layer.smooth: true
         fragmentShader: "blur.frag.qsb"
+    }
+
+    ShaderEffectSource {
+        id: hPassProxy
+
+        sourceItem: hPass
+        hideSource: true
+        visible: true
+        opacity: 0
     }
 
     // 2. 縦方向ブラー + 出力
     ShaderEffect {
         id: vPass
 
-        property variant source: hPass
+        property variant source: hPassProxy
         property vector2d direction: Qt.vector2d(0, 1)
         property real radius: root.vLen
+        property real targetWidth: root.width
+        property real targetHeight: root.height
 
         anchors.fill: parent
         fragmentShader: "blur.frag.qsb"
     }
 
+    ShaderEffectSource {
+        id: vPassProxy
+
+        sourceItem: vPass
+        hideSource: root.fixedSize
+        visible: true
+        opacity: 0
+    }
+
     // サイズ固定用マスク (必要な場合のみ適用)
     MultiEffect {
         anchors.fill: parent
-        source: vPass
+        source: vPassProxy
         maskEnabled: root.fixedSize
-        maskSource: root.source
+        maskSource: root.sourceProxy
         visible: root.fixedSize
     }
 

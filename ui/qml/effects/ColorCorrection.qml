@@ -16,7 +16,7 @@ Common.BaseEffect {
     }
 
     ShaderEffect {
-        property variant source: root.source
+        property variant source: root.sourceProxy
         // パラメータを -1.0 ~ 1.0 (または適切な範囲) に正規化して渡す
         property real brightness: (root.evalNumber("brightness", 100) - 100) / 100
         property real contrast: (root.evalNumber("contrast", 100) - 100) / 100

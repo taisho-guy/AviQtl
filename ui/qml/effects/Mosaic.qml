@@ -20,8 +20,10 @@ Common.BaseEffect {
     }
 
     ShaderEffect {
-        property variant source: root.source
+        property variant source: root.sourceProxy
         property real size: root.size
+        property real targetWidth: root.width
+        property real targetHeight: root.height
 
         anchors.fill: parent
         fragmentShader: "mosaic.frag.qsb"

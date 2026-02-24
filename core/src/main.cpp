@@ -53,6 +53,9 @@ int main(int argc, char *argv[]) {
     // 2. レンダリングバックエンドをVulkanに強制
     qputenv("QSG_RHI_BACKEND", "vulkan");
 
+    // シェーダーのコンパイルログなどを出力してデバッグを容易にする
+    // qputenv("QSG_INFO", "1");
+
     // 1. アプリケーション初期化
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);

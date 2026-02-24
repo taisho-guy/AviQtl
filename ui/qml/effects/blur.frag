@@ -6,8 +6,8 @@ layout(std140, binding = 0) uniform buf {
     float qt_Opacity;
     vec2 direction;
     float radius;
-    float width;
-    float height;
+    float targetWidth;
+    float targetHeight;
 };
 layout(binding = 1) uniform sampler2D source;
 
@@ -17,22 +17,18 @@ float gaussian(float x, float sigma) {
 }
 
 void main() {
-    if (radius <= 0.0) {
+    if (radius <= 0.0 || targetWidth <= 0.0 || targetHeight <= 0.0) {
         fragColor = texture(source, qt_TexCoord0) * qt_Opacity;
         return;
     }
 
-    vec2 res = vec2(width, height);
+    vec2 res = vec2(targetWidth, targetHeight);
     vec2 step = direction / res;
     
     vec4 acc = vec4(0.0);
     float weightSum = 0.0;
     
-    // シグマの近似
     float sigma = max(radius / 2.0, 0.1);
-    
-    // ループ回数の制限 (GPU負荷対策)
-    // 半径が大きい場合はサンプリング数を制限するが、品質維持のため最大64サンプルとする
     int samples = int(min(ceil(radius), 64.0));
     
     for (int i = -samples; i <= samples; i++) {

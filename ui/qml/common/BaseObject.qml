@@ -160,7 +160,7 @@ Node {
         if (sourceItem) {
             // キャプチャ安定化のためvisibleは落とさず、不可視化はopacityで行う
             sourceItem.visible = true;
-            sourceItem.opacity = 0;
+            sourceItem.opacity = 1;
         }
     }
     onRelFrameChanged: {
