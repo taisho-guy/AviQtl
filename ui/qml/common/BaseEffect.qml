@@ -1,19 +1,18 @@
 import QtQuick
 import QtQuick.Effects
 
-MultiEffect {
+Item {
     id: base
 
     // ObjectRenderer から Binding で注入される
     property var params
+    property Item source
     // ソースアイテムを非表示にしつつ、テクスチャとして利用可能にするプロキシ
     property alias sourceProxy: proxySource
     property QtObject effectModel
     property int frame: 0
     // QMLバインディング再評価用（params/keyframes変更を確実に検知）
     property int _rev: 0
-    // カスタムシェーダー使用時にMultiEffectの標準描画を無効化するための空マスク
-    readonly property Item emptyMask: _emptyMask
 
     // 【統一API】キーフレーム優先評価
     function evalParam(key, fallback) {
@@ -42,26 +41,10 @@ MultiEffect {
         return (typeof v === 'string') ? v : fallback;
     }
 
-    layer.enabled: false // オブジェクトプレビュー消失防止（ぼかし専用）
-    // implicitSize を使用（子要素が自動的に参照）
-    implicitWidth: source ? source.width : 1
-    implicitHeight: source ? source.height : 1
-    // 明示的サイズも設定
-    width: implicitWidth > 0 ? implicitWidth : 1
-    height: implicitHeight > 0 ? implicitHeight : 1
-
-    Item {
-        id: _emptyMask
-
-        visible: false
-    }
-
     ShaderEffectSource {
         id: proxySource
 
-        // カスタムシェーダー（emptyMask）使用時のみソースをキャプチャし、元画像を隠す
-        // これにより、MultiEffect単体使用時（Glowなど）の競合とオーバーヘッドを防ぐ
-        sourceItem: (base.maskSource === base.emptyMask) ? base.source : null
+        sourceItem: base.source
         hideSource: true
         visible: true
         opacity: 0

@@ -21,10 +21,6 @@ Common.BaseEffect {
     readonly property real remH: hLen - commonRadius
     readonly property real remV: vLen - commonRadius
 
-    // MultiEffectの描画を無効化
-    maskEnabled: true
-    maskSource: emptyMask
-
     // 1. 横方向ブラー
     ShaderEffect {
         id: hPass

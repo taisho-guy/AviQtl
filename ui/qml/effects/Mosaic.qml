@@ -6,9 +6,6 @@ Common.BaseEffect {
 
     property real size: Math.max(1, root.evalNumber("size", 10))
 
-    maskEnabled: true
-    maskSource: emptyMask
-
     ShaderEffect {
         property variant source: root.sourceProxy
         property real size: root.size

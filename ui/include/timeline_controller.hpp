@@ -107,6 +107,9 @@ class TimelineController : public QObject {
     // クリップの配置・長さを更新 (ID指定)
     Q_INVOKABLE void updateClip(int id, int layer, int startFrame, int duration);
 
+    // 衝突回避ロジック付きでクリップを移動する（QMLのドラッグ操作から呼ぶ）
+    Q_INVOKABLE void moveClipWithCollisionCheck(int clipId, int layer, int startFrame);
+
     // エフェクト操作
     Q_INVOKABLE QList<QObject *> getClipEffectsModel(int clipId) const;
     Q_INVOKABLE void updateClipEffectParam(int clipId, int effectIndex, const QString &paramName, const QVariant &value);

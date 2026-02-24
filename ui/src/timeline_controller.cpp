@@ -424,6 +424,16 @@ void TimelineController::log(const QString &msg) { qDebug() << "[TimelineBridge]
 
 void TimelineController::updateClip(int id, int layer, int startFrame, int duration) { m_timeline->updateClip(id, layer, startFrame, duration); }
 
+void TimelineController::moveClipWithCollisionCheck(int clipId, int layer, int startFrame) {
+    const ClipData *clip = m_timeline->findClipById(clipId);
+    if (!clip)
+        return;
+
+    int duration = clip->durationFrames;
+    int fixedStart = m_timeline->findVacantFrame(layer, startFrame, duration, clipId);
+    updateClip(clipId, layer, fixedStart, duration);
+}
+
 bool TimelineController::saveProject(const QString &fileUrl) {
     QString error;
     bool result = Rina::Core::ProjectSerializer::save(fileUrl, m_timeline, m_project, &error);

@@ -18,10 +18,6 @@ Common.BaseEffect {
     readonly property real remH: hLen - commonRadius
     readonly property real remV: vLen - commonRadius
 
-    // MultiEffectの標準描画を無効化
-    maskEnabled: true
-    maskSource: emptyMask
-
     MultiEffect {
         anchors.fill: parent
         source: root.sourceProxy

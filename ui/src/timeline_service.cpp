@@ -4,6 +4,8 @@
 #include "selection_service.hpp"
 #include "settings_manager.hpp"
 #include <QDebug>
+#include <QPoint>
+#include <algorithm>
 
 namespace Rina::UI {
 
@@ -162,6 +164,126 @@ void TimelineService::updateClip(int id, int layer, int startFrame, int duration
     m_undoStack->push(new MoveClipCommand(this, id, clip->layer, clip->startFrame, clip->durationFrames, layer, startFrame, duration, clipName));
 }
 
+int TimelineService::computeMagneticSnapPosition(int clipId, int targetLayer, int proposedStartFrame) {
+    // 0. 移動対象のクリップ情報を取得
+    const auto *movingClip = findClipById(clipId);
+    if (!movingClip) {
+        return proposedStartFrame; // 対象クリップが見つからなければ何もしない
+    }
+    const int clipDuration = movingClip->durationFrames;
+
+    // 1. 対象レイヤーのクリップを抽出 (現在のシーンのみ)
+    QList<const ClipData *> layerClips;
+    for (const auto &c : clips()) { // 修正: 全シーン走査を現在のシーンに限定
+        if (c.layer == targetLayer && c.id != clipId) {
+            layerClips.append(&c);
+        }
+    }
+
+    int finalStart = std::max(0, proposedStartFrame);
+
+    // 2. レイヤーに他のクリップがなければ、0未満にならないように補正してそのまま配置
+    if (layerClips.isEmpty()) {
+        updateClipInternal(clipId, targetLayer, finalStart, clipDuration);
+        return finalStart;
+    }
+
+    // 3. startFrame昇順ソート
+    std::sort(layerClips.begin(), layerClips.end(), [](const ClipData *a, const ClipData *b) { return a->startFrame < b->startFrame; });
+
+    // 4. スナップ候補となる「空き領域の始点」を生成
+    QList<int> snapPoints;
+
+    // 4-1. 最初のクリップの前が空いていれば、タイムラインの先頭(0)を候補に
+    if (layerClips.first()->startFrame >= clipDuration) {
+        snapPoints.append(0);
+    }
+
+    // 4-2. クリップ間の隙間を候補に
+    for (int i = 0; i < layerClips.size() - 1; ++i) {
+        int gapStart = layerClips[i]->startFrame + layerClips[i]->durationFrames;
+        int gapEnd = layerClips[i + 1]->startFrame;
+        if (gapEnd - gapStart >= clipDuration) {
+            snapPoints.append(gapStart);
+        }
+    }
+
+    // 4-3. 最後のクリップの後を候補に
+    snapPoints.append(layerClips.last()->startFrame + layerClips.last()->durationFrames);
+
+    // 5. 提案位置に最も近いスナップ候補を見つける
+    if (!snapPoints.isEmpty()) {
+        int bestSnapPoint = snapPoints.first();
+        int minDelta = std::abs(proposedStartFrame - bestSnapPoint);
+
+        for (int i = 1; i < snapPoints.size(); ++i) {
+            int delta = std::abs(proposedStartFrame - snapPoints[i]);
+            if (delta < minDelta) {
+                minDelta = delta;
+                bestSnapPoint = snapPoints[i];
+            }
+        }
+        finalStart = bestSnapPoint;
+    } else {
+        // どの隙間にも収まらない場合 (クリップが密集している場合など) は、既存の findVacantFrame で安全な位置を探す
+        finalStart = findVacantFrame(targetLayer, proposedStartFrame, clipDuration, clipId);
+    }
+
+    // 6. 即時適用 (Undoスタックを汚さないように internal を使用)
+    // 注意: ドラッグ完了時に QUndoCommand を発行するアーキテクチャが望ましいです。
+    updateClipInternal(clipId, targetLayer, finalStart, clipDuration);
+
+    return finalStart;
+}
+
+QPoint TimelineService::resolveDragPosition(int clipId, int targetLayer, int proposedStartFrame) {
+    const auto *movingClip = findClipById(clipId);
+    if (!movingClip) {
+        return QPoint(proposedStartFrame, targetLayer);
+    }
+
+    const int duration = movingClip->durationFrames;
+    int candidateFrame = std::max(0, proposedStartFrame);
+
+    // 1. 対象レイヤーの他のクリップをすべて取得
+    QList<const ClipData *> layerClips;
+    for (const auto &c : clips()) {
+        if (c.id != clipId && c.layer == targetLayer) {
+            layerClips.append(&c);
+        }
+    }
+
+    // クリップがなければ衝突はありえない
+    if (layerClips.isEmpty()) {
+        return QPoint(candidateFrame, targetLayer);
+    }
+
+    // 2. 衝突解決ロジックのために、クリップを開始フレームでソートする
+    // これが欠けていたことが、クリップが重なってしまうバグの根本原因でした。
+    std::sort(layerClips.begin(), layerClips.end(), [](const ClipData *a, const ClipData *b) { return a->startFrame < b->startFrame; });
+
+    // 3. 衝突解決 (Push-Right)
+    // QML側でグリッドスナップされた位置(`proposedStartFrame`)を尊重し、
+    // 衝突する場合のみ、重ならなくなるまで右に押し出す。
+    // このループは、押し出した結果、さらに別のクリップと衝突するケースを解決するために必要。
+    bool collisionFound;
+    do {
+        collisionFound = false;
+        for (const auto *c : layerClips) {
+            // Overlap check: (s1 < e2) && (s2 < e1)
+            if (candidateFrame < (c->startFrame + c->durationFrames) && c->startFrame < (candidateFrame + duration)) {
+                // 衝突した場合、そのクリップの右端に候補位置を移動
+                candidateFrame = c->startFrame + c->durationFrames;
+                // 位置を動かしたため、再度全クリップとの衝突を確認する必要がある
+                collisionFound = true;
+                break;
+            }
+        }
+    } while (collisionFound);
+
+    return QPoint(candidateFrame, targetLayer);
+}
+
 void TimelineService::updateClipInternal(int id, int layer, int startFrame, int duration) {
     if (startFrame < 0)
         startFrame = 0;
@@ -170,18 +292,15 @@ void TimelineService::updateClipInternal(int id, int layer, int startFrame, int 
     if (layer < 0)
         layer = 0;
 
-    auto overlaps = [](int s1, int d1, int s2, int d2) { return (s1 < (s2 + d2)) && (s2 < (s1 + d1)); };
-    auto &currentClips = clipsMutable();
-    for (const auto &c : currentClips) {
-        if (c.id == id)
-            continue;
-        if (c.layer == layer && overlaps(startFrame, duration, c.startFrame, c.durationFrames)) {
-            qWarning() << "クリップ更新を拒否: クリップID" << id << "で衝突が発生";
-            return;
-        }
+    // [FINAL LOGIC] The ultimate gatekeeper for collision.
+    // All position updates, whether from drag, undo, or other operations, must pass this check.
+    int safeStartFrame = findVacantFrame(layer, startFrame, duration, id);
+    if (safeStartFrame != startFrame) {
+        qWarning() << "updateClipInternal: Collision detected. Position adjusted from" << startFrame << "to" << safeStartFrame;
+        startFrame = safeStartFrame;
     }
 
-    for (auto &clip : currentClips) {
+    for (auto &clip : clipsMutable()) {
         if (clip.id == id) {
             if (clip.layer != layer || clip.startFrame != startFrame || clip.durationFrames != duration) {
                 clip.layer = layer;
@@ -649,6 +768,27 @@ QList<ClipData *> TimelineService::resolvedActiveClipsAt(int frame) const {
     }
 
     return result;
+}
+
+int TimelineService::findVacantFrame(int layer, int startFrame, int duration, int excludeClipId) const {
+    QList<ClipData> layerClips;
+    for (const auto &clip : clips()) {
+        if (clip.id != excludeClipId && clip.layer == layer) {
+            layerClips.append(clip);
+        }
+    }
+
+    std::sort(layerClips.begin(), layerClips.end(), [](const ClipData &a, const ClipData &b) { return a.startFrame < b.startFrame; });
+
+    int candidateStart = std::max(0, startFrame);
+    for (const auto &clip : layerClips) {
+        int clipEnd = clip.startFrame + clip.durationFrames;
+        int candidateEnd = candidateStart + duration;
+        if (candidateStart < clipEnd && candidateEnd > clip.startFrame) {
+            candidateStart = clipEnd;
+        }
+    }
+    return candidateStart;
 }
 
 } // namespace Rina::UI

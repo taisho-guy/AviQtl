@@ -28,10 +28,6 @@ Common.BaseEffect {
     property color flashColor: root.evalColor("color", "#ffffff")
     property bool fixedSize: root.evalParam("fixedSize", false)
 
-    // MultiEffectの標準描画を無効化
-    maskEnabled: true
-    maskSource: emptyMask
-
     MultiEffect {
         anchors.fill: parent
         source: root.sourceProxy

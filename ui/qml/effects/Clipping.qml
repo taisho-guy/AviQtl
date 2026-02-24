@@ -11,10 +11,13 @@ Common.BaseEffect {
     property real rightVal: Math.max(0, root.evalNumber("right", 0))
     property bool centerVal: root.evalParam("center", false)
 
-    // マスク適用
-    maskEnabled: true
-    maskSource: mask
-    visible: root.source !== null
+    MultiEffect {
+        anchors.fill: parent
+        source: root.sourceProxy
+        maskEnabled: true
+        maskSource: mask
+        visible: root.source !== null
+    }
 
     // マスク画像の生成 (白 = 表示、透明 = 非表示)
     Item {

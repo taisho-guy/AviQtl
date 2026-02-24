@@ -9,10 +9,6 @@ Common.BaseEffect {
     property real diffusion: Math.max(0, root.evalNumber("diffusion", 10))
     property bool fixedSize: root.evalParam("fixedSize", false)
 
-    // MultiEffectの標準描画を無効化
-    maskEnabled: true
-    maskSource: emptyMask
-
     // 1. 拡散光層 (背面)
     MultiEffect {
         anchors.fill: parent

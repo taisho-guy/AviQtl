@@ -59,11 +59,46 @@ ScrollView {
         return Math.max(lo, Math.min(hi, v));
     }
 
+    function getGridInterval() {
+        if (!TimelineBridge)
+            return 1;
+
+        var scale = TimelineBridge.timelineScale;
+        var projectFps = (TimelineBridge.project && TimelineBridge.project.fps) ? TimelineBridge.project.fps : 60;
+        var step = 1;
+        if (gridSettings.mode === "BPM") {
+            var bps = gridSettings.bpm / 60;
+            var beatFrames = projectFps / bps;
+            var bpmDiv = 1;
+            if (scale > 3)
+                bpmDiv = 4;
+            else if (scale > 1.5)
+                bpmDiv = 2;
+            step = beatFrames / bpmDiv;
+        } else if (gridSettings.mode === "Frame") {
+            step = gridSettings.interval;
+        } else {
+            // Auto
+            if (scale < 0.5)
+                step = Math.ceil(projectFps);
+            else if (scale < 1.5)
+                step = 10;
+            else if (scale < 3)
+                step = 5;
+            else
+                step = 1;
+        }
+        return step;
+    }
+
     function snapFrame(frame) {
         if (!enableSnap)
-            return frame;
+            return Math.round(frame);
 
-        return Math.max(0, Math.round(frame));
+        var step = getGridInterval();
+        var offset = (gridSettings.mode === "BPM" && TimelineBridge && TimelineBridge.project) ? gridSettings.offset * TimelineBridge.project.fps : 0;
+        var snapped = Math.round((frame - offset) / step) * step + offset;
+        return Math.max(0, Math.round(snapped));
     }
 
     onGridSettingsChanged: timelineGrid.requestPaint()
@@ -150,34 +185,15 @@ ScrollView {
                     var startFrame = Math.floor(contentX / scale);
                     var endFrame = Math.ceil((contentX + width) / scale);
                     // === グリッド計算ロジック (Strategy) ===
-                    var step = 1;
-                    var offsetFrames = 0;
+                    var step = timelineViewRoot.getGridInterval();
+                    var offsetFrames = (gridSettings.mode === "BPM" && TimelineBridge.project) ? gridSettings.offset * TimelineBridge.project.fps : 0;
                     var isBpmMode = (gridSettings.mode === "BPM");
                     var bpmDiv = 1;
                     if (isBpmMode) {
-                        // BPMモード: 1拍あたりのフレーム数を計算
-                        var bps = gridSettings.bpm / 60;
-                        var beatFrames = projectFps / bps; // 1拍のフレーム数 (小数含む)
-                        // ズームに応じて分割 (1拍 -> 8分 -> 16分)
                         if (scale > 3)
                             bpmDiv = 4;
                         else if (scale > 1.5)
                             bpmDiv = 2;
-                        step = beatFrames / bpmDiv;
-                        offsetFrames = gridSettings.offset * projectFps;
-                    } else if (gridSettings.mode === "Frame") {
-                        // 固定フレームモード
-                        step = gridSettings.interval;
-                    } else {
-                        // Auto (AviUtl風): ズームに応じて間引き
-                        if (scale < 0.5)
-                            step = Math.ceil(projectFps);
-                        else if (scale < 1.5)
-                            step = 10;
-                        else if (scale < 3)
-                            step = 5;
-                        else
-                            step = 1;
                     }
                     // グリッド線の描画ループ
                     // 数式: lineX = offset + n * step
@@ -425,25 +441,74 @@ ScrollView {
                     MouseArea {
                         id: moveArea
 
+                        property point dragStartScenePos: Qt.point(0, 0)
+                        property int initialLayer: 0
+                        property int initialFrame: 0
+                        property int lastProposedFrame: -1
+                        property int lastProposedLayer: -1
+
                         anchors.fill: parent
                         anchors.rightMargin: clipResizeHandleWidth
                         // ロックされたレイヤーではドラッグ不可
-                        drag.target: clipDelegate.isLayerLocked ? null : clipDelegate
-                        drag.axis: Drag.XAndYAxis
-                        drag.smoothed: false
+                        // drag.target / drag.axis を削除し、生のイベントで制御する
+                        // これによりQtのドラッグシステムによる閾値や補正の干渉を排除し、
+                        // AviUtlライクな「マウスに完全に追従する」挙動を実現する
                         acceptedButtons: Qt.LeftButton | Qt.RightButton
                         cursorShape: clipDelegate.isLayerLocked ? Qt.ForbiddenCursor : Qt.OpenHandCursor
-                        onPressed: {
+                        preventStealing: true
+                        onPressed: (mouse) => {
                             if (clipDelegate.isLayerLocked)
                                 return ;
 
                             if (TimelineBridge)
                                 TimelineBridge.selectClip(modelData.id);
 
+                            // 開始時のシーン座標と、クリップの初期位置を記録
+                            // これにより「移動量」ベースの計算を行い、ドラッグ中の座標系変動の影響を受けないようにする
+                            var scenePos = mapToItem(timelineFlickable.contentItem, mouse.x, mouse.y);
+                            dragStartScenePos = scenePos;
+                            initialLayer = modelData.layer;
+                            initialFrame = modelData.startFrame;
+                            // キャッシュをリセット
+                            lastProposedFrame = -1;
+                            lastProposedLayer = -1;
+                        }
+                        onPositionChanged: (mouse) => {
+                            if (pressed && !clipDelegate.isLayerLocked) {
+                                // 1. マウスの移動量(Delta)を計算
+                                var scenePos = mapToItem(timelineFlickable.contentItem, mouse.x, mouse.y);
+                                var deltaX = scenePos.x - dragStartScenePos.x;
+                                var deltaY = scenePos.y - dragStartScenePos.y;
+                                // 2. 初期位置に移動量を加算して「希望の」位置を算出
+                                var proposedFrame = timelineViewRoot.snapFrame(initialFrame + (deltaX / clipDelegate.scale));
+                                var proposedLayer = initialLayer + Math.round(deltaY / layerHeight);
+                                // 3. 値を有効な範囲に制限
+                                proposedLayer = Math.max(0, Math.min(proposedLayer, timelineViewRoot.layerCount - 1));
+                                proposedFrame = Math.max(0, proposedFrame);
+                                // 4. 最適化: グリッド位置が変わっていなければ再計算しない
+                                if (proposedFrame === lastProposedFrame && proposedLayer === lastProposedLayer)
+                                    return ;
+
+                                lastProposedFrame = proposedFrame;
+                                lastProposedLayer = proposedLayer;
+                                // 5. C++側で衝突解決を含めた最終位置を計算
+                                if (TimelineBridge) {
+                                    var finalFrame = proposedFrame;
+                                    var finalLayer = proposedLayer;
+                                    if (typeof TimelineBridge.resolveDragPosition === "function") {
+                                        var finalPos = TimelineBridge.resolveDragPosition(modelData.id, proposedLayer, proposedFrame);
+                                        finalFrame = finalPos.x;
+                                        finalLayer = finalPos.y;
+                                    }
+                                    // 6. デリゲートの表示位置を更新
+                                    clipDelegate.x = finalFrame * clipDelegate.scale;
+                                    clipDelegate.y = finalLayer * layerHeight;
+                                }
+                            }
                         }
                         onReleased: {
                             if (TimelineBridge) {
-                                var newStart = timelineViewRoot.snapFrame(clipDelegate.x / clipDelegate.scale);
+                                var newStart = Math.round(clipDelegate.x / clipDelegate.scale);
                                 var newLayer = Math.round(clipDelegate.y / layerHeight);
                                 TimelineBridge.updateClip(modelData.id, newLayer, newStart, modelData.durationFrames);
                                 // バインディング復元
@@ -505,14 +570,14 @@ ScrollView {
                                 if (resizing) {
                                     var deltaX = mouseX - startX;
                                     var currentScale = clipDelegate.scale;
-                                    var deltaFrames = Math.round(deltaX / currentScale);
+                                    var rawNewStart = startFrame + (deltaX / currentScale);
+                                    var newStart = timelineViewRoot.snapFrame(rawNewStart);
+                                    var newDur = startDuration - (newStart - startFrame);
                                     // ガード: 持続時間が5フレーム未満にならないように
-                                    if (startDuration - deltaFrames < 5)
+                                    if (newDur < 5)
                                         return ;
 
                                     // プレビュー更新 (即時反映)
-                                    var newStart = startFrame + deltaFrames;
-                                    var newDur = startDuration - deltaFrames;
                                     clipDelegate.x = newStart * currentScale;
                                     clipDelegate.width = newDur * currentScale;
                                 }
@@ -570,11 +635,11 @@ ScrollView {
                             onPositionChanged: {
                                 if (resizing) {
                                     var delta = mouseX - startX;
-                                    var newW = startWidth + delta;
-                                    if (newW < 5)
-                                        newW = 5;
-
-                                    clipDelegate.width = newW;
+                                    var rawWidth = startWidth + delta;
+                                    var rawEndFrame = modelData.startFrame + (rawWidth / clipDelegate.scale);
+                                    var snappedEndFrame = timelineViewRoot.snapFrame(rawEndFrame);
+                                    var newDur = Math.max(5, snappedEndFrame - modelData.startFrame);
+                                    clipDelegate.width = newDur * clipDelegate.scale;
                                 }
                             }
                             onReleased: {

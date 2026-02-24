@@ -11,10 +11,6 @@ Common.BaseEffect {
     property real yOffset: root.evalNumber("y", 5)
     property real opacityVal: Math.max(0, Math.min(100, root.evalNumber("opacity", 100))) / 100
 
-    // MultiEffectの標準描画を無効化
-    maskEnabled: true
-    maskSource: emptyMask
-
     // 1. 影 (背面)
     MultiEffect {
         anchors.fill: parent

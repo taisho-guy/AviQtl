@@ -5,10 +5,6 @@ import "qrc:/qt/qml/Rina/ui/qml/common" as Common
 Common.BaseEffect {
     id: root
 
-    // MultiEffectの描画を無効化
-    maskEnabled: true
-    maskSource: emptyMask
-
     ShaderEffect {
         property variant source: root.sourceProxy
         // パラメータを -1.0 ~ 1.0 (または適切な範囲) に正規化して渡す

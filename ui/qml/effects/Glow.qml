@@ -23,10 +23,6 @@ Common.BaseEffect {
     }
     property real effectiveDiffusion: Math.max(0, diffusion * fluctuation)
 
-    // MultiEffectの標準描画を無効化し、内部で合成を行う
-    maskEnabled: true
-    maskSource: emptyMask
-
     // 1. 発光層 (背面)
     MultiEffect {
         anchors.fill: parent

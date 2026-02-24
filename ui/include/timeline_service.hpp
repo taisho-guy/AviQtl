@@ -1,6 +1,7 @@
 #pragma once
 #include "timeline_types.hpp"
 #include <QObject>
+#include <QPoint>
 #include <QUndoStack>
 #include <memory>
 
@@ -20,6 +21,9 @@ class TimelineService : public QObject {
     // 追加: ネストを解決した「フレーム時点のアクティブクリップ」を返す
     QList<ClipData *> resolvedActiveClipsAt(int frame) const;
 
+    // 指定された条件で配置可能な最短の開始フレームを計算する（衝突回避）
+    int findVacantFrame(int layer, int startFrame, int duration, int excludeClipId) const;
+
     const QList<SceneData> &getAllScenes() const { return m_scenes; }
     void setScenes(const QList<SceneData> &scenes);
     QUndoStack *undoStack() const { return m_undoStack; }
@@ -31,6 +35,8 @@ class TimelineService : public QObject {
     void deleteClip(int clipId);
     void updateClip(int id, int layer, int startFrame, int duration);
     void splitClip(int clipId, int frame);
+    Q_INVOKABLE int computeMagneticSnapPosition(int clipId, int targetLayer, int proposedStartFrame); // Note: This is for a different snap feature
+    Q_INVOKABLE QPoint resolveDragPosition(int clipId, int targetLayer, int proposedStartFrame);
     void selectClip(int id);
 
     // シーン管理
