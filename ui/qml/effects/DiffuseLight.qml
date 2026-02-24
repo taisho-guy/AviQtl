@@ -26,9 +26,10 @@ Common.BaseEffect {
     }
 
     // 2. 元画像 (前面)
-    ShaderEffectSource {
+    ShaderEffect {
+        property variant source: root.sourceProxy
+
         anchors.fill: parent
-        sourceItem: root.sourceProxy
     }
 
 }
