@@ -28,10 +28,18 @@ Common.BaseEffect {
     property color flashColor: root.evalColor("color", "#ffffff")
     property bool fixedSize: root.evalParam("fixedSize", false)
 
-    // Simulate flash with brightness/colorization
-    brightness: root.strength / 100
-    colorization: root.useOriginalColor ? 0 : 1
-    colorizationColor: root.flashColor
-    maskEnabled: root.fixedSize
-    maskSource: root.source
+    // MultiEffectの標準描画を無効化
+    maskEnabled: true
+    maskSource: emptyMask
+
+    MultiEffect {
+        anchors.fill: parent
+        source: root.sourceProxy
+        brightness: root.strength / 100
+        colorization: root.useOriginalColor ? 0 : 1
+        colorizationColor: root.flashColor
+        maskEnabled: root.fixedSize
+        maskSource: root.fixedSize ? root.sourceProxy : null
+    }
+
 }

@@ -8,12 +8,22 @@ Common.BaseEffect {
     property bool horizontal: root.evalParam("horizontal", false)
     property bool vertical: root.evalParam("vertical", false)
 
-    // MultiEffect自体には反転プロパティがないため、Itemのtransformを使用
-    transform: Scale {
-        origin.x: root.width / 2
-        origin.y: root.height / 2
-        xScale: root.horizontal ? -1 : 1
-        yScale: root.vertical ? -1 : 1
+    // MultiEffectの標準描画を無効化し、内部のShaderEffectで反転を行う
+    maskEnabled: true
+    maskSource: emptyMask
+
+    ShaderEffect {
+        property variant source: root.sourceProxy
+
+        anchors.fill: parent
+
+        transform: Scale {
+            origin.x: parent.width / 2
+            origin.y: parent.height / 2
+            xScale: root.horizontal ? -1 : 1
+            yScale: root.vertical ? -1 : 1
+        }
+
     }
 
 }

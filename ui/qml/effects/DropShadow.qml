@@ -11,11 +11,32 @@ Common.BaseEffect {
     property real yOffset: root.evalNumber("y", 5)
     property real opacityVal: Math.max(0, Math.min(100, root.evalNumber("opacity", 100))) / 100
 
-    shadowEnabled: true
-    // MultiEffectのshadowBlurは0.0-1.0の範囲。100を最大として正規化
-    shadowBlur: Math.min(1, root.radius / 100)
-    shadowColor: root.color
-    shadowHorizontalOffset: root.xOffset
-    shadowVerticalOffset: root.yOffset
-    shadowOpacity: root.opacityVal
+    // MultiEffectの標準描画を無効化
+    maskEnabled: true
+    maskSource: emptyMask
+
+    // 1. 影 (背面)
+    MultiEffect {
+        anchors.fill: parent
+        source: root.sourceProxy
+        blurEnabled: true
+        blurMax: 100
+        blur: Math.min(1, root.radius / 100)
+        colorization: 1
+        colorizationColor: root.color
+        opacity: root.opacityVal
+
+        transform: Translate {
+            x: root.xOffset
+            y: root.yOffset
+        }
+
+    }
+
+    // 2. 元画像 (前面)
+    ShaderEffectSource {
+        anchors.fill: parent
+        sourceItem: root.sourceProxy
+    }
+
 }

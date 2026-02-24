@@ -18,9 +18,18 @@ Common.BaseEffect {
     readonly property real remH: hLen - commonRadius
     readonly property real remV: vLen - commonRadius
 
-    blurEnabled: true
-    blurMax: Math.max(32, root.size)
-    blur: root.size / blurMax
-    maskEnabled: !root.blurAlpha
-    maskSource: root.source
+    // MultiEffectの標準描画を無効化
+    maskEnabled: true
+    maskSource: emptyMask
+
+    MultiEffect {
+        anchors.fill: parent
+        source: root.sourceProxy
+        blurEnabled: true
+        blurMax: Math.max(32, root.size)
+        blur: root.size / blurMax
+        maskEnabled: !root.blurAlpha
+        maskSource: !root.blurAlpha ? root.sourceProxy : null
+    }
+
 }

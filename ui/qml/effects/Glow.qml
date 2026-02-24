@@ -23,10 +23,26 @@ Common.BaseEffect {
     }
     property real effectiveDiffusion: Math.max(0, diffusion * fluctuation)
 
-    shadowEnabled: true
-    shadowColor: root.useOriginalColor ? "white" : root.glowColor
-    shadowBlur: Math.min(1, root.effectiveDiffusion / 64)
-    shadowOpacity: Math.min(1, root.strength / 100)
-    maskEnabled: root.fixedSize
-    maskSource: root.source
+    // MultiEffectの標準描画を無効化し、内部で合成を行う
+    maskEnabled: true
+    maskSource: emptyMask
+
+    // 1. 発光層 (背面)
+    MultiEffect {
+        anchors.fill: parent
+        source: root.sourceProxy
+        blurEnabled: true
+        blurMax: 64
+        blur: Math.min(1, root.effectiveDiffusion / 64)
+        colorization: root.useOriginalColor ? 0 : 1
+        colorizationColor: root.glowColor
+        opacity: Math.min(1, root.strength / 100)
+    }
+
+    // 2. 元画像 (前面)
+    ShaderEffectSource {
+        anchors.fill: parent
+        sourceItem: root.sourceProxy
+    }
+
 }

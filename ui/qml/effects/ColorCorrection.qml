@@ -9,12 +9,6 @@ Common.BaseEffect {
     maskEnabled: true
     maskSource: emptyMask
 
-    Item {
-        id: emptyMask
-
-        visible: false
-    }
-
     ShaderEffect {
         property variant source: root.sourceProxy
         // パラメータを -1.0 ~ 1.0 (または適切な範囲) に正規化して渡す

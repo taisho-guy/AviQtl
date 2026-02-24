@@ -12,6 +12,8 @@ MultiEffect {
     property int frame: 0
     // QMLバインディング再評価用（params/keyframes変更を確実に検知）
     property int _rev: 0
+    // カスタムシェーダー使用時にMultiEffectの標準描画を無効化するための空マスク
+    readonly property Item emptyMask: _emptyMask
 
     // 【統一API】キーフレーム優先評価
     function evalParam(key, fallback) {
@@ -48,10 +50,18 @@ MultiEffect {
     width: implicitWidth > 0 ? implicitWidth : 1
     height: implicitHeight > 0 ? implicitHeight : 1
 
+    Item {
+        id: _emptyMask
+
+        visible: false
+    }
+
     ShaderEffectSource {
         id: proxySource
 
-        sourceItem: base.source
+        // カスタムシェーダー（emptyMask）使用時のみソースをキャプチャし、元画像を隠す
+        // これにより、MultiEffect単体使用時（Glowなど）の競合とオーバーヘッドを防ぐ
+        sourceItem: (base.maskSource === base.emptyMask) ? base.source : null
         hideSource: true
         visible: true
         opacity: 0

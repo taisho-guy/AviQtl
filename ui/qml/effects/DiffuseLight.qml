@@ -9,12 +9,26 @@ Common.BaseEffect {
     property real diffusion: Math.max(0, root.evalNumber("diffusion", 10))
     property bool fixedSize: root.evalParam("fixedSize", false)
 
-    // Use shadow to simulate diffuse light (glow)
-    shadowEnabled: true
-    shadowColor: Qt.rgba(1, 1, 1, root.strength) // White glow with strength
-    shadowBlur: root.diffusion / 64 // Approximate normalization
-    shadowHorizontalOffset: 0
-    shadowVerticalOffset: 0
-    maskEnabled: root.fixedSize
-    maskSource: root.source
+    // MultiEffectの標準描画を無効化
+    maskEnabled: true
+    maskSource: emptyMask
+
+    // 1. 拡散光層 (背面)
+    MultiEffect {
+        anchors.fill: parent
+        source: root.sourceProxy
+        blurEnabled: true
+        blurMax: 64
+        blur: Math.min(1, root.diffusion / 64)
+        colorization: 1
+        colorizationColor: "white"
+        opacity: root.strength
+    }
+
+    // 2. 元画像 (前面)
+    ShaderEffectSource {
+        anchors.fill: parent
+        sourceItem: root.sourceProxy
+    }
+
 }

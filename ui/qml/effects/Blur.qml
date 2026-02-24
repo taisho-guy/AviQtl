@@ -25,12 +25,6 @@ Common.BaseEffect {
     maskEnabled: true
     maskSource: emptyMask
 
-    Item {
-        id: emptyMask
-
-        visible: false
-    }
-
     // 1. 横方向ブラー
     ShaderEffect {
         id: hPass

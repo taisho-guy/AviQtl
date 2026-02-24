@@ -9,16 +9,6 @@ Common.BaseEffect {
     maskEnabled: true
     maskSource: emptyMask
 
-    // MultiEffectの標準描画（ソースのそのままの表示）を無効化するため、
-    // 透明なマスクを適用して隠す。
-    // これにより、子要素であるShaderEffectSource（モザイク）のみが表示される。
-    Item {
-        id: emptyMask
-
-        anchors.fill: parent
-        visible: false
-    }
-
     ShaderEffect {
         property variant source: root.sourceProxy
         property real size: root.size

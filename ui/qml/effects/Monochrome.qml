@@ -8,6 +8,15 @@ Common.BaseEffect {
     property color color: root.evalColor("color", "#ffffff")
     property real strength: Math.max(0, Math.min(100, root.evalNumber("strength", 100))) / 100
 
-    colorization: root.strength
-    colorizationColor: root.color
+    // MultiEffectの標準描画を無効化
+    maskEnabled: true
+    maskSource: emptyMask
+
+    MultiEffect {
+        anchors.fill: parent
+        source: root.sourceProxy
+        colorization: root.strength
+        colorizationColor: root.color
+    }
+
 }
