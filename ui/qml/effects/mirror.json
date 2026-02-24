@@ -1,0 +1,15 @@
+{
+    "id": "mirror",
+    "name": "反転",
+    "qml": "Mirror.qml",
+    "params": {
+        "horizontal": false,
+        "vertical": false
+    },
+    "ui": {
+        "controls": [
+            { "type": "bool", "param": "horizontal", "label": "左右反転" },
+            { "type": "bool", "param": "vertical", "label": "上下反転" }
+        ]
+    }
+}

@@ -1,9 +1,9 @@
-import "../common" as Common
 import QtQuick
 import QtQuick.Shapes
 import QtQuick3D
-import Rina 1.0
-import Rina.Core 1.0
+import Rina
+import Rina.Core
+import "qrc:/qt/qml/Rina/ui/qml/common" as Common
 
 Common.BaseObject {
     // 将来的にはここで「子シーンをオフスクリーン描画」したテクスチャを貼る

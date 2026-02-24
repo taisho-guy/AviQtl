@@ -1,0 +1,15 @@
+{
+    "id": "monochrome",
+    "name": "単色化",
+    "qml": "Monochrome.qml",
+    "params": {
+        "color": "#ffffff",
+        "strength": 100
+    },
+    "ui": {
+        "controls": [
+            { "type": "color", "param": "color", "label": "色" },
+            { "type": "float", "param": "strength", "label": "強さ", "min": 0, "max": 100 }
+        ]
+    }
+}

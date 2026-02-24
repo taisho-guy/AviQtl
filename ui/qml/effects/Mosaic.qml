@@ -6,13 +6,25 @@ Common.BaseEffect {
 
     property real size: Math.max(1, root.evalNumber("size", 10))
 
-    ShaderEffectSource {
+    maskEnabled: true
+    maskSource: emptyMask
+
+    // MultiEffectの標準描画（ソースのそのままの表示）を無効化するため、
+    // 透明なマスクを適用して隠す。
+    // これにより、子要素であるShaderEffectSource（モザイク）のみが表示される。
+    Item {
+        id: emptyMask
+
         anchors.fill: parent
-        sourceItem: root.source
-        // ソースのサイズをモザイクサイズで割ってテクスチャ解像度を落とす
-        textureSize: Qt.size(Math.max(1, Math.ceil(width / root.size)), Math.max(1, Math.ceil(height / root.size)))
-        smooth: false // 最近傍補間（ドット絵状）で拡大表示する
-        visible: root.source !== null
+        visible: false
+    }
+
+    ShaderEffect {
+        property variant source: root.source
+        property real size: root.size
+
+        anchors.fill: parent
+        fragmentShader: "mosaic.frag.qsb"
     }
 
 }

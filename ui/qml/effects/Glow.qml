@@ -1,5 +1,5 @@
-import Qt5Compat.GraphicalEffects
 import QtQuick
+import QtQuick.Effects
 import "qrc:/qt/qml/Rina/ui/qml/common" as Common
 
 Common.BaseEffect {
@@ -23,73 +23,10 @@ Common.BaseEffect {
     }
     property real effectiveDiffusion: Math.max(0, diffusion * fluctuation)
 
-    // 1. しきい値処理 (ThresholdMask)
-    // 元画像をマスクとして使い、輝度がしきい値以下の部分を切り落とす
-    ThresholdMask {
-        id: thresholded
-
-        anchors.fill: parent
-        source: root.source
-        maskSource: root.source
-        threshold: root.threshold
-        spread: 0.1
-        visible: false
-    }
-
-    // 2. 着色 (ColorOverlay) - オプション
-    ColorOverlay {
-        id: colored
-
-        anchors.fill: parent
-        source: thresholded
-        color: root.glowColor
-        visible: false
-    }
-
-    // 3. ぼかし (FastBlur)
-    FastBlur {
-        id: blurred
-
-        anchors.fill: parent
-        source: root.useOriginalColor ? thresholded : colored
-        radius: root.effectiveDiffusion
-        transparentBorder: true
-        visible: false
-    }
-
-    // 4. 強さ調整用レイヤー
-    Item {
-        id: glowLayer
-
-        anchors.fill: parent
-        visible: false
-        // 強さを不透明度で表現 (1.0で最大)
-        opacity: Math.min(1, root.strength)
-
-        ShaderEffectSource {
-            anchors.fill: parent
-            sourceItem: blurred
-        }
-
-    }
-
-    // 5. 合成 (Blend: Add)
-    Blend {
-        id: blended
-
-        anchors.fill: parent
-        source: root.source
-        foregroundSource: glowLayer
-        mode: "add"
-        visible: !root.fixedSize
-    }
-
-    // 6. サイズ固定 (OpacityMaskで元画像の領域で切り抜く)
-    OpacityMask {
-        anchors.fill: parent
-        source: blended
-        maskSource: root.source
-        visible: root.fixedSize
-    }
-
+    shadowEnabled: true
+    shadowColor: root.useOriginalColor ? "white" : root.glowColor
+    shadowBlur: Math.min(1, root.effectiveDiffusion / 64)
+    shadowOpacity: Math.min(1, root.strength / 100)
+    maskEnabled: root.fixedSize
+    maskSource: root.source
 }

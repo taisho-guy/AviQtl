@@ -1,10 +1,10 @@
 import QtQuick
+import QtQuick.Effects
 
-Item {
+MultiEffect {
     id: base
 
     // ObjectRenderer から Binding で注入される
-    property Item source: null
     property var params
     property QtObject effectModel
     property int frame: 0

@@ -1,8 +1,10 @@
-import Qt5Compat.GraphicalEffects
 import QtQuick
+import QtQuick.Effects
 import "qrc:/qt/qml/Rina/ui/qml/common" as Common
 
 Common.BaseEffect {
+    // Simplified Flash using MultiEffect (ZoomBlur removed)
+
     id: root
 
     property real strength: Math.max(0, root.evalNumber("strength", 10))
@@ -26,90 +28,10 @@ Common.BaseEffect {
     property color flashColor: root.evalColor("color", "#ffffff")
     property bool fixedSize: root.evalParam("fixedSize", false)
 
-    // 1. ブラー用ソースの準備 (着色処理)
-    Item {
-        id: flashSource
-
-        anchors.fill: parent
-        visible: false
-        layer.enabled: true
-
-        // 元の色を使用する場合
-        ShaderEffectSource {
-            anchors.fill: parent
-            sourceItem: root.source
-            visible: root.useOriginalColor
-        }
-
-        // 指定色で塗りつぶす場合
-        ColorOverlay {
-            anchors.fill: parent
-            source: root.source
-            color: root.flashColor
-            visible: !root.useOriginalColor
-        }
-
-    }
-
-    // 2. 閃光の生成 (ZoomBlur)
-    ZoomBlur {
-        id: flashEffect
-
-        anchors.fill: parent
-        source: flashSource
-        length: root.strength
-        horizontalOffset: root.centerX
-        verticalOffset: root.centerY
-        samples: Math.min(128, Math.max(24, root.strength * 2)) // 強さに応じてサンプル数を調整
-        transparentBorder: true
-        visible: false
-    }
-
-    // 3. 合成 (サイズ固定なし)
-    Item {
-        id: composition
-
-        anchors.fill: parent
-        visible: !root.fixedSize
-
-        // 後方に合成 (Flash -> Source)
-        ShaderEffectSource {
-            anchors.fill: parent
-            sourceItem: flashEffect
-            visible: root.mode === 1
-        }
-
-        // 元画像 (光成分のみ以外で表示)
-        ShaderEffectSource {
-            anchors.fill: parent
-            sourceItem: root.source
-            visible: root.mode === 1 // 後方合成時は上に重ねる
-        }
-
-        // 光成分のみ
-        ShaderEffectSource {
-            anchors.fill: parent
-            sourceItem: flashEffect
-            visible: root.mode === 2
-        }
-
-        // 前方に合成 (Source + Flash(Add))
-        Blend {
-            anchors.fill: parent
-            visible: root.mode === 0
-            source: root.source
-            foregroundSource: flashEffect
-            mode: "add"
-        }
-
-    }
-
-    // 4. サイズ固定 (OpacityMaskで切り抜き)
-    OpacityMask {
-        anchors.fill: parent
-        visible: root.fixedSize
-        source: composition
-        maskSource: root.source
-    }
-
+    // Simulate flash with brightness/colorization
+    brightness: root.strength / 100
+    colorization: root.useOriginalColor ? 0 : 1
+    colorizationColor: root.flashColor
+    maskEnabled: root.fixedSize
+    maskSource: root.source
 }

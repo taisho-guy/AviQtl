@@ -85,7 +85,15 @@ class BuildWorker(QtCore.QThread):
                 dest_path = self.output_dir / d
                 if src_path.exists():
                     if dest_path.exists(): shutil.rmtree(dest_path)
-                    shutil.copytree(src_path, dest_path)
+                    shutil.copytree(src_path, dest_path, ignore=shutil.ignore_patterns("*.frag", "*.vert", "*.glsl"))
+
+            # コンパイル済みシェーダー(.qsb)のコピー
+            for d in ["effects", "objects"]:
+                qsb_src_dir = work_dir / d
+                qsb_dest_dir = self.output_dir / d
+                if qsb_src_dir.exists() and qsb_dest_dir.exists():
+                    for qsb_file in qsb_src_dir.glob("*.qsb"):
+                        shutil.copy2(qsb_file, qsb_dest_dir / qsb_file.name)
 
             # Plugins
             plugins_src = self.source_dir / "plugins"

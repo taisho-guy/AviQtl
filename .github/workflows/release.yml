@@ -288,6 +288,11 @@ jobs:
             cp -r plugins/* ../dist/plugins/
           fi
 
+          # 不要なシェーダーソースを削除
+          find ../dist -name "*.frag" -type f -delete
+          find ../dist -name "*.vert" -type f -delete
+          find ../dist -name "*.glsl" -type f -delete
+
           # 3. 圧縮
           cd ../dist
           zip -r Rina-Linux-x86_64-v3.zip .

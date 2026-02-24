@@ -1,5 +1,5 @@
-import Qt5Compat.GraphicalEffects
 import QtQuick
+import QtQuick.Effects
 import "qrc:/qt/qml/Rina/ui/qml/common" as Common
 
 Common.BaseEffect {
@@ -10,6 +10,11 @@ Common.BaseEffect {
     property real leftVal: Math.max(0, root.evalNumber("left", 0))
     property real rightVal: Math.max(0, root.evalNumber("right", 0))
     property bool centerVal: root.evalParam("center", false)
+
+    // マスク適用
+    maskEnabled: true
+    maskSource: mask
+    visible: root.source !== null
 
     // マスク画像の生成 (白 = 表示、透明 = 非表示)
     Item {
@@ -29,21 +34,12 @@ Common.BaseEffect {
 
     }
 
-    // マスク適用
-    OpacityMask {
-        anchors.fill: parent
-        source: root.source
-        maskSource: mask
-        visible: root.source !== null
-
-        // 中心位置の補正
-        // 左を削ると見た目の中心は右にずれるため、左へ移動させて補正する
-        // 補正量 X = (右カット量 - 左カット量) / 2
-        transform: Translate {
-            x: root.centerVal ? (root.rightVal - root.leftVal) / 2 : 0
-            y: root.centerVal ? (root.bottomVal - root.topVal) / 2 : 0
-        }
-
+    // 中心位置の補正
+    // 左を削ると見た目の中心は右にずれるため、左へ移動させて補正する
+    // 補正量 X = (右カット量 - 左カット量) / 2
+    transform: Translate {
+        x: root.centerVal ? (root.rightVal - root.leftVal) / 2 : 0
+        y: root.centerVal ? (root.bottomVal - root.topVal) / 2 : 0
     }
 
 }

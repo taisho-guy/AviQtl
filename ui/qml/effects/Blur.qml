@@ -1,5 +1,5 @@
-import Qt5Compat.GraphicalEffects
 import QtQuick
+import QtQuick.Effects
 import "qrc:/qt/qml/Rina/ui/qml/common" as Common
 
 Common.BaseEffect {
@@ -21,66 +21,50 @@ Common.BaseEffect {
     readonly property real remH: hLen - commonRadius
     readonly property real remV: vLen - commonRadius
 
-    // 1. 光の強さ (前処理: コントラスト強調)
-    // 輝度が高い部分をより強調するためにコントラストを上げる
-    BrightnessContrast {
-        id: gainEffect
+    // MultiEffectの描画を無効化
+    maskEnabled: true
+    maskSource: emptyMask
 
-        anchors.fill: parent
-        source: root.source
-        // gain 0 -> contrast 0 (通常)
-        // gain 100 -> contrast 1.0 (最大)
-        contrast: root.gain / 100
-        brightness: root.gain / 200 // 少し明るくする
+    Item {
+        id: emptyMask
+
         visible: false
     }
 
-    // 2. 共通ブラー (FastBlur)
-    // 縦横等倍成分を高速に処理
-    FastBlur {
-        id: baseBlur
+    // 1. 横方向ブラー
+    ShaderEffect {
+        id: hPass
+
+        property variant source: root.source
+        property vector2d direction: Qt.vector2d(1, 0)
+        property real radius: root.hLen
 
         anchors.fill: parent
-        source: gainEffect
-        radius: root.commonRadius
-        transparentBorder: true
-        visible: false
+        visible: false // テクスチャとしてのみ使用
+        layer.enabled: true
+        layer.smooth: true
+        fragmentShader: "blur.frag.qsb"
     }
 
-    // 3. 横方向の追加ブラー (DirectionalBlur)
-    DirectionalBlur {
-        id: hBlur
+    // 2. 縦方向ブラー + 出力
+    ShaderEffect {
+        id: vPass
+
+        property variant source: hPass
+        property vector2d direction: Qt.vector2d(0, 1)
+        property real radius: root.vLen
 
         anchors.fill: parent
-        source: root.remH > 0.1 ? baseBlur : baseBlur // 変更なし（ロジック整理のため）
-        angle: 90 // 90度回転して適用されるため、0度方向(右)へのブラーとなる(Qt仕様)
-        length: root.remH * 2 // FastBlurのradius換算に合わせるため2倍
-        samples: Math.min(32, Math.max(8, length))
-        transparentBorder: true
-        visible: false
+        fragmentShader: "blur.frag.qsb"
     }
 
-    // 4. 縦方向の追加ブラー (DirectionalBlur)
-    DirectionalBlur {
-        id: vBlur
-
+    // サイズ固定用マスク (必要な場合のみ適用)
+    MultiEffect {
         anchors.fill: parent
-        // 最適化: 横方向の追加ブラーが不要な場合はスキップして直結する
-        source: root.remH > 0.1 ? hBlur : baseBlur
-        angle: 0 // 0度回転 = 下方向(Qt仕様)
-        length: root.remV * 2
-        samples: Math.min(32, Math.max(8, length))
-        transparentBorder: true
-        visible: root.source !== null && !root.fixedSize
-    }
-
-    // 5. サイズ固定 (マスキング)
-    OpacityMask {
-        anchors.fill: parent
-        // 最適化: 最終出力のソースを選択
-        source: root.remV > 0.1 ? vBlur : (root.remH > 0.1 ? hBlur : baseBlur)
-        maskSource: root.source // 元画像のアルファチャンネルで切り抜く
-        visible: root.source !== null && root.fixedSize
+        source: vPass
+        maskEnabled: root.fixedSize
+        maskSource: root.source
+        visible: root.fixedSize
     }
 
 }

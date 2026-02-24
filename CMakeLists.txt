@@ -50,7 +50,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     list(APPEND EXTRA_QT_COMPONENTS WaylandClient)
 endif()
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick QuickControls2 Quick3D Widgets Core5Compat Sql Svg Multimedia Concurrent ${EXTRA_QT_COMPONENTS})
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick QuickControls2 Quick3D Widgets Core5Compat Sql Svg Multimedia Concurrent ShaderTools ${EXTRA_QT_COMPONENTS})
 find_package(Vulkan REQUIRED)
 find_package(PkgConfig REQUIRED)
 
@@ -102,10 +102,12 @@ file(GLOB_RECURSE CPP_SOURCES
     "scripting/*.hpp"
 )
 
+# 共通シェーダーライブラリ (依存関係用)
+file(GLOB_RECURSE COMMON_SHADERS "ui/qml/common/shaders/*.glsl")
+
 # 実行可能ターゲットの作成
 qt_add_executable(Rina
     ${CPP_SOURCES}
-    ui/resources.qrc
     core/src/settings_manager.cpp
     ui/src/project_service.cpp
     ui/src/transport_service.cpp
@@ -120,6 +122,7 @@ qt_add_executable(Rina
     core/src/project_serializer.cpp
     core/src/video_encoder.cpp
     scripting/mod_engine.cpp
+    ${COMMON_SHADERS}
 )
 
 if(APPLE)
@@ -172,6 +175,9 @@ qt_add_qml_module(Rina
         ui/qml/ExportDialog.qml
 
         # 【削除】Objectsは外部読み込みするため、ここ（コンパイル対象）からは外す
+
+    RESOURCES
+        ui/resources.qrc
 )
 
 # リンク設定
@@ -216,7 +222,7 @@ if(VST3SDK_FOUND)
 
 
     # VST3 SDKのヘルパーソースを直接コンパイルに含める（リンクエラー防止）
-    target_sources(Rina PRIVATE ${VST3_SOURCES})
+    # target_sources(Rina PRIVATE ${VST3_SOURCES})
 endif()
 
 
@@ -232,3 +238,30 @@ endif()
 file(COPY ui/qml/objects/ DESTINATION ${CMAKE_BINARY_DIR}/objects)
 file(COPY ui/qml/effects/ DESTINATION ${CMAKE_BINARY_DIR}/effects)
 file(COPY plugins/ DESTINATION ${CMAKE_BINARY_DIR}/plugins)
+
+# シェーダーのコンパイル (.frag -> .qsb)
+function(compile_shaders TARGET_SUFFIX SRC_DIR DEST_DIR)
+    file(GLOB SHADERS "${SRC_DIR}/*.frag" "${SRC_DIR}/*.vert")
+    set(QSB_OUTPUTS "")
+    foreach(SHADER ${SHADERS})
+        get_filename_component(FILENAME ${SHADER} NAME)
+        set(QSB_FILE "${DEST_DIR}/${FILENAME}.qsb")
+        
+        add_custom_command(
+            OUTPUT ${QSB_FILE}
+            COMMAND Qt6::qsb --glsl "100 es,120,150" --hlsl 50 --msl 12 ${SHADER} -o ${QSB_FILE}
+            DEPENDS ${SHADER} ${COMMON_SHADERS}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            COMMENT "Compiling shader ${FILENAME} to .qsb"
+        )
+        list(APPEND QSB_OUTPUTS ${QSB_FILE})
+    endforeach()
+    
+    if(QSB_OUTPUTS)
+        add_custom_target(CompileShaders_${TARGET_SUFFIX} ALL DEPENDS ${QSB_OUTPUTS})
+        add_dependencies(Rina CompileShaders_${TARGET_SUFFIX})
+    endif()
+endfunction()
+
+compile_shaders("Effects" "ui/qml/effects" "${CMAKE_BINARY_DIR}/effects")
+compile_shaders("Objects" "ui/qml/objects" "${CMAKE_BINARY_DIR}/objects")

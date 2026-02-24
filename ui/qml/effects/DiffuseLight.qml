@@ -1,5 +1,5 @@
-import Qt5Compat.GraphicalEffects
 import QtQuick
+import QtQuick.Effects
 import "qrc:/qt/qml/Rina/ui/qml/common" as Common
 
 Common.BaseEffect {
@@ -9,49 +9,12 @@ Common.BaseEffect {
     property real diffusion: Math.max(0, root.evalNumber("diffusion", 10))
     property bool fixedSize: root.evalParam("fixedSize", false)
 
-    // 1. 拡散 (ぼかし)
-    FastBlur {
-        id: blurred
-
-        anchors.fill: parent
-        source: root.source
-        radius: root.diffusion
-        transparentBorder: true
-        visible: false
-    }
-
-    // 2. 強さ調整用レイヤー
-    Item {
-        id: lightLayer
-
-        anchors.fill: parent
-        visible: false
-        opacity: root.strength
-
-        ShaderEffectSource {
-            anchors.fill: parent
-            sourceItem: blurred
-        }
-
-    }
-
-    // 3. 合成 (Blend: Add)
-    Blend {
-        id: blended
-
-        anchors.fill: parent
-        source: root.source
-        foregroundSource: lightLayer
-        mode: "add"
-        visible: !root.fixedSize
-    }
-
-    // 4. サイズ固定 (OpacityMaskで元画像の領域で切り抜く)
-    OpacityMask {
-        anchors.fill: parent
-        source: blended
-        maskSource: root.source
-        visible: root.fixedSize
-    }
-
+    // Use shadow to simulate diffuse light (glow)
+    shadowEnabled: true
+    shadowColor: Qt.rgba(1, 1, 1, root.strength) // White glow with strength
+    shadowBlur: root.diffusion / 64 // Approximate normalization
+    shadowHorizontalOffset: 0
+    shadowVerticalOffset: 0
+    maskEnabled: root.fixedSize
+    maskSource: root.source
 }

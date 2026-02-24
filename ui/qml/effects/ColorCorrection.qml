@@ -1,29 +1,31 @@
-import Qt5Compat.GraphicalEffects
 import QtQuick
+import QtQuick.Effects
 import "qrc:/qt/qml/Rina/ui/qml/common" as Common
 
 Common.BaseEffect {
     id: root
 
-    // Hue, Saturation, Lightness
-    HueSaturation {
-        id: hs
+    // MultiEffectの描画を無効化
+    maskEnabled: true
+    maskSource: emptyMask
 
-        anchors.fill: parent
-        source: root.source
-        hue: root.evalNumber("hue", 0) / 180
-        saturation: (root.evalNumber("saturation", 100) - 100) / 100
-        lightness: (root.evalNumber("lightness", 100) - 100) / 100
-        visible: root.source !== null && root.width > 0 && root.height > 0
+    Item {
+        id: emptyMask
+
+        visible: false
     }
 
-    // Brightness, Contrast
-    BrightnessContrast {
+    ShaderEffect {
+        property variant source: root.source
+        // パラメータを -1.0 ~ 1.0 (または適切な範囲) に正規化して渡す
+        property real brightness: (root.evalNumber("brightness", 100) - 100) / 100
+        property real contrast: (root.evalNumber("contrast", 100) - 100) / 100
+        property real hue: root.evalNumber("hue", 0) / 360
+        property real saturation: (root.evalNumber("saturation", 100) - 100) / 100
+        property real lightness: (root.evalNumber("lightness", 100) - 100) / 100
+
         anchors.fill: parent
-        source: hs
-        brightness: (root.evalNumber("brightness", 100) - 100) / 100
-        contrast: (root.evalNumber("contrast", 100) - 100) / 100
-        visible: hs.visible
+        fragmentShader: "color_correction.frag.qsb"
     }
 
 }

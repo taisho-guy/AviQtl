@@ -64,7 +64,7 @@ Common.BaseObject {
         for (var j = 0; j < ch.length; j++) {
             var node = ch[j];
             // 各 clipNode の fbRendererOutput 変化を監視
-            var conn = Qt.createQmlObject('import QtQml 2.15; Connections { function onFbRendererOutputChanged() { Qt.callLater(root._rebuildCapture); } }', root, "fbWatch");
+            var conn = Qt.createQmlObject('import QtQml; Connections { function onFbRendererOutputChanged() { Qt.callLater(root._rebuildCapture); } }', root, "fbWatch");
             conn.target = node;
             _watchConnections.push(conn);
         }

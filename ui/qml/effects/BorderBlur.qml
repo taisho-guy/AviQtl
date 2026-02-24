@@ -1,5 +1,5 @@
-import Qt5Compat.GraphicalEffects
 import QtQuick
+import QtQuick.Effects
 import "qrc:/qt/qml/Rina/ui/qml/common" as Common
 
 Common.BaseEffect {
@@ -18,49 +18,9 @@ Common.BaseEffect {
     readonly property real remH: hLen - commonRadius
     readonly property real remV: vLen - commonRadius
 
-    // 1. 共通ブラー (FastBlur)
-    FastBlur {
-        id: baseBlur
-
-        anchors.fill: parent
-        source: root.source
-        radius: root.commonRadius
-        transparentBorder: true
-        visible: false
-    }
-
-    // 2. 横方向の追加ブラー (DirectionalBlur)
-    DirectionalBlur {
-        id: hBlur
-
-        anchors.fill: parent
-        source: baseBlur
-        angle: 90 // 90度回転して適用されるため、0度方向(右)へのブラーとなる(Qt仕様)
-        length: root.remH * 2 // FastBlurのradius換算に合わせるため2倍
-        samples: Math.min(32, Math.max(8, length))
-        transparentBorder: true
-        visible: false
-    }
-
-    // 3. 縦方向の追加ブラー (DirectionalBlur)
-    DirectionalBlur {
-        id: vBlur
-
-        anchors.fill: parent
-        source: root.remH > 0.1 ? hBlur : baseBlur
-        angle: 0 // 0度回転 = 下方向(Qt仕様)
-        length: root.remV * 2
-        samples: Math.min(32, Math.max(8, length))
-        transparentBorder: true
-        visible: root.source !== null && root.blurAlpha
-    }
-
-    // 4. 透明度の境界をぼかさない (マスキング)
-    OpacityMask {
-        anchors.fill: parent
-        source: root.remV > 0.1 ? vBlur : (root.remH > 0.1 ? hBlur : baseBlur)
-        maskSource: root.source // 元画像のアルファチャンネルで切り抜く
-        visible: root.source !== null && !root.blurAlpha
-    }
-
+    blurEnabled: true
+    blurMax: Math.max(32, root.size)
+    blur: root.size / blurMax
+    maskEnabled: !root.blurAlpha
+    maskSource: root.source
 }
