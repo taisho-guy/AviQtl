@@ -3,6 +3,7 @@ push.fish
 # Builds
 build/
 .build_tmp/
+dist
 
 # Exports
 project_context.json
