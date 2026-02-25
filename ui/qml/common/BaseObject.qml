@@ -227,8 +227,8 @@ Node {
             readonly property var _ti: base.hasTransform ? transformLoader.item : null
 
             // テクスチャサイズをスケール適用後のサイズに設定
-            width: (renderer.output.sourceItem ? renderer.output.sourceItem.width : 1) * (_ti ? _ti.output2dScale : 1)
-            height: (renderer.output.sourceItem ? renderer.output.sourceItem.height : 1) * (_ti ? _ti.output2dScale : 1)
+            width: (rendererInstance && rendererInstance.output && rendererInstance.output.sourceItem ? rendererInstance.output.sourceItem.width : 1) * (_ti ? _ti.output2dScale : 1)
+            height: (rendererInstance && rendererInstance.output && rendererInstance.output.sourceItem ? rendererInstance.output.sourceItem.height : 1) * (_ti ? _ti.output2dScale : 1)
             // AviUtl 座標系: 中心(0,0)、Y下プラス → Qt2D: 中心 = parent の center + offset
             x: _fbCaptureItemImpl.width / 2 + (_ti ? _ti.output2dX : 0) - width / 2
             y: _fbCaptureItemImpl.height / 2 - (_ti ? _ti.output2dY : 0) - height / 2

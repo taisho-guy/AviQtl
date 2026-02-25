@@ -27,7 +27,18 @@ AudioPluginManager &AudioPluginManager::instance() {
     return inst;
 }
 
-AudioPluginManager::AudioPluginManager() { scanPlugins(); }
+AudioPluginManager::AudioPluginManager() {
+    m_lilvWorld = lilv_world_new();
+    lilv_world_load_all(m_lilvWorld);
+    scanPlugins();
+}
+
+AudioPluginManager::~AudioPluginManager() {
+    if (m_lilvWorld) {
+        lilv_world_free(m_lilvWorld);
+        m_lilvWorld = nullptr;
+    }
+}
 
 void AudioPluginManager::registerPlugin(const PluginInfo &info) {
     m_plugins.append(info);
@@ -151,9 +162,7 @@ void AudioPluginManager::scanLadspa() {
 }
 
 void AudioPluginManager::scanLv2() {
-    LilvWorld *world = lilv_world_new();
-    lilv_world_load_all(world);
-    const LilvPlugins *plugins = lilv_world_get_all_plugins(world);
+    const LilvPlugins *plugins = lilv_world_get_all_plugins(m_lilvWorld);
 
     LILV_FOREACH(plugins, i, plugins) {
         const LilvPlugin *p = lilv_plugins_get(plugins, i);
@@ -183,7 +192,6 @@ void AudioPluginManager::scanLv2() {
             registerPlugin(info);
         }
     }
-    lilv_world_free(world);
 }
 
 void AudioPluginManager::scanClap() {

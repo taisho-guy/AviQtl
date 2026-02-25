@@ -1,4 +1,5 @@
 #include "lv2_plugin.hpp"
+#include "audio_plugin_manager.hpp"
 #include <QDebug>
 #include <algorithm>
 #include <cmath>
@@ -8,8 +9,7 @@
 namespace Rina::Engine::Plugin {
 
 bool Lv2Plugin::load(const QString &uri, int) {
-    m_world = lilv_world_new();
-    lilv_world_load_all(m_world); // /usr/lib/lv2 を自動スキャン
+    m_world = AudioPluginManager::instance().getLilvWorld();
 
     LilvNode *uriNode = lilv_new_uri(m_world, uri.toUtf8().constData());
     const LilvPlugins *all = lilv_world_get_all_plugins(m_world);
@@ -201,10 +201,7 @@ void Lv2Plugin::release() {
         lilv_instance_free(m_instance);
         m_instance = nullptr;
     }
-    if (m_world) {
-        lilv_world_free(m_world);
-        m_world = nullptr;
-    }
+    m_world = nullptr;
 }
 
 QString Lv2Plugin::name() const {

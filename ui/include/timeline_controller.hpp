@@ -1,13 +1,16 @@
 #pragma once
+#include "../../engine/audio_mixer.hpp"
 #include "clip_model.hpp"
-#include "effect_model.hpp" // 念のため維持
+#include "effect_model.hpp"
 #include "project_service.hpp"
 #include "selection_service.hpp"
+#include "timeline_engine_synchronizer.hpp"
+#include "timeline_export_manager.hpp"
+#include "timeline_media_manager.hpp"
 #include "timeline_service.hpp"
 #include "timeline_types.hpp"
 #include "transport_service.hpp"
 #include <QAbstractListModel>
-#include <QColor>
 #include <QDebug>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -24,22 +27,10 @@
 
 class QUndoStack;
 
-// Forward declarations for Rina::Core
-namespace Rina {
-namespace Core {
-class VideoDecoder;
+namespace Rina::Core {
 class VideoFrameStore;
-class VideoEncoder; // 前方宣言
-class AudioDecoder;
-} // namespace Core
-} // namespace Rina
-
-namespace Rina::Engine {
-class AudioMixer;
-}
-#include "../../core/include/audio_decoder.hpp"
-#include "../../core/include/video_decoder.hpp"
-#include "../../engine/audio_mixer.hpp"
+class VideoEncoder;
+} // namespace Rina::Core
 
 namespace Rina::UI { // 元のnamespaceに戻す
 class TimelineController : public QObject {
@@ -69,12 +60,14 @@ class TimelineController : public QObject {
     void setVideoFrameStore(Rina::Core::VideoFrameStore *store);
 
     Q_INVOKABLE void setCompositeView(QQuickItem *view) { m_compositeView = view; }
+    QQuickItem *compositeView() const { return m_compositeView; }
 
     // サービスアクセサ
     ProjectService *project() const { return m_project; }
     TransportService *transport() const { return m_transport; }
     SelectionService *selection() const { return m_selection; }
     TimelineService *timeline() const { return m_timeline; }
+    TimelineMediaManager *mediaManager() const { return m_mediaManager; }
 
     double timelineScale() const;
     void setTimelineScale(double scale);
@@ -102,7 +95,7 @@ class TimelineController : public QObject {
 
     Q_INVOKABLE void log(const QString &msg);
     QVariantList clips() const;
-    ClipModel *clipModel() const { return m_clipModel; }
+    ClipModel *clipModel() const { return m_engineSync->clipModel(); }
 
     // クリップの配置・長さを更新 (ID指定)
     Q_INVOKABLE void updateClip(int id, int layer, int startFrame, int duration);
@@ -168,27 +161,13 @@ class TimelineController : public QObject {
     void updateActiveClipsList();
 
     // 再生速度の同期 (QMLからTransportServiceの変更通知を受けて呼び出す)
-    Q_INVOKABLE void syncPlaybackSpeed() {
-        double speed = m_transport->playbackSpeed();
-        for (auto *decoder : m_videoDecoders) {
-            decoder->setPlaybackRate(speed);
-        }
-        if (m_audioMixer)
-            m_audioMixer->setPlaybackSpeed(speed);
-    }
+    Q_INVOKABLE void syncPlaybackSpeed() { m_mediaManager->syncPlaybackSpeed(); }
 
     // サンプリングレートの更新 (ProjectServiceの変更通知を受けて呼び出す)
-    Q_INVOKABLE void updateAudioSampleRate() {
-        int rate = m_project->sampleRate();
-        if (m_audioMixer)
-            m_audioMixer->setSampleRate(rate);
-        for (auto *decoder : m_audioDecoders) {
-            decoder->setSampleRate(rate);
-        }
-    }
+    Q_INVOKABLE void updateAudioSampleRate() { m_mediaManager->updateAudioSampleRate(); }
 
     // 動的に計算されたタイムラインの長さ（最後のクリップの末尾フレーム）
-    int timelineDuration() const { return m_timelineDuration; }
+    int timelineDuration() const { return m_engineSync->timelineDuration(); }
 
   signals:
     void timelineScaleChanged();
@@ -206,12 +185,15 @@ class TimelineController : public QObject {
     void exportProgressChanged(int progress);
 
   private:
-    void updateClipActiveState();
-    void rebuildClipIndex();
-    void updateVideoDecoders();
-    void updateMediaDecoders(); // Video/Audio両対応へ変更
+    // Initialization Helpers
+    void initializeServices();
+    void setupConnections();
 
-    ClipModel *m_clipModel;       // アクティブなクリップをQMLに公開するためのモデル
+    // Internal Slots
+    void onPlayingChanged();
+    void onCurrentFrameChanged();
+
+    void updateClipActiveState();
     double m_timelineScale = 1.0; // タイムラインの表示倍率 (1.0 = 1フレームあたり1ピクセル)
 
     bool m_isClipActive = false;
@@ -223,25 +205,9 @@ class TimelineController : public QObject {
     SelectionService *m_selection;
     TimelineService *m_timeline;
 
-    // 動画デコーダーの管理
-    QHash<int, Core::VideoDecoder *> m_videoDecoders;
-    Core::VideoFrameStore *m_videoFrameStore = nullptr;
-
-    // 音声関連
-    Rina::Engine::AudioMixer *m_audioMixer = nullptr;
-    QHash<int, Core::AudioDecoder *> m_audioDecoders;
-
-    // 最適化: O(log N) での検索のためのソート済みインデックス
-    QList<ClipData *> m_sortedClips; // vector<ClipData*> ではなく QList<ClipData>
-    int m_maxDuration = 0;
-    int m_timelineDuration = 0; // タイムライン全体の長さ
-
-    // エクスポート用ヘルパー
-    bool exportImageSequence(const QString &dir, int quality);
-    bool exportVideo(const QString &path, const QString &format, int quality);
-
-    // GPU→CPUコピーを避けるため、QQuickWindowから直接キャプチャ
-    QImage renderCurrentFrame() const; // DEPRECATED: CPU転送発生
+    TimelineMediaManager *m_mediaManager;
+    TimelineEngineSynchronizer *m_engineSync;
+    TimelineExportManager *m_exportManager;
 
     // デバッグ用: Luaスクリプト直接実行
     Q_INVOKABLE QString debugRunLua(const QString &script);

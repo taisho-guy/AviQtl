@@ -231,8 +231,9 @@ int TimelineService::computeMagneticSnapPosition(int clipId, int targetLayer, in
 
     // 6. 即時適用 (Undoスタックを汚さないように internal を使用)
     // 注意: ドラッグ完了時に QUndoCommand を発行するアーキテクチャが望ましいです。
-    updateClipInternal(clipId, targetLayer, finalStart, clipDuration);
-
+    // 修正: この関数は位置を計算して返すだけに責務を限定します。
+    // 実際の更新は呼び出し元（QMLのドラッグハンドラなど）が担当べきです。
+    // updateClipInternal(clipId, targetLayer, finalStart, clipDuration);
     return finalStart;
 }
 
@@ -246,21 +247,21 @@ QPoint TimelineService::resolveDragPosition(int clipId, int targetLayer, int pro
     int candidateFrame = std::max(0, proposedStartFrame);
 
     // 1. 対象レイヤーの他のクリップをすべて取得
-    QList<const ClipData *> layerClips;
+    QList<const ClipData *> otherClips;
     for (const auto &c : clips()) {
         if (c.id != clipId && c.layer == targetLayer) {
-            layerClips.append(&c);
+            otherClips.append(&c);
         }
     }
 
     // クリップがなければ衝突はありえない
-    if (layerClips.isEmpty()) {
+    if (otherClips.isEmpty()) {
         return QPoint(candidateFrame, targetLayer);
     }
 
     // 2. 衝突解決ロジックのために、クリップを開始フレームでソートする
     // これが欠けていたことが、クリップが重なってしまうバグの根本原因でした。
-    std::sort(layerClips.begin(), layerClips.end(), [](const ClipData *a, const ClipData *b) { return a->startFrame < b->startFrame; });
+    std::sort(otherClips.begin(), otherClips.end(), [](const ClipData *a, const ClipData *b) { return a->startFrame < b->startFrame; });
 
     // 3. 衝突解決 (Push-Right)
     // QML側でグリッドスナップされた位置(`proposedStartFrame`)を尊重し、
@@ -269,7 +270,7 @@ QPoint TimelineService::resolveDragPosition(int clipId, int targetLayer, int pro
     bool collisionFound;
     do {
         collisionFound = false;
-        for (const auto *c : layerClips) {
+        for (const auto *c : otherClips) {
             // Overlap check: (s1 < e2) && (s2 < e1)
             if (candidateFrame < (c->startFrame + c->durationFrames) && c->startFrame < (candidateFrame + duration)) {
                 // 衝突した場合、そのクリップの右端に候補位置を移動
@@ -771,20 +772,20 @@ QList<ClipData *> TimelineService::resolvedActiveClipsAt(int frame) const {
 }
 
 int TimelineService::findVacantFrame(int layer, int startFrame, int duration, int excludeClipId) const {
-    QList<ClipData> layerClips;
+    QList<const ClipData *> layerClips;
     for (const auto &clip : clips()) {
         if (clip.id != excludeClipId && clip.layer == layer) {
-            layerClips.append(clip);
+            layerClips.append(&clip);
         }
     }
 
-    std::sort(layerClips.begin(), layerClips.end(), [](const ClipData &a, const ClipData &b) { return a.startFrame < b.startFrame; });
+    std::sort(layerClips.begin(), layerClips.end(), [](const ClipData *a, const ClipData *b) { return a->startFrame < b->startFrame; });
 
     int candidateStart = std::max(0, startFrame);
     for (const auto &clip : layerClips) {
-        int clipEnd = clip.startFrame + clip.durationFrames;
+        int clipEnd = clip->startFrame + clip->durationFrames;
         int candidateEnd = candidateStart + duration;
-        if (candidateStart < clipEnd && candidateEnd > clip.startFrame) {
+        if (candidateStart < clipEnd && candidateEnd > clip->startFrame) {
             candidateStart = clipEnd;
         }
     }

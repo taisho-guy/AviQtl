@@ -5,6 +5,9 @@
 #include <QVariantList>
 #include <memory>
 
+// Forward declaration
+typedef struct LilvWorldImpl LilvWorld;
+
 namespace Rina::Engine::Plugin {
 
 struct PluginInfo {
@@ -21,6 +24,7 @@ class AudioPluginManager : public QObject {
     Q_OBJECT
   public:
     static AudioPluginManager &instance();
+    ~AudioPluginManager();
 
     // システム上のプラグインをスキャン
     void scanPlugins();
@@ -35,6 +39,8 @@ class AudioPluginManager : public QObject {
     // IDからプラグインインスタンスを生成
     std::unique_ptr<IAudioPlugin> createPlugin(const QString &id);
 
+    LilvWorld *getLilvWorld() const { return m_lilvWorld; }
+
   private:
     AudioPluginManager();
     QList<PluginInfo> m_plugins;
@@ -45,6 +51,8 @@ class AudioPluginManager : public QObject {
     void scanLv2();
     void scanClap();
     void scanVst3();
+
+    LilvWorld *m_lilvWorld = nullptr;
 };
 
 } // namespace Rina::Engine::Plugin

@@ -63,11 +63,6 @@ RowLayout {
                 root.startValueModified(newVal);
 
         }
-        onActiveFocusChanged: {
-            if (!activeFocus)
-                onEditingFinished();
-
-        }
 
         validator: DoubleValidator {
             bottom: root.minValue
@@ -100,11 +95,6 @@ RowLayout {
             var newVal = parseFloat(text);
             if (!isNaN(newVal))
                 root.endValueModified(newVal);
-
-        }
-        onActiveFocusChanged: {
-            if (!activeFocus)
-                onEditingFinished();
 
         }
 
