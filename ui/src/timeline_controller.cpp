@@ -265,25 +265,23 @@ QVariantList TimelineController::clips() const {
         auto meta = Rina::Core::EffectRegistry::instance().getEffect(clip.type);
         if (!meta.qmlSource.isEmpty()) {
             map["qmlSource"] = meta.qmlSource;
-        } else {
-            // 見つからない場合のフォールバック
-            // 実行時のカレントディレクトリ基準になるので注意が必要
-            if (clip.type == "text")
-                map["qmlSource"] = "file:objects/TextObject.qml";
-            else if (clip.type == "rect")
-                map["qmlSource"] = "file:objects/RectObject.qml";
         }
 
-        // クリップの種類やID以外に表示したい情報があればここに追加する
-        // テキストエフェクトがあればそのテキストを表示
+        // params を構築して追加
+        QVariantMap params;
+        // 基本情報もparamsに入れておく（QML側での利便性とBaseObjectでの参照用）
+        params["layer"] = clip.layer;
+        params["startFrame"] = clip.startFrame;
+        params["durationFrames"] = clip.durationFrames;
+        params["id"] = clip.id;
+
         for (auto *eff : clip.effects) {
-            if (eff->id() == "text") {
-                QVariantMap params = eff->params();
-                if (params.contains("text"))
-                    map["text"] = params["text"];
-                break;
+            QVariantMap p = eff->params();
+            for (auto it = p.begin(); it != p.end(); ++it) {
+                params.insert(it.key(), it.value());
             }
         }
+        map["params"] = params;
 
         list.append(map);
     }
@@ -887,6 +885,12 @@ QVariantList TimelineController::getSceneClips(int sceneId) const {
 
         // パラメータの収集 (エフェクトからフラット化)
         QVariantMap params;
+        // 基本情報もparamsに入れておく
+        params["layer"] = clip.layer;
+        params["startFrame"] = clip.startFrame;
+        params["durationFrames"] = clip.durationFrames;
+        params["id"] = clip.id;
+
         for (auto *eff : clip.effects) {
             if (!eff->isEnabled())
                 continue;
