@@ -1,5 +1,6 @@
 #pragma once
 #include "../../engine/audio_mixer.hpp"
+#include "../../engine/plugin/audio_plugin_manager.hpp"
 #include "clip_model.hpp"
 #include "effect_model.hpp"
 #include "project_service.hpp"
@@ -121,6 +122,10 @@ class TimelineController : public QObject {
     Q_INVOKABLE QVariantList getPluginCategories() const;
     Q_INVOKABLE QVariantList getPluginsByCategory(const QString &category) const;
     Q_INVOKABLE bool isAudioClip(int clipId) const;
+
+    // フォーマット別リスト取得 (Inline implementation)
+    Q_INVOKABLE QVariantList getPluginFormats() const { return Rina::Engine::Plugin::AudioPluginManager::instance().getFormats(); }
+    Q_INVOKABLE QVariantList getPluginsByFormat(const QString &format) const { return Rina::Engine::Plugin::AudioPluginManager::instance().getPluginsByFormat(format); }
 
     // パラメータ操作用
     Q_INVOKABLE QVariantList getClipEffectStack(int clipId) const;
