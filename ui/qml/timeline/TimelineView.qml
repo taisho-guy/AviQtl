@@ -352,6 +352,56 @@ ScrollView {
                     clipDisplayName = modelData.type;
                 }
 
+                // ドラッグ中の位置計算と更新を行う関数
+                // ロジックを分離して可読性を向上
+                function updateDragPosition(mouse) {
+                    // 1. マウスの移動量(Delta)を計算
+                    // mapToItemを使ってシーン全体の座標系で計算することで、
+                    // Flickableのスクロールやアイテム自体の移動による座標ズレを防ぐ
+                    var scenePos = mapToItem(timelineFlickable.contentItem, mouse.x, mouse.y);
+                    var deltaX = scenePos.x - moveArea.dragStartScenePos.x;
+                    var deltaY = scenePos.y - moveArea.dragStartScenePos.y;
+
+                    // 2. 初期位置に移動量を加算して「希望の」位置を算出
+                    var rawFrame = moveArea.initialFrame + (deltaX / clipDelegate.scale);
+                    var proposedFrame = timelineViewRoot.snapFrame(rawFrame);
+                    var proposedLayer = moveArea.initialLayer + Math.round(deltaY / layerHeight);
+
+                    // 3. 値を有効な範囲に制限
+                    proposedLayer = Math.max(0, Math.min(proposedLayer, timelineViewRoot.layerCount - 1));
+                    proposedFrame = Math.max(0, proposedFrame);
+
+                    // 4. 最適化: グリッド位置が変わっていなければ再計算しない
+                    if (proposedFrame === moveArea.lastProposedFrame && proposedLayer === moveArea.lastProposedLayer)
+                        return;
+
+                    moveArea.lastProposedFrame = proposedFrame;
+                    moveArea.lastProposedLayer = proposedLayer;
+
+                    // 5. 最終位置の決定（衝突解決含む）
+                    var finalFrame = proposedFrame;
+                    var finalLayer = proposedLayer;
+
+                    // C++側の衝突解決ロジックを利用
+                    if (TimelineBridge && typeof TimelineBridge.resolveDragPosition === "function") {
+                        var finalPos = TimelineBridge.resolveDragPosition(modelData.id, proposedLayer, proposedFrame);
+                        finalFrame = finalPos.x;
+                        finalLayer = finalPos.y;
+                    }
+
+                    // 6. 衝突回避時のオートスクロール
+                    // ドラッグによってクリップが強制的に移動させられた場合（衝突回避）、
+                    // その移動分だけビューをスクロールさせて、マウス位置とクリップの相対関係を維持しようとする
+                    if (finalFrame !== proposedFrame) {
+                        var diff = (finalFrame - proposedFrame) * clipDelegate.scale;
+                        timelineFlickable.contentX = Math.max(0, timelineFlickable.contentX + diff);
+                    }
+
+                    // 7. デリゲートの表示位置を更新
+                    clipDelegate.x = finalFrame * clipDelegate.scale;
+                    clipDelegate.y = finalLayer * layerHeight;
+                }
+
                 function updateGroupInfo() {
                     groupLayerCount = 0;
                     groupEffectModel = null;
@@ -475,35 +525,7 @@ ScrollView {
                         }
                         onPositionChanged: (mouse) => {
                             if (pressed && !clipDelegate.isLayerLocked) {
-                                // 1. マウスの移動量(Delta)を計算
-                                var scenePos = mapToItem(timelineFlickable.contentItem, mouse.x, mouse.y);
-                                var deltaX = scenePos.x - dragStartScenePos.x;
-                                var deltaY = scenePos.y - dragStartScenePos.y;
-                                // 2. 初期位置に移動量を加算して「希望の」位置を算出
-                                var proposedFrame = timelineViewRoot.snapFrame(initialFrame + (deltaX / clipDelegate.scale));
-                                var proposedLayer = initialLayer + Math.round(deltaY / layerHeight);
-                                // 3. 値を有効な範囲に制限
-                                proposedLayer = Math.max(0, Math.min(proposedLayer, timelineViewRoot.layerCount - 1));
-                                proposedFrame = Math.max(0, proposedFrame);
-                                // 4. 最適化: グリッド位置が変わっていなければ再計算しない
-                                if (proposedFrame === lastProposedFrame && proposedLayer === lastProposedLayer)
-                                    return ;
-
-                                lastProposedFrame = proposedFrame;
-                                lastProposedLayer = proposedLayer;
-                                // 5. C++側で衝突解決を含めた最終位置を計算
-                                if (TimelineBridge) {
-                                    var finalFrame = proposedFrame;
-                                    var finalLayer = proposedLayer;
-                                    if (typeof TimelineBridge.resolveDragPosition === "function") {
-                                        var finalPos = TimelineBridge.resolveDragPosition(modelData.id, proposedLayer, proposedFrame);
-                                        finalFrame = finalPos.x;
-                                        finalLayer = finalPos.y;
-                                    }
-                                    // 6. デリゲートの表示位置を更新
-                                    clipDelegate.x = finalFrame * clipDelegate.scale;
-                                    clipDelegate.y = finalLayer * layerHeight;
-                                }
+                                clipDelegate.updateDragPosition(mouse);
                             }
                         }
                         onReleased: {

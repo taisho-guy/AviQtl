@@ -4,8 +4,9 @@ import subprocess
 import shutil
 import multiprocessing
 from pathlib import Path
-from PySide6 import QtWidgets, QtCore, QtGui
+from PySide6 import QtCore
 import platform
+import shlex
 
 class BuildWorker(QtCore.QThread):
     progress_signal = QtCore.Signal(int, str)
@@ -21,11 +22,28 @@ class BuildWorker(QtCore.QThread):
         self.is_debug = is_debug
         self.dist_dir = self.source_dir / "dist"
         self.system = platform.system()
+        self.container_name = "archlinux-rina"
 
-    def _run_cmd(self, cmd, shell=False):
-        self.log_signal.emit(f"Run: {' '.join(cmd) if isinstance(cmd, list) else cmd}")
+    def _run_cmd(self, cmd, shell=False, in_container=False):
+        display_cmd = ' '.join(cmd) if isinstance(cmd, list) else cmd
+        prefix = "[Container] " if in_container else ""
+        self.log_signal.emit(f"{prefix}Run: {display_cmd}")
+
+        actual_cmd = cmd
+        if in_container and self.system == "Linux":
+            if isinstance(cmd, str):
+                cmd = shlex.split(cmd)
+            
+            # コンテナ内でカレントディレクトリを維持して実行
+            cmd_str = shlex.join(cmd)
+            cwd = os.getcwd()
+            # プロセスをシェルで包んで実行 (shell=True)
+            inner_cmd = f"cd {shlex.quote(cwd)} && {cmd_str}"
+            actual_cmd = f"distrobox enter {self.container_name} -- bash -c {shlex.quote(inner_cmd)}"
+            shell = True
+
         process = subprocess.Popen(
-            cmd,
+            actual_cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
@@ -37,7 +55,7 @@ class BuildWorker(QtCore.QThread):
             self.log_signal.emit(line.rstrip())
         process.wait()
         if process.returncode != 0:
-            raise subprocess.CalledProcessError(process.returncode, cmd)
+            raise subprocess.CalledProcessError(process.returncode, actual_cmd)
 
     def install_dependencies(self):
         self.log_signal.emit("依存関係を確認中...")
@@ -70,7 +88,7 @@ class BuildWorker(QtCore.QThread):
                     "mingw-w64-ucrt-x86_64-curl",
                     "zip"
                 ]
-                self._run_cmd(["pacman", "-S", "--needed", "--noconfirm"] + deps)
+                self._run_cmd(["pacman", "-Syu", "--needed", "--noconfirm"] + deps)
                 
                 # Audio Plugin SDKs
                 if not (self.source_dir / "clap").exists():
@@ -80,24 +98,28 @@ class BuildWorker(QtCore.QThread):
                 self.log_signal.emit("警告: MSYS2 環境外で実行されています。依存関係の自動インストールはスキップされます。")
 
         elif self.system == "Linux":
-            # CachyOS (Arch Linux based)
-            if shutil.which("pacman"):
-                self.log_signal.emit("Pacman (Arch/CachyOS) を検出しました。")
-                deps = [
-                    "base-devel", "git", "cmake", "ninja", "extra/clang", "mold", "zip",
-                    "mesa", "vulkan-devel", "libxkbcommon", "wayland", "wayland-protocols",
-                    "libffi", "ffmpeg", "luajit", "fftw", "qt6-base", "qt6-declarative",
-                    "qt6-quick3d", "qt6-multimedia", "qt6-shadertools", "qt6-svg",
-                    "qt6-5compat", "qt6-tools", "lilv", "ladspa", "clap", "vst3sdk"
-                ]
-                # sudoが必要な場合があるため、パスワード入力なしで実行できるか、あるいはユーザーに委ねる
-                # ここではsudoを使ってインストールを試みる
-                try:
-                    self._run_cmd(["sudo", "pacman", "-S", "--needed", "--noconfirm"] + deps)
-                except Exception as e:
-                    self.log_signal.emit(f"依存関係のインストールに失敗しました (sudo権限が必要かもしれません): {e}")
-            else:
-                self.log_signal.emit("警告: Pacmanが見つかりません。依存関係の自動インストールはスキップされます。")
+            # 1. ホスト環境: distrobox と podman の確認
+            if not (shutil.which("distrobox") and shutil.which("podman")):
+                self.log_signal.emit("警告: distrobox または podman が見つかりません。インストールしてください。")
+
+            # 2. コンテナの作成 (archlinux-rina)
+            self.log_signal.emit(f"ビルド用コンテナ '{self.container_name}' を準備中...")
+            try:
+                self._run_cmd(["distrobox", "create", "--name", self.container_name, "--image", "archlinux:latest", "--yes"])
+            except subprocess.CalledProcessError:
+                self.log_signal.emit("コンテナの作成をスキップします（既に存在するかエラーが発生しました）。")
+
+            # 3. コンテナ内: ビルド依存関係のインストール
+            self.log_signal.emit("コンテナ内の依存関係をインストール中...")
+            container_deps = [
+                "base-devel", "git", "cmake", "ninja", "clang", "mold", "zip",
+                "mesa", "vulkan-devel", "libxkbcommon", "wayland", "wayland-protocols",
+                "libffi", "ffmpeg", "luajit", "fftw", "qt6-base", "qt6-declarative",
+                "qt6-quick3d", "qt6-multimedia", "qt6-shadertools", "qt6-svg",
+                "qt6-5compat", "qt6-tools", "lilv", "ladspa", "clap", "vst3sdk"
+            ]
+            # コンテナ内では sudo を使用してインストール
+            self._run_cmd(["sudo", "pacman", "-Syu", "--needed", "--noconfirm"] + container_deps, in_container=True)
 
     def run(self):
         try:
@@ -129,7 +151,7 @@ class BuildWorker(QtCore.QThread):
                     "-DCMAKE_CXX_COMPILER=clang++",
                 ])
                 if not self.is_debug:
-                    conf_cmd.append("-DCMAKE_CXX_FLAGS=-O3 -march=x86-64-v3 -flto -fno-semantic-interposition")
+                    conf_cmd.append("-DCMAKE_CXX_FLAGS=-O3 -flto -fno-semantic-interposition")
                     conf_cmd.append("-DCMAKE_POLICY_DEFAULT_CMP0056=NEW")
                     conf_cmd.append("-DCMAKE_SKIP_INSTALL_RPATH=ON")
             
@@ -139,12 +161,15 @@ class BuildWorker(QtCore.QThread):
                  conf_cmd.append(f"-DCLAP_SDK_DIR={self.source_dir}/clap")
 
             conf_cmd.append(str(self.source_dir))
-            self._run_cmd(conf_cmd)
+            
+            # Linuxの場合はコンテナ内で実行
+            use_container = (self.system == "Linux")
+            self._run_cmd(conf_cmd, in_container=use_container)
 
             # 3. Build
             self.log_signal.emit(f"{name} コンパイル中...")
             build_cmd = ["cmake", "--build", str(work_dir), "-j", str(j_slots)]
-            self._run_cmd(build_cmd)
+            self._run_cmd(build_cmd, in_container=use_container)
 
             # 4. パッケージング処理
             self.log_signal.emit(f"パッケージングを開始します...")
@@ -245,86 +270,28 @@ class BuildWorker(QtCore.QThread):
         except Exception as e:
             self.finished_signal.emit(False, str(e))
 
-class RinaGui(QtWidgets.QMainWindow):
-    def __init__(self):
-        super().__init__()
-        self.source_dir = Path.cwd()
-        self.temp_base = self.source_dir / ".build_tmp"
-        self.output_dir = self.source_dir / "build"
-        
-        self.init_ui()
-
-    def init_ui(self):
-        self.setWindowTitle("Rina ビルドシステム")
-        self.resize(600, 400)
-        
-        central = QtWidgets.QWidget()
-        layout = QtWidgets.QVBoxLayout(central)
-        
-        self.status_label = QtWidgets.QLabel("ステータス：準備完了")
-        layout.addWidget(self.status_label)
-        
-        self.progress_bar = QtWidgets.QProgressBar()
-        layout.addWidget(self.progress_bar)
-        
-        self.log_view = QtWidgets.QPlainTextEdit()
-        self.log_view.setReadOnly(True)
-        layout.addWidget(self.log_view)
-        
-        btn_layout = QtWidgets.QHBoxLayout()
-        self.btn_build = QtWidgets.QPushButton("リリースビルド")
-        self.btn_build.clicked.connect(self.run_build)
-        btn_layout.addWidget(self.btn_build)
-        layout.addLayout(btn_layout)
-        
-        self.setCentralWidget(central)
-
-    def run_build(self):
-        self.set_ui_enabled(False)
-        self.worker = BuildWorker(self.source_dir, self.temp_base, self.output_dir)
-        self.connect_worker()
-        self.worker.start()
-
-    def connect_worker(self):
-        self.worker.progress_signal.connect(self.update_progress)
-        self.worker.log_signal.connect(self.log_view.appendPlainText)
-        self.worker.finished_signal.connect(self.on_finished)
-
-    def update_progress(self, val, msg):
-        self.progress_bar.setValue(val)
-        self.status_label.setText(f"Status: {msg}")
-
-    def on_finished(self, success, msg):
-        self.set_ui_enabled(True)
-        if success:
-            QtWidgets.QMessageBox.information(self, "成功", "ビルドが完了しました！")
-        else:
-            self.log_view.appendPlainText(f"\nエラー: {msg}")
-
-    def set_ui_enabled(self, enabled):
-        self.btn_build.setEnabled(enabled)
-
 if __name__ == "__main__":
-    if "--gui" in sys.argv:
-        app = QtWidgets.QApplication(sys.argv)
-        gui = RinaGui()
-        gui.show()
-        sys.exit(app.exec())
-    else:
-        # CLI Mode (Release Build)
-        app = QtCore.QCoreApplication(sys.argv)
-        
-        source_dir = Path.cwd()
-        temp_base = source_dir / ".build_tmp"
-        output_dir = source_dir / "build"
-        
-        # Host Native Release Build
-        worker = BuildWorker(source_dir, temp_base, output_dir, is_debug=False)
-        
-        worker.log_signal.connect(print)
-        worker.progress_signal.connect(lambda val, msg: print(f"[{val}%] {msg}"))
-        worker.finished_signal.connect(lambda success, msg: app.quit() if success else app.exit(1))
-        
-        print("リリースビルドを開始します...")
-        worker.start()
-        sys.exit(app.exec())
+    # CLI Mode (Release Build)
+    app = QtCore.QCoreApplication(sys.argv)
+    
+    source_dir = Path.cwd()
+    temp_base = source_dir / ".build_tmp"
+    output_dir = source_dir / "build"
+    
+    # Host Native Release Build
+    worker = BuildWorker(source_dir, temp_base, output_dir, is_debug=False)
+    
+    worker.log_signal.connect(print)
+    worker.progress_signal.connect(lambda val, msg: print(f"[{val}%] {msg}"))
+    
+    def on_cli_finished(success, msg):
+        if success:
+            app.quit()
+        else:
+            print(f"\nビルド失敗: {msg}")
+            app.exit(1)
+    worker.finished_signal.connect(on_cli_finished)
+    
+    print("リリースビルドを開始します...")
+    worker.start()
+    sys.exit(app.exec())
