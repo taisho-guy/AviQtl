@@ -7,9 +7,6 @@ MenuItem {
 
     property string iconName: ""
 
-    // Binding loop対策: 暗黙の高さを明示的に計算し、レイアウトの循環依存を防止
-    implicitHeight: Math.max(32, contentItem.implicitHeight + topPadding + bottomPadding)
-
     // デフォルトのインジケーター（チェックボックス）を無効化し、
     // contentItem内で自前で描画することでアイコンとの重なりを防ぐ
     indicator: Item {

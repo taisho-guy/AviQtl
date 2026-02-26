@@ -162,7 +162,6 @@ qt_add_qml_module(Rina
         ui/qml/SystemSettingsWindow.qml
         ui/qml/SceneSettingsWindow.qml
         ui/qml/CompositeView.qml
-        ui/qml/ExportDialog.qml
         
         ui/qml/common/RinaWindow.qml
         ui/qml/common/ParamControl.qml
@@ -176,7 +175,7 @@ qt_add_qml_module(Rina
         ui/qml/common/Icons.js
         ui/qml/common/RinaIcon.qml
         ui/qml/common/IconMenuItem.qml
-        ui/qml/common/AudioPluginMenu.qml
+        ui/qml/ExportDialog.qml
 
         # 【削除】Objectsは外部読み込みするため、ここ（コンパイル対象）からは外す
 

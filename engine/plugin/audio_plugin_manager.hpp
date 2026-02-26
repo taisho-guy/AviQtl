@@ -36,10 +36,6 @@ class AudioPluginManager : public QObject {
     Q_INVOKABLE QVariantList getCategories() const;
     Q_INVOKABLE QVariantList getPluginsInCategory(const QString &category) const;
 
-    // フォーマット別プラグインリスト (Added)
-    Q_INVOKABLE QVariantList getFormats() const;
-    Q_INVOKABLE QVariantList getPluginsByFormat(const QString &format) const;
-
     // IDからプラグインインスタンスを生成
     std::unique_ptr<IAudioPlugin> createPlugin(const QString &id);
 
@@ -50,11 +46,6 @@ class AudioPluginManager : public QObject {
     QList<PluginInfo> m_plugins;
     QHash<QString, PluginInfo> m_pluginMap; // ID -> Info
 
-    // キャッシュ用
-    QVariantList m_cachedPluginList;
-    QVariantList m_cachedCategories;
-    QVariantList m_cachedFormats;
-
     void registerPlugin(const PluginInfo &info);
     void scanLadspa();
     void scanLv2();
@@ -62,7 +53,6 @@ class AudioPluginManager : public QObject {
     void scanVst3();
 
     LilvWorld *m_lilvWorld = nullptr;
-    bool m_lilvWorldLoaded = false;
 };
 
 } // namespace Rina::Engine::Plugin

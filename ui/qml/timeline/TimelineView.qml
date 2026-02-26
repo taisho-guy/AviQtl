@@ -742,16 +742,6 @@ ScrollView {
 
     }
 
-    // オーディオプラグインメニュー (永続インスタンス)
-    // 毎回生成すると重いため、一度だけ生成して使い回す
-    Common.AudioPluginMenu {
-        id: sharedAudioMenu
-
-        onPluginSelected: function(pluginId) {
-            TimelineBridge.addAudioPlugin(contextMenu.targetClipId, pluginId);
-        }
-    }
-
     // コンテキストメニュー（復元版）
     Menu {
         // 汎用アイコン
@@ -838,10 +828,6 @@ ScrollView {
             while (contextMenu.count > 0) {
                 var item = contextMenu.itemAt(0);
                 contextMenu.removeItem(item);
-                // 永続メニューは破棄しない
-                if (item === sharedAudioMenu)
-                    continue;
-
                 // スタイルがアイテムにアクセスする問題を回避するため破棄を遅延
                 (function(obj) {
                     Qt.callLater(function() {
@@ -904,7 +890,25 @@ ScrollView {
                 }
                 contextMenu.addMenu(effectMenu);
                 // オーディオプラグイン追加メニュー
-                contextMenu.addMenu(sharedAudioMenu);
+                var audioPluginMenu = createSubMenu("オーディオプラグイン");
+                var plugins = TimelineBridge.getAvailableAudioPlugins();
+                // 数が多い場合はサブメニュー化などを検討すべきだが、まずはフラットに表示
+                for (var k = 0; k < plugins.length; k++) {
+                    var plug = plugins[k];
+                    var plugItem = menuItemComp.createObject(null, {
+                        "text": "[" + plug.format + "] " + plug.name,
+                        "iconName": "music_line"
+                    });
+                    (function(cId, pId) {
+                        plugItem.triggered.connect(function() {
+                            TimelineBridge.addAudioPlugin(cId, pId);
+                        });
+                    })(targetClipId, plug.id);
+                    audioPluginMenu.addItem(plugItem);
+                }
+                if (plugins.length > 0)
+                    contextMenu.addMenu(audioPluginMenu);
+
             }
         }
 

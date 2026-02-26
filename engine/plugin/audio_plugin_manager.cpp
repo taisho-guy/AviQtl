@@ -27,7 +27,11 @@ AudioPluginManager &AudioPluginManager::instance() {
     return inst;
 }
 
-AudioPluginManager::AudioPluginManager() { m_lilvWorld = lilv_world_new(); }
+AudioPluginManager::AudioPluginManager() {
+    m_lilvWorld = lilv_world_new();
+    lilv_world_load_all(m_lilvWorld);
+    scanPlugins();
+}
 
 AudioPluginManager::~AudioPluginManager() {
     if (m_lilvWorld) {
@@ -41,18 +45,34 @@ void AudioPluginManager::registerPlugin(const PluginInfo &info) {
     m_pluginMap.insert(info.id, info);
 }
 
-QVariantList AudioPluginManager::getPluginList() const { return m_cachedPluginList; }
-
-QVariantList AudioPluginManager::getCategories() const { return m_cachedCategories; }
-
-QVariantList AudioPluginManager::getFormats() const { return m_cachedFormats; }
-
-QVariantList AudioPluginManager::getPluginsByFormat(const QString &format) const {
+QVariantList AudioPluginManager::getPluginList() const {
     QVariantList list;
+    for (const auto &p : m_plugins) {
+        QVariantMap m;
+        m["id"] = p.id;
+        m["name"] = p.name;
+        m["format"] = p.format;
+        list.append(m);
+    }
+    return list;
+}
+
+QVariantList AudioPluginManager::getCategories() const {
+    QSet<QString> categories;
     for (const auto &plugin : m_plugins) {
-        if (plugin.format == format) {
-            list.append(QVariantMap{{"id", plugin.id}, {"name", plugin.name}});
+        if (!plugin.category.isEmpty()) {
+            categories.insert(plugin.category);
+        } else {
+            categories.insert(plugin.format);
         }
+    }
+
+    QStringList sortedCategories = categories.values();
+    std::sort(sortedCategories.begin(), sortedCategories.end());
+
+    QVariantList list;
+    for (const auto &cat : sortedCategories) {
+        list.append(cat);
     }
     return list;
 }
@@ -94,56 +114,13 @@ std::unique_ptr<IAudioPlugin> AudioPluginManager::createPlugin(const QString &id
 void AudioPluginManager::scanPlugins() {
     m_plugins.clear();
     m_pluginMap.clear();
-    m_cachedPluginList.clear();
-    m_cachedCategories.clear();
-    m_cachedFormats.clear();
-
     qInfo() << "[AudioPluginManager] Scanning plugins...";
 
     scanLadspa();
-
-    // LV2ワールドのロードは一度だけ行う
-    if (!m_lilvWorldLoaded) {
-        lilv_world_load_all(m_lilvWorld);
-        m_lilvWorldLoaded = true;
-    }
     scanLv2();
     scanClap();
 
     scanVst3();
-
-    // キャッシュの構築
-    QSet<QString> categories;
-    QSet<QString> formats;
-    for (const auto &p : m_plugins) {
-        // Plugin List Cache
-        QVariantMap m;
-        m["id"] = p.id;
-        m["name"] = p.name;
-        m["format"] = p.format;
-        m_cachedPluginList.append(m);
-
-        // Categories Cache
-        if (!p.category.isEmpty()) {
-            categories.insert(p.category);
-        } else {
-            categories.insert(p.format);
-        }
-        formats.insert(p.format);
-    }
-
-    QStringList sortedCategories = categories.values();
-    std::sort(sortedCategories.begin(), sortedCategories.end());
-    for (const auto &cat : sortedCategories) {
-        m_cachedCategories.append(cat);
-    }
-
-    QStringList sortedFormats = formats.values();
-    std::sort(sortedFormats.begin(), sortedFormats.end());
-    for (const auto &fmt : sortedFormats) {
-        m_cachedFormats.append(fmt);
-    }
-
     qInfo() << "[AudioPluginManager] Scan complete. Found" << m_plugins.size() << "plugins.";
 }
 
