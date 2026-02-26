@@ -29,21 +29,37 @@ enum AVPixelFormat VideoDecoder::get_hw_format(AVCodecContext *ctx, const enum A
     return avcodec_default_get_format(ctx, pix_fmts);
 }
 
-VideoDecoder::VideoDecoder(int clipId, const QUrl &source, VideoFrameStore *store, QObject *parent) : QObject(parent), m_clipId(clipId), m_store(store) {
-    QString path = source.toLocalFile();
-    if (path.isEmpty())
-        path = source.toString();
-
-    if (!open(path)) {
-        qWarning() << "[VideoDecoder] Failed to open:" << path;
-    }
+VideoDecoder::VideoDecoder(int clipId, const QUrl &source, VideoFrameStore *store, QObject *parent) : MediaDecoder(clipId, source, parent), m_store(store) {
+    m_frame = av_frame_alloc();
+    m_swFrame = av_frame_alloc();
 
     // キャッシュ容量設定: SettingsManagerから取得し、変更を監視
     updateCacheSize();
     connect(&SettingsManager::instance(), &SettingsManager::settingsChanged, this, &VideoDecoder::updateCacheSize);
 }
 
-VideoDecoder::~VideoDecoder() { close(); }
+VideoDecoder::~VideoDecoder() {
+    close();
+    if (m_swsCtx)
+        sws_freeContext(m_swsCtx);
+    if (m_frame)
+        av_frame_free(&m_frame);
+    if (m_swFrame)
+        av_frame_free(&m_swFrame);
+}
+
+void VideoDecoder::startDecoding() {
+    (void)QtConcurrent::run([this] {
+        QString path = m_source.toLocalFile();
+        if (path.isEmpty())
+            path = m_source.toString();
+
+        if (open(path)) {
+            m_isReady = true;
+            emit ready();
+        }
+    });
+}
 
 bool VideoDecoder::open(const QString &path) {
     QMutexLocker locker(&m_mutex);
@@ -51,14 +67,12 @@ bool VideoDecoder::open(const QString &path) {
     m_lastDecodedFrame = -1;
     m_index.clear();
 
-    int ret = avformat_open_input(&m_fmtCtx, path.toStdString().c_str(), nullptr, nullptr);
-    if (ret < 0)
+    if (avformat_open_input(&m_fmtCtx, path.toStdString().c_str(), nullptr, nullptr) < 0)
         return false;
 
     if (avformat_find_stream_info(m_fmtCtx, nullptr) < 0)
         return false;
 
-    // Find video stream
     m_streamIndex = av_find_best_stream(m_fmtCtx, AVMEDIA_TYPE_VIDEO, -1, -1, nullptr, 0);
     if (m_streamIndex < 0)
         return false;
@@ -88,7 +102,7 @@ bool VideoDecoder::open(const QString &path) {
 
             if (config->methods & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX && config->device_type == type) {
                 // デバイス作成
-                if (av_hwdevice_ctx_create(&m_hwDeviceCtx, type, nullptr, nullptr, 0) >= 0) {
+                if (av_hwdevice_ctx_create(&m_hwDeviceCtx, type, nullptr, nullptr, 0) >= 0) { // m_hwDeviceCtx is in base
                     qDebug() << "[VideoDecoder] Hardware device initialized:" << *name;
                     m_hwPixFmt = config->pix_fmt;
                     m_decCtx->hw_device_ctx = av_buffer_ref(m_hwDeviceCtx);
@@ -115,13 +129,8 @@ hw_init_done:
     if (avcodec_open2(m_decCtx, codec, nullptr) < 0)
         return false;
 
-    m_frame = av_frame_alloc();
-    m_swFrame = av_frame_alloc();
-    m_pkt = av_packet_alloc();
-
-    // インデックス構築 (L-SMASH Worksライクな挙動)
     if (!buildIndex()) {
-        qWarning() << "[VideoDecoder] Failed to build index";
+        qWarning() << "[VideoDecoder] Failed to build index for" << path;
         return false;
     }
 
@@ -130,6 +139,7 @@ hw_init_done:
 }
 
 bool VideoDecoder::buildIndex() {
+    // This function is now called from open()
     // ファイル先頭へシーク
     if (av_seek_frame(m_fmtCtx, m_streamIndex, 0, AVSEEK_FLAG_BACKWARD) < 0) {
         av_seek_frame(m_fmtCtx, -1, 0, AVSEEK_FLAG_BACKWARD);
@@ -162,33 +172,35 @@ bool VideoDecoder::buildIndex() {
 }
 
 void VideoDecoder::close() {
-    // mutex is usually locked by caller or destructor
-    if (m_swsCtx) {
-        sws_freeContext(m_swsCtx);
-        m_swsCtx = nullptr;
+    // No need for a mutex here if it's only called from the destructor or a locked context
+    if (m_decCtx) {
+        avcodec_free_context(&m_decCtx);
+        m_decCtx = nullptr;
     }
-    if (m_frame) {
-        av_frame_free(&m_frame);
-    }
-    if (m_swFrame) {
-        av_frame_free(&m_swFrame);
+    if (m_fmtCtx) {
+        avformat_close_input(&m_fmtCtx);
+        m_fmtCtx = nullptr;
     }
     if (m_hwDeviceCtx) {
         av_buffer_unref(&m_hwDeviceCtx);
         m_hwDeviceCtx = nullptr;
     }
-    if (m_pkt) {
-        av_packet_free(&m_pkt);
-    }
-    if (m_decCtx) {
-        avcodec_free_context(&m_decCtx);
-    }
-    if (m_fmtCtx) {
-        avformat_close_input(&m_fmtCtx);
-    }
+    // m_frame and m_swFrame are freed in destructor
+    // m_swsCtx is freed in destructor
+}
+
+void VideoDecoder::seek(qint64 ms) {
+    // This is for the base class interface. Video seeking is frame-based.
+    // We can emit the signal for compatibility if needed.
+    emit seekRequested(ms);
 }
 
 void VideoDecoder::seekToFrame(int frame, double fps) {
+    if (!m_isReady) {
+        // If not ready, queue the seek? For now, just ignore.
+        return;
+    }
+
     if (frame < 0)
         return;
 
@@ -198,7 +210,7 @@ void VideoDecoder::seekToFrame(int frame, double fps) {
     // キャッシュにあれば即時適用
     if (m_frameCache.contains(frame)) {
         m_store->setFrameSafe(QString::number(m_clipId), *m_frameCache[frame]);
-        emit frameDecoded(frame);
+        emit frameReady(frame);
         return;
     }
 
@@ -256,16 +268,17 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) {
     // デコードループ (プリロール)
     // キーフレームからターゲットPTSまで空読みする
     bool frameFound = false;
+    AVPacket *pkt = av_packet_alloc();
     int maxDecodeCount = (targetFrame - m_lastDecodedFrame) + 300; // 安全マージン
 
     while (maxDecodeCount-- > 0) {
-        int ret = av_read_frame(m_fmtCtx, m_pkt);
+        int ret = av_read_frame(m_fmtCtx, pkt);
         if (ret < 0)
             break; // EOF or Error
 
-        if (m_pkt->stream_index == m_streamIndex) {
+        if (pkt->stream_index == m_streamIndex) {
             // パケット送信 (EAGAINハンドリング付き)
-            ret = avcodec_send_packet(m_decCtx, m_pkt);
+            ret = avcodec_send_packet(m_decCtx, pkt);
 
             // 入力バッファが一杯(EAGAIN)の場合、出力(フレーム)を読み出して空ける
             while (ret == AVERROR(EAGAIN)) {
@@ -281,11 +294,11 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) {
                 }
 
                 // 再試行
-                ret = avcodec_send_packet(m_decCtx, m_pkt);
+                ret = avcodec_send_packet(m_decCtx, pkt);
             }
 
             if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
-                av_packet_unref(m_pkt);
+                av_packet_unref(pkt);
                 continue;
             }
 
@@ -302,11 +315,12 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) {
                 }
             }
         }
-        av_packet_unref(m_pkt);
+        av_packet_unref(pkt);
     }
 
 process_frame:
-    av_packet_unref(m_pkt);
+    av_packet_unref(pkt);
+    av_packet_free(&pkt);
 
     if (frameFound) {
         AVFrame *srcFrame = m_frame;
@@ -338,7 +352,7 @@ process_frame:
             if (!m_frameCache.contains(targetFrame)) {
                 m_frameCache.insert(targetFrame, new QImage(result), result.sizeInBytes());
             }
-            emit frameDecoded(targetFrame);
+            emit ready(); // Or a more specific signal if needed
         });
     } else {
         // ターゲットが見つからなかった場合（ファイルの末尾など）

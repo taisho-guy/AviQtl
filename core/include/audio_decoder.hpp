@@ -1,46 +1,47 @@
 #pragma once
 
-#include <QAudioDecoder>
-#include <QObject>
-#include <QUrl>
+#include "media_decoder.hpp"
 #include <mutex>
 #include <vector>
 
+extern "C" {
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+#include <libavutil/opt.h>
+#include <libswresample/swresample.h>
+}
+
 namespace Rina::Core {
 
-class AudioDecoder : public QObject {
+class AudioDecoder : public MediaDecoder {
     Q_OBJECT
   public:
     explicit AudioDecoder(int clipId, const QUrl &source, QObject *parent = nullptr);
 
-    // 指定された開始時間（秒）から count サンプル分を取得
-    // ステレオ(2ch)インターリーブされたデータを返す想定
-    // count は (フレーム数 * チャンネル数)
-    std::vector<float> getSamples(double startTime, int count);
+    ~AudioDecoder() override;
 
-    bool isReady() const { return m_isReady; }
+    void setSampleRate(int sampleRate) override;
+    void seek(qint64 ms) override;
+    void setPlaying(bool) override {}
 
-    void setSampleRate(int sampleRate);
-  public slots:
-    void seek(qint64 ms);
+    std::vector<float> getSamples(double startTime, int count) override;
 
-  signals:
-    void ready();
-    void seekRequested(qint64 ms);
-
-  private slots:
-    void onBufferReady();
-    void onFinished();
-    void onError(QAudioDecoder::Error error);
+  protected:
+    void startDecoding() override;
 
   private:
-    void startDecoding();
-    int m_clipId;
-    QAudioDecoder *m_decoder;
+    void closeFFmpeg();
+
+    // FFmpeg コンテキスト
+    AVFormatContext *m_fmtCtx = nullptr;
+    AVCodecContext *m_decCtx = nullptr;
+    AVStream *m_stream = nullptr;
+    int m_streamIdx = -1;
+    SwrContext *m_swrCtx = nullptr;
+    AVFrame *m_frame = nullptr;
+    AVPacket *m_pkt = nullptr;
+
     std::vector<float> m_fullAudioData; // インターリーブされたPCMデータ (L, R, L, R...)
-    bool m_isReady = false;
-    mutable std::mutex m_mutex;
-    int m_sampleRate = 48000;
 };
 
 } // namespace Rina::Core

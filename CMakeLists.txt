@@ -122,6 +122,7 @@ qt_add_executable(Rina
     core/src/video_decoder.cpp
     core/src/audio_decoder.cpp
     engine/audio_mixer.cpp
+    core/src/media_decoder.cpp
     core/src/project_serializer.cpp
     core/src/video_encoder.cpp
     scripting/mod_engine.cpp
@@ -162,6 +163,7 @@ qt_add_qml_module(Rina
         ui/qml/SystemSettingsWindow.qml
         ui/qml/SceneSettingsWindow.qml
         ui/qml/CompositeView.qml
+        ui/qml/ExportDialog.qml
         
         ui/qml/common/RinaWindow.qml
         ui/qml/common/ParamControl.qml
@@ -175,7 +177,7 @@ qt_add_qml_module(Rina
         ui/qml/common/Icons.js
         ui/qml/common/RinaIcon.qml
         ui/qml/common/IconMenuItem.qml
-        ui/qml/ExportDialog.qml
+        ui/qml/common/AudioPluginMenu.qml
 
         # 【削除】Objectsは外部読み込みするため、ここ（コンパイル対象）からは外す
 

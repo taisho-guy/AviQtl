@@ -5,8 +5,7 @@
 #include <QUrl>
 
 namespace Rina::Core {
-class VideoDecoder;
-class AudioDecoder;
+class MediaDecoder;
 class VideoFrameStore;
 } // namespace Rina::Core
 namespace Rina::Engine {
@@ -36,7 +35,6 @@ class TimelineMediaManager : public QObject {
     TimelineController *m_controller;
     Rina::Engine::AudioMixer *m_audioMixer = nullptr;
     Rina::Core::VideoFrameStore *m_videoFrameStore = nullptr;
-    QHash<int, Rina::Core::VideoDecoder *> m_videoDecoders;
-    QHash<int, Rina::Core::AudioDecoder *> m_audioDecoders;
+    QHash<int, Rina::Core::MediaDecoder *> m_decoders;
 };
 } // namespace Rina::UI

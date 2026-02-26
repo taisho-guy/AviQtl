@@ -1,5 +1,6 @@
 #include "timeline_media_manager.hpp"
 #include "../../core/include/audio_decoder.hpp"
+#include "../../core/include/media_decoder.hpp"
 #include "../../core/include/video_decoder.hpp"
 #include "../../engine/audio_mixer.hpp"
 #include "effect_registry.hpp"
@@ -16,7 +17,7 @@ void TimelineMediaManager::setVideoFrameStore(Rina::Core::VideoFrameStore *store
 
 void TimelineMediaManager::onPlayingChanged() {
     bool playing = m_controller->transport()->isPlaying();
-    for (auto *decoder : m_videoDecoders) {
+    for (auto *decoder : m_decoders) {
         decoder->setPlaying(playing);
     }
 }
@@ -27,27 +28,29 @@ void TimelineMediaManager::onCurrentFrameChanged() {
 
     // ループ時のシーク
     if (nextFrame == 0) {
-        for (auto *decoder : m_audioDecoders) {
+        for (auto *decoder : m_decoders) {
             decoder->seek(0);
         }
     }
 
     if (m_controller->transport()->isPlaying()) {
-        int samples = 48000 / fps;
+        int sampleRate = m_controller->project()->sampleRate();
+        int samples = sampleRate / fps;
         m_audioMixer->processFrame(nextFrame, fps, samples);
     }
 
-    for (auto it = m_videoDecoders.begin(); it != m_videoDecoders.end(); ++it) {
+    for (auto it = m_decoders.begin(); it != m_decoders.end(); ++it) {
         const auto *clip = m_controller->timeline()->findClipById(it.key());
         if (clip && (nextFrame >= clip->startFrame && nextFrame < clip->startFrame + clip->durationFrames)) {
-            it.value()->seekToFrame(nextFrame - clip->startFrame, fps);
+            if (auto *vid = qobject_cast<Rina::Core::VideoDecoder *>(it.value()))
+                vid->seekToFrame(nextFrame - clip->startFrame, fps);
         }
     }
 }
 
 void TimelineMediaManager::syncPlaybackSpeed() {
     double speed = m_controller->transport()->playbackSpeed();
-    for (auto *decoder : m_videoDecoders) {
+    for (auto *decoder : m_decoders) {
         decoder->setPlaybackRate(speed);
     }
     if (m_audioMixer)
@@ -58,7 +61,7 @@ void TimelineMediaManager::updateAudioSampleRate() {
     int rate = m_controller->project()->sampleRate();
     if (m_audioMixer)
         m_audioMixer->setSampleRate(rate);
-    for (auto *decoder : m_audioDecoders) {
+    for (auto *decoder : m_decoders) {
         decoder->setSampleRate(rate);
     }
 }
@@ -79,52 +82,43 @@ QUrl TimelineMediaManager::getClipSourceUrl(const ClipData &clip) const {
 
 void TimelineMediaManager::updateMediaDecoders() {
     const auto &clips = m_controller->timeline()->clips();
-    QSet<int> currentVideoClipIds;
-    QSet<int> currentAudioClipIds;
+    QSet<int> currentClipIds;
 
     for (const auto &clip : clips) {
         if (clip.type != "video" && clip.type != "audio")
             continue;
 
+        currentClipIds.insert(clip.id);
+        if (m_decoders.contains(clip.id))
+            continue;
+
+        QUrl sourceUrl = getClipSourceUrl(clip);
+        if (!sourceUrl.isValid() || sourceUrl.isEmpty())
+            continue;
+
+        Rina::Core::MediaDecoder *decoder = nullptr;
         if (clip.type == "video") {
-            currentVideoClipIds.insert(clip.id);
-            if (!m_videoDecoders.contains(clip.id)) {
-                QUrl sourceUrl = getClipSourceUrl(clip);
-                if (sourceUrl.isValid() && !sourceUrl.isEmpty()) {
-                    if (!m_videoFrameStore)
-                        continue;
-                    auto *decoder = new Rina::Core::VideoDecoder(clip.id, sourceUrl, m_videoFrameStore, this);
-                    decoder->setPlaying(m_controller->transport()->isPlaying());
-                    m_videoDecoders.insert(clip.id, decoder);
-                }
-            }
+            if (!m_videoFrameStore)
+                continue;
+            decoder = new Rina::Core::VideoDecoder(clip.id, sourceUrl, m_videoFrameStore, this);
+        } else if (clip.type == "audio") {
+            decoder = new Rina::Core::AudioDecoder(clip.id, sourceUrl, this);
+            if (auto *audioDecoder = qobject_cast<Rina::Core::AudioDecoder *>(decoder))
+                m_audioMixer->registerDecoder(clip.id, audioDecoder);
         }
-        if (clip.type == "audio") {
-            currentAudioClipIds.insert(clip.id);
-            if (!m_audioDecoders.contains(clip.id)) {
-                QUrl sourceUrl = getClipSourceUrl(clip);
-                if (sourceUrl.isValid() && !sourceUrl.isEmpty()) {
-                    auto *decoder = new Rina::Core::AudioDecoder(clip.id, sourceUrl, this);
-                    m_audioDecoders.insert(clip.id, decoder);
-                    m_audioMixer->registerDecoder(clip.id, decoder);
-                }
-            }
+
+        if (decoder) {
+            m_decoders.insert(clip.id, decoder);
+            decoder->scheduleStart(); // 非同期起動
         }
     }
 
-    for (auto it = m_videoDecoders.begin(); it != m_videoDecoders.end();) {
-        if (!currentVideoClipIds.contains(it.key())) {
+    for (auto it = m_decoders.begin(); it != m_decoders.end();) {
+        if (!currentClipIds.contains(it.key())) {
+            if (qobject_cast<Rina::Core::AudioDecoder *>(it.value()))
+                m_audioMixer->unregisterDecoder(it.key());
             it.value()->deleteLater();
-            it = m_videoDecoders.erase(it);
-        } else {
-            ++it;
-        }
-    }
-    for (auto it = m_audioDecoders.begin(); it != m_audioDecoders.end();) {
-        if (!currentAudioClipIds.contains(it.key())) {
-            m_audioMixer->unregisterDecoder(it.key());
-            it.value()->deleteLater();
-            it = m_audioDecoders.erase(it);
+            it = m_decoders.erase(it);
         } else {
             ++it;
         }
