@@ -5,28 +5,16 @@ import QtQuick.Dialogs
 import QtQuick.Layouts
 
 Loader {
-    // ────────────────────────────────────────────────────────────────
-    // 3. Color  ─  ParamControl と完全同一レイアウト
-    //   ParamControl の対応:
-    //     leftSlider      (fillWidth, preferredWidth:120)  → 開始色スウォッチ
-    //     leftValueField  (preferredWidth:70)              → 開始色HEX入力
-    //     paramButton     (preferredWidth:100)             → パラメーター名ボタン
-    //     rightValueField (preferredWidth:70)              → 終了色HEX入力
-    //     rightSlider     (fillWidth, preferredWidth:120)  → 終了色スウォッチ
-
     id: controlLoader
 
-    // === 入力プロパティ ===
     property var definition: ({
     })
     property var value: null
     property var effectRootRef: null
 
-    // === 出力シグナル ===
     signal valueModified(var newValue)
     signal paramButtonClicked()
 
-    // ── 共通ヘルパー ─────────────────────────────────────────────────
     function _label() {
         var d = controlLoader.definition;
         if (!d)
@@ -119,9 +107,6 @@ Loader {
         }
     }
 
-    // ────────────────────────────────────────────────────────────────
-    // 1. Float / Number (ParamControl)
-    // ────────────────────────────────────────────────────────────────
     Component {
         id: floatComponent
 
@@ -146,9 +131,6 @@ Loader {
 
     }
 
-    // ────────────────────────────────────────────────────────────────
-    // 2. Int / Scene ID
-    // ────────────────────────────────────────────────────────────────
     Component {
         id: intComponent
 
@@ -195,27 +177,34 @@ Loader {
 
     }
 
-    //   キーフレームなし時: 右側(終了色HEX + 終了色スウォッチ)を非表示
-    // ────────────────────────────────────────────────────────────────
     Component {
         id: colorComponent
 
         RowLayout {
             id: colorRow
 
-            // ── キーフレーム関連プロパティ ────────────────────────────
             property var _em: controlLoader.effectRootRef ? controlLoader.effectRootRef.effectModel : null
             property int _effIdx: controlLoader.effectRootRef ? controlLoader.effectRootRef.effectIndex : 0
             property string _key: controlLoader.definition.param || controlLoader.definition.name || ""
             property int _clipDur: TimelineBridge ? TimelineBridge.clipDurationFrames : 100
             property int _curFrame: (TimelineBridge && TimelineBridge.transport) ? TimelineBridge.transport.currentFrame - TimelineBridge.clipStartFrame : 0
-            property var _kfs: _em ? (_em.keyframeTracks[_key] || []) : []
+            property int _rev: 0
+            property var _kfs: {
+                var _ = colorRow._rev;
+                return _em ? (_em.keyframeTracks[_key] || []) : [];
+            }
             property bool _hasKf: _kfs.length > 0
             property var _interval: controlLoader._findKeyframeInterval(_kfs, _curFrame, _clipDur)
             property int _startFrame: _interval.start
             property int _endFrame: _interval.end
-            property var _startVal: (_hasKf && _em) ? (_em.evaluatedParam(_key, _startFrame) || controlLoader.value || "#ffffff") : (controlLoader.value || "#ffffff")
-            property var _endVal: (_hasKf && _em) ? (_em.evaluatedParam(_key, _endFrame) || controlLoader.value || "#ffffff") : (controlLoader.value || "#ffffff")
+            property var _startVal: {
+                var _ = colorRow._rev;
+                return (_hasKf && _em) ? (_em.evaluatedParam(_key, _startFrame) || controlLoader.value || "#ffffff") : (controlLoader.value || "#ffffff");
+            }
+            property var _endVal: {
+                var _ = colorRow._rev;
+                return (_hasKf && _em) ? (_em.evaluatedParam(_key, _endFrame) || controlLoader.value || "#ffffff") : (controlLoader.value || "#ffffff");
+            }
 
             function _hasKfAt(f) {
                 for (var i = 0; i < _kfs.length; i++) if (_kfs[i].frame === f) {
@@ -244,14 +233,22 @@ Loader {
                 _em.setKeyframe(_key, frame, val, {
                     "interp": "constant"
                 });
-                // setKeyframe は keyframeTracks のみ更新するため
-                // エンジン側への即時反映には valueModified も emit する必要がある
-                controlLoader.valueModified(val);
             }
 
             spacing: 8
 
-            // ── ColorDialog ───────────────────────────────────────────
+            Connections {
+                function onKeyframeTracksChanged() {
+                    colorRow._rev++;
+                }
+
+                function onParamsChanged() {
+                    colorRow._rev++;
+                }
+
+                target: colorRow._em
+            }
+
             ColorDialog {
                 id: startColorDlg
 
@@ -264,7 +261,6 @@ Loader {
                 onAccepted: colorRow._commit(colorRow._endFrame, selectedColor.toString())
             }
 
-            // ── 開始色スウォッチ  ← leftSlider 相当 ─────────────────
             // fillWidth:true + preferredWidth:120 で leftSlider と同幅
             Rectangle {
                 Layout.fillWidth: true
@@ -284,14 +280,15 @@ Loader {
                     anchors.fill: parent
                     hoverEnabled: true
                     onClicked: {
-                        startColorDlg.selectedColor = colorRow._startVal;
+                        var c = colorRow._startVal || "#ffffff";
+                        // HexArgb (#aarrggbb) を Qt color 型に安全変換
+                        startColorDlg.selectedColor = Qt.color(c);
                         startColorDlg.open();
                     }
                 }
 
             }
 
-            // ── 開始色HEX入力  ← leftValueField 相当 ────────────────
             TextField {
                 id: startHexField
 
@@ -338,7 +335,6 @@ Loader {
 
             }
 
-            // ── 終了色スウォッチ  ← rightSlider 相当 ─────────────────
             Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredWidth: 120
@@ -357,7 +353,9 @@ Loader {
                     anchors.fill: parent
                     hoverEnabled: true
                     onClicked: {
-                        endColorDlg.selectedColor = colorRow._endVal;
+                        var c = colorRow._endVal || "#ffffff";
+                        // HexArgb (#aarrggbb) を Qt color 型に安全変換
+                        endColorDlg.selectedColor = Qt.color(c);
                         endColorDlg.open();
                     }
                 }
@@ -368,9 +366,6 @@ Loader {
 
     }
 
-    // ────────────────────────────────────────────────────────────────
-    // 4. Bool (Checkbox)
-    // ────────────────────────────────────────────────────────────────
     Component {
         id: boolComponent
 
@@ -395,9 +390,6 @@ Loader {
 
     }
 
-    // ────────────────────────────────────────────────────────────────
-    // 5. Path / File
-    // ────────────────────────────────────────────────────────────────
     Component {
         id: pathComponent
 
@@ -460,9 +452,6 @@ Loader {
 
     }
 
-    // ────────────────────────────────────────────────────────────────
-    // 6. String / Text
-    // ────────────────────────────────────────────────────────────────
     Component {
         id: stringComponent
 
@@ -488,9 +477,6 @@ Loader {
 
     }
 
-    // ────────────────────────────────────────────────────────────────
-    // 7. Enum (ComboBox)
-    // ────────────────────────────────────────────────────────────────
     Component {
         id: enumComponent
 
@@ -519,9 +505,6 @@ Loader {
 
     }
 
-    // ────────────────────────────────────────────────────────────────
-    // 8. Header（区切り線）
-    // ────────────────────────────────────────────────────────────────
     Component {
         id: headerComponent
 
@@ -547,9 +530,6 @@ Loader {
 
     }
 
-    // ────────────────────────────────────────────────────────────────
-    // 9. Combo (動的ソース)
-    // ────────────────────────────────────────────────────────────────
     Component {
         id: comboComponent
 
@@ -600,9 +580,6 @@ Loader {
 
     }
 
-    // ────────────────────────────────────────────────────────────────
-    // 10. Font
-    // ────────────────────────────────────────────────────────────────
     Component {
         id: fontComponent
 
@@ -641,9 +618,6 @@ Loader {
 
     }
 
-    // ────────────────────────────────────────────────────────────────
-    // Fallback
-    // ────────────────────────────────────────────────────────────────
     Component {
         id: unknownComponent
 

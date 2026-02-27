@@ -212,12 +212,11 @@ Common.RinaWindow {
                                 if (hasKeyframeAt(f))
                                     return ;
 
-                                var v = Number(effectModel.evaluatedParam(key, f));
-                                if (isNaN(v))
-                                    v = 0;
-
+                                var raw = effectModel.evaluatedParam(key, f);
+                                var v = (raw !== undefined && raw !== null) ? raw : effVal;
+                                var interp = (def.type === "color") ? "constant" : "linear";
                                 effectModel.setKeyframe(key, f, v, {
-                                    "interp": "linear"
+                                    "interp": interp
                                 });
                             }
 
