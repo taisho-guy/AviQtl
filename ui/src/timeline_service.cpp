@@ -370,7 +370,7 @@ void TimelineService::addEffectInternal(int clipId, const QString &effectId) {
     for (auto &clip : clipsMutable()) {
         if (clip.id == clipId) {
             auto meta = Rina::Core::EffectRegistry::instance().getEffect(effectId);
-            auto *model = new EffectModel(meta.id, meta.name, meta.defaultParams, meta.qmlSource, meta.uiDefinition, this);
+            auto *model = new EffectModel(meta.id, meta.name, meta.category, meta.defaultParams, meta.qmlSource, meta.uiDefinition, this);
             connect(model, &EffectModel::keyframeTracksChanged, this, &TimelineService::clipsChanged);
             clip.effects.append(model);
             emit clipsChanged();
@@ -389,7 +389,8 @@ void TimelineService::addClipDirectInternal(const ClipData &clip) {
 void TimelineService::restoreEffectInternal(int clipId, const QVariantMap &data) {
     for (auto &clip : clipsMutable()) {
         if (clip.id == clipId) {
-            auto *model = new EffectModel(data["id"].toString(), data["name"].toString(), data["params"].toMap(), data["qmlSource"].toString(), data["uiDefinition"].toMap(), this);
+            auto meta = Rina::Core::EffectRegistry::instance().getEffect(data["id"].toString());
+            auto *model = new EffectModel(data["id"].toString(), data["name"].toString(), meta.category, data["params"].toMap(), data["qmlSource"].toString(), data["uiDefinition"].toMap(), this);
             model->setEnabled(data["enabled"].toBool());
             model->setKeyframeTracks(data["keyframes"].toMap());
             connect(model, &EffectModel::keyframeTracksChanged, this, &TimelineService::clipsChanged);
@@ -493,7 +494,7 @@ ClipData TimelineService::deepCopyClip(const ClipData &source) {
     newClip.layer = source.layer;
 
     for (const auto *oldEffect : source.effects) {
-        auto *newEffect = new EffectModel(oldEffect->id(), oldEffect->name(), oldEffect->params(), oldEffect->qmlSource(), oldEffect->uiDefinition(), this);
+        auto *newEffect = new EffectModel(oldEffect->id(), oldEffect->name(), oldEffect->category(), oldEffect->params(), oldEffect->qmlSource(), oldEffect->uiDefinition(), this);
         newEffect->setEnabled(oldEffect->isEnabled());
         newEffect->setKeyframeTracks(oldEffect->keyframeTracks());
         connect(newEffect, &EffectModel::keyframeTracksChanged, this, &TimelineService::clipsChanged);

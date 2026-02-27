@@ -199,7 +199,7 @@ bool ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
 
                     // 中断した場合にタイムラインによって自動削除されるのを防ぐため、最初は親なしで作成
                     // メタデータからUI定義を取得、なければ空
-                    auto *eff = new UI::EffectModel(effId, eObj["name"].toString(), eObj["params"].toObject().toVariantMap(), meta.qmlSource, meta.uiDefinition, nullptr);
+                    auto *eff = new UI::EffectModel(effId, eObj["name"].toString(), meta.category, eObj["params"].toObject().toVariantMap(), meta.qmlSource, meta.uiDefinition, nullptr);
                     eff->setEnabled(eObj["enabled"].toBool(true));
                     if (eObj.contains("keyframes"))
                         eff->setKeyframeTracks(eObj["keyframes"].toObject().toVariantMap());
@@ -219,7 +219,7 @@ bool ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
             if (!hasTransform) {
                 EffectMetadata meta = EffectRegistry::instance().getEffect("transform");
                 if (!meta.id.isEmpty()) {
-                    auto *eff = new UI::EffectModel(meta.id, meta.name, meta.defaultParams, meta.qmlSource, meta.uiDefinition, nullptr);
+                    auto *eff = new UI::EffectModel(meta.id, meta.name, meta.category, meta.defaultParams, meta.qmlSource, meta.uiDefinition, nullptr);
                     clip.effects.prepend(eff); // 慣例的に先頭に追加
                 }
             }

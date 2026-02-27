@@ -149,7 +149,7 @@ Common.RinaWindow {
 
                         // 削除ボタン (Transform以外)
                         Button {
-                            visible: modelData.id !== "transform" && modelData.id !== "rect" && modelData.id !== "text"
+                            visible: modelData.category === "filter"
                             anchors.right: parent.right
                             anchors.verticalCenter: parent.verticalCenter
                             flat: true
@@ -563,11 +563,21 @@ Common.RinaWindow {
                 delegate: Menu {
                     id: categoryMenu
 
+                    // プラグイン一覧をキャッシュするためのプロパティ
+                    property var cachedPlugins: []
+
                     title: modelData // カテゴリ名
+                    // サブメニューが開かれる直前に一度だけモデルをロードする（遅延評価）
+                    onAboutToShow: {
+                        if (cachedPlugins.length === 0 && TimelineBridge)
+                            cachedPlugins = TimelineBridge.getPluginsByCategory(categoryMenu.title);
+
+                    }
 
                     Instantiator {
-                        model: TimelineBridge.getPluginsByCategory(categoryMenu.title)
+                        model: categoryMenu.cachedPlugins
                         onObjectAdded: (index, subObj) => {
+                            // eslint-disable-line
                             return categoryMenu.insertItem(index, subObj);
                         }
                         onObjectRemoved: (index, subObj) => {

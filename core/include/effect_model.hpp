@@ -20,6 +20,7 @@ class EffectModel : public QObject {
     Q_OBJECT
     Q_PROPERTY(QString id READ id CONSTANT)
     Q_PROPERTY(QString name READ name CONSTANT)
+    Q_PROPERTY(QString category READ category CONSTANT)
     Q_PROPERTY(bool enabled READ isEnabled WRITE setEnabled NOTIFY enabledChanged)
     Q_PROPERTY(QVariantMap params READ params NOTIFY paramsChanged)
     Q_PROPERTY(QString qmlSource READ qmlSource CONSTANT)
@@ -27,11 +28,12 @@ class EffectModel : public QObject {
     Q_PROPERTY(QVariantMap uiDefinition READ uiDefinition CONSTANT)
 
   public:
-    explicit EffectModel(const QString &id, const QString &name, const QVariantMap &params = {}, const QString &qmlSource = "", const QVariantMap &uiDef = {}, QObject *parent = nullptr)
-        : QObject(parent), m_id(id), m_name(name), m_enabled(true), m_params(params), m_qmlSource(qmlSource), m_uiDefinition(uiDef) {}
+    explicit EffectModel(const QString &id, const QString &name, const QString &category = "filter", const QVariantMap &params = {}, const QString &qmlSource = "", const QVariantMap &uiDef = {}, QObject *parent = nullptr)
+        : QObject(parent), m_id(id), m_name(name), m_category(category), m_enabled(true), m_params(params), m_qmlSource(qmlSource), m_uiDefinition(uiDef) {}
 
     QString id() const { return m_id; }
     QString name() const { return m_name; }
+    QString category() const { return m_category; }
     bool isEnabled() const { return m_enabled; }
     QVariantMap params() const { return m_params; }
     QString qmlSource() const { return m_qmlSource; }
@@ -398,6 +400,7 @@ class EffectModel : public QObject {
 
     QString m_id;
     QString m_name;
+    QString m_category;
     bool m_enabled;
     QVariantMap m_params;
     QString m_qmlSource;

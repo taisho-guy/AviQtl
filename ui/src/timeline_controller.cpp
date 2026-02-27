@@ -510,11 +510,6 @@ QVariantList TimelineController::getSceneClips(int sceneId) const {
         auto meta = Rina::Core::EffectRegistry::instance().getEffect(clip.type);
         if (!meta.qmlSource.isEmpty()) {
             map["qmlSource"] = meta.qmlSource;
-        } else {
-            if (clip.type == "text")
-                map["qmlSource"] = "file:objects/TextObject.qml";
-            else if (clip.type == "rect")
-                map["qmlSource"] = "file:objects/RectObject.qml";
         }
 
         // パラメータの収集 (エフェクトからフラット化)
