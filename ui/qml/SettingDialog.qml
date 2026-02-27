@@ -351,10 +351,25 @@ Common.RinaWindow {
                                 visible: !isNumber
                                 definition: def
                                 value: effVal
+                                effectRootRef: effectRoot
                                 onValueModified: function(val) {
                                     root.inputting = true;
                                     TimelineBridge.updateClipEffectParam(targetClipId, effIdx, key, val);
                                     root.inputting = false;
+                                }
+                                onParamButtonClicked: {
+                                    if (!effectModel || !key)
+                                        return ;
+
+                                    ensureRangeKeyframes();
+                                    var dialog = easingDialogComponent.createObject(root, {
+                                        "effectModel": effectModel,
+                                        "paramName": key,
+                                        "keyframeFrame": startFrame
+                                    });
+                                    if (dialog)
+                                        dialog.open();
+
                                 }
                             }
 

@@ -179,8 +179,6 @@ qt_add_qml_module(Rina
         ui/qml/common/IconMenuItem.qml
         ui/qml/common/AudioPluginMenu.qml
 
-        # 【削除】Objectsは外部読み込みするため、ここ（コンパイル対象）からは外す
-
     RESOURCES
         ui/resources.qrc
 )

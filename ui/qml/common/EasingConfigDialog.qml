@@ -6,7 +6,6 @@ Dialog {
     id: root
 
     property var effectModel: null
-    property var effectModel: null
     property string paramName: ""
     property int keyframeFrame: 0
     property string selectedType: "linear"
@@ -904,7 +903,8 @@ Dialog {
 
                                                     if (type === "custom")
                                                         return t;
- // custom はメインプレビューで確認
+
+                                                    // custom はメインプレビューで確認
                                                     return t;
                                                 }
 

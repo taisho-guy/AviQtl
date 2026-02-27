@@ -1,5 +1,6 @@
 #pragma once
 #include "../../scripting/lua_host.hpp"
+#include <QColor>
 #include <QObject>
 #include <QQmlEngine>
 #include <QVariant>
@@ -324,18 +325,40 @@ class EffectModel : public QObject {
             const QVariant v0 = getValue(track[i]);
             const QVariant v1 = getValue(track[i + 1]);
 
-            if (!numeric || !v0.canConvert<double>() || !v1.canConvert<double>()) {
-                return v0; // step
-            }
-
-            const double a = v0.toDouble();
-            const double b = v1.toDouble();
             const double tRaw = (frame - f0) / double(f1 - f0);
 
             QString type = getInterp(track[i]);
 
             if (!easingFunctions().count(type))
                 type = "linear";
+
+            // 色 (文字列) の補間
+            if (v0.typeId() == QMetaType::QString && v1.typeId() == QMetaType::QString) {
+                QColor c0(v0.toString());
+                QColor c1(v1.toString());
+                if (c0.isValid() && c1.isValid()) {
+                    std::vector<double> params;
+                    if (type == "custom") {
+                        params = getBezierParams(track[i]);
+                    }
+                    const double t = easingFunctions().at(type)(tRaw, params);
+
+                    int r = static_cast<int>(c0.red() + (c1.red() - c0.red()) * t);
+                    int g = static_cast<int>(c0.green() + (c1.green() - c0.green()) * t);
+                    int b = static_cast<int>(c0.blue() + (c1.blue() - c0.blue()) * t);
+                    int a = static_cast<int>(c0.alpha() + (c1.alpha() - c0.alpha()) * t);
+
+                    return QColor(r, g, b, a).name(QColor::HexArgb);
+                }
+            }
+
+            // 数値の補間
+            if (!numeric || !v0.canConvert<double>() || !v1.canConvert<double>()) {
+                return v0; // step
+            }
+
+            const double a = v0.toDouble();
+            const double b = v1.toDouble();
 
             std::vector<double> params;
             if (type == "custom") {
