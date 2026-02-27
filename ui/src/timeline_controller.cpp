@@ -1,4 +1,5 @@
 #include "timeline_controller.hpp"
+#include "../../core/include/audio_decoder.hpp"
 #include "../../core/include/project_serializer.hpp"
 #include "../../engine/plugin/audio_plugin_manager.hpp"
 #include "../../scripting/lua_host.hpp"
@@ -403,6 +404,47 @@ QVariantList TimelineController::getPluginsByCategory(const QString &category) c
 bool TimelineController::isAudioClip(int clipId) const {
     const auto *clip = m_timeline->findClipById(clipId);
     return clip && clip->type == "audio";
+}
+
+QVariantList TimelineController::getWaveformPeaks(int clipId, int pixelWidth, int displayDurationFrames) const {
+    if (pixelWidth <= 0 || displayDurationFrames <= 0)
+        return {};
+
+    const auto *clip = m_timeline->findClipById(clipId);
+    if (!clip || clip->type != "audio")
+        return {};
+
+    auto *decoder = qobject_cast<Rina::Core::AudioDecoder *>(m_mediaManager ? m_mediaManager->decoderForClip(clipId) : nullptr);
+    if (!decoder || !decoder->isReady())
+        return QVariantList(pixelWidth, 0.0);
+
+    int fps = m_project->fps();
+    if (fps <= 0)
+        fps = 60;
+    int sampleRate = m_project->sampleRate();
+    if (sampleRate <= 0)
+        sampleRate = 48000;
+
+    // 渡された displayDurationFrames で秒数を計算 (ドラフト値が来たらそれを使う)
+    double displaySec = static_cast<double>(displayDurationFrames) / fps;
+    int totalSamples = static_cast<int>(displaySec * sampleRate);
+    int samplesPerPixel = std::max(1, totalSamples / pixelWidth);
+
+    QVariantList peaks;
+    peaks.reserve(pixelWidth);
+
+    for (int px = 0; px < pixelWidth; px++) {
+        double startSec = static_cast<double>(px * samplesPerPixel) / sampleRate;
+        auto samples = decoder->getSamples(startSec, samplesPerPixel * 2);
+
+        float peak = 0.0f;
+        for (float s : samples)
+            peak = std::max(peak, std::abs(s));
+
+        peaks.append(static_cast<double>(std::min(peak, 1.0f)));
+    }
+
+    return peaks;
 }
 
 QVariantList TimelineController::getClipEffectStack(int clipId) const {

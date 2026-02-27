@@ -121,6 +121,7 @@ class TimelineController : public QObject {
     Q_INVOKABLE QVariantList getPluginCategories() const;
     Q_INVOKABLE QVariantList getPluginsByCategory(const QString &category) const;
     Q_INVOKABLE bool isAudioClip(int clipId) const;
+    Q_INVOKABLE QVariantList getWaveformPeaks(int clipId, int pixelWidth, int displayDurationFrames) const;
 
     // パラメータ操作用
     Q_INVOKABLE QVariantList getClipEffectStack(int clipId) const;
