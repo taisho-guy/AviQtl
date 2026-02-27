@@ -205,7 +205,7 @@ class BuildWorker(QtCore.QThread):
 
             # コンパイル済みシェーダー(.qsb)のコピー
             for d in ["effects", "objects"]:
-                qsb_src_dir = work_dir / "ui" / "qml" / d # ビルドディレクトリ構造に合わせる
+                qsb_src_dir = work_dir / d
                 qsb_dest_dir = self.output_dir / d
                 if qsb_src_dir.exists() and qsb_dest_dir.exists():
                     for qsb_file in qsb_src_dir.glob("*.qsb"):

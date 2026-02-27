@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Effects
 import "qrc:/qt/qml/Rina/ui/qml/common" as Common
 
 Common.BaseEffect {
@@ -9,19 +8,12 @@ Common.BaseEffect {
     property real aspect: Math.max(-100, Math.min(100, root.evalNumber("aspect", 0)))
     property real gain: Math.max(0, root.evalNumber("gain", 0))
     property bool fixedSize: root.evalParam("fixedSize", false)
-    // 縦横比の計算 (-100: 縦のみ, 0: 等倍, 100: 横のみ)
-    // aspect < 0: 横を減らす (1.0 -> 0.0)
-    // aspect > 0: 縦を減らす (1.0 -> 0.0)
     readonly property real hRatio: aspect < 0 ? (100 + aspect) / 100 : 1
     readonly property real vRatio: aspect > 0 ? (100 - aspect) / 100 : 1
     readonly property real hLen: size * hRatio
     readonly property real vLen: size * vRatio
-    // 最適化: 共通部分はFastBlurで処理し、差分のみDirectionalBlurで行う
-    readonly property real commonRadius: Math.min(hLen, vLen)
-    readonly property real remH: hLen - commonRadius
-    readonly property real remV: vLen - commonRadius
 
-    // 1. 横方向ブラー
+    // 1. 横方向ブラー (常に非表示, hPassProxy がテクスチャとして利用)
     ShaderEffect {
         id: hPass
 
@@ -33,18 +25,22 @@ Common.BaseEffect {
 
         anchors.fill: parent
         fragmentShader: "blur.frag.qsb"
+        visible: false
     }
 
+    // hPass の結果を中間テクスチャとして保持
     ShaderEffectSource {
         id: hPassProxy
 
         sourceItem: hPass
-        hideSource: true
-        visible: true
-        opacity: 0
+        hideSource: false
+        visible: false
+        live: true
     }
 
-    // 2. 縦方向ブラー + 出力
+    // 2. 縦方向ブラー
+    // fixedSize=false の場合はこれが最終出力として直接 root に描画される
+    // fixedSize=true の場合は非表示にし、mask が直接 source として参照する
     ShaderEffect {
         id: vPass
 
@@ -56,24 +52,20 @@ Common.BaseEffect {
 
         anchors.fill: parent
         fragmentShader: "blur.frag.qsb"
+        visible: !root.fixedSize
     }
 
-    ShaderEffectSource {
-        id: vPassProxy
+    // 3. サイズ固定用マスク
+    // vPassProxy を介さず vPass を直接 source に渡す
+    ShaderEffect {
+        id: maskPass
 
-        sourceItem: vPass
-        hideSource: root.fixedSize
-        visible: true
-        opacity: 0
-    }
+        property variant source: vPass
+        property variant maskSource: root.sourceProxy
 
-    // サイズ固定用マスク (必要な場合のみ適用)
-    MultiEffect {
         anchors.fill: parent
-        source: vPassProxy
-        maskEnabled: root.fixedSize
-        maskSource: root.sourceProxy
         visible: root.fixedSize
+        fragmentShader: "mask.frag.qsb"
     }
 
 }

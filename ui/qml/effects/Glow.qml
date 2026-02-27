@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Effects
 import "qrc:/qt/qml/Rina/ui/qml/common" as Common
 
 Common.BaseEffect {
@@ -12,34 +11,27 @@ Common.BaseEffect {
     property bool useOriginalColor: root.evalParam("useOriginalColor", true)
     property color glowColor: root.evalColor("color", "#ffffff")
     property bool fixedSize: root.evalParam("fixedSize", false)
-    // 拡散速度（ゆらぎ）の計算
     property real fluctuation: {
         if (speed <= 0)
             return 1;
 
-        // フレーム数ベースの簡易ノイズ (sin/cos合成)
         var t = root.frame * speed * 0.05;
         return 1 + (Math.sin(t) * 0.2 + Math.cos(t * 2.3) * 0.1);
     }
     property real effectiveDiffusion: Math.max(0, diffusion * fluctuation)
 
-    // 1. 発光層 (背面)
-    MultiEffect {
-        anchors.fill: parent
-        source: root.sourceProxy
-        blurEnabled: true
-        blurMax: 64
-        blur: Math.min(1, root.effectiveDiffusion / 64)
-        colorization: root.useOriginalColor ? 0 : 1
-        colorizationColor: root.glowColor
-        opacity: Math.min(1, root.strength / 100)
-    }
-
-    // 2. 元画像 (前面)
     ShaderEffect {
         property variant source: root.sourceProxy
+        property real strength: root.strength
+        property real diffusion: root.effectiveDiffusion
+        property real threshold: root.threshold
+        property real useOriginalColor: root.useOriginalColor ? 1 : 0
+        property color glowColor: root.glowColor
+        property real targetWidth: root.width
+        property real targetHeight: root.height
 
         anchors.fill: parent
+        fragmentShader: "glow.frag.qsb"
     }
 
 }

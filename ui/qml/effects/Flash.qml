@@ -1,16 +1,12 @@
 import QtQuick
-import QtQuick.Effects
 import "qrc:/qt/qml/Rina/ui/qml/common" as Common
 
 Common.BaseEffect {
-    // Simplified Flash using MultiEffect (ZoomBlur removed)
-
     id: root
 
     property real strength: Math.max(0, root.evalNumber("strength", 10))
     property real centerX: root.evalNumber("x", 0)
     property real centerY: root.evalNumber("y", 0)
-    // 0: Forward, 1: Backward, 2: Light Only
     property int mode: {
         var m = root.evalParam("mode", "前方に合成");
         if (m === "前方に合成")
@@ -28,14 +24,19 @@ Common.BaseEffect {
     property color flashColor: root.evalColor("color", "#ffffff")
     property bool fixedSize: root.evalParam("fixedSize", false)
 
-    MultiEffect {
+    ShaderEffect {
+        property variant source: root.sourceProxy
+        property real strength: root.strength
+        property real centerX: root.centerX
+        property real centerY: root.centerY
+        property real mode: root.mode
+        property real useOriginalColor: root.useOriginalColor ? 1 : 0
+        property color flashColor: root.flashColor
+        property real targetWidth: root.width
+        property real targetHeight: root.height
+
         anchors.fill: parent
-        source: root.sourceProxy
-        brightness: root.strength / 100
-        colorization: root.useOriginalColor ? 0 : 1
-        colorizationColor: root.flashColor
-        maskEnabled: root.fixedSize
-        maskSource: root.fixedSize ? root.sourceProxy : null
+        fragmentShader: "flash.frag.qsb"
     }
 
 }

@@ -1,6 +1,7 @@
 #version 440
 layout(location = 0) in vec2 qt_TexCoord0;
 layout(location = 0) out vec4 fragColor;
+layout(binding = 1) uniform sampler2D source;
 layout(std140, binding = 0) uniform buf {
     mat4 qt_Matrix;
     float qt_Opacity;
@@ -8,18 +9,24 @@ layout(std140, binding = 0) uniform buf {
     float targetWidth;
     float targetHeight;
 };
-layout(binding = 1) uniform sampler2D source;
 
 void main() {
-    vec2 uv = qt_TexCoord0;
+    vec2 tc = qt_TexCoord0;
     
-    if (size > 1.0 && targetWidth > 0.0 && targetHeight > 0.0) {
-        vec2 res = vec2(targetWidth, targetHeight);
-        vec2 blocks = res / size;
-        uv = floor(uv * blocks) / blocks;
-        // ブロックの中心をサンプリング
-        uv += (vec2(1.0) / blocks) * 0.5;
+    if (size <= 1.0) {
+        fragColor = texture(source, tc) * qt_Opacity;
+        return;
     }
     
-    fragColor = texture(source, uv) * qt_Opacity;
+    // ピクセル座標に変換
+    float px = tc.x * targetWidth;
+    float py = tc.y * targetHeight;
+    
+    // 指定サイズで量子化（モザイクのブロック中心座標を計算）
+    float mx = floor(px / size) * size + (size * 0.5);
+    float my = floor(py / size) * size + (size * 0.5);
+    
+    vec2 mosaicTc = vec2(mx / targetWidth, my / targetHeight);
+    
+    fragColor = texture(source, mosaicTc) * qt_Opacity;
 }

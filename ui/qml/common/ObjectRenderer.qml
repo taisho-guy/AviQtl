@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Effects
 
 Item {
     id: renderer
@@ -26,6 +25,10 @@ Item {
 
         Loader {
             id: effectLoader
+
+            // rendererInstance のサイズに追従させ、item (BaseEffect) のサイズを確定させる
+            anchors.fill: parent
+
             active: modelData.enabled
             source: modelData.qmlSource
 
@@ -36,24 +39,21 @@ Item {
                 return renderer.originalSource;
             }
 
-            // ─── 命令的同期 (Binding.when ループを回避) ──────────────
             function _syncAll() {
                 if (!item) return;
-                // "in" 演算子で宣言プロパティの存在を確認してからセット
                 if ("source"      in item) item.source      = inputSource;
                 if ("params"      in item) item.params      = modelData.params;
                 if ("effectModel" in item) item.effectModel = modelData;
                 if ("frame"       in item) item.frame       = renderer.relFrame;
             }
 
-            onLoaded:         _syncAll()
+            onLoaded:             _syncAll()
             onInputSourceChanged: {
                 if (status === Loader.Ready) {
                     if ("source" in item) item.source = inputSource;
                 }
             }
 
-            // relFrame 変化をエフェクトに伝播
             Connections {
                 target: renderer
                 function onRelFrameChanged() {
@@ -63,7 +63,6 @@ Item {
                 }
             }
 
-            // modelData.params 変化をエフェクトに伝播
             Connections {
                 target: modelData
                 function onParamsChanged() {
@@ -86,17 +85,18 @@ Item {
                 return findFinalOutput(renderer.originalSource);
             return renderer.originalSource;
         }
-        visible:   false
-        live:      true
+        visible:    false
+        live:       true
         hideSource: true
-        recursive: false
+        recursive:  false
 
         function findFinalOutput(defaultSource) {
             for (var i = effectChain.count - 1; i >= 0; i--) {
                 var loader = effectChain.itemAt(i);
+                // width/height チェックを除去: anchors.fill: parent で親に追従するため
+                // サイズが 0 の場合は item が存在することだけを確認する
                 if (loader && loader.status === Loader.Ready
-                        && loader.active && loader.item
-                        && loader.item.width > 0 && loader.item.height > 0)
+                        && loader.active && loader.item)
                     return loader.item;
             }
             return defaultSource;
