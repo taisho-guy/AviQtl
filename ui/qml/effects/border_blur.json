@@ -1,6 +1,7 @@
 {
     "id": "border_blur",
     "name": "境界ぼかし",
+    "category": "filter",
     "qml": "BorderBlur.qml",
     "params": {
         "size": 5,

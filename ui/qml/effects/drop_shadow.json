@@ -1,6 +1,7 @@
 {
     "id": "drop_shadow",
     "name": "ドロップシャドウ",
+    "category": "filter",
     "qml": "DropShadow.qml",
     "params": {
         "radius": 10,

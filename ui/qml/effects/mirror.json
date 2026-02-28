@@ -1,15 +1,24 @@
 {
     "id": "mirror",
     "name": "反転",
+    "category": "filter",
     "qml": "Mirror.qml",
     "params": {
         "horizontal": false,
-        "vertical": false
+        "vertical": false,
+        "centerX": 0,
+        "centerY": 0,
+        "invertLuma": false,
+        "invertChroma": false
     },
     "ui": {
         "controls": [
             { "type": "bool", "param": "horizontal", "label": "左右反転" },
-            { "type": "bool", "param": "vertical", "label": "上下反転" }
+            { "type": "bool", "param": "vertical", "label": "上下反転" },
+            { "type": "float", "param": "centerX", "label": "中心X", "min": -2000, "max": 2000 },
+            { "type": "float", "param": "centerY", "label": "中心Y", "min": -2000, "max": 2000 },
+            { "type": "bool", "param": "invertLuma", "label": "輝度反転" },
+            { "type": "bool", "param": "invertChroma", "label": "色相反転" }
         ]
     }
 }

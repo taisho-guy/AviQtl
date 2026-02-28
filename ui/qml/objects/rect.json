@@ -11,8 +11,13 @@
         "innerRadius": 50,
         "rotation": 0,
         "color": "#66aa99",
+        "useGradient": false,
+        "gradientColor2": "#ffffff",
+        "gradientType": 0,
         "strokeColor": "#ffffff",
         "strokeWidth": 0,
+        "dashLength": 0,
+        "dashSpace": 0,
         "opacity": 1.0,
         "shapeType": "polygon"
     },
@@ -28,8 +33,13 @@
             { "type": "slider", "param": "innerRadius",  "label": "内径 (%)",    "min": 0, "max": 100,  "step": 0.5 },
             { "type": "float",  "param": "rotation",     "label": "初期回転 (°)","min": -360, "max": 360 },
             { "type": "color",  "param": "color",        "label": "塗り色" },
+            { "type": "bool",   "param": "useGradient",  "label": "グラデーション" },
+            { "type": "color",  "param": "gradientColor2","label": "グラデ色2" },
+            { "type": "enum",   "param": "gradientType", "label": "グラデ種類", "options": ["線形", "放射状"] },
             { "type": "color",  "param": "strokeColor",  "label": "縁の色" },
             { "type": "float",  "param": "strokeWidth",  "label": "縁幅",        "min": 0, "max": 200 },
+            { "type": "float",  "param": "dashLength",   "label": "破線:線長",   "min": 0, "max": 100 },
+            { "type": "float",  "param": "dashSpace",    "label": "破線:間隔",   "min": 0, "max": 100 },
             { "type": "slider", "param": "opacity",      "label": "不透明度",    "min": 0, "max": 1,    "step": 0.01 }
         ]
     }

@@ -1,6 +1,7 @@
 {
     "id": "diffuse_light",
     "name": "拡散光",
+    "category": "filter",
     "qml": "DiffuseLight.qml",
     "params": {
         "strength": 100,

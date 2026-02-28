@@ -1,0 +1,20 @@
+{
+    "id": "raster",
+    "name": "ラスター",
+    "category": "filter",
+    "qml": "Raster.qml",
+    "params": {
+        "amplitude": 10,
+        "frequency": 10,
+        "speed": 5,
+        "vertical": false
+    },
+    "ui": {
+        "controls": [
+            { "type": "float", "param": "amplitude", "label": "振幅", "min": 0, "max": 500 },
+            { "type": "float", "param": "frequency", "label": "周期", "min": 0, "max": 100 },
+            { "type": "float", "param": "speed", "label": "速度", "min": 0, "max": 100 },
+            { "type": "bool", "param": "vertical", "label": "縦揺れ" }
+        ]
+    }
+}

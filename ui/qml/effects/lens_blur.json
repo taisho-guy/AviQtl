@@ -1,0 +1,16 @@
+{
+    "id": "lens_blur",
+    "name": "レンズブラー",
+    "category": "filter",
+    "qml": "LensBlur.qml",
+    "params": {
+        "radius": 10,
+        "brightness": 0
+    },
+    "ui": {
+        "controls": [
+            { "type": "float", "param": "radius", "label": "範囲", "min": 0, "max": 100 },
+            { "type": "float", "param": "brightness", "label": "光の強さ", "min": 0, "max": 100 }
+        ]
+    }
+}

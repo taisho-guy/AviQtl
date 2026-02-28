@@ -1,6 +1,7 @@
 {
     "id": "mosaic",
     "name": "モザイク",
+    "category": "filter",
     "qml": "Mosaic.qml",
     "params": {
         "size": 10

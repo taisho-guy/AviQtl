@@ -1,6 +1,7 @@
 {
     "id": "clipping",
     "name": "クリッピング",
+    "category": "filter",
     "qml": "Clipping.qml",
     "params": {
         "top": 0,

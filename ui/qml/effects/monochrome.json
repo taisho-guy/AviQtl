@@ -1,6 +1,7 @@
 {
     "id": "monochrome",
     "name": "単色化",
+    "category": "filter",
     "qml": "Monochrome.qml",
     "params": {
         "color": "#ffffff",

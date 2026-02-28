@@ -1,6 +1,7 @@
 {
     "id": "glow",
     "name": "発光",
+    "category": "filter",
     "qml": "Glow.qml",
     "params": {
         "strength": 100,

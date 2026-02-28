@@ -1,6 +1,7 @@
 {
     "id": "flash",
     "name": "閃光",
+    "category": "filter",
     "qml": "Flash.qml",
     "params": {
         "strength": 10,
