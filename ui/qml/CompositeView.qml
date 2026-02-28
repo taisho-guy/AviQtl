@@ -24,6 +24,18 @@ Item {
     property alias view3D: view
     // ─── グループ制御管理 ─────────────────────────────────────────
     property var groupControls: []
+    // ─── カメラ制御管理 ─────────────────────────────────────────
+    property var activeCameraControl: null
+
+    function registerCameraControl(cc) {
+        activeCameraControl = cc;
+    }
+
+    function unregisterCameraControl(cc) {
+        if (activeCameraControl === cc)
+            activeCameraControl = null;
+
+    }
 
     function getCachedComponent(url) {
         if (_componentCache[url])
@@ -89,7 +101,7 @@ Item {
         // 現在のクリップ内での相対時間 (0.0 ~ 1.0)
         property double currentClipTimeRatio: (TimelineBridge) ? Math.max(0, Math.min(1, (root.currentFrame - TimelineBridge.clipStartFrame) / TimelineBridge.clipDurationFrames)) : 0
 
-        camera: mainCamera
+        camera: activeCameraControl ? activeCameraControl.camera : mainCamera
         // 親に収まる最大サイズを計算 (Letterboxing)
         width: root.exportMode ? projW : Math.min(parent.width, parent.height * aspect)
         height: root.exportMode ? projH : Math.min(parent.height, parent.width / aspect)
@@ -344,6 +356,10 @@ Item {
                             // グループ制御オブジェクトなら登録
                             if (item.isGroupControl && root.registerGroupControl)
                                 root.registerGroupControl(item);
+
+                            // カメラ制御オブジェクトなら登録
+                            if (item.isCameraControl && root.registerCameraControl)
+                                root.registerCameraControl(item);
 
                             // 変換パラメータを注入 (初期値)
                             _syncTransformToItem();
