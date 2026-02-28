@@ -309,6 +309,7 @@ ScrollView {
 
                         readonly property bool isAudio: modelData.type === "audio"
                         property int waveRev: 0
+                        property bool _paintPending: false
 
                         // ドラフト中はドラフト値、確定後は modelData の値を使う
                         readonly property int displayDuration: {
@@ -318,19 +319,27 @@ ScrollView {
                         }
 
                         anchors.fill:        parent
-                        anchors.leftMargin:  clipResizeHandleWidth
-                        anchors.rightMargin: clipResizeHandleWidth
                         visible:             isAudio
                         opacity:             0.7
 
-                        onWidthChanged:           { if (isAudio) requestPaint() }
-                        onDisplayDurationChanged: { if (isAudio) requestPaint() }  // リサイズ中もここで再描画
-                        onWaveRevChanged:         { if (isAudio) requestPaint() }
+                        function _schedulePaint() {
+                            if (!isAudio) return
+                            if (_paintPending) return
+                            _paintPending = true
+                            Qt.callLater(function() {
+                                _paintPending = false
+                                waveformCanvas.requestPaint()
+                            })
+                        }
+
+                        onWidthChanged:           _schedulePaint()
+                        onDisplayDurationChanged: _schedulePaint()
+                        onWaveRevChanged:         _schedulePaint()
 
                         Connections {
                             target: TimelineBridge
                             function onClipsChanged() {
-                                if (waveformCanvas.isAudio) waveformCanvas.waveRev++
+                                waveformCanvas._schedulePaint()
                             }
                         }
 
