@@ -28,22 +28,43 @@ void TimelineMediaManager::onCurrentFrameChanged() {
 
     // ループ時のシーク
     if (nextFrame == 0) {
-        for (auto *decoder : m_decoders) {
+        for (auto *decoder : m_decoders)
             decoder->seek(0);
-        }
     }
 
     if (m_controller->transport()->isPlaying()) {
         int sampleRate = m_controller->project()->sampleRate();
-        int samples = sampleRate / fps;
-        m_audioMixer->processFrame(nextFrame, fps, samples);
+        m_audioMixer->processFrame(nextFrame, fps, sampleRate / fps);
     }
 
     for (auto it = m_decoders.begin(); it != m_decoders.end(); ++it) {
         const auto *clip = m_controller->timeline()->findClipById(it.key());
-        if (clip && (nextFrame >= clip->startFrame && nextFrame < clip->startFrame + clip->durationFrames)) {
-            if (auto *vid = qobject_cast<Rina::Core::VideoDecoder *>(it.value()))
-                vid->seekToFrame(nextFrame - clip->startFrame, fps);
+        if (!clip || nextFrame < clip->startFrame || nextFrame >= clip->startFrame + clip->durationFrames)
+            continue;
+
+        if (auto *vid = qobject_cast<Rina::Core::VideoDecoder *>(it.value())) {
+            const int relFrame = nextFrame - clip->startFrame;
+            int videoFrame = 0;
+
+            for (const auto *eff : clip->effects) {
+                if (eff->id() != "video")
+                    continue;
+
+                const QString playMode = eff->params().value("playMode", "開始フレーム＋再生速度").toString();
+
+                if (playMode == "フレーム直接指定") {
+                    // フレーム直接指定モード: キーフレーム評価を適用
+                    videoFrame = eff->evaluatedParam("directFrame", relFrame).toInt();
+                } else {
+                    // 開始フレーム + 再生速度モード
+                    const int startFrame = eff->params().value("startFrame", 0).toInt();
+                    const double speed = eff->params().value("speed", 100.0).toDouble();
+                    videoFrame = static_cast<int>(relFrame * (speed / 100.0)) + startFrame;
+                }
+                break;
+            }
+
+            vid->seekToFrame(videoFrame, fps);
         }
     }
 }
@@ -109,6 +130,11 @@ void TimelineMediaManager::updateMediaDecoders() {
 
         if (decoder) {
             m_decoders.insert(clip.id, decoder);
+            // frameReady → QML 側の updateCounter 更新用シグナルを中継
+            if (qobject_cast<Rina::Core::VideoDecoder *>(decoder)) {
+                int cid = clip.id;
+                connect(decoder, &Rina::Core::MediaDecoder::frameReady, this, [this, cid](int) { emit frameUpdated(cid); });
+            }
             decoder->scheduleStart(); // 非同期起動
         }
     }

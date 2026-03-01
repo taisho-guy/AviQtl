@@ -32,6 +32,9 @@ class TimelineMediaManager : public QObject {
     // 波形取得用: クリップIDに対応するデコーダを返す
     Rina::Core::MediaDecoder *decoderForClip(int clipId) const { return m_decoders.value(clipId, nullptr); }
 
+  signals:
+    void frameUpdated(int clipId);
+
   private:
     QUrl getClipSourceUrl(const ClipData &clip) const;
 

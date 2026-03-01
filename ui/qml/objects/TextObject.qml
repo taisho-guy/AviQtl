@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Effects
+import QtQuick3D
 import "qrc:/qt/qml/Rina/ui/qml/common" as Common
 
 Common.BaseObject {
@@ -28,9 +29,26 @@ Common.BaseObject {
     property real bgPaddingX: Number(evalParam("text", "backgroundPaddingX", 20))
     property real bgPaddingY: Number(evalParam("text", "backgroundPaddingY", 10))
 
+    Model {
+        source: "#Rectangle"
+        scale: Qt.vector3d((renderer.output.sourceItem ? renderer.output.sourceItem.width : 1) / 100, (renderer.output.sourceItem ? renderer.output.sourceItem.height : 1) / 100, 1)
+
+        materials: DefaultMaterial {
+            lighting: DefaultMaterial.NoLighting
+            blendMode: root.blendMode
+            cullMode: root.cullMode
+
+            diffuseMap: Texture {
+                sourceItem: renderer.output
+            }
+
+        }
+
+    }
+
     sourceItem: Item {
-        width: Math.max(textItem.width + (bgEnabled ? bgPaddingX * 2 : 0), 1)
-        height: Math.max(textItem.height + (bgEnabled ? bgPaddingY * 2 : 0), 1)
+        width: Math.max(textItem.implicitWidth + (bgEnabled ? bgPaddingX * 2 : 0), 1)
+        height: Math.max(textItem.implicitHeight + (bgEnabled ? bgPaddingY * 2 : 0), 1)
         visible: false
 
         Rectangle {
@@ -46,8 +64,8 @@ Common.BaseObject {
             id: textContainer
 
             anchors.centerIn: parent
-            width: textItem.width
-            height: textItem.height
+            width: textItem.implicitWidth
+            height: textItem.implicitHeight
 
             Text {
                 id: textItem

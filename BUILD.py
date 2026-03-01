@@ -14,12 +14,13 @@ class BuildWorker(QtCore.QThread):
     finished_signal = QtCore.Signal(bool, str)
     dist_dir = None
 
-    def __init__(self, source_dir, temp_base, output_dir, is_debug=False):
+    def __init__(self, source_dir, temp_base, output_dir, is_debug=False, use_container=True):
         super().__init__()
         self.source_dir = source_dir
         self.temp_base = temp_base
         self.output_dir = output_dir
         self.is_debug = is_debug
+        self.use_container_opt = use_container
         self.dist_dir = self.source_dir / "dist"
         self.system = platform.system()
         self.container_name = "archlinux-rina"
@@ -98,6 +99,10 @@ class BuildWorker(QtCore.QThread):
                 self.log_signal.emit("警告: MSYS2 環境外で実行されています。依存関係の自動インストールはスキップされます。")
 
         elif self.system == "Linux":
+            if not self.use_container_opt:
+                self.log_signal.emit("コンテナビルドは無効です。ホスト環境でビルドします。")
+                return
+
             # 1. ホスト環境: distrobox と podman の確認
             if not (shutil.which("distrobox") and shutil.which("podman")):
                 self.log_signal.emit("警告: distrobox または podman が見つかりません。インストールしてください。")
@@ -163,7 +168,7 @@ class BuildWorker(QtCore.QThread):
             conf_cmd.append(str(self.source_dir))
             
             # Linuxの場合はコンテナ内で実行
-            use_container = (self.system == "Linux")
+            use_container = (self.system == "Linux" and self.use_container_opt)
             self._run_cmd(conf_cmd, in_container=use_container)
 
             # 3. Build
@@ -279,7 +284,9 @@ if __name__ == "__main__":
     output_dir = source_dir / "build"
     
     # Host Native Release Build
-    worker = BuildWorker(source_dir, temp_base, output_dir, is_debug=False)
+    use_container = "--no-container" not in sys.argv
+    
+    worker = BuildWorker(source_dir, temp_base, output_dir, is_debug=False, use_container=use_container)
     
     worker.log_signal.connect(print)
     worker.progress_signal.connect(lambda val, msg: print(f"[{val}%] {msg}"))

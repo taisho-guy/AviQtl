@@ -44,6 +44,8 @@ Common.BaseObject {
 
             Canvas {
                 // 偶数角形は頂点を上に
+                // Radial
+                // Linear (上から下)
 
                 id: shapeCanvas
 
@@ -54,9 +56,6 @@ Common.BaseObject {
                 antialiasing: true
                 // パラメーター変化 → 再描画
                 onPaint: {
-                    // Radial
-                    // Linear (上から下)
-
                     var ctx = getContext("2d");
                     ctx.clearRect(0, 0, width, height);
                     ctx.save();
