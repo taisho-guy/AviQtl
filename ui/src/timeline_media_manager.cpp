@@ -66,6 +66,29 @@ void TimelineMediaManager::onCurrentFrameChanged() {
 
             vid->seekToFrame(videoFrame, fps);
         }
+
+        if (auto *aud = qobject_cast<Rina::Core::AudioDecoder *>(it.value())) {
+            const int relFrame = nextFrame - clip->startFrame;
+            const double relTime = static_cast<double>(relFrame) / fps;
+            double audioTime = 0.0;
+
+            for (const auto *eff : clip->effects) {
+                if (eff->id() != "audio")
+                    continue;
+
+                const QString playMode = eff->params().value("playMode", "開始時間＋再生速度").toString();
+
+                if (playMode == "時間直接指定") {
+                    audioTime = eff->evaluatedParam("directTime", relFrame).toDouble();
+                } else {
+                    const double startTime = eff->params().value("startTime", 0.0).toDouble();
+                    const double speed = eff->params().value("speed", 100.0).toDouble();
+                    audioTime = relTime * (speed / 100.0) + startTime;
+                }
+                break;
+            }
+            aud->seekToTime(audioTime);
+        }
     }
 }
 
