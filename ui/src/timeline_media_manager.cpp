@@ -87,7 +87,7 @@ void TimelineMediaManager::onCurrentFrameChanged() {
                 }
                 break;
             }
-            aud->seekToTime(audioTime);
+            aud->seek(static_cast<qint64>(audioTime * 1000.0));
         }
     }
 }

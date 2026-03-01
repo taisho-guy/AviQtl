@@ -348,6 +348,8 @@ QVariantList TimelineController::getAvailableObjects() const {
     return list;
 }
 
+QString TimelineController::getClipTypeColor(const QString &type) const { return Rina::Core::EffectRegistry::instance().getEffect(type).color; }
+
 QVariantList TimelineController::getAvailableObjects(const QString &category) const {
     QVariantList list;
     const auto effects = Rina::Core::EffectRegistry::instance().getAllEffects();

@@ -12,6 +12,7 @@ struct EffectMetadata {
     QString name;
     QString category;
     QString qmlSource; // QML実装へのパス
+    QString color;     // ← 追加: JSON の "color" フィールド（省略可）
     QVariantMap defaultParams;
     QVariantMap uiDefinition; // UI定義（隠しパラメータやウィジェットタイプなど）
     // TODO: パラメータの型情報や範囲制限などをここに追加

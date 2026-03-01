@@ -69,6 +69,7 @@ void EffectRegistry::loadEffectsFromDirectory(const QString &path) {
         meta.category = category;
         meta.defaultParams = params;
         meta.uiDefinition = uiDef;
+        meta.color = obj["color"].toString();
 
         // qrc: で始まる場合は絶対パスとしてそのまま使用
         if (qmlFileName.startsWith("qrc:")) {
