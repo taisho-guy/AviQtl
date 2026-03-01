@@ -172,29 +172,41 @@ class EffectModel : public QObject {
         static const std::map<QString, EasingFunction> funcs = {
                                                                 // ─── 既存 (後方互換) ───────────────────────────────────────
                                                                 {"linear", [](double t, const auto &) { return t; }},
-                                                                {"ease_in", [](double t, const auto &) { return t * t; }},
-                                                                {"ease_out", [](double t, const auto &) { return t * (2.0 - t); }},
-                                                                {"ease_in_out", [](double t, const auto &) { return t < 0.5 ? 2.0 * t * t : -1.0 + (4.0 - 2.0 * t) * t; }},
                                                                 // ─── Sine ─────────────────────────────────────────────────
                                                                 {"ease_in_sine", [](double t, const auto &) { return 1.0 - std::cos(t * M_PI / 2.0); }},
                                                                 {"ease_out_sine", [](double t, const auto &) { return std::sin(t * M_PI / 2.0); }},
                                                                 {"ease_in_out_sine", [](double t, const auto &) { return -(std::cos(M_PI * t) - 1.0) / 2.0; }},
+                                                                {"ease_out_in_sine", [](double t, const auto &) {
+                                                                     return t < 0.5 ? std::sin(t * M_PI) / 2.0 : (1.0 - std::cos((t * 2.0 - 1.0) * M_PI / 2.0)) / 2.0 + 0.5;
+                                                                 }},
                                                                 // ─── Quad ─────────────────────────────────────────────────
                                                                 {"ease_in_quad", [](double t, const auto &) { return t * t; }},
                                                                 {"ease_out_quad", [](double t, const auto &) { return 1.0 - (1.0 - t) * (1.0 - t); }},
                                                                 {"ease_in_out_quad", [](double t, const auto &) { return t < 0.5 ? 2.0 * t * t : 1.0 - ((-2.0 * t + 2.0) * (-2.0 * t + 2.0)) / 2.0; }},
+                                                                {"ease_out_in_quad", [](double t, const auto &) {
+                                                                     return t < 0.5 ? (1.0 - (1.0 - 2.0 * t) * (1.0 - 2.0 * t)) / 2.0 : (2.0 * t - 1.0) * (2.0 * t - 1.0) / 2.0 + 0.5;
+                                                                 }},
                                                                 // ─── Cubic ────────────────────────────────────────────────
                                                                 {"ease_in_cubic", [](double t, const auto &) { return t * t * t; }},
                                                                 {"ease_out_cubic", [](double t, const auto &) { return 1.0 - (1.0 - t) * (1.0 - t) * (1.0 - t); }},
                                                                 {"ease_in_out_cubic", [](double t, const auto &) { return t < 0.5 ? 4.0 * t * t * t : 1.0 - ((-2.0 * t + 2.0) * (-2.0 * t + 2.0) * (-2.0 * t + 2.0)) / 2.0; }},
+                                                                {"ease_out_in_cubic", [](double t, const auto &) {
+                                                                     return t < 0.5 ? (1.0 - std::pow(1.0 - 2.0 * t, 3.0)) / 2.0 : std::pow(2.0 * t - 1.0, 3.0) / 2.0 + 0.5;
+                                                                 }},
                                                                 // ─── Quart ────────────────────────────────────────────────
                                                                 {"ease_in_quart", [](double t, const auto &) { return t * t * t * t; }},
                                                                 {"ease_out_quart", [](double t, const auto &) { return 1.0 - (1.0 - t) * (1.0 - t) * (1.0 - t) * (1.0 - t); }},
                                                                 {"ease_in_out_quart", [](double t, const auto &) { return t < 0.5 ? 8.0 * t * t * t * t : 1.0 - ((-2.0 * t + 2.0) * (-2.0 * t + 2.0) * (-2.0 * t + 2.0) * (-2.0 * t + 2.0)) / 2.0; }},
+                                                                {"ease_out_in_quart", [](double t, const auto &) {
+                                                                     return t < 0.5 ? (1.0 - std::pow(1.0 - 2.0 * t, 4.0)) / 2.0 : std::pow(2.0 * t - 1.0, 4.0) / 2.0 + 0.5;
+                                                                 }},
                                                                 // ─── Quint ────────────────────────────────────────────────
                                                                 {"ease_in_quint", [](double t, const auto &) { return t * t * t * t * t; }},
                                                                 {"ease_out_quint", [](double t, const auto &) { return 1.0 - (1.0 - t) * (1.0 - t) * (1.0 - t) * (1.0 - t) * (1.0 - t); }},
                                                                 {"ease_in_out_quint", [](double t, const auto &) { return t < 0.5 ? 16.0 * t * t * t * t * t : 1.0 - ((-2.0 * t + 2.0) * (-2.0 * t + 2.0) * (-2.0 * t + 2.0) * (-2.0 * t + 2.0) * (-2.0 * t + 2.0)) / 2.0; }},
+                                                                {"ease_out_in_quint", [](double t, const auto &) {
+                                                                     return t < 0.5 ? (1.0 - std::pow(1.0 - 2.0 * t, 5.0)) / 2.0 : std::pow(2.0 * t - 1.0, 5.0) / 2.0 + 0.5;
+                                                                 }},
                                                                 // ─── Expo ─────────────────────────────────────────────────
                                                                 {"ease_in_expo", [](double t, const auto &) { return t == 0.0 ? 0.0 : std::pow(2.0, 10.0 * t - 10.0); }},
                                                                 {"ease_out_expo", [](double t, const auto &) { return t == 1.0 ? 1.0 : 1.0 - std::pow(2.0, -10.0 * t); }},
@@ -205,11 +217,21 @@ class EffectModel : public QObject {
                                                                          return 1.0;
                                                                      return t < 0.5 ? std::pow(2.0, 20.0 * t - 10.0) / 2.0 : (2.0 - std::pow(2.0, -20.0 * t + 10.0)) / 2.0;
                                                                  }},
+                                                                {"ease_out_in_expo", [](double t, const auto &) {
+                                                                     if (t == 0.0)
+                                                                         return 0.0;
+                                                                     if (t == 1.0)
+                                                                         return 1.0;
+                                                                     return t < 0.5 ? (1.0 - std::pow(2.0, -20.0 * t)) / 2.0 : std::pow(2.0, 20.0 * t - 20.0) / 2.0 + 0.5;
+                                                                 }},
                                                                 // ─── Circ ─────────────────────────────────────────────────
                                                                 {"ease_in_circ", [](double t, const auto &) { return 1.0 - std::sqrt(1.0 - t * t); }},
                                                                 {"ease_out_circ", [](double t, const auto &) { return std::sqrt(1.0 - (t - 1.0) * (t - 1.0)); }},
                                                                 {"ease_in_out_circ", [](double t, const auto &) {
                                                                      return t < 0.5 ? (1.0 - std::sqrt(1.0 - 4.0 * t * t)) / 2.0 : (std::sqrt(1.0 - (-2.0 * t + 2.0) * (-2.0 * t + 2.0)) + 1.0) / 2.0;
+                                                                 }},
+                                                                {"ease_out_in_circ", [](double t, const auto &) {
+                                                                     return t < 0.5 ? std::sqrt(1.0 - (2.0 * t - 1.0) * (2.0 * t - 1.0)) / 2.0 : (1.0 - std::sqrt(1.0 - (2.0 * t - 1.0) * (2.0 * t - 1.0))) / 2.0 + 0.5;
                                                                  }},
                                                                 // ─── Back ─────────────────────────────────────────────────
                                                                 {"ease_in_back", [](double t, const auto &) {
@@ -223,6 +245,12 @@ class EffectModel : public QObject {
                                                                 {"ease_in_out_back", [](double t, const auto &) {
                                                                      constexpr double c2 = 1.70158 * 1.525;
                                                                      return t < 0.5 ? ((2.0 * t) * (2.0 * t) * ((c2 + 1.0) * 2.0 * t - c2)) / 2.0 : ((2.0 * t - 2.0) * (2.0 * t - 2.0) * ((c2 + 1.0) * (2.0 * t - 2.0) + c2) + 2.0) / 2.0;
+                                                                 }},
+                                                                {"ease_out_in_back", [](double t, const auto &) {
+                                                                     constexpr double c1 = 1.70158, c3 = c1 + 1.0;
+                                                                     auto eout = [&](double u) { return 1.0 + c3 * (u - 1.0) * (u - 1.0) * (u - 1.0) + c1 * (u - 1.0) * (u - 1.0); };
+                                                                     auto ein = [&](double u) { return c3 * u * u * u - c1 * u * u; };
+                                                                     return t < 0.5 ? eout(2.0 * t) / 2.0 : ein(2.0 * t - 1.0) / 2.0 + 0.5;
                                                                  }},
                                                                 // ─── Elastic ──────────────────────────────────────────────
                                                                 {"ease_in_elastic", [](double t, const auto &) {
@@ -249,10 +277,27 @@ class EffectModel : public QObject {
                                                                          return 1.0;
                                                                      return t < 0.5 ? -(std::pow(2.0, 20.0 * t - 10.0) * std::sin((20.0 * t - 11.125) * c5)) / 2.0 : (std::pow(2.0, -20.0 * t + 10.0) * std::sin((20.0 * t - 11.125) * c5)) / 2.0 + 1.0;
                                                                  }},
+                                                                {"ease_out_in_elastic", [](double t, const auto &) {
+                                                                     constexpr double c4 = (2.0 * M_PI) / 3.0;
+                                                                     if (t == 0.0)
+                                                                         return 0.0;
+                                                                     if (t == 1.0)
+                                                                         return 1.0;
+                                                                     auto eout = [&](double u) { return std::pow(2.0, -10.0 * u) * std::sin((u * 10.0 - 0.75) * c4) + 1.0; };
+                                                                     auto ein = [&](double u) {
+                                                                         if (u == 0.0)
+                                                                             return 0.0;
+                                                                         if (u == 1.0)
+                                                                             return 1.0;
+                                                                         return -std::pow(2.0, 10.0 * u - 10.0) * std::sin((u * 10.0 - 10.75) * c4);
+                                                                     };
+                                                                     return t < 0.5 ? eout(2.0 * t) / 2.0 : ein(2.0 * t - 1.0) / 2.0 + 0.5;
+                                                                 }},
                                                                 // ─── Bounce ───────────────────────────────────────────────
                                                                 {"ease_out_bounce", [](double t, const auto &) { return easeOutBounce(t); }},
                                                                 {"ease_in_bounce", [](double t, const auto &) { return 1.0 - easeOutBounce(1.0 - t); }},
                                                                 {"ease_in_out_bounce", [](double t, const auto &) { return t < 0.5 ? (1.0 - easeOutBounce(1.0 - 2.0 * t)) / 2.0 : (1.0 + easeOutBounce(2.0 * t - 1.0)) / 2.0; }},
+                                                                {"ease_out_in_bounce", [](double t, const auto &) { return t < 0.5 ? easeOutBounce(2.0 * t) / 2.0 : (1.0 - easeOutBounce(1.0 - 2.0 * (t - 0.5))) / 2.0 + 0.5; }},
                                                                 // ─── カスタムベジェ ───────────────────────────────────────
                                                                 {"custom", [](double x, const auto &p) {
                                                                      // p = [cp1x, cp1y, cp2x, cp2y, endX, endY, ...repeat...]

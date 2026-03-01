@@ -11,7 +11,7 @@ ScrollView {
     property alias contentY: timelineFlickable.contentY
     property int layerHeight: 30
     property int layerCount: 128
-    property int clipResizeHandleWidth
+    property int clipResizeHandleWidth: 6
     property var getLayerLocked: function(layer) {
         return false;
     }
