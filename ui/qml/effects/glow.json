@@ -1,26 +1,82 @@
 {
-    "id": "glow",
-    "name": "発光",
-    "category": "filter",
-    "qml": "Glow.qml",
-    "params": {
-        "strength": 100,
-        "diffusion": 10,
-        "threshold": 10,
-        "speed": 0,
-        "useOriginalColor": true,
-        "color": "#ffffff",
-        "fixedSize": false
-    },
-    "ui": {
-        "controls": [
-            { "type": "float", "param": "strength", "label": "強さ", "min": 0, "max": 2000 },
-            { "type": "float", "param": "diffusion", "label": "拡散", "min": 0, "max": 200 },
-            { "type": "float", "param": "threshold", "label": "しきい値", "min": 0, "max": 100 },
-            { "type": "float", "param": "speed", "label": "拡散速度", "min": 0, "max": 100 },
-            { "type": "bool", "param": "useOriginalColor", "label": "元の色を使用" },
-            { "type": "color", "param": "color", "label": "光色" },
-            { "type": "bool", "param": "fixedSize", "label": "サイズ固定" }
-        ]
-    }
+  "id": "glow",
+  "name": "グロー",
+  "category": "filter",
+  "qml": "Glow.qml",
+  "color": "#ff8844",
+  "params": {
+    "strength": 100,
+    "diffusion": 20,
+    "threshold": 0,
+    "blur": 0,
+    "shape": "normal",
+    "lightColor": "#ffffff",
+    "glowOnly": false
+  },
+  "ui": {
+    "params": [
+      {
+        "type": "slider",
+        "param": "strength",
+        "label": "強さ",
+        "min": 0,
+        "max": 100,
+        "default": 100,
+        "decimals": 0
+      },
+      {
+        "type": "slider",
+        "param": "diffusion",
+        "label": "拡散",
+        "min": 0,
+        "max": 500,
+        "default": 20,
+        "decimals": 0
+      },
+      {
+        "type": "slider",
+        "param": "threshold",
+        "label": "しきい値",
+        "min": -100,
+        "max": 100,
+        "default": 0,
+        "decimals": 0
+      },
+      {
+        "type": "slider",
+        "param": "blur",
+        "label": "ぼかし",
+        "min": 0,
+        "max": 100,
+        "default": 0,
+        "decimals": 0
+      },
+      {
+        "type": "enum",
+        "param": "shape",
+        "label": "形状",
+        "options": [
+          "normal",
+          "cross4",
+          "cross4diag",
+          "cross8",
+          "lineH",
+          "lineV"
+        ],
+        "default": "normal"
+      },
+      {
+        "type": "color",
+        "param": "lightColor",
+        "label": "光色",
+        "default": "#ffffff"
+      },
+      {
+        "type": "bool",
+        "param": "glowOnly",
+        "label": "光成分のみ",
+        "default": false
+      }
+    ]
+  }
 }

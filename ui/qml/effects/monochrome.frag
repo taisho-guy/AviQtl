@@ -1,29 +1,17 @@
 #version 440
-layout(location = 0) in vec2 qt_TexCoord0;
-layout(location = 0) out vec4 fragColor;
-layout(binding = 1) uniform sampler2D source;
-layout(std140, binding = 0) uniform buf {
-    mat4 qt_Matrix;
+layout(location=0) in vec2 qt_TexCoord0;
+layout(location=0) out vec4 fragColor;
+layout(std140, binding=0) uniform buf {
+    mat4  qt_Matrix;
     float qt_Opacity;
-    vec4 monoColor;
     float strength;
+    float _p0; float _p1; float _p2;
+    vec4  monoColor;
 };
-
+layout(binding=1) uniform sampler2D source;
 void main() {
-    vec4 c = texture(source, qt_TexCoord0);
-    if (c.a == 0.0) {
-        fragColor = vec4(0.0);
-        return;
-    }
-
-    vec3 unmultiplied = c.rgb / c.a;
-    float luminance = dot(unmultiplied, vec3(0.299, 0.587, 0.114));
-
-    // 指定色と輝度を乗算
-    vec3 colored = monoColor.rgb * luminance;
-
-    // 強さに応じて元の色とブレンドし、再度アルファ乗算
-    c.rgb = mix(unmultiplied, colored, strength) * c.a;
-
-    fragColor = c * qt_Opacity;
+    vec4  col  = texture(source, qt_TexCoord0);
+    float luma = dot(col.rgb, vec3(0.299, 0.587, 0.114));
+    vec3  mono = monoColor.rgb * luma;
+    fragColor  = vec4(mix(col.rgb, mono, strength), col.a) * qt_Opacity;
 }

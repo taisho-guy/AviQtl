@@ -1,26 +1,55 @@
 {
-    "id": "flash",
-    "name": "閃光",
-    "category": "filter",
-    "qml": "Flash.qml",
-    "params": {
-        "strength": 10,
-        "x": 0,
-        "y": 0,
-        "mode": "前方に合成",
-        "useOriginalColor": true,
-        "color": "#ffffff",
-        "fixedSize": false
-    },
-    "ui": {
-        "controls": [
-            { "type": "float", "param": "strength", "label": "強さ", "min": 0, "max": 100 },
-            { "type": "float", "param": "x", "label": "X", "min": -2000, "max": 2000 },
-            { "type": "float", "param": "y", "label": "Y", "min": -2000, "max": 2000 },
-            { "type": "enum", "param": "mode", "label": "合成モード", "options": ["前方に合成", "後方に合成", "光成分のみ"] },
-            { "type": "bool", "param": "useOriginalColor", "label": "元の色を使用" },
-            { "type": "color", "param": "color", "label": "光色" },
-            { "type": "bool", "param": "fixedSize", "label": "サイズ固定" }
-        ]
-    }
+  "id": "flash",
+  "name": "閃光",
+  "category": "filter",
+  "qml": "Flash.qml",
+  "color": "#ffffaa",
+  "params": {
+    "strength": 100,
+    "x": 0,
+    "y": 0,
+    "compositeMode": "top"
+  },
+  "ui": {
+    "params": [
+      {
+        "type": "slider",
+        "param": "strength",
+        "label": "強さ",
+        "min": 0,
+        "max": 100,
+        "default": 100,
+        "decimals": 0
+      },
+      {
+        "type": "slider",
+        "param": "x",
+        "label": "x",
+        "min": -2000,
+        "max": 2000,
+        "default": 0,
+        "decimals": 0
+      },
+      {
+        "type": "slider",
+        "param": "y",
+        "label": "y",
+        "min": -2000,
+        "max": 2000,
+        "default": 0,
+        "decimals": 0
+      },
+      {
+        "type": "enum",
+        "param": "compositeMode",
+        "label": "合成方法",
+        "options": [
+          "top",
+          "bottom",
+          "only"
+        ],
+        "default": "top"
+      }
+    ]
+  }
 }

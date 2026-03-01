@@ -1,29 +1,31 @@
 import QtQuick
-import "qrc:/qt/qml/Rina/ui/qml/common" as Common
+import qrc:/qt/qml/Rinauiqml/common as Common
 
 Common.BaseEffect {
     id: root
 
-    property bool horizontal: root.evalParam("horizontal", false)
-    property bool vertical: root.evalParam("vertical", false)
-    property real centerX: root.evalNumber("centerX", 0)
-    property real centerY: root.evalNumber("centerY", 0)
-    property bool invertLuma: root.evalParam("invertLuma", false)
-    property bool invertChroma: root.evalParam("invertChroma", false)
+    // AviUtl: 透明度/減衰/境目調整/ミラーの方向 (下/上/右/左)
+    property real  transparency: Math.max(0, Math.min(100, root.evalNumber("transparency", 0)))
+    property real  decay:        Math.max(0, Math.min(100, root.evalNumber("decay",        0)))
+    property real  boundary:     Math.max(0, root.evalNumber("boundary",  0))
+    // direction: 0=下 1=上 2=右 3=左
+    property real  direction: {
+        var d = root.evalParam("direction", "down")
+        if (d === "up")    return 1.0
+        if (d === "right") return 2.0
+        if (d === "left")  return 3.0
+        return 0.0
+    }
 
     ShaderEffect {
-        property variant source: root.sourceProxy
-        property real horizontal: root.horizontal ? 1 : 0
-        property real vertical: root.vertical ? 1 : 0
-        property real centerX: root.centerX
-        property real centerY: root.centerY
-        property real invertLuma: root.invertLuma ? 1 : 0
-        property real invertChroma: root.invertChroma ? 1 : 0
-        property real targetWidth: root.width
-        property real targetHeight: root.height
-
+        property variant source:       root.sourceProxy
+        property real    transparency: root.transparency
+        property real    decay:        root.decay
+        property real    boundary:     root.boundary
+        property real    direction:    root.direction
+        property real    targetWidth:  root.width
+        property real    targetHeight: root.height
         anchors.fill: parent
         fragmentShader: "mirror.frag.qsb"
     }
-
 }

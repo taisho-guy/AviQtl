@@ -1,0 +1,57 @@
+{
+  "id": "colorgamutconv",
+  "name": "特定色域変換",
+  "category": "filter",
+  "qml": "ColorGamutConversion.qml",
+  "color": "#44aa66",
+  "params": {
+    "sourceColor": "#ff0000",
+    "targetColor": "#0000ff",
+    "hueRange": 30,
+    "satRange": 100,
+    "boundary": 10
+  },
+  "ui": {
+    "params": [
+      {
+        "type": "color",
+        "param": "sourceColor",
+        "label": "変換元の色",
+        "default": "#ff0000"
+      },
+      {
+        "type": "color",
+        "param": "targetColor",
+        "label": "変換先の色",
+        "default": "#0000ff"
+      },
+      {
+        "type": "slider",
+        "param": "hueRange",
+        "label": "色相範囲",
+        "min": 0,
+        "max": 360,
+        "default": 30,
+        "decimals": 0
+      },
+      {
+        "type": "slider",
+        "param": "satRange",
+        "label": "彩度範囲",
+        "min": 0,
+        "max": 100,
+        "default": 100,
+        "decimals": 0
+      },
+      {
+        "type": "slider",
+        "param": "boundary",
+        "label": "境界補正",
+        "min": 0,
+        "max": 100,
+        "default": 10,
+        "decimals": 0
+      }
+    ]
+  }
+}

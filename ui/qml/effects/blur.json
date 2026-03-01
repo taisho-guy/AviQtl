@@ -1,20 +1,50 @@
 {
-    "id": "blur",
-    "name": "ぼかし",
-    "category": "filter",
-    "qml": "Blur.qml",
-    "params": {
-        "size": 10,
-        "aspect": 0,
-        "gain": 0,
-        "fixedSize": false
-    },
-    "ui": {
-        "controls": [
-            { "type": "float", "param": "size", "label": "範囲", "min": 0, "max": 200 },
-            { "type": "float", "param": "aspect", "label": "縦横比", "min": -100, "max": 100 },
-            { "type": "float", "param": "gain", "label": "光の強さ", "min": 0, "max": 100 },
-            { "type": "bool", "param": "fixedSize", "label": "サイズ固定" }
-        ]
-    }
+  "id": "blur",
+  "name": "ぼかし",
+  "category": "filter",
+  "qml": "Blur.qml",
+  "color": "#3366aa",
+  "params": {
+    "size": 10,
+    "aspect": 0,
+    "gain": 0,
+    "fixedSize": false
+  },
+  "ui": {
+    "params": [
+      {
+        "type": "slider",
+        "param": "size",
+        "label": "範囲",
+        "min": 0,
+        "max": 500,
+        "default": 10,
+        "decimals": 0
+      },
+      {
+        "type": "slider",
+        "param": "aspect",
+        "label": "縦横比",
+        "min": -100,
+        "max": 100,
+        "default": 0,
+        "decimals": 0
+      },
+      {
+        "type": "slider",
+        "param": "gain",
+        "label": "光の強さ",
+        "min": 0,
+        "max": 100,
+        "default": 0,
+        "decimals": 0
+      },
+      {
+        "type": "bool",
+        "param": "fixedSize",
+        "label": "サイズ固定",
+        "default": false
+      }
+    ]
+  }
 }

@@ -1,0 +1,33 @@
+{
+  "id": "diffusedlight",
+  "name": "拡散光",
+  "category": "filter",
+  "qml": "DiffusedLight.qml",
+  "color": "#ffeecc",
+  "params": {
+    "strength": 100,
+    "diffusion": 20
+  },
+  "ui": {
+    "params": [
+      {
+        "type": "slider",
+        "param": "strength",
+        "label": "強さ",
+        "min": 0,
+        "max": 100,
+        "default": 100,
+        "decimals": 0
+      },
+      {
+        "type": "slider",
+        "param": "diffusion",
+        "label": "拡散",
+        "min": 0,
+        "max": 500,
+        "default": 20,
+        "decimals": 0
+      }
+    ]
+  }
+}

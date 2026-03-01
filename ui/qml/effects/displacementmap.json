@@ -1,0 +1,138 @@
+{
+  "id": "displacementmap",
+  "name": "ディスプレイメントマップ",
+  "category": "filter",
+  "qml": "DisplacementMap.qml",
+  "color": "#cc6622",
+  "params": {
+    "deformX": 0,
+    "deformY": 0,
+    "deformScale": 50,
+    "deformAspect": 100,
+    "deformRotation": 0,
+    "x": 0,
+    "y": 0,
+    "rotation": 0,
+    "size": 100,
+    "aspect": 100,
+    "blur": 20,
+    "mapType": "circle",
+    "deformMethod": "move"
+  },
+  "ui": {
+    "params": [
+      {
+        "type": "slider",
+        "param": "deformX",
+        "label": "変形X",
+        "min": -500,
+        "max": 500,
+        "default": 0
+      },
+      {
+        "type": "slider",
+        "param": "deformY",
+        "label": "変形Y",
+        "min": -500,
+        "max": 500,
+        "default": 0
+      },
+      {
+        "type": "slider",
+        "param": "deformScale",
+        "label": "拡大変形",
+        "min": -500,
+        "max": 500,
+        "default": 50
+      },
+      {
+        "type": "slider",
+        "param": "deformAspect",
+        "label": "拡大縦横",
+        "min": 0,
+        "max": 500,
+        "default": 100
+      },
+      {
+        "type": "slider",
+        "param": "deformRotation",
+        "label": "回転変形",
+        "min": -360,
+        "max": 360,
+        "default": 0
+      },
+      {
+        "type": "slider",
+        "param": "x",
+        "label": "X",
+        "min": -2000,
+        "max": 2000,
+        "default": 0
+      },
+      {
+        "type": "slider",
+        "param": "y",
+        "label": "Y",
+        "min": -2000,
+        "max": 2000,
+        "default": 0
+      },
+      {
+        "type": "slider",
+        "param": "rotation",
+        "label": "回転",
+        "min": -360,
+        "max": 360,
+        "default": 0
+      },
+      {
+        "type": "slider",
+        "param": "size",
+        "label": "サイズ",
+        "min": 1,
+        "max": 2000,
+        "default": 100
+      },
+      {
+        "type": "slider",
+        "param": "aspect",
+        "label": "縦横比",
+        "min": 0,
+        "max": 500,
+        "default": 100
+      },
+      {
+        "type": "slider",
+        "param": "blur",
+        "label": "ぼかし",
+        "min": 0,
+        "max": 500,
+        "default": 20
+      },
+      {
+        "type": "enum",
+        "param": "mapType",
+        "label": "マップの種類",
+        "options": [
+          "circle",
+          "square",
+          "triangle",
+          "pentagon",
+          "star"
+        ],
+        "default": "circle"
+      },
+      {
+        "type": "enum",
+        "param": "deformMethod",
+        "label": "変形方法",
+        "options": [
+          "move",
+          "scale",
+          "rotate"
+        ],
+        "default": "move"
+      }
+    ]
+  }
+}

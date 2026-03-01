@@ -1,0 +1,95 @@
+{
+  "id": "ripple",
+  "name": "波紋",
+  "category": "filter",
+  "qml": "Ripple.qml",
+  "color": "#2299cc",
+  "params": {
+    "centerX": 0,
+    "centerY": 0,
+    "width": 15,
+    "height": 15,
+    "speed": 150,
+    "time": 0,
+    "rippleCount": 0,
+    "rippleInterval": 10,
+    "amplitudeDecay": 0
+  },
+  "ui": {
+    "params": [
+      {
+        "type": "slider",
+        "param": "centerX",
+        "label": "中心X",
+        "min": -2000,
+        "max": 2000,
+        "default": 0
+      },
+      {
+        "type": "slider",
+        "param": "centerY",
+        "label": "中心Y",
+        "min": -2000,
+        "max": 2000,
+        "default": 0
+      },
+      {
+        "type": "slider",
+        "param": "width",
+        "label": "幅",
+        "min": 1,
+        "max": 500,
+        "default": 15
+      },
+      {
+        "type": "slider",
+        "param": "height",
+        "label": "高さ",
+        "min": 0,
+        "max": 500,
+        "default": 15
+      },
+      {
+        "type": "slider",
+        "param": "speed",
+        "label": "速度",
+        "min": 0,
+        "max": 1000,
+        "default": 150
+      },
+      {
+        "type": "slider",
+        "param": "time",
+        "label": "時間(s)",
+        "min": 0,
+        "max": 3600,
+        "default": 0,
+        "decimals": 2
+      },
+      {
+        "type": "slider",
+        "param": "rippleCount",
+        "label": "波紋数",
+        "min": 0,
+        "max": 50,
+        "default": 0
+      },
+      {
+        "type": "slider",
+        "param": "rippleInterval",
+        "label": "波紋間隔",
+        "min": 1,
+        "max": 100,
+        "default": 10
+      },
+      {
+        "type": "slider",
+        "param": "amplitudeDecay",
+        "label": "増幅減衰回数",
+        "min": -20,
+        "max": 20,
+        "default": 0
+      }
+    ]
+  }
+}

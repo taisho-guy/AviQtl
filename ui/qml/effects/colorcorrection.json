@@ -1,0 +1,70 @@
+{
+  "id": "colorcorrection",
+  "name": "色調補正",
+  "category": "filter",
+  "qml": "ColorCorrection.qml",
+  "color": "#2255aa",
+  "params": {
+    "brightness": 0,
+    "contrast": 0,
+    "hue": 0,
+    "luminance": 0,
+    "saturation": 0,
+    "saturate": false
+  },
+  "ui": {
+    "params": [
+      {
+        "type": "slider",
+        "param": "brightness",
+        "label": "明るさ",
+        "min": -100,
+        "max": 100,
+        "default": 0,
+        "decimals": 0
+      },
+      {
+        "type": "slider",
+        "param": "contrast",
+        "label": "コントラスト",
+        "min": -100,
+        "max": 100,
+        "default": 0,
+        "decimals": 0
+      },
+      {
+        "type": "slider",
+        "param": "hue",
+        "label": "色相",
+        "min": -360,
+        "max": 360,
+        "default": 0,
+        "decimals": 0
+      },
+      {
+        "type": "slider",
+        "param": "luminance",
+        "label": "輝度",
+        "min": -100,
+        "max": 100,
+        "default": 0,
+        "decimals": 0
+      },
+      {
+        "type": "slider",
+        "param": "saturation",
+        "label": "彩度",
+        "min": -100,
+        "max": 100,
+        "default": 0,
+        "decimals": 0
+      },
+      {
+        "type": "bool",
+        "param": "saturate",
+        "label": "飽和する",
+        "default": false
+      }
+    ]
+  }
+}

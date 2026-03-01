@@ -1,0 +1,49 @@
+{
+  "id": "polarcoords",
+  "name": "極座標変換",
+  "category": "filter",
+  "qml": "PolarCoords.qml",
+  "color": "#aa44cc",
+  "params": {
+    "centerWidth": 0,
+    "scale": 100,
+    "rotation": 0,
+    "swirl": 0
+  },
+  "ui": {
+    "params": [
+      {
+        "type": "slider",
+        "param": "centerWidth",
+        "label": "中心幅",
+        "min": 0,
+        "max": 400,
+        "default": 0
+      },
+      {
+        "type": "slider",
+        "param": "scale",
+        "label": "拡大率",
+        "min": 1,
+        "max": 1000,
+        "default": 100
+      },
+      {
+        "type": "slider",
+        "param": "rotation",
+        "label": "回転",
+        "min": -360,
+        "max": 360,
+        "default": 0
+      },
+      {
+        "type": "slider",
+        "param": "swirl",
+        "label": "渦巻",
+        "min": -360,
+        "max": 360,
+        "default": 0
+      }
+    ]
+  }
+}

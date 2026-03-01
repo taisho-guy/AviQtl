@@ -1,41 +1,30 @@
 #version 440
-layout(location = 0) in vec2 qt_TexCoord0;
-layout(location = 0) out vec4 fragColor;
-layout(binding = 1) uniform sampler2D source;
-layout(std140, binding = 0) uniform buf {
-    mat4 qt_Matrix;
+layout(location=0) in vec2 qt_TexCoord0;
+layout(location=0) out vec4 fragColor;
+layout(std140, binding=0) uniform buf {
+    mat4  qt_Matrix;
     float qt_Opacity;
     float strength;
-    float centerX;
-    float centerY;
-    float mode;
-    float useOriginalColor;
-    vec4 flashColor;
+    float flashX;
+    float flashY;
     float targetWidth;
     float targetHeight;
 };
-
+layout(binding=1) uniform sampler2D source;
 void main() {
-    vec2 tc = qt_TexCoord0;
-    vec4 c = texture(source, tc);
-
-    vec2 centerTc = vec2(0.5 + centerX / targetWidth, 0.5 + centerY / targetHeight);
-    float dist = distance(tc, centerTc);
-    float intensity = exp(-dist * 5.0) * (strength / 10.0);
-
-    vec3 fColor = useOriginalColor > 0.5 ? c.rgb : flashColor.rgb;
-
-    if (mode < 0.5) { 
-        c.rgb = c.rgb + fColor * intensity;
-        c.a = min(1.0, c.a + intensity * flashColor.a);
-    } else if (mode < 1.5) { 
-        float backIntensity = intensity * (1.0 - c.a);
-        c.rgb = c.rgb + fColor * backIntensity;
-        c.a = min(1.0, c.a + backIntensity * flashColor.a);
-    } else { 
-        c.rgb = fColor * intensity;
-        c.a = intensity * flashColor.a;
+    vec2  flash   = vec2(0.5 + flashX / targetWidth,
+                         0.5 - flashY / targetHeight);
+    vec2  dir     = flash - qt_TexCoord0;
+    float scale   = strength * 0.004;
+    const int N   = 24;
+    vec4  sum     = vec4(0.0);
+    float total   = 0.0;
+    for (int i = 0; i < N; i++) {
+        float t   = float(i) / float(N - 1);
+        float w   = 1.0 - t * 0.8;
+        vec2  uv  = qt_TexCoord0 + dir * t * scale;
+        sum      += texture(source, clamp(uv, vec2(0.0), vec2(1.0))) * w;
+        total    += w;
     }
-
-    fragColor = vec4(c.rgb * c.a, c.a) * qt_Opacity;
+    fragColor = (sum / max(total, 0.001)) * qt_Opacity;
 }

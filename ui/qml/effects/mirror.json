@@ -1,24 +1,53 @@
 {
-    "id": "mirror",
-    "name": "反転",
-    "category": "filter",
-    "qml": "Mirror.qml",
-    "params": {
-        "horizontal": false,
-        "vertical": false,
-        "centerX": 0,
-        "centerY": 0,
-        "invertLuma": false,
-        "invertChroma": false
-    },
-    "ui": {
-        "controls": [
-            { "type": "bool", "param": "horizontal", "label": "左右反転" },
-            { "type": "bool", "param": "vertical", "label": "上下反転" },
-            { "type": "float", "param": "centerX", "label": "中心X", "min": -2000, "max": 2000 },
-            { "type": "float", "param": "centerY", "label": "中心Y", "min": -2000, "max": 2000 },
-            { "type": "bool", "param": "invertLuma", "label": "輝度反転" },
-            { "type": "bool", "param": "invertChroma", "label": "色相反転" }
-        ]
-    }
+  "id": "mirror",
+  "name": "ミラー",
+  "category": "filter",
+  "qml": "Mirror.qml",
+  "color": "#447799",
+  "params": {
+    "transparency": 0,
+    "decay": 0,
+    "boundary": 0,
+    "direction": "down"
+  },
+  "ui": {
+    "params": [
+      {
+        "type": "slider",
+        "param": "transparency",
+        "label": "透明度",
+        "min": 0,
+        "max": 100,
+        "default": 0
+      },
+      {
+        "type": "slider",
+        "param": "decay",
+        "label": "減衰",
+        "min": 0,
+        "max": 100,
+        "default": 0
+      },
+      {
+        "type": "slider",
+        "param": "boundary",
+        "label": "境目調整",
+        "min": 0,
+        "max": 500,
+        "default": 0
+      },
+      {
+        "type": "enum",
+        "param": "direction",
+        "label": "ミラーの方向",
+        "options": [
+          "down",
+          "up",
+          "right",
+          "left"
+        ],
+        "default": "down"
+      }
+    ]
+  }
 }

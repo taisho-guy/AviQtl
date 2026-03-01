@@ -1,0 +1,64 @@
+{
+  "id": "motionblur",
+  "name": "モーションブラー",
+  "category": "filter",
+  "qml": "MotionBlur.qml",
+  "color": "#885522",
+  "params": {
+    "interval": 50,
+    "quality": 16,
+    "trail": false,
+    "velX": 0,
+    "velY": 0
+  },
+  "ui": {
+    "params": [
+      {
+        "type": "slider",
+        "param": "interval",
+        "label": "間隔",
+        "min": 0,
+        "max": 100,
+        "default": 50,
+        "decimals": 0
+      },
+      {
+        "type": "slider",
+        "param": "quality",
+        "label": "分解能",
+        "min": 1,
+        "max": 100,
+        "default": 16,
+        "decimals": 0
+      },
+      {
+        "type": "bool",
+        "param": "trail",
+        "label": "残像",
+        "default": false
+      },
+      {
+        "type": "header",
+        "label": "ブラー方向 (手動設定)"
+      },
+      {
+        "type": "slider",
+        "param": "velX",
+        "label": "速度X",
+        "min": -2000,
+        "max": 2000,
+        "default": 0,
+        "decimals": 0
+      },
+      {
+        "type": "slider",
+        "param": "velY",
+        "label": "速度Y",
+        "min": -2000,
+        "max": 2000,
+        "default": 0,
+        "decimals": 0
+      }
+    ]
+  }
+}

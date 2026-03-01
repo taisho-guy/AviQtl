@@ -1,0 +1,43 @@
+{
+  "id": "extendedcolortint",
+  "name": "拡張色設定",
+  "category": "filter",
+  "qml": "ExtendedColorTint.qml",
+  "color": "#3377aa",
+  "params": {
+    "r": 255,
+    "g": 255,
+    "b": 255
+  },
+  "ui": {
+    "params": [
+      {
+        "type": "slider",
+        "param": "r",
+        "label": "R",
+        "min": 0,
+        "max": 255,
+        "default": 255,
+        "decimals": 0
+      },
+      {
+        "type": "slider",
+        "param": "g",
+        "label": "G",
+        "min": 0,
+        "max": 255,
+        "default": 255,
+        "decimals": 0
+      },
+      {
+        "type": "slider",
+        "param": "b",
+        "label": "B",
+        "min": 0,
+        "max": 255,
+        "default": 255,
+        "decimals": 0
+      }
+    ]
+  }
+}

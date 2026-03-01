@@ -1,0 +1,40 @@
+{
+  "id": "lensblur",
+  "name": "レンズブラー",
+  "category": "filter",
+  "qml": "LensBlur.qml",
+  "color": "#6644aa",
+  "params": {
+    "range": 10,
+    "lightPower": 0,
+    "fixedSize": false
+  },
+  "ui": {
+    "params": [
+      {
+        "type": "slider",
+        "param": "range",
+        "label": "範囲",
+        "min": 0,
+        "max": 500,
+        "default": 10,
+        "decimals": 0
+      },
+      {
+        "type": "slider",
+        "param": "lightPower",
+        "label": "光の強さ",
+        "min": 0,
+        "max": 100,
+        "default": 0,
+        "decimals": 0
+      },
+      {
+        "type": "bool",
+        "param": "fixedSize",
+        "label": "サイズ固定",
+        "default": false
+      }
+    ]
+  }
+}

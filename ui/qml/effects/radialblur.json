@@ -1,0 +1,50 @@
+{
+  "id": "radialblur",
+  "name": "放射ブラー",
+  "category": "filter",
+  "qml": "RadialBlur.qml",
+  "color": "#aa6622",
+  "params": {
+    "range": 50,
+    "x": 0,
+    "y": 0,
+    "fixedSize": false
+  },
+  "ui": {
+    "params": [
+      {
+        "type": "slider",
+        "param": "range",
+        "label": "範囲",
+        "min": 0,
+        "max": 2000,
+        "default": 50,
+        "decimals": 0
+      },
+      {
+        "type": "slider",
+        "param": "x",
+        "label": "X",
+        "min": -2000,
+        "max": 2000,
+        "default": 0,
+        "decimals": 0
+      },
+      {
+        "type": "slider",
+        "param": "y",
+        "label": "Y",
+        "min": -2000,
+        "max": 2000,
+        "default": 0,
+        "decimals": 0
+      },
+      {
+        "type": "bool",
+        "param": "fixedSize",
+        "label": "サイズ固定",
+        "default": false
+      }
+    ]
+  }
+}
