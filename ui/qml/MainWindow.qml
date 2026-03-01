@@ -238,7 +238,7 @@ ApplicationWindow {
                     value: (TimelineBridge && TimelineBridge.transport) ? TimelineBridge.transport.currentFrame : 0
                     onMoved: {
                         if (TimelineBridge && TimelineBridge.transport)
-                            TimelineBridge.transport.currentFrame = value;
+                            TimelineBridge.transport.setCurrentFrame_seek(value);
 
                     }
                 }
@@ -259,7 +259,7 @@ ApplicationWindow {
                         flat: true
                         onClicked: {
                             if (TimelineBridge && TimelineBridge.transport)
-                                TimelineBridge.transport.currentFrame = Math.max(0, TimelineBridge.transport.currentFrame - 1);
+                                TimelineBridge.transport.setCurrentFrame_seek(Math.max(0, TimelineBridge.transport.currentFrame - 1));
 
                         }
 
@@ -295,7 +295,7 @@ ApplicationWindow {
                         flat: true
                         onClicked: {
                             if (TimelineBridge && TimelineBridge.transport)
-                                TimelineBridge.transport.currentFrame = TimelineBridge.transport.currentFrame + 1;
+                                TimelineBridge.transport.setCurrentFrame_seek(TimelineBridge.transport.currentFrame + 1);
 
                         }
 

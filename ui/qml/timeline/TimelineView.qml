@@ -598,7 +598,7 @@ ScrollView {
                 var frame = timelineViewRoot.snapFrame(mouse.x / scale);
                 if (mouse.button === Qt.LeftButton) {
                     if (TimelineBridge && TimelineBridge.transport)
-                        TimelineBridge.transport.currentFrame = frame;
+                        TimelineBridge.transport.setCurrentFrame_seek(frame);
 
                 } else {
                     var layer = Math.floor(mouse.y / layerHeight);

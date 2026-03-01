@@ -1,34 +1,67 @@
 #include "transport_service.hpp"
+#include <QElapsedTimer>
 
 namespace Rina::UI {
 
 TransportService::TransportService(QObject *parent) : QObject(parent) {
+    m_clock.start(); // ← 追加：プロセス起動直後から単調増加
     m_timer = new QTimer(this);
     m_timer->setTimerType(Qt::PreciseTimer);
-    connect(m_timer, &QTimer::timeout, this, [this]() { setCurrentFrame(m_currentFrame + 1); });
+    // tick間隔は短めに固定し、フレーム計算は経過時間から行う
+    // 4ms ≒ 240fps 相当のポーリング。過剰だが CPU 使用量は僅少
+    m_timer->setInterval(4);
+
+    connect(m_timer, &QTimer::timeout, this, &TransportService::onTick);
 }
 
 int TransportService::currentFrame() const { return m_currentFrame; }
+bool TransportService::isPlaying() const { return m_isPlaying; }
+
 void TransportService::setCurrentFrame(int f) {
-    if (m_currentFrame != f) {
-        m_currentFrame = f;
-        emit currentFrameChanged();
-    }
+    if (m_currentFrame == f)
+        return;
+    m_currentFrame = f;
+    emit currentFrameChanged();
 }
 
-bool TransportService::isPlaying() const { return m_isPlaying; }
 void TransportService::togglePlay() {
-    m_isPlaying = !m_isPlaying;
-    if (m_isPlaying)
-        m_timer->start();
-    else
+    if (m_isPlaying) {
         m_timer->stop();
+        m_isPlaying = false;
+    } else {
+        // 再生開始: 現在フレームを起点に時刻を記録
+        m_playStartFrame = m_currentFrame;
+        m_playStartTime = m_clock.nsecsElapsed();
+        m_isPlaying = true;
+        m_timer->start();
+    }
     emit isPlayingChanged();
 }
 
-void TransportService::updateTimerInterval(double fps) {
-    if (fps > 0) {
-        m_timer->setInterval(static_cast<int>(1000.0 / fps));
-    }
+void TransportService::setCurrentFrame_seek(int f) {
+    // シーク時は起点を再設定
+    m_playStartFrame = f;
+    m_playStartTime = m_clock.nsecsElapsed();
+    setCurrentFrame(f);
 }
+
+void TransportService::onTick() {
+    if (!m_isPlaying || m_fps <= 0)
+        return;
+
+    qint64 elapsedNs = m_clock.nsecsElapsed() - m_playStartTime;
+    double elapsedSec = elapsedNs / 1'000'000'000.0;
+
+    int targetFrame = m_playStartFrame + static_cast<int>(elapsedSec * m_fps * m_playbackSpeed);
+
+    // フレームが変化した場合のみシグナルを発火（無駄な再描画を抑制）
+    if (targetFrame != m_currentFrame)
+        setCurrentFrame(targetFrame);
+}
+
+void TransportService::updateTimerInterval(double fps) {
+    // 旧 API との互換性維持。fps はプロパティ経由で管理
+    setFps(fps);
+}
+
 } // namespace Rina::UI
