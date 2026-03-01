@@ -128,6 +128,8 @@ class TimelineController : public QObject {
     Q_INVOKABLE QVariantList getClipEffectStack(int clipId) const;
     Q_INVOKABLE QVariantList getEffectParameters(int clipId, int effectIndex) const;
     Q_INVOKABLE void setEffectParameter(int clipId, int effectIndex, int paramIndex, float value);
+    Q_INVOKABLE void setKeyframe(int clipId, int effectIndex, const QString &paramName, int frame, const QVariant &value, const QVariantMap &options);
+    Q_INVOKABLE void removeKeyframe(int clipId, int effectIndex, const QString &paramName, int frame);
 
     // シーン操作 (未実装)
     QVariantList scenes() const;

@@ -11,6 +11,15 @@ Common.RinaWindow {
     })
     property alias currentTabIndex: bar.currentIndex
 
+    function set(key, val) {
+        if (!SettingsManager)
+            return ;
+
+        var s = root.settings;
+        s[key] = val;
+        SettingsManager.settings = s;
+    }
+
     width: 600
     height: 500
     title: "システムの設定"
@@ -43,6 +52,14 @@ Common.RinaWindow {
 
             TabButton {
                 text: "新規プロジェクト"
+            }
+
+            TabButton {
+                text: "エクスポート"
+            }
+
+            TabButton {
+                text: "デコード / オーディオ"
             }
 
         }
@@ -735,6 +752,268 @@ Common.RinaWindow {
                                         SettingsManager.settings = s;
 
                                 }
+                            }
+
+                        }
+
+                    }
+
+                }
+
+            }
+
+            // エクスポート設定
+            ScrollView {
+                contentWidth: availableWidth
+
+                ColumnLayout {
+                    spacing: 15
+
+                    GroupBox {
+                        title: "映像デフォルト"
+                        Layout.fillWidth: true
+
+                        GridLayout {
+                            columns: 2
+
+                            Label {
+                                text: "コーデック:"
+                            }
+
+                            ComboBox {
+                                model: ["h264_vaapi", "h264_nvenc", "h264_amf", "libx264", "hevc_vaapi", "hevc_nvenc", "libx265", "libaom-av1"]
+                                currentIndex: model.indexOf(root.settings.exportDefaultCodec ?? "h264_vaapi")
+                                onActivated: set("exportDefaultCodec", currentText)
+                            }
+
+                            Label {
+                                text: "ビットレート (Mbps):"
+                            }
+
+                            SpinBox {
+                                from: 1
+                                to: 500
+                                value: root.settings.exportDefaultBitrateMbps ?? 15
+                                onValueModified: set("exportDefaultBitrateMbps", value)
+                            }
+
+                            Label {
+                                text: "CRF デフォルト値:"
+                            }
+
+                            SpinBox {
+                                from: 0
+                                to: 51
+                                value: root.settings.exportDefaultCrf ?? 20
+                                onValueModified: set("exportDefaultCrf", value)
+                            }
+
+                            Label {
+                                text: "フレームグラブ タイムアウト (ms):"
+                            }
+
+                            SpinBox {
+                                from: 500
+                                to: 10000
+                                stepSize: 100
+                                value: root.settings.exportFrameGrabTimeoutMs ?? 2000
+                                onValueModified: set("exportFrameGrabTimeoutMs", value)
+                            }
+
+                            Label {
+                                text: "進捗更新間隔 (フレーム):"
+                            }
+
+                            SpinBox {
+                                from: 1
+                                to: 60
+                                value: root.settings.exportProgressInterval ?? 5
+                                onValueModified: set("exportProgressInterval", value)
+                            }
+
+                        }
+
+                    }
+
+                    GroupBox {
+                        title: "音声デフォルト"
+                        Layout.fillWidth: true
+
+                        GridLayout {
+                            columns: 2
+
+                            Label {
+                                text: "コーデック:"
+                            }
+
+                            ComboBox {
+                                model: ["aac", "libopus", "libmp3lame", "flac", "pcm_s16le"]
+                                currentIndex: model.indexOf(root.settings.exportDefaultAudioCodec ?? "aac")
+                                onActivated: set("exportDefaultAudioCodec", currentText)
+                            }
+
+                            Label {
+                                text: "ビットレート (kbps):"
+                            }
+
+                            SpinBox {
+                                from: 64
+                                to: 320
+                                stepSize: 32
+                                value: root.settings.exportDefaultAudioBitrateKbps ?? 192
+                                onValueModified: set("exportDefaultAudioBitrateKbps", value)
+                            }
+
+                        }
+
+                    }
+
+                }
+
+            }
+
+            // デコード / オーディオ設定
+            ScrollView {
+                contentWidth: availableWidth
+
+                ColumnLayout {
+                    spacing: 15
+
+                    GroupBox {
+                        title: "映像デコード"
+                        Layout.fillWidth: true
+
+                        GridLayout {
+                            columns: 2
+
+                            Label {
+                                text: "インデックス予約フレーム数:"
+                            }
+
+                            SpinBox {
+                                from: 1800
+                                to: 1e+06
+                                stepSize: 1800
+                                value: root.settings.videoDecoderIndexReserve ?? 108000
+                                onValueModified: set("videoDecoderIndexReserve", value)
+                            }
+
+                            Label {
+                                text: "最小キャッシュ (MB):"
+                            }
+
+                            SpinBox {
+                                from: 32
+                                to: 4096
+                                stepSize: 32
+                                value: root.settings.videoDecoderMinCacheMB ?? 64
+                                onValueModified: set("videoDecoderMinCacheMB", value)
+                            }
+
+                            Label {
+                                text: "HW フレームプールサイズ:"
+                            }
+
+                            SpinBox {
+                                from: 8
+                                to: 128
+                                stepSize: 8
+                                value: root.settings.hwFramePoolSize ?? 32
+                                onValueModified: set("hwFramePoolSize", value)
+                            }
+
+                        }
+
+                    }
+
+                    GroupBox {
+                        title: "オーディオ"
+                        Layout.fillWidth: true
+
+                        GridLayout {
+                            columns: 2
+
+                            Label {
+                                text: "チャンネル数:"
+                            }
+
+                            ComboBox {
+                                model: ["1 (モノラル)", "2 (ステレオ)"]
+                                currentIndex: (root.settings.audioChannels ?? 2) - 1
+                                onActivated: set("audioChannels", currentIndex + 1)
+                            }
+
+                            Label {
+                                text: "プラグイン最大ブロックサイズ:"
+                            }
+
+                            ComboBox {
+                                model: [128, 256, 512, 1024, 2048, 4096]
+                                currentIndex: model.indexOf(root.settings.audioPluginMaxBlockSize ?? 4096)
+                                onActivated: set("audioPluginMaxBlockSize", model[currentIndex])
+                            }
+
+                        }
+
+                    }
+
+                    GroupBox {
+                        title: "タイムライン編集"
+                        Layout.fillWidth: true
+
+                        GridLayout {
+                            columns: 2
+
+                            Label {
+                                text: "クリップ最小フレーム数:"
+                            }
+
+                            SpinBox {
+                                from: 1
+                                to: 30
+                                value: root.settings.minClipDurationFrames ?? 5
+                                onValueModified: set("minClipDurationFrames", value)
+                            }
+
+                            Label {
+                                text: "マグネットスナップ範囲 (px):"
+                            }
+
+                            SpinBox {
+                                from: 0
+                                to: 50
+                                value: root.settings.magneticSnapRange ?? 10
+                                onValueModified: set("magneticSnapRange", value)
+                            }
+
+                            Label {
+                                text: "最近使ったプロジェクト 最大表示数:"
+                            }
+
+                            SpinBox {
+                                from: 3
+                                to: 30
+                                value: root.settings.recentProjectMaxCount ?? 10
+                                onValueModified: set("recentProjectMaxCount", value)
+                            }
+
+                            Label {
+                                text: "Lua フック間隔 (ms):"
+                            }
+
+                            SpinBox {
+                                from: 8
+                                to: 100
+                                stepSize: 4
+                                value: root.settings.luaHookIntervalMs ?? 16
+                                onValueModified: set("luaHookIntervalMs", value)
+                            }
+
+                            Label {
+                                text: "※ Lua フック間隔は再起動後に有効"
+                                font.pixelSize: 10
+                                color: palette.mid
+                                Layout.columnSpan: 2
                             }
 
                         }

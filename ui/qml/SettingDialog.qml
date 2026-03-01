@@ -333,6 +333,8 @@ Common.RinaWindow {
                                     // 区間キーフレームがない場合は生成
                                     ensureRangeKeyframes();
                                     var dialog = easingDialogComponent.createObject(root, {
+                                        "clipId": targetClipId,
+                                        "effectIndex": effIdx,
                                         "effectModel": effectModel,
                                         "paramName": key,
                                         "keyframeFrame": startFrame
@@ -362,6 +364,8 @@ Common.RinaWindow {
 
                                     ensureRangeKeyframes();
                                     var dialog = easingDialogComponent.createObject(root, {
+                                        "clipId": targetClipId,
+                                        "effectIndex": effIdx,
                                         "effectModel": effectModel,
                                         "paramName": key,
                                         "keyframeFrame": startFrame

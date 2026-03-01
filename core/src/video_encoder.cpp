@@ -1,4 +1,5 @@
 #include "video_encoder.hpp"
+#include "settings_manager.hpp"
 #include <QDebug>
 
 extern "C" {
@@ -144,7 +145,7 @@ bool VideoEncoder::open(const Config &config) {
 
         frames_ctx->width = config.width;
         frames_ctx->height = config.height;
-        frames_ctx->initial_pool_size = 32;
+        frames_ctx->initial_pool_size = SettingsManager::instance().value("hwFramePoolSize", 32).toInt();
 
         if (av_hwframe_ctx_init(hw_frames_ref) >= 0)
             m_encCtx->hw_frames_ctx = hw_frames_ref;

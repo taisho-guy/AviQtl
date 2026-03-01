@@ -52,6 +52,36 @@ SettingsManager::SettingsManager(QObject *parent) : QObject(parent) {
                   // Export
                   {"exportImageQuality", 95},
                   {"exportSequencePadding", 6},
+                  // ▼ 新規追加: タイムライン編集
+                  {"minClipDurationFrames", 5},
+                  {"magneticSnapRange", 10},
+                  {"timelineZoomMin", 10},
+                  {"timelineZoomMax", 400},
+                  {"timelineZoomStep", 10},
+                  // ▼ 新規追加: 映像デコード
+                  {"videoDecoderIndexReserve", 108000},
+                  {"videoDecoderMinCacheMB", 64},
+                  {"hwFramePoolSize", 32},
+                  // ▼ 新規追加: エクスポート
+                  {"exportDefaultCodec", "h264_vaapi"},
+                  {"exportDefaultBitrateMbps", 15},
+                  {"exportDefaultCrf", 20},
+                  {"exportDefaultAudioCodec", "aac"},
+                  {"exportDefaultAudioBitrateKbps", 192},
+                  {"exportFrameGrabTimeoutMs", 2000},
+                  {"exportProgressInterval", 5},
+                  // ▼ 新規追加: オーディオ
+                  {"audioChannels", 2},
+                  {"audioPluginMaxBlockSize", 4096},
+                  // ▼ 新規追加: シーン設定UI上限
+                  {"sceneWidthMax", 8000},
+                  {"sceneHeightMax", 8000},
+                  {"sceneFramesMin", 100},
+                  {"sceneFramesMax", 24000},
+                  {"sceneFramesStep", 100},
+                  // ▼ 新規追加: アプリ
+                  {"recentProjectMaxCount", 10},
+                  {"luaHookIntervalMs", 16},
                   // Misc
                   {"textPaddingMultiplier", 4.0}};
     load();

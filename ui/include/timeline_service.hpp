@@ -51,6 +51,8 @@ class TimelineService : public QObject {
     void addEffect(int clipId, const QString &effectId);
     void removeEffect(int clipId, int effectIndex);
     void updateEffectParam(int clipId, int effectIndex, const QString &paramName, const QVariant &value);
+    void setKeyframe(int clipId, int effectIndex, const QString &paramName, int frame, const QVariant &value, const QVariantMap &options);
+    void removeKeyframe(int clipId, int effectIndex, const QString &paramName, int frame);
 
     // クリップボード
     void copyClip(int clipId);
@@ -58,6 +60,7 @@ class TimelineService : public QObject {
     void pasteClip(int frame, int layer);
 
     // 内部用 (コマンドから呼び出される)
+    void deleteClipInternal(int clipId);
     void createClipInternal(int clipId, const QString &type, int startFrame, int layer);
     void updateClipInternal(int id, int layer, int startFrame, int duration);
     void addEffectInternal(int clipId, const QString &effectId);
@@ -65,6 +68,13 @@ class TimelineService : public QObject {
     void restoreEffectInternal(int clipId, const QVariantMap &data);
     void removeEffectInternal(int clipId, int effectIndex);
     void updateEffectParamInternal(int clipId, int effectIndex, const QString &paramName, const QVariant &value);
+    void setClipboard(const ClipData &clip);
+    void createSceneInternal(int sceneId, const QString &name);
+    void removeSceneInternal(int sceneId);
+    void restoreSceneInternal(const SceneData &scene);
+    void applySceneSettingsInternal(int sceneId, const SceneData &data);
+    void setKeyframeInternal(int clipId, int effectIndex, const QString &paramName, int frame, const QVariant &value, const QVariantMap &options);
+    void removeKeyframeInternal(int clipId, int effectIndex, const QString &paramName, int frame);
     ClipData *findClipById(int clipId);
     const ClipData *findClipById(int clipId) const;
 

@@ -18,7 +18,8 @@ Common.RinaWindow {
         if (SettingsManager && SettingsManager.settings) {
             var recent = SettingsManager.settings.recentProjects || [];
             recentModel.clear();
-            for (var i = 0; i < Math.min(recent.length, 10); i++) {
+            var maxRecent = SettingsManager ? SettingsManager.value("recentProjectMaxCount", 10) : 10;
+            for (var i = 0; i < Math.min(recent.length, maxRecent); i++) {
                 recentModel.append(recent[i]);
             }
             // 設定からデフォルト値を読み込む

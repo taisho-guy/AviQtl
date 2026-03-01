@@ -1,4 +1,5 @@
 #include "timeline_export_manager.hpp"
+#include "../../core/include/settings_manager.hpp"
 #include "../../core/include/video_encoder.hpp"
 #include "../../engine/audio_mixer.hpp"
 #include "timeline_controller.hpp"
@@ -78,7 +79,9 @@ void TimelineExportManager::runExport(const Rina::Core::VideoEncoder::Config &co
         m_exporting = false;
         return;
     }
-    encoder.addAudioStream(48000, 2);
+    const int sr = Rina::Core::SettingsManager::instance().value("defaultProjectSampleRate", 48000).toInt();
+    const int ch = Rina::Core::SettingsManager::instance().value("audioChannels", 2).toInt();
+    encoder.addAudioStream(sr, ch);
 
     const double fps = m_controller->project()->fps();
     const int startFrame = config.startFrame;
@@ -108,7 +111,8 @@ void TimelineExportManager::runExport(const Rina::Core::VideoEncoder::Config &co
             if (grab) {
                 QEventLoop loop;
                 connect(grab.get(), &QQuickItemGrabResult::ready, &loop, &QEventLoop::quit);
-                QTimer::singleShot(2000, &loop, &QEventLoop::quit);
+                const int grabTimeout = Rina::Core::SettingsManager::instance().value("exportFrameGrabTimeoutMs", 2000).toInt();
+                QTimer::singleShot(grabTimeout, &loop, &QEventLoop::quit);
                 loop.exec();
                 img = grab->image();
             }
@@ -121,7 +125,8 @@ void TimelineExportManager::runExport(const Rina::Core::VideoEncoder::Config &co
         encoder.pushAudio(audio.data(), samplesNeeded);
 
         const int done = frame - startFrame + 1;
-        if (done % 5 == 0 || done == totalFrames)
+        const int progInterval = Rina::Core::SettingsManager::instance().value("exportProgressInterval", 5).toInt();
+        if (done % progInterval == 0 || done == totalFrames)
             emit exportProgressChanged(done * 100 / totalFrames, done, totalFrames);
     }
 

@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
     QTimer luaHookTimer;
     auto &modEngine = Rina::Scripting::ModEngine::instance();
     QObject::connect(&luaHookTimer, &QTimer::timeout, [&modEngine]() { modEngine.onUpdate(); });
-    luaHookTimer.start(16);
+    luaHookTimer.start(Rina::Core::SettingsManager::instance().value("luaHookIntervalMs", 16).toInt());
 
     QQuickStyle::setFallbackStyle("Fusion");
 

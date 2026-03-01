@@ -322,9 +322,9 @@ ApplicationWindow {
                     }
 
                     SpinBox {
-                        from: 10
-                        to: 400
-                        stepSize: 10
+                        from: SettingsManager ? SettingsManager.value("timelineZoomMin", 10) : 10
+                        to: SettingsManager ? SettingsManager.value("timelineZoomMax", 400) : 400
+                        stepSize: SettingsManager ? SettingsManager.value("timelineZoomStep", 10) : 10
                         editable: true
                         Layout.preferredWidth: 80
                         Layout.preferredHeight: 28

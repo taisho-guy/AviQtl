@@ -149,7 +149,7 @@ bool VideoDecoder::buildIndex() {
     if (m_stream->nb_frames > 0) {
         m_index.reserve(m_stream->nb_frames);
     } else {
-        m_index.reserve(108000); // 推定: 1時間の動画 @ 30fps
+        m_index.reserve(SettingsManager::instance().value("videoDecoderIndexReserve", 108000).toInt());
     }
 
     AVPacket *pkt = av_packet_alloc();
@@ -363,8 +363,9 @@ process_frame:
 
 void VideoDecoder::updateCacheSize() {
     int sizeMB = SettingsManager::instance().settings().value("cacheSize", 512).toInt();
-    if (sizeMB < 64)
-        sizeMB = 64; // 安全策: 最小64MB
+    int minSizeMB = SettingsManager::instance().value("videoDecoderMinCacheMB", 64).toInt();
+    if (sizeMB < minSizeMB)
+        sizeMB = minSizeMB;
     m_frameCache.setMaxCost(sizeMB * 1024 * 1024);
 }
 

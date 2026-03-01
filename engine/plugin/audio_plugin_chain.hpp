@@ -1,4 +1,5 @@
 #pragma once
+#include "../../core/include/settings_manager.hpp"
 #include "audio_plugin_host.hpp"
 #include <memory>
 #include <vector>
@@ -7,6 +8,12 @@ namespace Rina::Engine::Plugin {
 
 class AudioPluginChain {
   public:
+    AudioPluginChain() {
+        const auto &sm = Rina::Core::SettingsManager::instance();
+        m_sampleRate = sm.value("defaultProjectSampleRate", 48000).toDouble();
+        m_maxBlockSize = sm.value("audioPluginMaxBlockSize", 4096).toInt();
+    }
+
     void add(std::unique_ptr<IAudioPlugin> plugin);
     void remove(int index);
     void clear();

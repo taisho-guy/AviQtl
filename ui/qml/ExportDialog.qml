@@ -10,6 +10,12 @@ Dialog {
     property var project: TimelineBridge?.project ?? null
     readonly property double pFps: project?.fps ?? 60
 
+    property string defaultCodec:      SettingsManager?.value("exportDefaultCodec",      "h264_vaapi") ?? "h264_vaapi"
+    property int    defaultBitrateMbps: SettingsManager?.value("exportDefaultBitrateMbps", 15)          ?? 15
+    property int    defaultCrf:         SettingsManager?.value("exportDefaultCrf",         20)          ?? 20
+    property string defaultAudioCodec: SettingsManager?.value("exportDefaultAudioCodec",  "aac")       ?? "aac"
+    property int    defaultAudioKbps:  SettingsManager?.value("exportDefaultAudioBitrateKbps", 192)    ?? 192
+
     function show() { open() }
 
     title:    "メディアの書き出し"
@@ -153,7 +159,16 @@ Dialog {
                         { text: "AV1 – VAAPI (Linux)",      value: "av1_vaapi"  }
                     ]
                     textRole: "text"
-                    currentIndex: 4  // デフォルト: h264_vaapi
+                    Component.onCompleted: {
+                        var idx = -1
+                        for(var i=0; i<model.length; i++) {
+                            if(model[i].value === root.defaultCodec) {
+                                idx = i; break;
+                            }
+                        }
+                        if(idx >= 0) currentIndex = idx
+                        else currentIndex = 4
+                    }
                 }
 
                 Label { text: "品質モード:" }
@@ -183,7 +198,7 @@ Dialog {
                     Slider {
                         id: crfSlider
                         Layout.fillWidth: true
-                        from: 0; to: 51; value: 20; stepSize: 1
+                        from: 0; to: 51; value: root.defaultCrf; stepSize: 1
                     }
                     Label {
                         text: crfSlider.value.toFixed(0)
@@ -207,7 +222,7 @@ Dialog {
                     Layout.columnSpan: 3
                     SpinBox {
                         id: bitrateSpin
-                        from: 1; to: 500; value: 15; stepSize: 1
+                        from: 1; to: 500; value: root.defaultBitrateMbps; stepSize: 1
                         editable: true
                         textFromValue: v => v + " Mbps"
                         valueFromText: t => parseInt(t)
@@ -240,6 +255,16 @@ Dialog {
                         { text: "PCM 16-bit", value: "pcm_s16le"}
                     ]
                     textRole: "text"
+                    Component.onCompleted: {
+                        var idx = -1
+                        for(var i=0; i<model.length; i++) {
+                            if(model[i].value === root.defaultAudioCodec) {
+                                idx = i; break;
+                            }
+                        }
+                        if(idx >= 0) currentIndex = idx
+                        else currentIndex = 0
+                    }
                 }
 
                 Label { text: "ビットレート:" }
@@ -247,8 +272,13 @@ Dialog {
                     id: audioBitrateCombo
                     Layout.columnSpan: 3
                     enabled: audioCodecCombo.currentIndex < 3  // PCM/FLACは無効
-                    model: ["96 kbps", "128 kbps", "192 kbps", "256 kbps", "320 kbps"]
-                    currentIndex: 2  // デフォルト: 192kbps
+                    model: ["96 kbps", "128 kbps", "192 kbps", "256 kbps", "320 kbps"] 
+                    Component.onCompleted: {
+                        var bitrateList = [96, 128, 192, 256, 320]
+                        var idx = bitrateList.indexOf(root.defaultAudioKbps)
+                        if (idx >= 0) currentIndex = idx
+                        else currentIndex = 2
+                    }
                     property int bitrate: [96000, 128000, 192000, 256000, 320000][currentIndex]
                 }
             }

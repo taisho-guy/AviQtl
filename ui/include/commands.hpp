@@ -93,4 +93,108 @@ class SplitClipCommand : public QUndoCommand {
     int m_originalDuration;
     QString m_clipName;
 };
+
+class DeleteClipCommand : public QUndoCommand {
+  public:
+    DeleteClipCommand(TimelineService *service, int clipId, const QString &clipName);
+    void undo() override;
+    void redo() override;
+
+  private:
+    TimelineService *m_service;
+    int m_clipId;
+    ClipData m_snapshot;
+};
+
+class PasteClipCommand : public QUndoCommand {
+  public:
+    PasteClipCommand(TimelineService *service, int newClipId, const ClipData &clipData);
+    void undo() override;
+    void redo() override;
+
+  private:
+    TimelineService *m_service;
+    int m_newClipId;
+    ClipData m_clipData;
+};
+
+class CutClipCommand : public QUndoCommand {
+  public:
+    CutClipCommand(TimelineService *service, int clipId, const QString &clipName);
+    void undo() override;
+    void redo() override;
+
+  private:
+    TimelineService *m_service;
+    int m_clipId;
+    ClipData m_snapshot;
+};
+
+class SetKeyframeCommand : public QUndoCommand {
+  public:
+    SetKeyframeCommand(TimelineService *service, int clipId, int effectIndex, const QString &paramName, int frame, const QVariant &newValue, const QVariantMap &options, const QVariant &oldValue, const QVariantMap &oldOptions, bool wasExisting);
+    void undo() override;
+    void redo() override;
+    int id() const override;
+    bool mergeWith(const QUndoCommand *other) override;
+
+  private:
+    TimelineService *m_service;
+    int m_clipId, m_effectIndex, m_frame;
+    QString m_paramName;
+    QVariant m_newValue, m_oldValue;
+    QVariantMap m_newOptions, m_oldOptions;
+    bool m_wasExisting;
+};
+
+class RemoveKeyframeCommand : public QUndoCommand {
+  public:
+    RemoveKeyframeCommand(TimelineService *service, int clipId, int effectIndex, const QString &paramName, int frame, const QVariant &savedValue, const QVariantMap &savedOptions);
+    void undo() override;
+    void redo() override;
+
+  private:
+    TimelineService *m_service;
+    int m_clipId, m_effectIndex, m_frame;
+    QString m_paramName;
+    QVariant m_savedValue;
+    QVariantMap m_savedOptions;
+};
+
+class AddSceneCommand : public QUndoCommand {
+  public:
+    AddSceneCommand(TimelineService *service, int sceneId, const QString &name);
+    void undo() override;
+    void redo() override;
+
+  private:
+    TimelineService *m_service;
+    int m_sceneId;
+    QString m_name;
+};
+
+class RemoveSceneCommand : public QUndoCommand {
+  public:
+    RemoveSceneCommand(TimelineService *service, int sceneId, const QString &name);
+    void undo() override;
+    void redo() override;
+
+  private:
+    TimelineService *m_service;
+    int m_sceneId;
+    SceneData m_snapshot;
+};
+
+class UpdateSceneSettingsCommand : public QUndoCommand {
+  public:
+    UpdateSceneSettingsCommand(TimelineService *service, int sceneId, const SceneData &oldData, const SceneData &newData);
+    void undo() override;
+    void redo() override;
+
+  private:
+    TimelineService *m_service;
+    int m_sceneId;
+    SceneData m_oldData, m_newData;
+};
+
 } // namespace Rina::UI

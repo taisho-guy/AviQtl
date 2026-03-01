@@ -92,6 +92,93 @@ void SplitClipCommand::redo() {
     m_service->addClipDirectInternal(newClip);
 }
 
+DeleteClipCommand::DeleteClipCommand(TimelineService *service, int clipId, const QString &clipName) : m_service(service), m_clipId(clipId) {
+    const auto *clip = service->findClipById(clipId);
+    if (clip)
+        m_snapshot = service->deepCopyClip(*clip);
+    setText(QString("クリップ削除: %1").arg(clipName));
+}
+void DeleteClipCommand::redo() { m_service->deleteClipInternal(m_clipId); }
+void DeleteClipCommand::undo() {
+    m_snapshot.id = m_clipId;
+    m_service->addClipDirectInternal(m_snapshot);
+}
+
+CutClipCommand::CutClipCommand(TimelineService *service, int clipId, const QString &clipName) : m_service(service), m_clipId(clipId) {
+    const auto *clip = service->findClipById(clipId);
+    if (clip)
+        m_snapshot = service->deepCopyClip(*clip);
+    setText(QString("切り取り: %1").arg(clipName));
+}
+void CutClipCommand::redo() {
+    m_service->setClipboard(m_snapshot);
+    m_service->deleteClipInternal(m_clipId);
+}
+void CutClipCommand::undo() {
+    m_snapshot.id = m_clipId;
+    m_service->addClipDirectInternal(m_snapshot);
+}
+
+PasteClipCommand::PasteClipCommand(TimelineService *service, int newClipId, const ClipData &clipData) : m_service(service), m_newClipId(newClipId), m_clipData(clipData) { setText(QString("貼り付け: %1").arg(clipData.type)); }
+void PasteClipCommand::redo() {
+    ClipData c = m_clipData;
+    c.id = m_newClipId;
+    m_service->addClipDirectInternal(c);
+}
+void PasteClipCommand::undo() { m_service->deleteClipInternal(m_newClipId); }
+
+SetKeyframeCommand::SetKeyframeCommand(TimelineService *service, int clipId, int effectIndex, const QString &paramName, int frame, const QVariant &newValue, const QVariantMap &options, const QVariant &oldValue, const QVariantMap &oldOptions,
+                                       bool wasExisting)
+    : m_service(service), m_clipId(clipId), m_effectIndex(effectIndex), m_frame(frame), m_paramName(paramName), m_newValue(newValue), m_oldValue(oldValue), m_newOptions(options), m_oldOptions(oldOptions), m_wasExisting(wasExisting) {
+    setText(QString("キーフレーム設定: %1").arg(paramName));
+}
+void SetKeyframeCommand::redo() { m_service->setKeyframeInternal(m_clipId, m_effectIndex, m_paramName, m_frame, m_newValue, m_newOptions); }
+void SetKeyframeCommand::undo() {
+    if (m_wasExisting)
+        m_service->setKeyframeInternal(m_clipId, m_effectIndex, m_paramName, m_frame, m_oldValue, m_oldOptions);
+    else
+        m_service->removeKeyframeInternal(m_clipId, m_effectIndex, m_paramName, m_frame);
+}
+int SetKeyframeCommand::id() const { return 1002; }
+bool SetKeyframeCommand::mergeWith(const QUndoCommand *other) {
+    if (other->id() != id())
+        return false;
+    const auto *cmd = static_cast<const SetKeyframeCommand *>(other);
+    if (cmd->m_clipId != m_clipId || cmd->m_effectIndex != m_effectIndex || cmd->m_paramName != m_paramName || cmd->m_frame != m_frame)
+        return false;
+    m_newValue = cmd->m_newValue;
+    m_newOptions = cmd->m_newOptions;
+    return true;
+}
+
+RemoveKeyframeCommand::RemoveKeyframeCommand(TimelineService *service, int clipId, int effectIndex, const QString &paramName, int frame, const QVariant &savedValue, const QVariantMap &savedOptions)
+    : m_service(service), m_clipId(clipId), m_effectIndex(effectIndex), m_frame(frame), m_paramName(paramName), m_savedValue(savedValue), m_savedOptions(savedOptions) {
+    setText(QString("キーフレーム削除: %1 [%2]").arg(paramName).arg(frame));
+}
+void RemoveKeyframeCommand::redo() { m_service->removeKeyframeInternal(m_clipId, m_effectIndex, m_paramName, m_frame); }
+void RemoveKeyframeCommand::undo() { m_service->setKeyframeInternal(m_clipId, m_effectIndex, m_paramName, m_frame, m_savedValue, m_savedOptions); }
+
+AddSceneCommand::AddSceneCommand(TimelineService *service, int sceneId, const QString &name) : m_service(service), m_sceneId(sceneId), m_name(name) { setText(QString("シーン追加: %1").arg(name)); }
+void AddSceneCommand::redo() { m_service->createSceneInternal(m_sceneId, m_name); }
+void AddSceneCommand::undo() { m_service->removeSceneInternal(m_sceneId); }
+
+RemoveSceneCommand::RemoveSceneCommand(TimelineService *service, int sceneId, const QString &name) : m_service(service), m_sceneId(sceneId) {
+    for (const auto &s : service->getAllScenes())
+        if (s.id == sceneId) {
+            m_snapshot = s;
+            break;
+        }
+    setText(QString("シーン削除: %1").arg(name));
+}
+void RemoveSceneCommand::redo() { m_service->removeSceneInternal(m_sceneId); }
+void RemoveSceneCommand::undo() { m_service->restoreSceneInternal(m_snapshot); }
+
+UpdateSceneSettingsCommand::UpdateSceneSettingsCommand(TimelineService *service, int sceneId, const SceneData &oldData, const SceneData &newData) : m_service(service), m_sceneId(sceneId), m_oldData(oldData), m_newData(newData) {
+    setText(QString("シーン設定変更: %1").arg(newData.name));
+}
+void UpdateSceneSettingsCommand::redo() { m_service->applySceneSettingsInternal(m_sceneId, m_newData); }
+void UpdateSceneSettingsCommand::undo() { m_service->applySceneSettingsInternal(m_sceneId, m_oldData); }
+
 TimelineService::TimelineService(SelectionService *selection, QObject *parent) : QObject(parent), m_undoStack(new QUndoStack(this)), m_selection(selection) {
     // 初期シーンを作成
     SceneData rootScene;
@@ -348,6 +435,14 @@ void TimelineService::selectClip(int id) {
 }
 
 void TimelineService::deleteClip(int clipId) {
+    const auto *clip = findClipById(clipId);
+    if (!clip)
+        return;
+    QString name = clip->effects.isEmpty() ? clip->type : clip->effects.first()->name();
+    m_undoStack->push(new DeleteClipCommand(this, clipId, name));
+}
+
+void TimelineService::deleteClipInternal(int clipId) {
     auto &currentClips = clipsMutable();
     auto it = std::find_if(currentClips.begin(), currentClips.end(), [clipId](const ClipData &c) { return c.id == clipId; });
     if (it != currentClips.end()) {
@@ -504,15 +599,18 @@ ClipData TimelineService::deepCopyClip(const ClipData &source) {
 }
 
 void TimelineService::copyClip(int clipId) {
-    const auto &currentClips = clips();
+    auto &currentClips = clipsMutable();
     auto it = std::find_if(currentClips.begin(), currentClips.end(), [clipId](const ClipData &c) { return c.id == clipId; });
     if (it != currentClips.end())
         m_clipboard = std::make_unique<ClipData>(deepCopyClip(*it));
 }
 
 void TimelineService::cutClip(int clipId) {
-    copyClip(clipId);
-    deleteClip(clipId);
+    const auto *clip = findClipById(clipId);
+    if (!clip)
+        return;
+    QString name = clip->effects.isEmpty() ? clip->type : clip->effects.first()->name();
+    m_undoStack->push(new CutClipCommand(this, clipId, name));
 }
 
 void TimelineService::pasteClip(int frame, int layer) {
@@ -534,13 +632,10 @@ void TimelineService::pasteClip(int frame, int layer) {
     }
 
     ClipData newClip = deepCopyClip(*m_clipboard);
-    newClip.id = m_nextClipId++;
-    newClip.sceneId = m_currentSceneId;
     newClip.startFrame = frame;
     newClip.layer = layer;
-    currentClips.append(newClip);
-    emit clipsChanged();
-    emit clipCreated(newClip.id, newClip.layer, newClip.startFrame, newClip.durationFrames, newClip.type);
+    int newId = m_nextClipId++;
+    m_undoStack->push(new PasteClipCommand(this, newId, newClip));
 }
 
 void TimelineService::splitClip(int clipId, int frame) {
@@ -629,36 +724,16 @@ void TimelineService::setScenes(const QList<SceneData> &scenes) {
 }
 
 void TimelineService::createScene(const QString &name) {
-    SceneData newScene;
-    newScene.id = m_nextSceneId++;
-    newScene.name = name;
-
-    // プロジェクト設定と同期
-    const auto &settings = Rina::Core::SettingsManager::instance().settings();
-    newScene.width = settings.value("defaultProjectWidth", 1920).toInt();
-    newScene.height = settings.value("defaultProjectHeight", 1080).toInt();
-    newScene.fps = settings.value("defaultProjectFps", 60.0).toDouble();
-
-    m_scenes.append(newScene);
-    emit scenesChanged();
-    switchScene(newScene.id);
+    int id = m_nextSceneId++;
+    m_undoStack->push(new AddSceneCommand(this, id, name));
 }
 
 void TimelineService::removeScene(int sceneId) {
-    if (sceneId == 0)
-        return;
-
-    auto it = std::find_if(m_scenes.begin(), m_scenes.end(), [sceneId](const SceneData &s) { return s.id == sceneId; });
-    if (it != m_scenes.end()) {
-        for (auto &clip : it->clips) {
-            qDeleteAll(clip.effects);
+    for (const auto &s : getAllScenes())
+        if (s.id == sceneId) {
+            m_undoStack->push(new RemoveSceneCommand(this, sceneId, s.name));
+            return;
         }
-        if (m_currentSceneId == sceneId) {
-            switchScene(0);
-        }
-        m_scenes.erase(it);
-        emit scenesChanged();
-    }
 }
 
 void TimelineService::switchScene(int sceneId) {
@@ -684,17 +759,20 @@ void TimelineService::switchScene(int sceneId) {
 }
 
 void TimelineService::updateSceneSettings(int sceneId, const QString &name, int width, int height, double fps, int totalFrames) {
-    for (auto &scene : m_scenes) {
-        if (scene.id == sceneId) {
-            scene.name = name;
-            scene.width = width;
-            scene.height = height;
-            scene.fps = fps;
-            scene.totalFrames = totalFrames;
-            emit scenesChanged();
-            return;
+    SceneData newData, oldData;
+    for (const auto &s : getAllScenes()) {
+        if (s.id == sceneId) {
+            oldData = s;
+            break;
         }
     }
+    newData = oldData;
+    newData.name = name;
+    newData.width = width;
+    newData.height = height;
+    newData.fps = fps;
+    newData.totalFrames = totalFrames;
+    m_undoStack->push(new UpdateSceneSettingsCommand(this, sceneId, oldData, newData));
 }
 
 QList<ClipData *> TimelineService::resolvedActiveClipsAt(int frame) const {
@@ -791,6 +869,108 @@ int TimelineService::findVacantFrame(int layer, int startFrame, int duration, in
         }
     }
     return candidateStart;
+}
+
+void TimelineService::setClipboard(const ClipData &clip) { m_clipboard = std::make_unique<ClipData>(deepCopyClip(clip)); }
+
+void TimelineService::createSceneInternal(int sceneId, const QString &name) {
+    SceneData newScene;
+    newScene.id = sceneId;
+    newScene.name = name;
+    const auto &settings = Rina::Core::SettingsManager::instance().settings();
+    newScene.width = settings.value("defaultProjectWidth", 1920).toInt();
+    newScene.height = settings.value("defaultProjectHeight", 1080).toInt();
+    newScene.fps = settings.value("defaultProjectFps", 60.0).toDouble();
+    m_scenes.append(newScene);
+    emit scenesChanged();
+    switchScene(newScene.id);
+}
+
+void TimelineService::removeSceneInternal(int sceneId) {
+    if (sceneId == 0)
+        return;
+    auto it = std::find_if(m_scenes.begin(), m_scenes.end(), [sceneId](const SceneData &s) { return s.id == sceneId; });
+    if (it != m_scenes.end()) {
+        for (auto &clip : it->clips)
+            qDeleteAll(clip.effects);
+        if (m_currentSceneId == sceneId)
+            switchScene(0);
+        m_scenes.erase(it);
+        emit scenesChanged();
+    }
+}
+
+void TimelineService::restoreSceneInternal(const SceneData &scene) {
+    m_scenes.append(scene);
+    emit scenesChanged();
+}
+
+void TimelineService::applySceneSettingsInternal(int sceneId, const SceneData &data) {
+    for (auto &scene : m_scenes) {
+        if (scene.id == sceneId) {
+            scene.name = data.name;
+            scene.width = data.width;
+            scene.height = data.height;
+            scene.fps = data.fps;
+            scene.totalFrames = data.totalFrames;
+            emit scenesChanged();
+            return;
+        }
+    }
+}
+
+void TimelineService::setKeyframe(int clipId, int effectIndex, const QString &paramName, int frame, const QVariant &value, const QVariantMap &options) {
+    const auto *clip = findClipById(clipId);
+    if (!clip || effectIndex >= clip->effects.size())
+        return;
+    const auto *eff = clip->effects[effectIndex];
+
+    bool wasExisting = false;
+    QVariant oldValue;
+    QVariantMap oldOptions;
+    const auto track = eff->keyframeTracks().value(paramName).toList();
+    for (const auto &v : track) {
+        const auto m = v.toMap();
+        if (m.value("frame").toInt() == frame) {
+            wasExisting = true;
+            oldValue = m.value("value");
+            oldOptions = m;
+            break;
+        }
+    }
+    m_undoStack->push(new SetKeyframeCommand(this, clipId, effectIndex, paramName, frame, value, options, oldValue, oldOptions, wasExisting));
+}
+
+void TimelineService::removeKeyframe(int clipId, int effectIndex, const QString &paramName, int frame) {
+    const auto *clip = findClipById(clipId);
+    if (!clip || effectIndex >= clip->effects.size())
+        return;
+    const auto *eff = clip->effects[effectIndex];
+
+    QVariant savedValue;
+    QVariantMap savedOptions;
+    const auto track = eff->keyframeTracks().value(paramName).toList();
+    for (const auto &v : track) {
+        const auto m = v.toMap();
+        if (m.value("frame").toInt() == frame) {
+            savedValue = m.value("value");
+            savedOptions = m;
+            break;
+        }
+    }
+    m_undoStack->push(new RemoveKeyframeCommand(this, clipId, effectIndex, paramName, frame, savedValue, savedOptions));
+}
+
+void TimelineService::setKeyframeInternal(int clipId, int effectIndex, const QString &paramName, int frame, const QVariant &value, const QVariantMap &options) {
+    const auto *clip = findClipById(clipId);
+    if (clip && effectIndex < clip->effects.size())
+        clip->effects[effectIndex]->setKeyframe(paramName, frame, value, options);
+}
+
+void TimelineService::removeKeyframeInternal(int clipId, int effectIndex, const QString &paramName, int frame) {
+    const auto *clip = findClipById(clipId);
+    if (clip && effectIndex < clip->effects.size())
+        clip->effects[effectIndex]->removeKeyframe(paramName, frame);
 }
 
 } // namespace Rina::UI

@@ -485,7 +485,8 @@ ScrollView {
                                 var rawNewStart = startFrame + delta / clipDelegate.scale;
                                 var newStart = Math.max(0, timelineViewRoot.snapFrame(rawNewStart));
                                 var newDur = endFrame - newStart;
-                                if (newDur < 5) {
+                                var minDur = SettingsManager ? SettingsManager.value("minClipDurationFrames", 5) : 5;
+                                if (newDur < minDur) {
                                     newStart = endFrame - 5;
                                     newDur = 5;
                                 }
@@ -551,7 +552,8 @@ ScrollView {
                                 // 右端フレームをスナップ
                                 var rawEndFrame = startFrame + (startDuration * clipDelegate.scale + delta) / clipDelegate.scale;
                                 var snappedEndFrame = timelineViewRoot.snapFrame(rawEndFrame);
-                                var newDur = Math.max(5, snappedEndFrame - startFrame);
+                                var minDur = SettingsManager ? SettingsManager.value("minClipDurationFrames", 5) : 5;
+                                var newDur = Math.max(minDur, snappedEndFrame - startFrame);
                                 // ドラフトプロパティ経由で表示更新（バインディング破壊なし）
                                 clipDelegate.resizeDraftDuration = newDur;
                             }

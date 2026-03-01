@@ -530,6 +530,10 @@ void TimelineController::setEffectParameter(int clipId, int effectIndex, int par
     }
 }
 
+void TimelineController::setKeyframe(int clipId, int effectIndex, const QString &paramName, int frame, const QVariant &value, const QVariantMap &options) { m_timeline->setKeyframe(clipId, effectIndex, paramName, frame, value, options); }
+
+void TimelineController::removeKeyframe(int clipId, int effectIndex, const QString &paramName, int frame) { m_timeline->removeKeyframe(clipId, effectIndex, paramName, frame); }
+
 void TimelineController::deleteClip(int clipId) {
     if (m_timeline)
         m_timeline->deleteClip(clipId);

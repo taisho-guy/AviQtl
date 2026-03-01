@@ -55,7 +55,7 @@ Common.RinaWindow {
                 id: widthField
 
                 from: 1
-                to: 8000
+                to: SettingsManager ? SettingsManager.value("sceneWidthMax", 8000) : 8000
                 editable: true
                 Layout.fillWidth: true
             }
@@ -90,9 +90,9 @@ Common.RinaWindow {
 
                 property real realValue: value / 100
 
-                from: 100
-                to: 24000
-                stepSize: 100
+                from: SettingsManager ? SettingsManager.value("sceneFramesMin", 100) : 100
+                to: SettingsManager ? SettingsManager.value("sceneFramesMax", 24000) : 24000
+                stepSize: SettingsManager ? SettingsManager.value("sceneFramesStep", 100) : 100
                 editable: true
                 Layout.fillWidth: true
                 textFromValue: function(value, locale) {

@@ -5,6 +5,8 @@ import QtQuick.Layouts
 Dialog {
     id: root
 
+    property int clipId: -1
+    property int effectIndex: -1
     property var effectModel: null
     property string paramName: ""
     property int keyframeFrame: 0
@@ -322,7 +324,7 @@ Dialog {
             for (let j = 0; j < bezierParams.length; j++) pts.push(bezierParams[j])
             options.points = pts;
         }
-        effectModel.setKeyframe(paramName, keyframeFrame, kf.value, options);
+        TimelineBridge.setKeyframe(clipId, effectIndex, paramName, keyframeFrame, kf.value, options);
     }
 
     RowLayout {
