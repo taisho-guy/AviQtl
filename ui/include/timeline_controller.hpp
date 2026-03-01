@@ -139,6 +139,8 @@ class TimelineController : public QObject {
     Q_INVOKABLE void switchScene(int sceneId);
     Q_INVOKABLE void updateSceneSettings(int sceneId, const QString &name, int width, int height, double fps, int totalFrames);
     Q_INVOKABLE QVariantList getSceneClips(int sceneId) const;
+    Q_INVOKABLE QVariantMap getSceneInfo(int sceneId) const;
+    Q_INVOKABLE int getSceneDuration(int sceneId) const;
 
     // プロジェクトI/O
     Q_INVOKABLE bool saveProject(const QString &fileUrl);

@@ -154,6 +154,7 @@ qt_add_qml_module(Rina
     QML_FILES
         ui/qml/MainWindow.qml
         ui/qml/TimelineWindow.qml
+        ui/qml/SceneRenderer.qml
         ui/qml/timeline/Ruler.qml
         ui/qml/timeline/LayerHeader.qml
         ui/qml/timeline/TimelineView.qml

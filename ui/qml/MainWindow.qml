@@ -183,8 +183,6 @@ ApplicationWindow {
 
     ExportDialog {
         id: exportDialog
-
-        anchors.centerIn: parent
     }
 
     ColumnLayout {
@@ -391,6 +389,8 @@ ApplicationWindow {
                 iconName: "movie_line"
                 enabled: TimelineBridge && TimelineBridge.project
                 onTriggered: {
+                    exportDialog.x = mainWin.x + (mainWin.width - exportDialog.width) / 2;
+                    exportDialog.y = mainWin.y + (mainWin.height - exportDialog.height) / 2;
                     exportDialog.open();
                 }
             }

@@ -4,6 +4,8 @@
 #include <QQmlEngine>
 #include <QQuickItem>
 #include <QQuickItemGrabResult>
+#include <QScopeGuard>
+#include <QSet>
 
 namespace Rina::Core {
 
@@ -47,7 +49,7 @@ void SceneDecoder::setTimelineBridge(QObject *bridge) {
     updateRender();
 }
 
-QString SceneDecoder::frameKey() const { return QString("scene_%1").arg(m_targetSceneId); }
+QString SceneDecoder::frameKey() const { return QString("scene_%1_f%2").arg(m_targetSceneId).arg(m_currentFrame); }
 
 void SceneDecoder::ensureWindow() {
     if (m_offscreenWindow)
@@ -88,6 +90,14 @@ void SceneDecoder::updateRender() {
     if (m_targetSceneId < 0 || !m_store || !m_timelineBridge)
         return;
 
+    thread_local QSet<int> renderingScenes;
+    if (renderingScenes.contains(m_targetSceneId)) {
+        qWarning() << "[SceneDecoder] 循環参照を検出: sceneId=" << m_targetSceneId;
+        return;
+    }
+    renderingScenes.insert(m_targetSceneId);
+    auto guard = qScopeGuard([&] { renderingScenes.remove(m_targetSceneId); });
+
     ensureWindow();
     if (!m_offscreenWindow || !m_rootItem)
         return;
@@ -107,6 +117,10 @@ void SceneDecoder::updateRender() {
     // 非同期キャプチャに変更 (grabWindowは重いため廃止)
     // QQuickItem::grabToImage はレンダリングスレッドで処理され、結果をコールバックで返す
     const QString key = frameKey();
+    // すでに同一フレームをキャッシュ済みなら再描画しない
+    if (m_store->hasFrame(key))
+        return;
+
     auto result = m_rootItem->grabToImage();
     if (result) {
         connect(result.data(), &QQuickItemGrabResult::ready, this, [this, key, result]() {

@@ -4,7 +4,7 @@ import QtQuick.Dialogs as Dialogs
 import QtQuick.Layouts
 import Rina.Core 1.0
 
-Dialog {
+Window {
     id: root
 
     property var project: TimelineBridge?.project ?? null
@@ -16,12 +16,14 @@ Dialog {
     property string defaultAudioCodec: SettingsManager?.value("exportDefaultAudioCodec",  "aac")       ?? "aac"
     property int    defaultAudioKbps:  SettingsManager?.value("exportDefaultAudioBitrateKbps", 192)    ?? 192
 
-    function show() { open() }
+    function show() { visible = true }
+    function open() { visible = true }
 
     title:    "メディアの書き出し"
     width:    620
     height:   580
-    modal:    true
+    modality: Qt.ApplicationModal
+    flags:    Qt.Dialog | Qt.WindowCloseButtonHint
 
     // ── 進捗オーバーレイ ───────────────────────────────────
     Rectangle {
@@ -315,8 +317,19 @@ Dialog {
                     enabled: !fullRangeCheck.checked
                     from: startFrameSpin.value + 1
                     to: 99999
-                    value: TimelineBridge ? TimelineBridge.timelineDuration : 300
+                    value: 300
                     editable: true
+                    Component.onCompleted: {
+                        if (TimelineBridge && TimelineBridge.timelineDuration > 0)
+                            value = TimelineBridge.timelineDuration
+                    }
+                    Connections {
+                        target: TimelineBridge
+                        function onClipsChanged() {
+                            if (TimelineBridge && TimelineBridge.timelineDuration > 0)
+                                endFrameSpin.value = TimelineBridge.timelineDuration
+                        }
+                    }
                 }
 
                 Label {

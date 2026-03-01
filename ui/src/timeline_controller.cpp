@@ -605,6 +605,21 @@ QVariantList TimelineController::getSceneClips(int sceneId) const {
     return list;
 }
 
+QVariantMap TimelineController::getSceneInfo(int sceneId) const {
+    for (const auto &s : m_timeline->getAllScenes()) {
+        if (s.id == sceneId)
+            return {{"id", s.id}, {"name", s.name}, {"width", s.width}, {"height", s.height}, {"fps", s.fps}, {"totalFrames", s.totalFrames}};
+    }
+    return {};
+}
+
+int TimelineController::getSceneDuration(int sceneId) const {
+    for (const auto &s : m_timeline->getAllScenes())
+        if (s.id == sceneId)
+            return s.totalFrames;
+    return 0;
+}
+
 QString TimelineController::debugRunLua(const QString &script) {
     // テスト用に time=currentFrame/fps, index=0, value=0 で実行
     double time = m_transport ? m_transport->currentFrame() / m_project->fps() : 0.0;

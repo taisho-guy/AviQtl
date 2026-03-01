@@ -17,7 +17,15 @@ Common.BaseObject {
     property int offset: evalParam("scene", "offset", 0)
     property real opacity: evalParam("scene", "opacity", 1)
     // シーン内時間計算
-    property int sceneFrame: Math.floor(relFrame * speed) + offset
+    property int sceneFrame: {
+        var f = Math.floor(relFrame * speed) + offset;
+        // シーン長が定義されていればクランプ
+        var dur = TimelineBridge ? TimelineBridge.getSceneDuration(targetSceneId) : 0;
+        if (dur > 0)
+            f = Math.max(0, Math.min(f, dur - 1));
+
+        return f;
+    }
     // 更新検知用カウンタ
     property int updateCounter: 0
 
@@ -61,8 +69,10 @@ Common.BaseObject {
     }
 
     sourceItem: Item {
-        width: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.width : 1920
-        height: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.height : 1080
+        property var sceneInfo: TimelineBridge ? TimelineBridge.getSceneInfo(root.targetSceneId) : null
+
+        width: sceneInfo ? (sceneInfo.width || 1920) : ((TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.width : 1920)
+        height: sceneInfo ? (sceneInfo.height || 1080) : ((TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.height : 1080)
         visible: false
 
         Image {
