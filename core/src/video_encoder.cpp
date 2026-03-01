@@ -169,9 +169,16 @@ bool VideoEncoder::open(const Config &config) {
     }
 
     // ビットレート制御 (CBR/VBR) - 簡易設定
-    m_encCtx->bit_rate = config.bitrate;
-    m_encCtx->rc_max_rate = config.bitrate;
-    m_encCtx->rc_buffer_size = config.bitrate / 2; // 0.5秒バッファ
+    if (config.crf >= 0) {
+        // CRF モード: libx264/libx265/libaom 系ソフトウェアエンコーダ向け
+        av_opt_set_int(m_encCtx->priv_data, "crf", config.crf, 0);
+        // HWエンコーダではフォールバックとして qp を設定
+        av_opt_set_int(m_encCtx->priv_data, "qp", config.crf, 0);
+    } else {
+        m_encCtx->bit_rate = config.bitrate;
+        m_encCtx->rc_max_rate = config.bitrate;
+        m_encCtx->rc_buffer_size = static_cast<int>(config.bitrate / 2); // 0.5秒バッファ
+    }
 
     // グローバルヘッダーが必要なコンテナ(mp4等)の場合
     if (m_fmtCtx->oformat->flags & AVFMT_GLOBALHEADER)
@@ -213,18 +220,21 @@ bool VideoEncoder::open(const QVariantMap &configMap) {
     config.height = configMap.value("height").toInt();
     config.fps_num = configMap.value("fps_num").toInt();
     config.fps_den = configMap.value("fps_den").toInt();
-    config.bitrate = configMap.value("bitrate").toInt();
+    config.bitrate = configMap.value("bitrate").toLongLong();
     config.outputUrl = configMap.value("outputUrl").toString();
     // codecName defaults to h264_vaapi if not present
     return open(config);
 }
 
-bool VideoEncoder::addAudioStream(int sampleRate, int channels, int bitrate) {
+bool VideoEncoder::addAudioStream(int sampleRate, int channels) {
     std::lock_guard<std::mutex> lock(m_mutex);
     if (!m_fmtCtx)
         return false;
 
-    const AVCodec *codec = avcodec_find_encoder(AV_CODEC_ID_AAC);
+    const AVCodec *codec = avcodec_find_encoder_by_name(m_config.audioCodecName.toStdString().c_str());
+    if (!codec)
+        codec = avcodec_find_encoder(AV_CODEC_ID_AAC); // フォールバック
+
     if (!codec) {
         qWarning() << "AAC codec not found.";
         return false;
@@ -239,7 +249,7 @@ bool VideoEncoder::addAudioStream(int sampleRate, int channels, int bitrate) {
         return false;
 
     m_audioEncCtx->sample_fmt = codec->sample_fmts ? codec->sample_fmts[0] : AV_SAMPLE_FMT_FLTP;
-    m_audioEncCtx->bit_rate = bitrate;
+    m_audioEncCtx->bit_rate = m_config.audioBitrate;
     m_audioEncCtx->sample_rate = sampleRate;
     av_channel_layout_default(&m_audioEncCtx->ch_layout, channels);
     m_audioStream->time_base = {1, sampleRate};

@@ -142,10 +142,13 @@ class TimelineController : public QObject {
     Q_INVOKABLE bool saveProject(const QString &fileUrl);
     Q_INVOKABLE bool loadProject(const QString &fileUrl);
     Q_INVOKABLE QVariantMap getProjectInfo(const QString &fileUrl) const;
+    // 旧インターフェース互換
     Q_INVOKABLE bool exportMedia(const QString &fileUrl, const QString &format, int quality);
-
-    // ハードウェアエンコード実行ループ
-    Q_INVOKABLE void exportVideoHW(Rina::Core::VideoEncoder *encoder);
+    // 新非同期インターフェース
+    Q_INVOKABLE void exportVideoAsync(const QVariantMap &config);
+    Q_INVOKABLE void cancelExport();
+    Q_PROPERTY(bool isExporting READ isExporting NOTIFY exportFinished)
+    bool isExporting() const;
 
     Q_INVOKABLE void selectClip(int id);
 
@@ -184,7 +187,9 @@ class TimelineController : public QObject {
     void clipEffectsChanged(int clipId);
     void selectedLayerChanged();
     void errorOccurred(const QString &message);
-    void exportProgressChanged(int progress);
+    void exportStarted(int totalFrames);
+    void exportProgressChanged(int progress, int currentFrame, int totalFrames);
+    void exportFinished(bool success, const QString &message);
 
   private:
     // Initialization Helpers

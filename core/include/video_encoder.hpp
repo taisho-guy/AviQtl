@@ -31,9 +31,14 @@ class VideoEncoder : public QObject {
         int height;
         int fps_num;
         int fps_den;
-        int bitrate;
+        int64_t bitrate = 15'000'000;
+        int crf = -1;                     // -1 = bitrateモード, 0〜51 = CRFモード
         QString codecName = "h264_vaapi"; // AMD Radeon 780M on Linux
+        QString audioCodecName = "aac";
+        int64_t audioBitrate = 192'000;
         QString outputUrl;
+        int startFrame = 0;
+        int endFrame = -1; // -1 = タイムライン末尾まで
     };
 
     explicit VideoEncoder(QObject *parent = nullptr);
@@ -43,7 +48,7 @@ class VideoEncoder : public QObject {
     Q_INVOKABLE bool open(const QVariantMap &config);
     bool pushFrame(const QImage &img, int64_t pts);                // CPU -> HW Upload
     bool pushTexture(const GpuTextureHandle &handle, int64_t pts); // GPU Texture -> HW Upload
-    bool addAudioStream(int sampleRate = 48000, int channels = 2, int bitrate = 128000);
+    bool addAudioStream(int sampleRate = 48000, int channels = 2);
     bool pushAudio(const float *samples, int sampleCount);
     void close();
 

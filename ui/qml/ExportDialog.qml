@@ -1,217 +1,355 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Dialogs
+import QtQuick.Dialogs as Dialogs
 import QtQuick.Layouts
 import Rina.Core 1.0
 
 Dialog {
     id: root
 
-    property string selectedFile: ""
-    // プロジェクト設定へのショートカット
-    readonly property var project: TimelineBridge ? TimelineBridge.project : null
-    readonly property int pWidth: project ? project.width : 1920
-    readonly property int pHeight: project ? project.height : 1080
-    // ProjectServiceはfps(double)を持っているのでそっからnum/denを作る
-    readonly property double pFps: project ? project.fps : 60
-    readonly property int pFpsNum: Math.round(pFps * 1000)
-    readonly property int pFpsDen: 1000
-    // コーデック定義
-    property var codecModel: [{
-        "text": "H.264 (Software / libx264)",
-        "value": "libx264"
-    }, {
-        "text": "H.264 (NVIDIA NVENC)",
-        "value": "h264_nvenc"
-    }, {
-        "text": "H.264 (AMD AMF)",
-        "value": "h264_amf"
-    }, {
-        "text": "H.264 (Intel QSV)",
-        "value": "h264_qsv"
-    }, {
-        "text": "H.264 (VAAPI)",
-        "value": "h264_vaapi"
-    }, {
-        "text": "HEVC (Software / libx265)",
-        "value": "libx265"
-    }, {
-        "text": "HEVC (NVIDIA NVENC)",
-        "value": "hevc_nvenc"
-    }, {
-        "text": "HEVC (AMD AMF)",
-        "value": "hevc_amf"
-    }, {
-        "text": "HEVC (Intel QSV)",
-        "value": "hevc_qsv"
-    }, {
-        "text": "HEVC (VAAPI)",
-        "value": "hevc_vaapi"
-    }, {
-        "text": "AV1 (Software / libaom)",
-        "value": "libaom-av1"
-    }, {
-        "text": "AV1 (NVIDIA NVENC)",
-        "value": "av1_nvenc"
-    }, {
-        "text": "AV1 (AMD AMF)",
-        "value": "av1_amf"
-    }, {
-        "text": "AV1 (Intel QSV)",
-        "value": "av1_qsv"
-    }, {
-        "text": "AV1 (VAAPI)",
-        "value": "av1_vaapi"
-    }]
+    property var project: TimelineBridge?.project ?? null
+    readonly property double pFps: project?.fps ?? 60
 
-    title: "メディアの書き出し"
-    modal: true
-    width: 600
-    height: 400
-    standardButtons: Dialog.Ok | Dialog.Cancel
-    onAccepted: {
-        if (filePathField.text === "")
-            return ;
+    function show() { open() }
 
-        var codec = codecModel[codecCombo.currentIndex].value;
-        var bitrateVal = bitrateSpin.value * 1e+06;
-        console.log("Starting Export: " + root.pWidth + "x" + root.pHeight + " @ " + codec);
-        // C++側の処理を開始
-        encoder.open({
-            "width": root.pWidth,
-            "height": root.pHeight,
-            "fps_num": root.pFpsNum,
-            "fps_den": root.pFpsDen,
-            "bitrate": bitrateVal,
-            "codecName": codec,
-            "outputUrl": filePathField.text
-        });
-        // 先に閉じる
-        root.close();
-        // 少し待ってから開始 (閉じるアニメーションの完了待ち)
-        var timer = Qt.createQmlObject("import QtQuick 2.0; Timer { interval: 200; repeat: false; running: true; }", root);
-        timer.triggered.connect(function() {
-            if (TimelineBridge)
-                TimelineBridge.exportVideoHW(encoder);
+    title:    "メディアの書き出し"
+    width:    620
+    height:   580
+    modal:    true
 
-        });
-    }
+    // ── 進捗オーバーレイ ───────────────────────────────────
+    Rectangle {
+        id: progressOverlay
+        anchors.fill: parent
+        color: Qt.rgba(0, 0, 0, 0.75)
+        visible: TimelineBridge && TimelineBridge.isExporting
+        z: 100
 
-    // C++のエンコーダーインスタンス
-    VideoEncoder {
-        id: encoder
-    }
+        ColumnLayout {
+            anchors.centerIn: parent
+            spacing: 16
+            width: parent.width * 0.7
 
-    // ファイル保存ダイアログ
-    FileDialog {
-        id: fileDialog
+            Label {
+                Layout.alignment: Qt.AlignHCenter
+                text: "書き出し中..."
+                font.pixelSize: 16
+                font.bold: true
+                color: "white"
+            }
 
-        title: "保存先を指定"
-        fileMode: FileDialog.SaveFile
-        nameFilters: ["MP4 Video (*.mp4)", "MKV Video (*.mkv)", "All files (*)"]
-        onAccepted: {
-            root.selectedFile = fileDialog.selectedFile;
-            // file:/// prefixを除去 (Linux/Windows対応)
-            var path = root.selectedFile.toString();
-            if (Qt.platform.os === "windows")
-                path = path.replace(/^(file:\/{3})/, "");
-            else
-                path = path.replace(/^(file:\/\/)/, "");
-            filePathField.text = path;
+            ProgressBar {
+                id: exportProgressBar
+                Layout.fillWidth: true
+                from: 0; to: 100; value: 0
+            }
+
+            Label {
+                id: progressLabel
+                Layout.alignment: Qt.AlignHCenter
+                text: "0 / 0 フレーム"
+                color: palette.mid
+                font.pixelSize: 11
+            }
+
+            Button {
+                Layout.alignment: Qt.AlignHCenter
+                text: "キャンセル"
+                onClicked: TimelineBridge.cancelExport()
+            }
         }
     }
 
+    // ── 進捗シグナルの受信 ────────────────────────────────
+    Connections {
+        target: TimelineBridge
+        function onExportProgressChanged(progress, current, total) {
+            exportProgressBar.value = progress
+            progressLabel.text = current + " / " + total + " フレーム"
+        }
+        function onExportFinished(success, message) {
+            resultPopup.message = message
+            resultPopup.success = success
+            resultPopup.open()
+        }
+    }
+
+    // ── 完了ポップアップ ──────────────────────────────────
+    Dialog {
+        id: resultPopup
+        property string message: ""
+        property bool   success: true
+        title:   success ? "完了" : "エラー"
+        modal:   true
+        anchors.centerIn: parent
+        standardButtons: Dialog.Ok
+        Label { text: resultPopup.message }
+    }
+
+    // ── メインUI ─────────────────────────────────────────
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 20
-        spacing: 15
+        anchors.margins: 16
+        spacing: 12
 
+        // ファイルパス
         RowLayout {
+            Layout.fillWidth: true
             TextField {
                 id: filePathField
-
                 Layout.fillWidth: true
                 placeholderText: "保存先ファイルパス..."
-                text: root.selectedFile
             }
-
             Button {
                 text: "参照..."
                 onClicked: fileDialog.open()
             }
-
         }
 
-        // エンコード設定情報
+        // ビデオ設定
         GroupBox {
-            title: "出力設定 (プロジェクト設定同期)"
+            title: "映像"
             Layout.fillWidth: true
 
             GridLayout {
-                columns: 2
-                rowSpacing: 10
-                columnSpacing: 20
+                columns: 4
+                rowSpacing: 8
+                columnSpacing: 12
+                width: parent.width
 
+                Label { text: "解像度:" }
                 Label {
-                    text: "解像度:"
-                }
-
-                Label {
-                    text: root.pWidth + " x " + root.pHeight
+                    text: (project?.width ?? 1920) + " × " + (project?.height ?? 1080)
                     font.bold: true
+                    Layout.columnSpan: 3
                 }
 
+                Label { text: "FPS:" }
                 Label {
-                    text: "フレームレート:"
-                }
-
-                Label {
-                    text: root.pFps.toFixed(2) + " fps"
+                    text: pFps.toFixed(3)
                     font.bold: true
+                    Layout.columnSpan: 3
                 }
 
-                Label {
-                    text: "コーデック:"
-                }
-
+                Label { text: "コーデック:" }
                 ComboBox {
                     id: codecCombo
+                    Layout.columnSpan: 3
+                    Layout.fillWidth: true
+                    model: [
+                        { text: "H.264 – libx264 (SW)",     value: "libx264"    },
+                        { text: "H.264 – NVENC (NVIDIA)",   value: "h264_nvenc" },
+                        { text: "H.264 – AMF (AMD)",        value: "h264_amf"   },
+                        { text: "H.264 – QSV (Intel)",      value: "h264_qsv"   },
+                        { text: "H.264 – VAAPI (Linux)",    value: "h264_vaapi" },
+                        { text: "HEVC – libx265 (SW)",      value: "libx265"    },
+                        { text: "HEVC – NVENC (NVIDIA)",    value: "hevc_nvenc" },
+                        { text: "HEVC – AMF (AMD)",         value: "hevc_amf"   },
+                        { text: "HEVC – QSV (Intel)",       value: "hevc_qsv"   },
+                        { text: "HEVC – VAAPI (Linux)",     value: "hevc_vaapi" },
+                        { text: "AV1 – libaom (SW)",        value: "libaom-av1" },
+                        { text: "AV1 – NVENC (NVIDIA)",     value: "av1_nvenc"  },
+                        { text: "AV1 – AMF (AMD)",          value: "av1_amf"    },
+                        { text: "AV1 – VAAPI (Linux)",      value: "av1_vaapi"  }
+                    ]
+                    textRole: "text"
+                    currentIndex: 4  // デフォルト: h264_vaapi
+                }
 
-                    model: root.codecModel.map((x) => {
-                        return x.text;
-                    })
-                    currentIndex: 0
+                Label { text: "品質モード:" }
+                ButtonGroup { id: qualityModeGroup }
+                RadioButton {
+                    id: crfRadio
+                    text: "CRF"
+                    ButtonGroup.group: qualityModeGroup
+                    checked: true
+                }
+                RadioButton {
+                    text: "ビットレート"
+                    ButtonGroup.group: qualityModeGroup
+                }
+
+                Item { Layout.columnSpan: 1 }
+
+                // CRF スライダー
+                Label {
+                    text: "CRF:"
+                    visible: crfRadio.checked
+                }
+                RowLayout {
+                    visible: crfRadio.checked
+                    Layout.columnSpan: 3
+                    Layout.fillWidth: true
+                    Slider {
+                        id: crfSlider
+                        Layout.fillWidth: true
+                        from: 0; to: 51; value: 20; stepSize: 1
+                    }
+                    Label {
+                        text: crfSlider.value.toFixed(0)
+                        Layout.preferredWidth: 28
+                    }
+                    Label {
+                        text: crfSlider.value <= 17 ? "高品質" : crfSlider.value <= 28 ? "標準" : "低品質"
+                        font.pixelSize: 10
+                        color: crfSlider.value <= 17 ? "#44cc88"
+                             : crfSlider.value <= 28 ? palette.text : "#cc4444"
+                    }
+                }
+
+                // ビットレート入力
+                Label {
+                    text: "ビットレート:"
+                    visible: !crfRadio.checked
+                }
+                RowLayout {
+                    visible: !crfRadio.checked
+                    Layout.columnSpan: 3
+                    SpinBox {
+                        id: bitrateSpin
+                        from: 1; to: 500; value: 15; stepSize: 1
+                        editable: true
+                        textFromValue: v => v + " Mbps"
+                        valueFromText: t => parseInt(t)
+                    }
+                }
+            }
+        }
+
+        // オーディオ設定
+        GroupBox {
+            title: "音声"
+            Layout.fillWidth: true
+
+            GridLayout {
+                columns: 4
+                rowSpacing: 8
+                columnSpacing: 12
+                width: parent.width
+
+                Label { text: "コーデック:" }
+                ComboBox {
+                    id: audioCodecCombo
+                    Layout.columnSpan: 3
+                    Layout.fillWidth: true
+                    model: [
+                        { text: "AAC",        value: "aac"      },
+                        { text: "Opus",       value: "libopus"  },
+                        { text: "MP3",        value: "libmp3lame"},
+                        { text: "FLAC (可逆)", value: "flac"    },
+                        { text: "PCM 16-bit", value: "pcm_s16le"}
+                    ]
+                    textRole: "text"
+                }
+
+                Label { text: "ビットレート:" }
+                ComboBox {
+                    id: audioBitrateCombo
+                    Layout.columnSpan: 3
+                    enabled: audioCodecCombo.currentIndex < 3  // PCM/FLACは無効
+                    model: ["96 kbps", "128 kbps", "192 kbps", "256 kbps", "320 kbps"]
+                    currentIndex: 2  // デフォルト: 192kbps
+                    property int bitrate: [96000, 128000, 192000, 256000, 320000][currentIndex]
+                }
+            }
+        }
+
+        // 範囲設定
+        GroupBox {
+            title: "範囲"
+            Layout.fillWidth: true
+
+            RowLayout {
+                width: parent.width
+                spacing: 12
+
+                CheckBox {
+                    id: fullRangeCheck
+                    text: "タイムライン全体"
+                    checked: true
+                }
+
+                Label { text: "開始:" }
+                SpinBox {
+                    id: startFrameSpin
+                    enabled: !fullRangeCheck.checked
+                    from: 0
+                    to: endFrameSpin.value - 1
+                    value: 0
+                    editable: true
+                }
+
+                Label { text: "終了:" }
+                SpinBox {
+                    id: endFrameSpin
+                    enabled: !fullRangeCheck.checked
+                    from: startFrameSpin.value + 1
+                    to: 99999
+                    value: TimelineBridge ? TimelineBridge.timelineDuration : 300
+                    editable: true
                 }
 
                 Label {
-                    text: "品質 (Bitrate):"
-                }
-
-                SpinBox {
-                    id: bitrateSpin
-
-                    from: 1
-                    to: 100
-                    value: 15 // Mbps
-                    editable: true
-                    stepSize: 1
-                    // suffixプロパティの代替実装
-                    textFromValue: function(value, locale) {
-                        return value + " Mbps";
+                    text: {
+                        var s = fullRangeCheck.checked ? 0 : startFrameSpin.value
+                        var e = fullRangeCheck.checked
+                            ? (TimelineBridge ? TimelineBridge.timelineDuration : 300)
+                            : endFrameSpin.value
+                        var sec = (e - s) / pFps
+                        return "(" + (e - s) + " フレーム / " + sec.toFixed(2) + " 秒)"
                     }
-                    valueFromText: function(text, locale) {
-                        return Number.fromLocaleString(locale, text.replace(" Mbps", ""));
-                    }
+                    font.pixelSize: 11
+                    color: palette.mid
                 }
-
             }
-
         }
 
-        Item {
-            Layout.fillHeight: true
-        }
+        Item { Layout.fillHeight: true }
 
+        // ボタン
+        RowLayout {
+            Layout.fillWidth: true
+            Item { Layout.fillWidth: true }
+            Button {
+                text: "キャンセル"
+                onClicked: root.close()
+            }
+            Button {
+                text: "書き出し開始"
+                enabled: filePathField.text !== ""
+                highlighted: true
+                onClicked: {
+                    var codec = codecCombo.model[codecCombo.currentIndex].value
+                    var audioCodec = audioCodecCombo.model[audioCodecCombo.currentIndex].value
+                    TimelineBridge.exportVideoAsync({
+                        "width":          project?.width  ?? 1920,
+                        "height":         project?.height ?? 1080,
+                        "fps_num":        Math.round(pFps * 1000),
+                        "fps_den":        1000,
+                        "bitrate":        bitrateSpin.value * 1_000_000,
+                        "crf":            crfRadio.checked ? crfSlider.value : -1,
+                        "codecName":      codec,
+                        "audioCodecName": audioCodec,
+                        "audioBitrate":   audioBitrateCombo.bitrate,
+                        "outputUrl":      filePathField.text,
+                        "startFrame":     fullRangeCheck.checked ? 0 : startFrameSpin.value,
+                        "endFrame":       fullRangeCheck.checked ? -1 : endFrameSpin.value
+                    })
+                }
+            }
+        }
     }
 
+    Dialogs.FileDialog {
+        id: fileDialog
+        title: "保存先を指定"
+        fileMode: Dialogs.FileDialog.SaveFile
+        nameFilters: ["MP4 Video (*.mp4)", "MKV Video (*.mkv)", "All files (*)"]
+        onAccepted: {
+            var path = selectedFile.toString()
+            filePathField.text = Qt.platform.os === "windows"
+                ? path.replace(/^file:\/{3}/, "")
+                : path.replace(/^file:\/\//, "")
+        }
+    }
 }

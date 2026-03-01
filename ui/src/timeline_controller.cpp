@@ -62,6 +62,10 @@ void TimelineController::setupConnections() {
     connect(m_timeline, &TimelineService::currentSceneIdChanged, this, &TimelineController::currentSceneIdChanged);
     connect(m_timeline, &TimelineService::clipEffectsChanged, this, &TimelineController::clipEffectsChanged);
 
+    connect(m_exportManager, &TimelineExportManager::exportStarted, this, &TimelineController::exportStarted);
+    connect(m_exportManager, &TimelineExportManager::exportProgressChanged, this, &TimelineController::exportProgressChanged);
+    connect(m_exportManager, &TimelineExportManager::exportFinished, this, &TimelineController::exportFinished);
+
     // FPSが変更されたら再生タイマーの間隔を更新
     connect(m_project, &ProjectService::fpsChanged, [this]() { m_transport->updateTimerInterval(m_project->fps()); });
     m_transport->updateTimerInterval(m_project->fps());
@@ -311,7 +315,25 @@ QVariantMap TimelineController::getProjectInfo(const QString &fileUrl) const {
 
 bool TimelineController::exportMedia(const QString &fileUrl, const QString &format, int quality) { return m_exportManager->exportMedia(fileUrl, format, quality); }
 
-void TimelineController::exportVideoHW(Rina::Core::VideoEncoder *encoder) { m_exportManager->exportVideoHW(encoder); }
+void TimelineController::exportVideoAsync(const QVariantMap &cfg) {
+    Rina::Core::VideoEncoder::Config c;
+    c.width = cfg.value("width", 1920).toInt();
+    c.height = cfg.value("height", 1080).toInt();
+    c.fps_num = cfg.value("fps_num", 60000).toInt();
+    c.fps_den = cfg.value("fps_den", 1000).toInt();
+    c.bitrate = cfg.value("bitrate", 15'000'000).toLongLong();
+    c.crf = cfg.value("crf", -1).toInt();
+    c.codecName = cfg.value("codecName", "h264_vaapi").toString();
+    c.audioCodecName = cfg.value("audioCodecName", "aac").toString();
+    c.audioBitrate = cfg.value("audioBitrate", 192'000).toLongLong();
+    c.outputUrl = cfg.value("outputUrl").toString();
+    c.startFrame = cfg.value("startFrame", 0).toInt();
+    c.endFrame = cfg.value("endFrame", -1).toInt();
+    m_exportManager->exportVideoAsync(c);
+}
+
+void TimelineController::cancelExport() { m_exportManager->cancelExport(); }
+bool TimelineController::isExporting() const { return m_exportManager->isExporting(); }
 
 void TimelineController::selectClip(int id) {
     if (m_timeline)

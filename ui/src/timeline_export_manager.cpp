@@ -19,8 +19,6 @@ bool TimelineExportManager::exportMedia(const QString &fileUrl, const QString &f
 
     if (format == "image_sequence")
         return exportImageSequence(localPath, quality);
-    else if (format == "avi" || format == "mp4")
-        return exportVideo(localPath, format, quality);
     return false;
 }
 
@@ -51,98 +49,89 @@ bool TimelineExportManager::exportImageSequence(const QString &dir, int quality)
         }
         QString filename = QString("%1_%2.png").arg(baseName).arg(frame, sequencePadding, 10, QChar('0'));
         renderedFrame.save(filename, "PNG", quality);
-        emit m_controller->exportProgressChanged((frame * 100) / totalFrames);
+        emit m_controller->exportProgressChanged((frame * 100) / totalFrames, frame + 1, totalFrames);
     }
     if (view)
         view->setProperty("exportMode", false);
-    emit m_controller->exportProgressChanged(100);
+    emit m_controller->exportProgressChanged(100, totalFrames, totalFrames);
     return true;
 }
 
-bool TimelineExportManager::exportVideo(const QString &path, const QString &format, int quality) {
-    Rina::Core::VideoEncoder encoder;
-    Rina::Core::VideoEncoder::Config config;
-    config.width = m_controller->project()->width();
-    config.height = m_controller->project()->height();
-    config.fps_num = static_cast<int>(m_controller->project()->fps() * 1000);
-    config.fps_den = 1000;
-    config.bitrate = static_cast<int>(config.width * config.height * m_controller->project()->fps() * 0.15);
-    config.outputUrl = path;
-    config.codecName = "h264_vaapi";
+void TimelineExportManager::exportVideoAsync(const Rina::Core::VideoEncoder::Config &config) {
+    if (m_exporting.load())
+        return;
+    m_cancelRequested = false;
 
-    if (!encoder.open(config))
-        return false;
-    encoder.addAudioStream(48000, 2, 192000);
+    m_exportThread = QThread::create([this, config]() { runExport(config); });
+    connect(m_exportThread, &QThread::finished, m_exportThread, &QObject::deleteLater);
+    m_exportThread->start();
+}
+
+void TimelineExportManager::cancelExport() { m_cancelRequested = true; }
+
+void TimelineExportManager::runExport(const Rina::Core::VideoEncoder::Config &config) {
+    m_exporting = true;
+
+    Rina::Core::VideoEncoder encoder;
+    if (!encoder.open(config)) {
+        emit exportFinished(false, "エンコーダーの初期化に失敗しました");
+        m_exporting = false;
+        return;
+    }
+    encoder.addAudioStream(48000, 2);
+
+    const double fps = m_controller->project()->fps();
+    const int startFrame = config.startFrame;
+    const int endFrame = config.endFrame >= 0 ? config.endFrame : m_controller->timelineDuration();
+    const int totalFrames = endFrame - startFrame;
+
+    emit exportStarted(totalFrames);
 
     QQuickItem *view = m_controller->compositeView();
-    if (view)
-        view->setProperty("exportMode", true);
     QQuickItem *targetItem = view ? (view->property("view3D").value<QQuickItem *>() ? view->property("view3D").value<QQuickItem *>() : view) : nullptr;
 
-    int totalFrames = m_controller->timelineDuration();
-    for (int frame = 0; frame < totalFrames; ++frame) {
-        m_controller->transport()->setCurrentFrame(frame);
-        QImage renderedFrame;
+    if (view)
+        QMetaObject::invokeMethod(view, [view] { view->setProperty("exportMode", true); }, Qt::BlockingQueuedConnection);
+
+    for (int frame = startFrame; frame < endFrame; ++frame) {
+        if (m_cancelRequested.load()) {
+            emit exportFinished(false, "キャンセルされました");
+            goto cleanup;
+        }
+
+        QMetaObject::invokeMethod(m_controller->transport(), [this, frame] { m_controller->transport()->setCurrentFrame(frame); }, Qt::BlockingQueuedConnection);
+
+        QImage img;
         if (targetItem) {
-            auto grabResult = targetItem->grabToImage(QSize(config.width, config.height));
-            if (grabResult) {
+            QSharedPointer<QQuickItemGrabResult> grab;
+            QMetaObject::invokeMethod(targetItem, [&] { grab = targetItem->grabToImage(QSize(config.width, config.height)); }, Qt::BlockingQueuedConnection);
+            if (grab) {
                 QEventLoop loop;
-                connect(grabResult.get(), &QQuickItemGrabResult::ready, &loop, &QEventLoop::quit);
+                connect(grab.get(), &QQuickItemGrabResult::ready, &loop, &QEventLoop::quit);
                 QTimer::singleShot(2000, &loop, &QEventLoop::quit);
                 loop.exec();
-                renderedFrame = grabResult->image();
+                img = grab->image();
             }
         }
-        encoder.pushFrame(renderedFrame, frame);
-        int samplesNeeded = 48000 / m_controller->project()->fps();
-        std::vector<float> audioSamples = m_controller->mediaManager()->audioMixer()->mix(frame, m_controller->project()->fps(), samplesNeeded);
-        encoder.pushAudio(audioSamples.data(), samplesNeeded);
-        emit m_controller->exportProgressChanged((frame * 100) / totalFrames);
+
+        encoder.pushFrame(img, frame - startFrame);
+
+        const int samplesNeeded = static_cast<int>(48000 / fps);
+        auto audio = m_controller->mediaManager()->audioMixer()->mix(frame, fps, samplesNeeded);
+        encoder.pushAudio(audio.data(), samplesNeeded);
+
+        const int done = frame - startFrame + 1;
+        if (done % 5 == 0 || done == totalFrames)
+            emit exportProgressChanged(done * 100 / totalFrames, done, totalFrames);
     }
-    if (view)
-        view->setProperty("exportMode", false);
+
     encoder.close();
-    emit m_controller->exportProgressChanged(100);
-    return true;
+    emit exportFinished(true, "書き出し完了");
+
+cleanup:
+    if (view)
+        QMetaObject::invokeMethod(view, [view] { view->setProperty("exportMode", false); }, Qt::BlockingQueuedConnection);
+    m_exporting = false;
 }
 
-void TimelineExportManager::exportVideoHW(Rina::Core::VideoEncoder *encoder) {
-    if (!encoder || !m_controller->project())
-        return;
-    QQuickItem *view = m_controller->compositeView();
-    if (!view)
-        return;
-
-    const int endFrame = m_controller->timelineDuration();
-    const int width = m_controller->project()->width();
-    const int height = m_controller->project()->height();
-    encoder->addAudioStream(48000, 2, 192000);
-    view->setProperty("exportMode", true);
-    QQuickItem *targetItem = view->property("view3D").value<QQuickItem *>() ? view->property("view3D").value<QQuickItem *>() : view;
-
-    for (int frame = 0; frame < endFrame; ++frame) {
-        m_controller->transport()->setCurrentFrame(frame);
-        QImage img;
-        auto grabResult = targetItem->grabToImage(QSize(width, height));
-        if (grabResult) {
-            QEventLoop loop;
-            connect(grabResult.get(), &QQuickItemGrabResult::ready, &loop, &QEventLoop::quit);
-            QTimer::singleShot(2000, &loop, &QEventLoop::quit);
-            loop.exec();
-            img = grabResult->image();
-        }
-        if (!encoder->pushFrame(img, frame))
-            break;
-        int samplesNeeded = 48000 / m_controller->project()->fps();
-        std::vector<float> audioSamples = m_controller->mediaManager()->audioMixer()->mix(frame, m_controller->project()->fps(), samplesNeeded);
-        encoder->pushAudio(audioSamples.data(), samplesNeeded);
-        if (frame % 10 == 0) {
-            emit m_controller->exportProgressChanged((frame * 100) / endFrame);
-            QCoreApplication::processEvents();
-        }
-    }
-    view->setProperty("exportMode", false);
-    encoder->close();
-    emit m_controller->exportProgressChanged(100);
-}
 } // namespace Rina::UI
