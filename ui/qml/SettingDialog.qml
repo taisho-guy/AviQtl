@@ -33,9 +33,12 @@ Common.RinaWindow {
     function getUiModel(effectModel) {
         var ui = effectModel.uiDefinition;
         if (ui) {
-            // 1. 標準形式：{ controls: [...] }
+            // 1. 標準形式：{ controls: [...] } または { params: [...] }
             if (ui.controls && typeof ui.controls.length === 'number')
                 return ui.controls;
+
+            if (ui.params && typeof ui.params.length === 'number')
+                return ui.params;
 
             // 2. マップ形式 (後方互換): { "param": { ... } }
             var keys = Object.keys(ui);
