@@ -7,14 +7,14 @@ import Rina.Core 1.0
 Window {
     id: root
 
-    property var project: TimelineBridge?.project ?? null
-    readonly property double pFps: project?.fps ?? 60
+    property var project: TimelineBridge ? TimelineBridge.project : null
+    readonly property double pFps: project ? project.fps : 60
 
-    property string defaultCodec:      SettingsManager?.value("exportDefaultCodec",      "h264_vaapi") ?? "h264_vaapi"
-    property int    defaultBitrateMbps: SettingsManager?.value("exportDefaultBitrateMbps", 15)          ?? 15
-    property int    defaultCrf:         SettingsManager?.value("exportDefaultCrf",         20)          ?? 20
-    property string defaultAudioCodec: SettingsManager?.value("exportDefaultAudioCodec",  "aac")       ?? "aac"
-    property int    defaultAudioKbps:  SettingsManager?.value("exportDefaultAudioBitrateKbps", 192)    ?? 192
+    property string defaultCodec:      SettingsManager ? SettingsManager.value("exportDefaultCodec",      "h264_vaapi") : "h264_vaapi"
+    property int    defaultBitrateMbps: SettingsManager ? SettingsManager.value("exportDefaultBitrateMbps", 15)          : 15
+    property int    defaultCrf:         SettingsManager ? SettingsManager.value("exportDefaultCrf",         20)          : 20
+    property string defaultAudioCodec: SettingsManager ? SettingsManager.value("exportDefaultAudioCodec",  "aac")       : "aac"
+    property int    defaultAudioKbps:  SettingsManager ? SettingsManager.value("exportDefaultAudioBitrateKbps", 192)    : 192
 
     function show() { visible = true }
     function open() { visible = true }
