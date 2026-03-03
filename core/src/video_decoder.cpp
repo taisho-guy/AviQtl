@@ -1,8 +1,9 @@
 #include "video_decoder.hpp"
+#include <cmath>
+#include <algorithm>
 #include "settings_manager.hpp"
 #include "video_frame_store.hpp"
 #include <QDebug>
-#include <QThread>
 #include <QtConcurrent>
 #include <algorithm>
 
@@ -79,16 +80,12 @@ bool VideoDecoder::open(const QString &path) {
         return false;
 
     m_stream = m_fmtCtx->streams[m_streamIndex];
-
-    // 動画本来のFPSを抽出する
-    if (m_stream->avg_frame_rate.den > 0 && m_stream->avg_frame_rate.num > 0) {
-        m_sourceFps = av_q2d(m_stream->avg_frame_rate);
-    } else if (m_stream->r_frame_rate.den > 0 && m_stream->r_frame_rate.num > 0) {
-        m_sourceFps = av_q2d(m_stream->r_frame_rate);
-    } else {
-        m_sourceFps = 60.0;
+    m_timeBase = m_stream->time_base;
+    double fps = av_q2d(m_stream->avg_frame_rate);
+    if (fps <= 0.0) {
+        fps = av_q2d(m_stream->r_frame_rate);
     }
-
+    m_sourceFps = fps;
     const AVCodec *codec = avcodec_find_decoder(m_stream->codecpar->codec_id);
     if (!codec)
         return false;
@@ -127,7 +124,7 @@ bool VideoDecoder::open(const QString &path) {
 
 hw_init_done:
     if (!m_hwDeviceCtx) {
-        // スレッド制限を解除し、FFmpegの自動最適化（利用可能な全コア）を最大限活用する
+        // HW初期化に失敗した場合はSWマルチスレッドを使用
         if (codec->capabilities & AV_CODEC_CAP_FRAME_THREADS) {
             m_decCtx->thread_type = FF_THREAD_FRAME;
             m_decCtx->thread_count = 0;
@@ -206,8 +203,55 @@ void VideoDecoder::seek(qint64 ms) {
     emit seekRequested(ms);
 }
 
+
+double VideoDecoder::sourceFps() const {
+    return m_sourceFps;
+}
+
+int VideoDecoder::frameIndexFromSeconds(double seconds) const {
+    if (m_index.empty())
+        return 0;
+
+    const double tb = av_q2d(m_timeBase);
+    if (tb <= 0.0) {
+        double fps = m_sourceFps > 0.0 ? m_sourceFps : 30.0;
+        int f = static_cast<int>(std::llround(seconds * fps));
+        if (f < 0) f = 0;
+        if (f >= (int)m_index.size()) f = (int)m_index.size() - 1;
+        return f;
+    }
+
+    const int64_t targetPts = (int64_t)std::llround(seconds / tb);
+
+    auto it = std::lower_bound(
+        m_index.begin(), m_index.end(), targetPts,
+        [](const FrameIndexEntry &e, int64_t v) { return e.pts < v; });
+
+    int idx = (int)std::distance(m_index.begin(), it);
+    if (idx <= 0) return 0;
+    if (idx >= (int)m_index.size()) return (int)m_index.size() - 1;
+
+    const int64_t a = m_index[idx - 1].pts;
+    const int64_t b = m_index[idx].pts;
+    return (std::llabs(targetPts - a) <= std::llabs(b - targetPts)) ? (idx - 1) : idx;
+}
+
+void VideoDecoder::seekToTime(double seconds) {
+    if (!m_isReady)
+        return;
+    if (seconds < 0.0)
+        seconds = 0.0;
+
+    const int frame = frameIndexFromSeconds(seconds);
+    seekToFrame(frame, m_sourceFps);
+}
 void VideoDecoder::seekToFrame(int frame, double fps) {
-    if (!m_isReady || frame < 0)
+    if (!m_isReady) {
+        // If not ready, queue the seek? For now, just ignore.
+        return;
+    }
+
+    if (frame < 0)
         return;
 
     // 最新の要求フレームを更新
@@ -215,165 +259,155 @@ void VideoDecoder::seekToFrame(int frame, double fps) {
 
     // キャッシュにあれば即時適用
     if (m_frameCache.contains(frame)) {
-        QByteArray *bytes = m_frameCache.object(frame);
-        if (bytes && m_decCtx && m_decCtx->width > 0 && m_decCtx->height > 0) {
-            QImage img(reinterpret_cast<const uchar *>(bytes->constData()), m_decCtx->width, m_decCtx->height, QImage::Format_RGBA8888);
-            m_store->setFrameSafe(QString::number(m_clipId), img);
-            emit frameReady(frame);
-        }
-        // 先読みパイプラインを途切れさせないためキャッシュヒット時もタスクを投げる
-        (void)QtConcurrent::run([this, fps]() { decodeTask(-1, fps); });
+        m_store->setFrameSafe(QString::number(m_clipId), *m_frameCache[frame]);
+        emit frameReady(frame);
         return;
     }
 
-    (void)QtConcurrent::run([this, fps]() { decodeTask(-1, fps); });
+    // 非同期でデコードタスクを実行
+    (void)QtConcurrent::run([this, frame, fps]() { decodeTask(frame, fps); });
 }
 
-void VideoDecoder::decodeTask(int, double fps) {
-    // tryLock でキュー詰まりを回避。すでにデコード中なら新タスクは即終了
-    if (!m_mutex.tryLock()) {
-        return;
-    }
-
-    // ロック取得成功時、スコープを抜けるときに確実にアンロックする
-    struct MutexUnlocker {
-        QMutex *m;
-        ~MutexUnlocker() { m->unlock(); }
-    } unlocker{&m_mutex};
-
+void VideoDecoder::decodeTask(int targetFrame, double fps) {
+    QMutexLocker locker(&m_mutex);
     if (!m_decCtx || m_index.empty())
         return;
 
-    // 常に最新のリクエストフレームを追いかけるループ
-    while (true) {
-        int currentRequest = m_lastRequestedFrame.load();
+    // 範囲制限
+    if (targetFrame < 0)
+        targetFrame = 0;
+    if (targetFrame >= (int)m_index.size())
+        targetFrame = (int)m_index.size() - 1;
 
-        // 常に要求フレームの4つ先まで裏でデコードしておく
-        int prefetchGoal = std::min((int)m_index.size() - 1, currentRequest + 4);
+    // 既に別の新しいリクエストが来ている場合はスキップ（簡易的なキャンセル）
+    if (m_lastRequestedFrame != targetFrame)
+        return;
 
-        // 逆再生や大ジャンプをした場合は現在位置をリセット
-        if (currentRequest < m_lastDecodedFrame - 2 || currentRequest > m_lastDecodedFrame + 50) {
-            m_lastDecodedFrame = -1;
+    // インデックスから正確なターゲット情報を取得
+    const auto &targetEntry = m_index[targetFrame];
+    int64_t targetPts = targetEntry.pts;
+
+    // シークが必要か判定
+    // 連続再生(次のフレーム)ならシーク不要だが、誤差を考慮して判定
+    bool needSeek = true;
+    // 修正: 多少のフレーム飛び（ドロップ）があっても、直近ならシークせずにデコードを進める
+    // これにより、GOP先頭への巻き戻しと再デコードによるフリーズ（処理落ち）を防ぐ
+    // 閾値を30フレーム(60fpsで0.5秒)まで緩和し、シーケンシャル読み込みを優先する
+    if (m_lastDecodedFrame != -1 && targetFrame > m_lastDecodedFrame && targetFrame <= m_lastDecodedFrame + 30) {
+        needSeek = false;
+    }
+
+    if (needSeek) {
+        // インデックスを使って直前のキーフレームを探す
+        int keyIndex = targetFrame;
+        while (keyIndex > 0 && !m_index[keyIndex].isKeyframe) {
+            keyIndex--;
         }
+        int64_t seekPts = m_index[keyIndex].pts;
 
-        if (m_lastDecodedFrame >= prefetchGoal)
-            break;
-
-        int targetFrame = std::max(currentRequest, m_lastDecodedFrame + 1);
-        if (targetFrame >= (int)m_index.size())
-            targetFrame = (int)m_index.size() - 1;
-        int64_t targetPts = m_index[targetFrame].pts;
-
-        bool needSeek = true;
-        if (m_lastDecodedFrame != -1 && targetFrame > m_lastDecodedFrame && targetFrame <= m_lastDecodedFrame + 50) {
-            needSeek = false;
+        // 正確なPTSへシーク
+        int ret = av_seek_frame(m_fmtCtx, m_streamIndex, seekPts, AVSEEK_FLAG_BACKWARD);
+        if (ret < 0) {
+            qWarning() << "[VideoDecoder] Seek failed to PTS" << seekPts;
+            return;
         }
+        avcodec_flush_buffers(m_decCtx);
+        m_lastDecodedFrame = -1; // リセット
+    }
 
-        if (needSeek) {
-            int keyIndex = currentRequest;
-            while (keyIndex > 0 && !m_index[keyIndex].isKeyframe)
-                keyIndex--;
-            av_seek_frame(m_fmtCtx, m_streamIndex, m_index[keyIndex].pts, AVSEEK_FLAG_BACKWARD);
-            avcodec_flush_buffers(m_decCtx);
-            m_lastDecodedFrame = keyIndex - 1;
-        }
+    // デコードループ (プリロール)
+    // キーフレームからターゲットPTSまで空読みする
+    bool frameFound = false;
+    AVPacket *pkt = av_packet_alloc();
+    int maxDecodeCount = (targetFrame - m_lastDecodedFrame) + 300; // 安全マージン
 
-        bool frameFound = false;
-        AVPacket *pkt = av_packet_alloc();
-        int maxDecodeCount = 500;
+    while (maxDecodeCount-- > 0) {
+        int ret = av_read_frame(m_fmtCtx, pkt);
+        if (ret < 0)
+            break; // EOF or Error
 
-        while (maxDecodeCount-- > 0) {
-            int newRequest = m_lastRequestedFrame.load();
-            if (newRequest != currentRequest) {
-                if (newRequest < m_lastDecodedFrame - 2 || newRequest > targetFrame + 50) {
-                    break;
+        if (pkt->stream_index == m_streamIndex) {
+            // パケット送信 (EAGAINハンドリング付き)
+            ret = avcodec_send_packet(m_decCtx, pkt);
+
+            // 入力バッファが一杯(EAGAIN)の場合、出力(フレーム)を読み出して空ける
+            while (ret == AVERROR(EAGAIN)) {
+                int rxRet = avcodec_receive_frame(m_decCtx, m_frame);
+                if (rxRet < 0)
+                    break; // 受信もできない場合は中断
+
+                // PTSの一致を確認（インデックスベースなので正確）
+                if (m_frame->pts == targetPts) {
+                    m_lastDecodedFrame = targetFrame;
+                    frameFound = true;
+                    goto process_frame;
                 }
-                currentRequest = newRequest;
-                prefetchGoal = std::min((int)m_index.size() - 1, currentRequest + 4);
-                targetFrame = std::max(currentRequest, m_lastDecodedFrame + 1);
-                if (targetFrame >= (int)m_index.size())
-                    targetFrame = (int)m_index.size() - 1;
-                targetPts = m_index[targetFrame].pts;
+
+                // 再試行
+                ret = avcodec_send_packet(m_decCtx, pkt);
             }
 
-            int ret = av_read_frame(m_fmtCtx, pkt);
-            if (ret == AVERROR_EOF) {
-                avcodec_send_packet(m_decCtx, nullptr);
-            } else if (ret < 0) {
-                break;
-            } else if (pkt->stream_index != m_streamIndex) {
+            if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
                 av_packet_unref(pkt);
                 continue;
-            } else {
-                if (currentRequest - m_lastDecodedFrame > 5) {
-                    m_decCtx->skip_frame = AVDISCARD_NONREF;
-                } else {
-                    m_decCtx->skip_frame = AVDISCARD_DEFAULT;
-                }
-                avcodec_send_packet(m_decCtx, pkt);
-                av_packet_unref(pkt);
             }
 
+            // 送信成功後のフレーム回収 (通常フロー)
             while (true) {
-                ret = avcodec_receive_frame(m_decCtx, m_frame);
-                if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF || ret < 0) {
-                    break;
-                }
+                int rxRet = avcodec_receive_frame(m_decCtx, m_frame);
+                if (rxRet < 0)
+                    break; // EAGAIN or EOF
 
-                int64_t pts = (m_frame->best_effort_timestamp != AV_NOPTS_VALUE) ? m_frame->best_effort_timestamp : m_frame->pts;
-
-                auto it = std::lower_bound(m_index.begin(), m_index.end(), pts, [](const FrameIndexEntry &e, int64_t p) { return e.pts < p; });
-                if (it != m_index.end()) {
-                    m_lastDecodedFrame = std::distance(m_index.begin(), it);
-                } else {
-                    m_lastDecodedFrame++;
-                }
-
-                if (m_lastDecodedFrame >= targetFrame || pts >= targetPts) {
+                if (m_frame->pts == targetPts) {
                     m_lastDecodedFrame = targetFrame;
                     frameFound = true;
                     goto process_frame;
                 }
             }
         }
-
-    process_frame:
         av_packet_unref(pkt);
-        av_packet_free(&pkt);
+    }
 
-        if (frameFound) {
-            AVFrame *srcFrame = m_frame;
-            if (m_frame->format == m_hwPixFmt) {
-                if (av_hwframe_transfer_data(m_swFrame, m_frame, 0) < 0)
-                    break;
-                srcFrame = m_swFrame;
+process_frame:
+    av_packet_unref(pkt);
+    av_packet_free(&pkt);
+
+    if (frameFound) {
+        AVFrame *srcFrame = m_frame;
+
+        // HWフレームの場合はCPUメモリへ転送(ダウンロード)する
+        if (m_frame->format == m_hwPixFmt) {
+            if (av_hwframe_transfer_data(m_swFrame, m_frame, 0) < 0) {
+                qWarning() << "[VideoDecoder] Error transferring frame data to CPU";
+                return;
             }
-
-            // SWS_POINTに変更し無駄な補間演算を全カット
-            m_swsCtx = sws_getCachedContext(m_swsCtx, m_decCtx->width, m_decCtx->height, (AVPixelFormat)srcFrame->format, m_decCtx->width, m_decCtx->height, AV_PIX_FMT_RGBA, SWS_POINT, nullptr, nullptr, nullptr);
-
-            QImage result(m_decCtx->width, m_decCtx->height, QImage::Format_RGBA8888);
-            uint8_t *dstData[4] = {result.bits(), nullptr, nullptr, nullptr};
-            int dstLinesize[4] = {static_cast<int>(result.bytesPerLine()), 0, 0, 0};
-
-            sws_scale(m_swsCtx, srcFrame->data, srcFrame->linesize, 0, m_decCtx->height, dstData, dstLinesize);
-
-            int cacheKey = targetFrame;
-
-            QMetaObject::invokeMethod(this, [this, result, cacheKey]() {
-                if (!m_frameCache.contains(cacheKey)) {
-                    auto *bytes = new QByteArray(reinterpret_cast<const char *>(result.constBits()), result.sizeInBytes());
-                    m_frameCache.insert(cacheKey, bytes, bytes->size());
-                }
-                // 先読み画像で画面を上書きしないよう現在の要求と一致した場合のみ更新
-                if (cacheKey == m_lastRequestedFrame.load()) {
-                    m_store->setFrameSafe(QString::number(m_clipId), result);
-                    emit ready();
-                }
-            });
-        } else {
-            break;
+            srcFrame = m_swFrame;
         }
+
+        // YUV -> RGB 変換
+        // srcFrame->format を使用する (HWデコード時はNV12などがここに入っている)
+        m_swsCtx = sws_getCachedContext(m_swsCtx, m_decCtx->width, m_decCtx->height, (AVPixelFormat)srcFrame->format, m_decCtx->width, m_decCtx->height, AV_PIX_FMT_RGBA, SWS_FAST_BILINEAR, nullptr, nullptr, nullptr);
+
+        // QImageを直接確保し、sws_scaleの出力先として指定することで中間バッファとコピーを排除 (Zero-copy write)
+        QImage result(m_decCtx->width, m_decCtx->height, QImage::Format_RGBA8888);
+        uint8_t *dstData[4] = {result.bits(), nullptr, nullptr, nullptr};
+        int dstLinesize[4] = {static_cast<int>(result.bytesPerLine()), 0, 0, 0};
+
+        // 変換実行
+        sws_scale(m_swsCtx, srcFrame->data, srcFrame->linesize, 0, m_decCtx->height, dstData, dstLinesize);
+
+        // メインスレッドへ通知
+        QMetaObject::invokeMethod(this, [this, result, targetFrame]() {
+            m_store->setFrameSafe(QString::number(m_clipId), result);
+            if (!m_frameCache.contains(targetFrame)) {
+                m_frameCache.insert(targetFrame, new QImage(result), result.sizeInBytes());
+            }
+            emit ready(); // Or a more specific signal if needed
+        });
+    } else {
+        // ターゲットが見つからなかった場合（ファイルの末尾など）
+        // 必要なら黒画像などを返す処理をここに追加
+        return;
     }
 }
 

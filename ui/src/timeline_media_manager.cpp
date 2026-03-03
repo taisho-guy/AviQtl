@@ -44,7 +44,8 @@ void TimelineMediaManager::onCurrentFrameChanged() {
 
         if (auto *vid = qobject_cast<Rina::Core::VideoDecoder *>(it.value())) {
             const int relFrame = nextFrame - clip->startFrame;
-            int videoFrame = 0;
+            const double relTime = static_cast<double>(relFrame) / fps;
+            double targetSec = relTime;
 
             for (const auto *eff : clip->effects) {
                 if (eff->id() != "video")
@@ -53,22 +54,24 @@ void TimelineMediaManager::onCurrentFrameChanged() {
                 const QString playMode = eff->params().value("playMode", "開始フレーム＋再生速度").toString();
 
                 if (playMode == "フレーム直接指定") {
-                    // フレーム直接指定モード: キーフレーム評価を適用
-                    videoFrame = eff->evaluatedParam("directFrame", relFrame).toInt();
+                    const double directFrame = eff->evaluatedParam("directFrame", relFrame).toDouble();
+                    targetSec = directFrame / fps;
                 } else {
-                    // 開始フレーム + 再生速度モード
                     const int startFrame = eff->params().value("startFrame", 0).toInt();
                     const double speed = eff->params().value("speed", 100.0).toDouble();
 
-                    // 動画FPSとプロジェクトFPSの比率で実時間同期させる
-                    const double sourceFps = vid->sourceFps();
-                    const double timeRatio = (sourceFps > 0.0) ? (sourceFps / fps) : 1.0;
-                    videoFrame = static_cast<int>(relFrame * timeRatio * (speed / 100.0)) + startFrame;
+                    double vfps = vid->sourceFps();
+                    if (vfps <= 0.0) {
+                        vfps = fps;
+                    }
+
+                    const double startSec = static_cast<double>(startFrame) / vfps;
+                    targetSec = startSec + relTime * (speed / 100.0);
                 }
                 break;
             }
 
-            vid->seekToFrame(videoFrame, fps);
+            vid->seekToTime(targetSec);
         }
 
         if (auto *aud = qobject_cast<Rina::Core::AudioDecoder *>(it.value())) {

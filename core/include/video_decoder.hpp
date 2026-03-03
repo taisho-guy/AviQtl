@@ -1,8 +1,8 @@
 #pragma once
 
 #include "media_decoder.hpp"
-#include <QByteArray>
 #include <QCache>
+#include <QImage>
 
 extern "C" {
 struct AVFormatContext;
@@ -13,12 +13,12 @@ struct AVPacket;
 struct AVBufferRef;
 struct SwsContext;
 #include <libavutil/pixfmt.h>
+#include <libavutil/rational.h>
 }
 
 namespace Rina::Core {
 
 class VideoFrameStore; // forward declaration
-class VideoRenderItem; // forward declaration
 
 class VideoDecoder : public MediaDecoder {
     Q_OBJECT
@@ -27,9 +27,10 @@ class VideoDecoder : public MediaDecoder {
     ~VideoDecoder() override;
 
     void seekToFrame(int frame, double fps);
+    void seekToTime(double seconds);
+    double sourceFps() const;
     void seek(qint64 ms) override;
     void setPlaying(bool playing) override {}
-    double sourceFps() const { return m_sourceFps; }
 
   protected:
     void startDecoding() override;
@@ -37,12 +38,9 @@ class VideoDecoder : public MediaDecoder {
     // Not used by video
     std::vector<float> getSamples(double startTime, int count) override { return {}; }
 
-  signals:
-    // VideoRenderItem へフレームデータを渡すためのシグナル
-    void frameDecoded(QByteArray data, int width, int height);
-
   private:
-    bool buildIndex(); // 全フレームスキャンしてインデックス構築
+    bool buildIndex();
+    int frameIndexFromSeconds(double seconds) const; // 全フレームスキャンしてインデックス構築
 
     struct FrameIndexEntry {
         int64_t pts;
@@ -71,12 +69,13 @@ class VideoDecoder : public MediaDecoder {
     // State
     int m_lastDecodedFrame = -1;
     std::vector<FrameIndexEntry> m_index; // フレーム番号 -> PTS/Keyframe マップ
-    double m_sourceFps = 60.0;
 
-    // デコード結果の軽量キャッシュ（フレーム番号 → 生 RGBA バイト列）
+    // LRUキャッシュ: Key="frameNumber", Value=QImage
     // インスタンスごとにキャッシュを持つ
-    QCache<int, QByteArray> m_frameCache;
+    QCache<int, QImage> m_frameCache;
     std::atomic<int> m_lastRequestedFrame = -1; // Use std::atomic for thread-safe access
+    double m_sourceFps = 0.0;
+    AVRational m_timeBase {0, 1};
 
     static enum AVPixelFormat get_hw_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts);
 };
