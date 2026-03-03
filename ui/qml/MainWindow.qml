@@ -326,6 +326,7 @@ ApplicationWindow {
                         editable: true
                         Layout.preferredWidth: 80
                         Layout.preferredHeight: 28
+                        enabled: !(TimelineBridge && TimelineBridge.transport && TimelineBridge.transport.isPlaying)
                         // 値のバインディング
                         value: (TimelineBridge && TimelineBridge.transport) ? Math.round(TimelineBridge.transport.playbackSpeed * 100) : 100
                         onValueModified: {

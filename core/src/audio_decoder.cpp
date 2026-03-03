@@ -193,4 +193,12 @@ std::vector<float> AudioDecoder::getSamples(double startTime, int count) {
     return result;
 }
 
+double AudioDecoder::totalDurationSec() const {
+    QMutexLocker locker(&m_mutex);
+    if (m_sampleRate <= 0)
+        return 0.0;
+    const double frames = static_cast<double>(m_fullAudioData.size()) / 2.0;
+    return frames / static_cast<double>(m_sampleRate);
+}
+
 } // namespace Rina::Core

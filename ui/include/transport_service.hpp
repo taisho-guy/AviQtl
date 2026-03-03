@@ -31,12 +31,10 @@ class TransportService : public QObject {
     void setPlaybackSpeed(double speed) {
         if (std::abs(m_playbackSpeed - speed) < 0.001)
             return;
+        // プレビュー再生中は変更を受け付けない
+        if (m_isPlaying)
+            return;
         m_playbackSpeed = speed;
-        // 再生中なら起点を現在地に再設定（速度変更の不連続を防ぐ）
-        if (m_isPlaying) {
-            m_playStartFrame = m_currentFrame;
-            m_playStartTime = m_clock.nsecsElapsed();
-        }
         emit playbackSpeedChanged();
     }
 

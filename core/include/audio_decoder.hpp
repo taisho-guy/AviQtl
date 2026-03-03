@@ -25,6 +25,7 @@ class AudioDecoder : public MediaDecoder {
     void setPlaying(bool) override {}
 
     std::vector<float> getSamples(double startTime, int count) override;
+    double totalDurationSec() const;
 
   protected:
     void startDecoding() override;

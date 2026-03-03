@@ -259,41 +259,118 @@ void TimelineController::log(const QString &msg) { qDebug() << "[TimelineBridge]
 
 void TimelineController::updateClip(int id, int layer, int startFrame, int duration) {
     const auto *clip = m_timeline->findClipById(id);
-    if (clip && clip->type == "video") {
-        auto *vid = qobject_cast<Rina::Core::VideoDecoder *>(m_mediaManager->decoderForClip(id));
-        if (vid && vid->isReady()) {
-            int startVideoFrame = 0;
-            double speed = 100.0;
+
+    if (clip) {
+        const int projectFps = project()->fps();
+
+        if (clip->type == "video") {
+            auto *vid = qobject_cast<Rina::Core::VideoDecoder *>(m_mediaManager->decoderForClip(id));
+            if (vid && vid->isReady()) {
+                int startVideoFrame = 0;
+                double speed = 100.0;
+                bool isDirectMode = false;
+
+                for (const auto *eff : clip->effects) {
+                    if (eff->id() != "video")
+                        continue;
+                    const QString playMode = eff->params().value("playMode", "開始フレーム＋再生速度").toString();
+                    if (playMode == "フレーム直接指定") {
+                        isDirectMode = true;
+                        break;
+                    }
+                    startVideoFrame = eff->params().value("startFrame", 0).toInt();
+                    speed = eff->params().value("speed", 100.0).toDouble();
+                    break;
+                }
+
+                double srcFps = vid->sourceFps();
+                if (srcFps <= 0.0)
+                    srcFps = projectFps;
+                int maxDuration = duration;
+
+                if (isDirectMode) {
+                    // フレーム直接指定: 単純に「素材の総フレーム数 / srcFps * projectFps」を限界とする
+                    const double totalSec = static_cast<double>(vid->totalFrameCount()) / srcFps;
+                    maxDuration = static_cast<int>(totalSec * projectFps);
+                } else if (speed > 0.0) {
+                    const double startSec = static_cast<double>(startVideoFrame) / srcFps;
+                    const double remainingSec = static_cast<double>(vid->totalFrameCount()) / srcFps - startSec;
+                    if (remainingSec > 0.0) {
+                        maxDuration = static_cast<int>(remainingSec / (speed / 100.0) * projectFps);
+                    }
+                }
+
+                if (maxDuration > 0 && duration > maxDuration) {
+                    duration = maxDuration;
+                }
+            }
+        } else if (clip->type == "audio") {
+            auto *aud = qobject_cast<Rina::Core::AudioDecoder *>(m_mediaManager->decoderForClip(id));
+            if (aud && aud->isReady()) {
+                double startTime = 0.0;
+                double speed = 100.0;
+                bool isDirectMode = false;
+
+                for (const auto *eff : clip->effects) {
+                    if (eff->id() != "audio")
+                        continue;
+                    const QString playMode = eff->params().value("playMode", "開始時間＋再生速度").toString();
+                    if (playMode == "時間直接指定") {
+                        isDirectMode = true;
+                        break;
+                    }
+                    startTime = eff->params().value("startTime", 0.0).toDouble();
+                    speed = eff->params().value("speed", 100.0).toDouble();
+                    break;
+                }
+
+                const double totalSec = aud->totalDurationSec();
+                int maxDuration = duration;
+
+                if (isDirectMode) {
+                    // 時間直接指定: 素材の総秒数 * projectFps を限界とする
+                    maxDuration = static_cast<int>(totalSec * projectFps);
+                } else if (speed > 0.0) {
+                    const double remainingSec = totalSec - startTime;
+                    if (remainingSec > 0.0) {
+                        maxDuration = static_cast<int>(remainingSec / (speed / 100.0) * projectFps);
+                    }
+                }
+
+                if (maxDuration > 0 && duration > maxDuration) {
+                    duration = maxDuration;
+                }
+            }
+        } else if (clip->type == "scene") {
+            int targetSceneId = 0;
+            double speed = 1.0;
+            int offset = 0;
             bool isDirectMode = false;
 
             for (const auto *eff : clip->effects) {
-                if (eff->id() != "video")
+                if (eff->id() != "scene")
                     continue;
-                const QString playMode = eff->params().value("playMode", "開始フレーム＋再生速度").toString();
-                if (playMode == "フレーム直接指定") {
-                    isDirectMode = true;
-                    break;
-                }
-                startVideoFrame = eff->params().value("startFrame", 0).toInt();
-                speed = eff->params().value("speed", 100.0).toDouble();
+                // ※ 現在Sceneには playMode パラメータは無いが、将来のために概念として考慮。
+                // 現状の仕様では「speed と offset」による計算。
+                targetSceneId = eff->params().value("targetSceneId", 0).toInt();
+                speed = eff->params().value("speed", 1.0).toDouble();
+                offset = eff->params().value("offset", 0).toInt();
                 break;
             }
 
-            if (!isDirectMode && speed > 0.0) {
-                double srcFps = vid->sourceFps();
-                if (srcFps <= 0.0)
-                    srcFps = project()->fps();
-                const double startSec = static_cast<double>(startVideoFrame) / srcFps;
-                const double remainingSec = static_cast<double>(vid->totalFrameCount()) / srcFps - startSec;
-                if (remainingSec > 0.0) {
-                    const int maxDuration = static_cast<int>(remainingSec / (speed / 100.0) * project()->fps());
-                    if (maxDuration > 0 && duration > maxDuration) {
-                        duration = maxDuration;
-                    }
+            const int sceneDur = getSceneDuration(targetSceneId);
+            if (sceneDur > 0 && speed > 0.0) {
+                const double rhs = (static_cast<double>(sceneDur - 1 - offset)) / speed;
+                int maxDuration = static_cast<int>(rhs) + 1;
+                if (maxDuration < 1)
+                    maxDuration = 1;
+                if (duration > maxDuration) {
+                    duration = maxDuration;
                 }
             }
         }
     }
+
     m_timeline->updateClip(id, layer, startFrame, duration);
 }
 

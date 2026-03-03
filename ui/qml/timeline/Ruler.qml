@@ -160,21 +160,31 @@ Rectangle {
 
             // マウス操作（スクラブ & ズーム）
             MouseArea {
+                property int draftFrame: -1
+
                 anchors.fill: parent
                 hoverEnabled: true
                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                 onPressed: (mouse) => {
                     if (mouse.button === Qt.LeftButton) {
                         if (TimelineBridge && TimelineBridge.transport && targetFlickable)
-                            TimelineBridge.transport.currentFrame = pxToFrame(mouse.x, targetFlickable.contentX);
+                            draftFrame = pxToFrame(mouse.x, targetFlickable.contentX);
 
                     }
                 }
                 onPositionChanged: (mouse) => {
                     if (pressed && mouse.buttons & Qt.LeftButton) {
                         if (TimelineBridge && TimelineBridge.transport && targetFlickable)
-                            TimelineBridge.transport.currentFrame = pxToFrame(mouse.x, targetFlickable.contentX);
+                            draftFrame = pxToFrame(mouse.x, targetFlickable.contentX);
 
+                    }
+                }
+                onReleased: (mouse) => {
+                    if (mouse.button === Qt.LeftButton && draftFrame >= 0) {
+                        if (TimelineBridge && TimelineBridge.transport)
+                            TimelineBridge.transport.currentFrame = draftFrame;
+
+                        draftFrame = -1;
                     }
                 }
                 onWheel: (wheel) => {

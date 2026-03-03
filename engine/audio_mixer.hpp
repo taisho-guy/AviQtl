@@ -50,6 +50,8 @@ class AudioMixer : public QObject {
     QHash<int, std::shared_ptr<Plugin::AudioPluginChain>> m_chains;
     int m_lastFrame = -1;
     double m_playbackSpeed = 1.0;
+    QHash<int, double> m_clipPhase;
+    QHash<int, int> m_clipLastFrame;
 };
 
 } // namespace Rina::Engine
