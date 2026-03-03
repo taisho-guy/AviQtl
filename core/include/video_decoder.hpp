@@ -1,8 +1,8 @@
 #pragma once
 
 #include "media_decoder.hpp"
+#include <QByteArray>
 #include <QCache>
-#include <QImage>
 
 extern "C" {
 struct AVFormatContext;
@@ -18,6 +18,7 @@ struct SwsContext;
 namespace Rina::Core {
 
 class VideoFrameStore; // forward declaration
+class VideoRenderItem; // forward declaration
 
 class VideoDecoder : public MediaDecoder {
     Q_OBJECT
@@ -28,12 +29,17 @@ class VideoDecoder : public MediaDecoder {
     void seekToFrame(int frame, double fps);
     void seek(qint64 ms) override;
     void setPlaying(bool playing) override {}
+    double sourceFps() const { return m_sourceFps; }
 
   protected:
     void startDecoding() override;
 
     // Not used by video
     std::vector<float> getSamples(double startTime, int count) override { return {}; }
+
+  signals:
+    // VideoRenderItem へフレームデータを渡すためのシグナル
+    void frameDecoded(QByteArray data, int width, int height);
 
   private:
     bool buildIndex(); // 全フレームスキャンしてインデックス構築
@@ -65,10 +71,11 @@ class VideoDecoder : public MediaDecoder {
     // State
     int m_lastDecodedFrame = -1;
     std::vector<FrameIndexEntry> m_index; // フレーム番号 -> PTS/Keyframe マップ
+    double m_sourceFps = 60.0;
 
-    // LRUキャッシュ: Key="frameNumber", Value=QImage
+    // デコード結果の軽量キャッシュ（フレーム番号 → 生 RGBA バイト列）
     // インスタンスごとにキャッシュを持つ
-    QCache<int, QImage> m_frameCache;
+    QCache<int, QByteArray> m_frameCache;
     std::atomic<int> m_lastRequestedFrame = -1; // Use std::atomic for thread-safe access
 
     static enum AVPixelFormat get_hw_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts);

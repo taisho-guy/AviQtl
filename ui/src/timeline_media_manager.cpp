@@ -59,7 +59,11 @@ void TimelineMediaManager::onCurrentFrameChanged() {
                     // 開始フレーム + 再生速度モード
                     const int startFrame = eff->params().value("startFrame", 0).toInt();
                     const double speed = eff->params().value("speed", 100.0).toDouble();
-                    videoFrame = static_cast<int>(relFrame * (speed / 100.0)) + startFrame;
+
+                    // 動画FPSとプロジェクトFPSの比率で実時間同期させる
+                    const double sourceFps = vid->sourceFps();
+                    const double timeRatio = (sourceFps > 0.0) ? (sourceFps / fps) : 1.0;
+                    videoFrame = static_cast<int>(relFrame * timeRatio * (speed / 100.0)) + startFrame;
                 }
                 break;
             }
