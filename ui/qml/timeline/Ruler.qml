@@ -160,31 +160,31 @@ Rectangle {
 
             // マウス操作（スクラブ & ズーム）
             MouseArea {
-                property int draftFrame: -1
-
                 anchors.fill: parent
                 hoverEnabled: true
                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                 onPressed: (mouse) => {
                     if (mouse.button === Qt.LeftButton) {
-                        if (TimelineBridge && TimelineBridge.transport && targetFlickable)
-                            draftFrame = pxToFrame(mouse.x, targetFlickable.contentX);
-
+                        if (TimelineBridge && TimelineBridge.transport && targetFlickable) {
+                            TimelineBridge.transport.isScrubbing = true;
+                            TimelineBridge.transport.currentFrame = pxToFrame(mouse.x, targetFlickable.contentX);
+                        }
                     }
                 }
                 onPositionChanged: (mouse) => {
-                    if (pressed && mouse.buttons & Qt.LeftButton) {
-                        if (TimelineBridge && TimelineBridge.transport && targetFlickable)
-                            draftFrame = pxToFrame(mouse.x, targetFlickable.contentX);
-
+                    if (pressed && (mouse.buttons & Qt.LeftButton)) {
+                        if (TimelineBridge && TimelineBridge.transport && targetFlickable) {
+                            TimelineBridge.transport.isScrubbing = true;
+                            TimelineBridge.transport.currentFrame = pxToFrame(mouse.x, targetFlickable.contentX);
+                        }
                     }
                 }
                 onReleased: (mouse) => {
-                    if (mouse.button === Qt.LeftButton && draftFrame >= 0) {
-                        if (TimelineBridge && TimelineBridge.transport)
-                            TimelineBridge.transport.currentFrame = draftFrame;
-
-                        draftFrame = -1;
+                    if (mouse.button === Qt.LeftButton) {
+                        if (TimelineBridge && TimelineBridge.transport) {
+                            TimelineBridge.transport.isScrubbing = false;
+                            TimelineBridge.transport.setCurrentFrame_seek(TimelineBridge.transport.currentFrame);
+                        }
                     }
                 }
                 onWheel: (wheel) => {

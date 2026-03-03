@@ -235,14 +235,25 @@ ApplicationWindow {
                         }
                         return Math.max(1, maxEnd + 1);
                     }
-                    // ドラッグを終えた瞬間にトランスポートへ反映
                     onPressedChanged: {
-                        if (!pressed && TimelineBridge && TimelineBridge.transport)
-                            TimelineBridge.transport.setCurrentFrame_seek(Math.floor(value));
+                        if (TimelineBridge && TimelineBridge.transport) {
+                            TimelineBridge.transport.isScrubbing = pressed;
+                            if (!pressed)
+                                // 離した瞬間にプレビュー確定
+                                TimelineBridge.transport.setCurrentFrame_seek(Math.floor(value));
+                            else
+                                // 押した瞬間も同期
+                                TimelineBridge.transport.currentFrame = Math.floor(value);
+                        }
+                    }
+                    onMoved: {
+                        if (TimelineBridge && TimelineBridge.transport)
+                            // 動かしている間は currentFrame を更新するがプレビューは止まる
+                            TimelineBridge.transport.currentFrame = Math.floor(value);
 
                     }
 
-                    // ドラッグ中以外は currentFrame に同期
+                    // スクラブ中はUI側からの書き換えを優先し、通常時はトランスポートに同期する
                     Binding on value {
                         when: !seekSlider.pressed
                         value: (TimelineBridge && TimelineBridge.transport) ? TimelineBridge.transport.currentFrame : 0
