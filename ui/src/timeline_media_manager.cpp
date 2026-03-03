@@ -45,7 +45,6 @@ void TimelineMediaManager::onCurrentFrameChanged() {
         if (auto *vid = qobject_cast<Rina::Core::VideoDecoder *>(it.value())) {
             const int relFrame = nextFrame - clip->startFrame;
             const double relTime = static_cast<double>(relFrame) / fps;
-            double targetSec = relTime;
 
             for (const auto *eff : clip->effects) {
                 if (eff->id() != "video")
@@ -54,9 +53,11 @@ void TimelineMediaManager::onCurrentFrameChanged() {
                 const QString playMode = eff->params().value("playMode", "開始フレーム＋再生速度").toString();
 
                 if (playMode == "フレーム直接指定") {
-                    const double directFrame = eff->evaluatedParam("directFrame", relFrame).toDouble();
-                    targetSec = directFrame / fps;
+                    // 動画の絶対フレーム番号を直接シーク（プロジェクトFPSと無関係）
+                    const int absFrame = eff->evaluatedParam("directFrame", relFrame).toInt();
+                    vid->seekToFrame(absFrame, vid->sourceFps());
                 } else {
+                    // 開始フレームは動画側フレーム番号として秒数に変換してシーク
                     const int startFrame = eff->params().value("startFrame", 0).toInt();
                     const double speed = eff->params().value("speed", 100.0).toDouble();
 
@@ -66,12 +67,11 @@ void TimelineMediaManager::onCurrentFrameChanged() {
                     }
 
                     const double startSec = static_cast<double>(startFrame) / vfps;
-                    targetSec = startSec + relTime * (speed / 100.0);
+                    const double targetSec = startSec + relTime * (speed / 100.0);
+                    vid->seekToTime(targetSec);
                 }
                 break;
             }
-
-            vid->seekToTime(targetSec);
         }
 
         if (auto *aud = qobject_cast<Rina::Core::AudioDecoder *>(it.value())) {
@@ -160,10 +160,42 @@ void TimelineMediaManager::updateMediaDecoders() {
 
         if (decoder) {
             m_decoders.insert(clip.id, decoder);
-            // frameReady → QML 側の updateCounter 更新用シグナルを中継
-            if (qobject_cast<Rina::Core::VideoDecoder *>(decoder)) {
+            if (auto *vid = qobject_cast<Rina::Core::VideoDecoder *>(decoder)) {
                 int cid = clip.id;
                 connect(decoder, &Rina::Core::MediaDecoder::frameReady, this, [this, cid](int) { emit frameUpdated(cid); });
+                // 動画メタ情報が揃った時点でクリップの最大長をクランプする
+                connect(vid, &Rina::Core::VideoDecoder::videoMetaReady, this, [this, cid](int totalFrameCount, double sourceFps) {
+                    const auto *clip = m_controller->timeline()->findClipById(cid);
+                    if (!clip || clip->type != "video")
+                        return;
+
+                    int startVideoFrame = 0;
+                    double speed = 100.0;
+                    for (const auto *eff : clip->effects) {
+                        if (eff->id() != "video")
+                            continue;
+                        const QString playMode = eff->params().value("playMode", "開始フレーム＋再生速度").toString();
+                        if (playMode == "フレーム直接指定")
+                            return;
+                        startVideoFrame = eff->params().value("startFrame", 0).toInt();
+                        speed = eff->params().value("speed", 100.0).toDouble();
+                        break;
+                    }
+
+                    if (speed <= 0.0 || sourceFps <= 0.0)
+                        return;
+
+                    const int projectFps = m_controller->project()->fps();
+                    const double startSec = static_cast<double>(startVideoFrame) / sourceFps;
+                    const double remainingSec = static_cast<double>(totalFrameCount) / sourceFps - startSec;
+                    if (remainingSec <= 0.0)
+                        return;
+
+                    const int maxDuration = static_cast<int>(remainingSec / (speed / 100.0) * projectFps);
+                    if (maxDuration > 0 && clip->durationFrames > maxDuration) {
+                        m_controller->updateClip(clip->id, clip->layer, clip->startFrame, maxDuration);
+                    }
+                });
             }
             decoder->scheduleStart(); // 非同期起動
         }

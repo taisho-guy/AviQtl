@@ -29,8 +29,12 @@ class VideoDecoder : public MediaDecoder {
     void seekToFrame(int frame, double fps);
     void seekToTime(double seconds);
     double sourceFps() const;
+    int totalFrameCount() const;
     void seek(qint64 ms) override;
     void setPlaying(bool playing) override {}
+
+  signals:
+    void videoMetaReady(int totalFrameCount, double sourceFps);
 
   protected:
     void startDecoding() override;
@@ -75,7 +79,7 @@ class VideoDecoder : public MediaDecoder {
     QCache<int, QImage> m_frameCache;
     std::atomic<int> m_lastRequestedFrame = -1; // Use std::atomic for thread-safe access
     double m_sourceFps = 0.0;
-    AVRational m_timeBase {0, 1};
+    AVRational m_timeBase{0, 1};
 
     static enum AVPixelFormat get_hw_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts);
 };

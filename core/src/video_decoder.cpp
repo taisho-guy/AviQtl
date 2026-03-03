@@ -1,11 +1,10 @@
 #include "video_decoder.hpp"
-#include <cmath>
-#include <algorithm>
 #include "settings_manager.hpp"
 #include "video_frame_store.hpp"
 #include <QDebug>
 #include <QtConcurrent>
 #include <algorithm>
+#include <cmath>
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -59,6 +58,7 @@ void VideoDecoder::startDecoding() {
         if (open(path)) {
             m_isReady = true;
             emit ready();
+            emit videoMetaReady((int)m_index.size(), m_sourceFps);
         }
     });
 }
@@ -203,10 +203,9 @@ void VideoDecoder::seek(qint64 ms) {
     emit seekRequested(ms);
 }
 
+double VideoDecoder::sourceFps() const { return m_sourceFps; }
 
-double VideoDecoder::sourceFps() const {
-    return m_sourceFps;
-}
+int VideoDecoder::totalFrameCount() const { return (int)m_index.size(); }
 
 int VideoDecoder::frameIndexFromSeconds(double seconds) const {
     if (m_index.empty())
@@ -216,20 +215,22 @@ int VideoDecoder::frameIndexFromSeconds(double seconds) const {
     if (tb <= 0.0) {
         double fps = m_sourceFps > 0.0 ? m_sourceFps : 30.0;
         int f = static_cast<int>(std::llround(seconds * fps));
-        if (f < 0) f = 0;
-        if (f >= (int)m_index.size()) f = (int)m_index.size() - 1;
+        if (f < 0)
+            f = 0;
+        if (f >= (int)m_index.size())
+            f = (int)m_index.size() - 1;
         return f;
     }
 
     const int64_t targetPts = (int64_t)std::llround(seconds / tb);
 
-    auto it = std::lower_bound(
-        m_index.begin(), m_index.end(), targetPts,
-        [](const FrameIndexEntry &e, int64_t v) { return e.pts < v; });
+    auto it = std::lower_bound(m_index.begin(), m_index.end(), targetPts, [](const FrameIndexEntry &e, int64_t v) { return e.pts < v; });
 
     int idx = (int)std::distance(m_index.begin(), it);
-    if (idx <= 0) return 0;
-    if (idx >= (int)m_index.size()) return (int)m_index.size() - 1;
+    if (idx <= 0)
+        return 0;
+    if (idx >= (int)m_index.size())
+        return (int)m_index.size() - 1;
 
     const int64_t a = m_index[idx - 1].pts;
     const int64_t b = m_index[idx].pts;

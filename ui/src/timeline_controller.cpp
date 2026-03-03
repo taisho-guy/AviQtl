@@ -1,6 +1,7 @@
 #include "timeline_controller.hpp"
 #include "../../core/include/audio_decoder.hpp"
 #include "../../core/include/project_serializer.hpp"
+#include "../../core/include/video_decoder.hpp"
 #include "../../engine/plugin/audio_plugin_manager.hpp"
 #include "../../scripting/lua_host.hpp"
 #include "commands.hpp"
@@ -256,7 +257,45 @@ void TimelineController::updateActiveClipsList() { m_engineSync->updateActiveCli
 
 void TimelineController::log(const QString &msg) { qDebug() << "[TimelineBridge] " << msg; }
 
-void TimelineController::updateClip(int id, int layer, int startFrame, int duration) { m_timeline->updateClip(id, layer, startFrame, duration); }
+void TimelineController::updateClip(int id, int layer, int startFrame, int duration) {
+    const auto *clip = m_timeline->findClipById(id);
+    if (clip && clip->type == "video") {
+        auto *vid = qobject_cast<Rina::Core::VideoDecoder *>(m_mediaManager->decoderForClip(id));
+        if (vid && vid->isReady()) {
+            int startVideoFrame = 0;
+            double speed = 100.0;
+            bool isDirectMode = false;
+
+            for (const auto *eff : clip->effects) {
+                if (eff->id() != "video")
+                    continue;
+                const QString playMode = eff->params().value("playMode", "開始フレーム＋再生速度").toString();
+                if (playMode == "フレーム直接指定") {
+                    isDirectMode = true;
+                    break;
+                }
+                startVideoFrame = eff->params().value("startFrame", 0).toInt();
+                speed = eff->params().value("speed", 100.0).toDouble();
+                break;
+            }
+
+            if (!isDirectMode && speed > 0.0) {
+                double srcFps = vid->sourceFps();
+                if (srcFps <= 0.0)
+                    srcFps = project()->fps();
+                const double startSec = static_cast<double>(startVideoFrame) / srcFps;
+                const double remainingSec = static_cast<double>(vid->totalFrameCount()) / srcFps - startSec;
+                if (remainingSec > 0.0) {
+                    const int maxDuration = static_cast<int>(remainingSec / (speed / 100.0) * project()->fps());
+                    if (maxDuration > 0 && duration > maxDuration) {
+                        duration = maxDuration;
+                    }
+                }
+            }
+        }
+    }
+    m_timeline->updateClip(id, layer, startFrame, duration);
+}
 
 void TimelineController::moveClipWithCollisionCheck(int clipId, int layer, int startFrame) {
     const ClipData *clip = m_timeline->findClipById(clipId);
