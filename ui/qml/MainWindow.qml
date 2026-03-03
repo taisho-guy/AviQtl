@@ -235,12 +235,20 @@ ApplicationWindow {
                         }
                         return Math.max(1, maxEnd + 1);
                     }
-                    value: (TimelineBridge && TimelineBridge.transport) ? TimelineBridge.transport.currentFrame : 0
-                    onMoved: {
-                        if (TimelineBridge && TimelineBridge.transport)
-                            TimelineBridge.transport.setCurrentFrame_seek(value);
+                    // ドラッグを終えた瞬間にトランスポートへ反映
+                    onPressedChanged: {
+                        if (!pressed && TimelineBridge && TimelineBridge.transport)
+                            TimelineBridge.transport.setCurrentFrame_seek(Math.floor(value));
 
                     }
+
+                    // ドラッグ中以外は currentFrame に同期
+                    Binding on value {
+                        when: !seekSlider.pressed
+                        value: (TimelineBridge && TimelineBridge.transport) ? TimelineBridge.transport.currentFrame : 0
+                        restoreMode: Binding.RestoreBinding
+                    }
+
                 }
 
                 Label {
