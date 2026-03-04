@@ -5,6 +5,8 @@
 #include <QMutex>
 #include <QObject>
 #include <QSet>
+#include <QVideoFrame>
+#include <QVideoSink>
 
 namespace Rina::Core {
 
@@ -22,12 +24,18 @@ class VideoFrameStore : public QObject {
 
     QImage frame(const QString &key) const;
 
+    // GPU Zero-copy 用
+    Q_INVOKABLE void setVideoFrameSafe(const QString &key, const QVideoFrame &frame);
+    Q_INVOKABLE void registerSink(const QString &key, QVideoSink *sink);
+    Q_INVOKABLE QVideoSink *sink(const QString &key);
+
   signals:
     void frameUpdated(const QString &key);
 
   private:
     mutable QMutex m_mutex;
     QHash<QString, QImage> m_frames;
+    QHash<QString, QVideoSink *> m_sinks;
 };
 
 } // namespace Rina::Core

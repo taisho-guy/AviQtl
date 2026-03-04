@@ -1,3 +1,4 @@
+import QtMultimedia
 import QtQuick
 import QtQuick3D
 import "qrc:/qt/qml/Rina/ui/qml/common" as Common
@@ -11,7 +12,6 @@ Common.BaseObject {
     property real speed: Number(evalParam("video", "speed", 100))
     property int directFrame: Math.ceil(Number(evalParam("video", "directFrame", 0)))
     property real opacity: Number(evalParam("video", "opacity", 1))
-    // ObjectRendererが期待するプロパティをダミー定義（警告回避）
     property var source: undefined
     property var params: ({
     })
@@ -19,10 +19,8 @@ Common.BaseObject {
     property int frame: 0
     property int width: containerItem.width
     property int height: containerItem.height
-    // 更新カウンタ（frameUpdatedシグナルを受けてインクリメント）
     property int updateCounter: 0
 
-    // VideoFrameStoreからの更新通知を受けてカウンタをインクリメント
     Connections {
         function onFrameUpdated(key) {
             if (key === String(base.clipId))
@@ -33,9 +31,8 @@ Common.BaseObject {
         target: videoFrameStore
     }
 
-    // 3DモデルとしてレンダリングされたOutputを表示
     Model {
-        source: "#Rectangle" // プリミティブ平面
+        source: "#Rectangle"
         scale: Qt.vector3d(base.sourceItem.width / 100, base.sourceItem.height / 100, 1)
         opacity: base.opacity
 
@@ -51,27 +48,38 @@ Common.BaseObject {
 
     }
 
-    // ImageObjectやRectObjectと同じパターンに従う
     sourceItem: Item {
         id: containerItem
 
-        // プロジェクトサイズをデフォルトとする
         width: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.width : 1920
         height: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.height : 1080
-        visible: false // ObjectRendererが処理するため直接表示しない
+        visible: false
 
-        Image {
-            id: img
+        VideoOutput {
+            id: videoOut
 
             anchors.fill: parent
-            fillMode: Image.PreserveAspectFit
-            cache: false
+            fillMode: VideoOutput.PreserveAspectFit
             opacity: base.opacity
-            // QMLに再描画を強制するため、relFrameをクエリパラメータとして付与する
-            // C++側(VideoFrameProvider)でこのパラメータは無視される
-            // updateCounterが変わると再リクエスト（デコード完了通知を受けて更新）
-            // clipIdが有効(>0)な場合のみリクエストし、それ以外は空にする（-1エラー防止）
-            source: base.clipId > 0 ? "image://videoFrame/" + base.clipId + "?v=" + base.relFrame + "&u=" + base.updateCounter : ""
+            // FBOキャプチャの黒画面制約を突破するGPUレイヤー化
+            layer.enabled: true
+            layer.format: ShaderEffectSource.RGBA
+            Component.onCompleted: {
+                if (base.clipId > 0 && typeof videoFrameStore !== "undefined")
+                    videoFrameStore.registerSink(String(base.clipId), videoOut.videoSink);
+
+            }
+
+            Connections {
+                function onClipIdChanged() {
+                    if (base.clipId > 0 && typeof videoFrameStore !== "undefined")
+                        videoFrameStore.registerSink(String(base.clipId), videoOut.videoSink);
+
+                }
+
+                target: base
+            }
+
         }
 
     }

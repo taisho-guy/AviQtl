@@ -2,6 +2,8 @@
 #include "settings_manager.hpp"
 #include "video_frame_store.hpp"
 #include <QDebug>
+#include <QVideoFrame>
+#include <QVideoFrameFormat>
 #include <QtConcurrent>
 #include <algorithm>
 #include <cmath>
@@ -274,141 +276,167 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) {
     if (!m_decCtx || m_index.empty())
         return;
 
-    // 範囲制限
     if (targetFrame < 0)
         targetFrame = 0;
     if (targetFrame >= (int)m_index.size())
         targetFrame = (int)m_index.size() - 1;
 
-    // 既に別の新しいリクエストが来ている場合はスキップ（簡易的なキャンセル）
     if (m_lastRequestedFrame != targetFrame)
         return;
 
-    // インデックスから正確なターゲット情報を取得
     const auto &targetEntry = m_index[targetFrame];
     int64_t targetPts = targetEntry.pts;
 
-    // シークが必要か判定
-    // 連続再生(次のフレーム)ならシーク不要だが、誤差を考慮して判定
     bool needSeek = true;
-    // 修正: 多少のフレーム飛び（ドロップ）があっても、直近ならシークせずにデコードを進める
-    // これにより、GOP先頭への巻き戻しと再デコードによるフリーズ（処理落ち）を防ぐ
-    // 閾値を30フレーム(60fpsで0.5秒)まで緩和し、シーケンシャル読み込みを優先する
     if (m_lastDecodedFrame != -1 && targetFrame > m_lastDecodedFrame && targetFrame <= m_lastDecodedFrame + 30) {
         needSeek = false;
     }
 
     if (needSeek) {
-        // インデックスを使って直前のキーフレームを探す
         int keyIndex = targetFrame;
         while (keyIndex > 0 && !m_index[keyIndex].isKeyframe) {
             keyIndex--;
         }
         int64_t seekPts = m_index[keyIndex].pts;
 
-        // 正確なPTSへシーク
+        if (keyIndex == 0) {
+            int64_t startTime = m_fmtCtx->streams[m_streamIndex]->start_time;
+            if (startTime != AV_NOPTS_VALUE && startTime < seekPts)
+                seekPts = startTime;
+        }
+
         int ret = av_seek_frame(m_fmtCtx, m_streamIndex, seekPts, AVSEEK_FLAG_BACKWARD);
         if (ret < 0) {
-            qWarning() << "[VideoDecoder] Seek failed to PTS" << seekPts;
-            return;
+            av_seek_frame(m_fmtCtx, -1, seekPts, AVSEEK_FLAG_BACKWARD);
         }
         avcodec_flush_buffers(m_decCtx);
-        m_lastDecodedFrame = -1; // リセット
+        m_lastDecodedFrame = keyIndex - 1;
     }
 
-    // デコードループ (プリロール)
-    // キーフレームからターゲットPTSまで空読みする
     bool frameFound = false;
     AVPacket *pkt = av_packet_alloc();
-    int maxDecodeCount = (targetFrame - m_lastDecodedFrame) + 300; // 安全マージン
+    int maxDecodeCount = 500;
 
-    while (maxDecodeCount-- > 0) {
+    while (maxDecodeCount-- > 0 && !frameFound) {
         int ret = av_read_frame(m_fmtCtx, pkt);
         if (ret < 0)
-            break; // EOF or Error
+            break;
 
         if (pkt->stream_index == m_streamIndex) {
-            // パケット送信 (EAGAINハンドリング付き)
             ret = avcodec_send_packet(m_decCtx, pkt);
 
-            // 入力バッファが一杯(EAGAIN)の場合、出力(フレーム)を読み出して空ける
-            while (ret == AVERROR(EAGAIN)) {
+            while (ret >= 0 || ret == AVERROR(EAGAIN)) {
                 int rxRet = avcodec_receive_frame(m_decCtx, m_frame);
-                if (rxRet < 0)
-                    break; // 受信もできない場合は中断
-
-                // PTSの一致を確認（インデックスベースなので正確）
-                if (m_frame->pts == targetPts) {
-                    m_lastDecodedFrame = targetFrame;
-                    frameFound = true;
-                    goto process_frame;
+                if (rxRet == AVERROR(EAGAIN) || rxRet == AVERROR_EOF) {
+                    if (ret == AVERROR(EAGAIN)) {
+                        ret = avcodec_send_packet(m_decCtx, pkt);
+                        continue;
+                    }
+                    break;
                 }
-
-                // 再試行
-                ret = avcodec_send_packet(m_decCtx, pkt);
-            }
-
-            if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
-                av_packet_unref(pkt);
-                continue;
-            }
-
-            // 送信成功後のフレーム回収 (通常フロー)
-            while (true) {
-                int rxRet = avcodec_receive_frame(m_decCtx, m_frame);
                 if (rxRet < 0)
-                    break; // EAGAIN or EOF
+                    break;
 
-                if (m_frame->pts == targetPts) {
+                int64_t currentPts = m_frame->best_effort_timestamp != AV_NOPTS_VALUE ? m_frame->best_effort_timestamp : m_frame->pts;
+
+                if (currentPts >= targetPts) {
                     m_lastDecodedFrame = targetFrame;
                     frameFound = true;
-                    goto process_frame;
+                    break;
                 }
             }
         }
         av_packet_unref(pkt);
     }
 
-process_frame:
-    av_packet_unref(pkt);
     av_packet_free(&pkt);
 
     if (frameFound) {
         AVFrame *srcFrame = m_frame;
-
-        // HWフレームの場合はCPUメモリへ転送(ダウンロード)する
         if (m_frame->format == m_hwPixFmt) {
             if (av_hwframe_transfer_data(m_swFrame, m_frame, 0) < 0) {
-                qWarning() << "[VideoDecoder] Error transferring frame data to CPU";
                 return;
             }
             srcFrame = m_swFrame;
         }
 
-        // YUV -> RGB 変換
-        // srcFrame->format を使用する (HWデコード時はNV12などがここに入っている)
-        m_swsCtx = sws_getCachedContext(m_swsCtx, m_decCtx->width, m_decCtx->height, (AVPixelFormat)srcFrame->format, m_decCtx->width, m_decCtx->height, AV_PIX_FMT_RGBA, SWS_FAST_BILINEAR, nullptr, nullptr, nullptr);
+        QVideoFrameFormat::PixelFormat qtFmt = QVideoFrameFormat::Format_Invalid;
+        switch (srcFrame->format) {
+        case AV_PIX_FMT_YUV420P:
+        case AV_PIX_FMT_YUVJ420P:
+            qtFmt = QVideoFrameFormat::Format_YUV420P;
+            break;
+        case AV_PIX_FMT_NV12:
+            qtFmt = QVideoFrameFormat::Format_NV12;
+            break;
+        case AV_PIX_FMT_RGBA:
+            qtFmt = QVideoFrameFormat::Format_RGBA8888;
+            break;
+        default:
+            qtFmt = QVideoFrameFormat::Format_YUV420P;
+            break;
+        }
 
-        // QImageを直接確保し、sws_scaleの出力先として指定することで中間バッファとコピーを排除 (Zero-copy write)
-        QImage result(m_decCtx->width, m_decCtx->height, QImage::Format_RGBA8888);
-        uint8_t *dstData[4] = {result.bits(), nullptr, nullptr, nullptr};
-        int dstLinesize[4] = {static_cast<int>(result.bytesPerLine()), 0, 0, 0};
+        QVideoFrameFormat format(QSize(m_decCtx->width, m_decCtx->height), qtFmt);
+        QVideoFrame videoFrame(format);
 
-        // 変換実行
-        sws_scale(m_swsCtx, srcFrame->data, srcFrame->linesize, 0, m_decCtx->height, dstData, dstLinesize);
-
-        // メインスレッドへ通知
-        QMetaObject::invokeMethod(this, [this, result, targetFrame]() {
-            m_store->setFrameSafe(QString::number(m_clipId), result);
-            if (!m_frameCache.contains(targetFrame)) {
-                m_frameCache.insert(targetFrame, new QImage(result), result.sizeInBytes());
+        if (videoFrame.map(QVideoFrame::WriteOnly)) {
+            // 究極の最適化: linesize が完全に一致する場合は、プレーン全体を一気に memcpy する
+            if (qtFmt == QVideoFrameFormat::Format_YUV420P) {
+                for (int i = 0; i < 3; ++i) {
+                    if (videoFrame.bits(i) && srcFrame->data[i]) {
+                        int h = (i == 0) ? m_decCtx->height : m_decCtx->height / 2;
+                        int srcLine = srcFrame->linesize[i];
+                        int dstLine = videoFrame.bytesPerLine(i);
+                        if (srcLine == dstLine) {
+                            memcpy(videoFrame.bits(i), srcFrame->data[i], dstLine * h);
+                        } else {
+                            int copyLine = std::min(srcLine, dstLine);
+                            for (int y = 0; y < h; ++y) {
+                                memcpy(videoFrame.bits(i) + y * dstLine, srcFrame->data[i] + y * srcLine, copyLine);
+                            }
+                        }
+                    }
+                }
+            } else if (qtFmt == QVideoFrameFormat::Format_NV12) {
+                for (int i = 0; i < 2; ++i) {
+                    if (videoFrame.bits(i) && srcFrame->data[i]) {
+                        int h = (i == 0) ? m_decCtx->height : m_decCtx->height / 2;
+                        int srcLine = srcFrame->linesize[i];
+                        int dstLine = videoFrame.bytesPerLine(i);
+                        if (srcLine == dstLine) {
+                            memcpy(videoFrame.bits(i), srcFrame->data[i], dstLine * h);
+                        } else {
+                            int copyLine = std::min(srcLine, dstLine);
+                            for (int y = 0; y < h; ++y) {
+                                memcpy(videoFrame.bits(i) + y * dstLine, srcFrame->data[i] + y * srcLine, copyLine);
+                            }
+                        }
+                    }
+                }
+            } else if (qtFmt == QVideoFrameFormat::Format_RGBA8888) {
+                int srcLine = srcFrame->linesize[0];
+                int dstLine = videoFrame.bytesPerLine(0);
+                if (srcLine == dstLine) {
+                    memcpy(videoFrame.bits(0), srcFrame->data[0], dstLine * m_decCtx->height);
+                } else {
+                    int copyLine = std::min(srcLine, dstLine);
+                    for (int y = 0; y < m_decCtx->height; ++y) {
+                        memcpy(videoFrame.bits(0) + y * dstLine, srcFrame->data[0] + y * srcLine, copyLine);
+                    }
+                }
             }
-            emit ready(); // Or a more specific signal if needed
+            videoFrame.unmap();
+            videoFrame.setStartTime(-1);
+            videoFrame.setEndTime(-1);
+        }
+
+        QMetaObject::invokeMethod(this, [this, videoFrame, targetFrame]() {
+            m_store->setVideoFrameSafe(QString::number(m_clipId), videoFrame);
+            emit frameReady(targetFrame);
         });
     } else {
-        // ターゲットが見つからなかった場合（ファイルの末尾など）
-        // 必要なら黒画像などを返す処理をここに追加
-        return;
+        QMetaObject::invokeMethod(this, [this, targetFrame]() { emit frameReady(targetFrame); });
     }
 }
 
