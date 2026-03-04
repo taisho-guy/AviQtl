@@ -82,11 +82,6 @@ void TimelineController::onPlayingChanged() { m_mediaManager->onPlayingChanged()
 
 void TimelineController::onCurrentFrameChanged() {
     int nextFrame = m_transport->currentFrame();
-    // ループ再生ロジック
-    if (nextFrame > timelineDuration() && timelineDuration() > 0) {
-        m_transport->setCurrentFrame(0);
-        return; // ループ時はここで処理を切り上げ、0フレーム目に任せる
-    }
     m_mediaManager->onCurrentFrameChanged();
     updateActiveClipsList();
 }

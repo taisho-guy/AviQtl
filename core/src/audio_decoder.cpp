@@ -171,11 +171,15 @@ void AudioDecoder::seek(qint64 ms) { emit seekRequested(ms); }
 std::vector<float> AudioDecoder::getSamples(double startTime, int count) {
     QMutexLocker locker(&m_mutex);
 
+    // startTimeが負数の場合のアンダーフローを防ぐ（size_tへのキャスト前にクランプ）
+    if (startTime < 0.0)
+        startTime = 0.0;
+
     // startTime (秒) × m_sampleRate (サンプル/秒) × 2 (ステレオ 2ch)
     size_t startIdx = static_cast<size_t>(startTime * m_sampleRate * 2);
 
     // 偶数アライメント（L/R がずれないように補正）
-    if (startIdx % 2 != 0)
+    if (startIdx % 2 != 0 && startIdx > 0)
         startIdx--;
 
     if (startIdx >= m_fullAudioData.size())

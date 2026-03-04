@@ -78,6 +78,8 @@ class VideoDecoder : public MediaDecoder {
     // インスタンスごとにキャッシュを持つ
     QCache<int, QImage> m_frameCache;
     std::atomic<int> m_lastRequestedFrame = -1; // Use std::atomic for thread-safe access
+    std::atomic<bool> m_closing{false};         // デストラクト進行中のフラグ
+    std::atomic<bool> m_isDecoding{false};      // デコードタスク多重起動防止用
     double m_sourceFps = 0.0;
     AVRational m_timeBase{0, 1};
 

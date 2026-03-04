@@ -30,6 +30,7 @@ void TransportService::togglePlay() {
         m_isPlaying = false;
     } else {
         // 再生開始: 現在フレームを起点に時刻を記録
+        m_prePlayFrame = m_currentFrame;
         m_playStartFrame = m_currentFrame;
         m_playStartTime = m_clock.nsecsElapsed();
         m_isPlaying = true;
@@ -53,19 +54,6 @@ void TransportService::onTick() {
     double elapsedSec = elapsedNs / 1'000'000'000.0;
 
     int targetFrame = m_playStartFrame + static_cast<int>(elapsedSec * m_fps * m_playbackSpeed);
-
-    if (m_totalFrames > 0) {
-        if (targetFrame >= m_totalFrames) {
-            int wrapped = targetFrame % m_totalFrames;
-            setCurrentFrame_seek(wrapped);
-            return;
-        }
-        if (targetFrame < 0) {
-            int wrapped = ((targetFrame % m_totalFrames) + m_totalFrames) % m_totalFrames;
-            setCurrentFrame_seek(wrapped);
-            return;
-        }
-    }
 
     // フレームが変化した場合のみシグナルを発火（無駄な再描画を抑制）
     if (targetFrame != m_currentFrame)

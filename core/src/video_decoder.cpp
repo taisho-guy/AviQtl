@@ -2,6 +2,7 @@
 #include "settings_manager.hpp"
 #include "video_frame_store.hpp"
 #include <QDebug>
+#include <QPointer>
 #include <QVideoFrame>
 #include <QVideoFrameFormat>
 #include <QtConcurrent>
@@ -42,6 +43,12 @@ VideoDecoder::VideoDecoder(int clipId, const QUrl &source, VideoFrameStore *stor
 }
 
 VideoDecoder::~VideoDecoder() {
+    // ワーカースレッドの新規タスク開始・invokeMethod実行をブロック
+    m_closing.store(true, std::memory_order_release);
+    {
+        // 実行中のデコードタスクが完了するのを待機
+        QMutexLocker locker(&m_mutex);
+    }
     close();
     if (m_swsCtx)
         sws_freeContext(m_swsCtx);
@@ -249,16 +256,18 @@ void VideoDecoder::seekToTime(double seconds) {
     seekToFrame(frame, m_sourceFps);
 }
 void VideoDecoder::seekToFrame(int frame, double fps) {
-    if (!m_isReady) {
-        // If not ready, queue the seek? For now, just ignore.
+    if (!m_isReady)
         return;
-    }
-
     if (frame < 0)
+        return;
+    int maxFrame = (int)m_index.size();
+    if (maxFrame > 0)
+        frame = std::clamp(frame, 0, maxFrame - 1);
+    else
         return;
 
     // 最新の要求フレームを更新
-    m_lastRequestedFrame = frame;
+    m_lastRequestedFrame.store(frame, std::memory_order_release);
 
     // キャッシュにあれば即時適用
     if (m_frameCache.contains(frame)) {
@@ -267,12 +276,35 @@ void VideoDecoder::seekToFrame(int frame, double fps) {
         return;
     }
 
-    // 非同期でデコードタスクを実行
-    (void)QtConcurrent::run([this, frame, fps]() { decodeTask(frame, fps); });
+    // isDecoding フラグで多重投入を防ぎ、単一ワーカーとして動かす
+    bool expected = false;
+    if (m_isDecoding.compare_exchange_strong(expected, true)) {
+        QPointer<VideoDecoder> self(this);
+        (void)QtConcurrent::run([self, fps]() {
+            // ループごとに self が有効か確認し、オブジェクト破棄時の SIGSEGV を防ぐ
+            while (self && !self->m_closing.load(std::memory_order_acquire)) {
+                int targetFrame = self->m_lastRequestedFrame.load(std::memory_order_acquire);
+                self->decodeTask(targetFrame, fps);
+
+                if (self && self->m_lastRequestedFrame.load(std::memory_order_acquire) == targetFrame) {
+                    self->m_isDecoding.store(false, std::memory_order_release);
+                    if (self && self->m_lastRequestedFrame.load(std::memory_order_acquire) != targetFrame) {
+                        bool exp = false;
+                        if (self->m_isDecoding.compare_exchange_strong(exp, true)) {
+                            continue;
+                        }
+                    }
+                    break;
+                }
+            }
+        });
+    }
 }
 
 void VideoDecoder::decodeTask(int targetFrame, double fps) {
     QMutexLocker locker(&m_mutex);
+    if (m_closing.load(std::memory_order_acquire))
+        return;
     if (!m_decCtx || m_index.empty())
         return;
 
@@ -288,7 +320,9 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) {
     int64_t targetPts = targetEntry.pts;
 
     bool needSeek = true;
-    if (m_lastDecodedFrame != -1 && targetFrame > m_lastDecodedFrame && targetFrame <= m_lastDecodedFrame + 30) {
+    // P/Bフレームによる内部状態(参照フレーム等)の維持とFFmpegの特性を活かし、
+    // 順方向なら長めの空回し（最大120フレーム）を許容してシークのコストと状態破綻を回避する
+    if (m_lastDecodedFrame != -1 && targetFrame > m_lastDecodedFrame && targetFrame <= m_lastDecodedFrame + 120) {
         needSeek = false;
     }
 
@@ -316,37 +350,48 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) {
     bool frameFound = false;
     AVPacket *pkt = av_packet_alloc();
     int maxDecodeCount = 500;
+    bool eof = false;
 
     while (maxDecodeCount-- > 0 && !frameFound) {
-        int ret = av_read_frame(m_fmtCtx, pkt);
-        if (ret < 0)
-            break;
-
-        if (pkt->stream_index == m_streamIndex) {
-            ret = avcodec_send_packet(m_decCtx, pkt);
-
-            while (ret >= 0 || ret == AVERROR(EAGAIN)) {
-                int rxRet = avcodec_receive_frame(m_decCtx, m_frame);
-                if (rxRet == AVERROR(EAGAIN) || rxRet == AVERROR_EOF) {
-                    if (ret == AVERROR(EAGAIN)) {
-                        ret = avcodec_send_packet(m_decCtx, pkt);
-                        continue;
-                    }
-                    break;
-                }
-                if (rxRet < 0)
-                    break;
-
-                int64_t currentPts = m_frame->best_effort_timestamp != AV_NOPTS_VALUE ? m_frame->best_effort_timestamp : m_frame->pts;
-
-                if (currentPts >= targetPts) {
-                    m_lastDecodedFrame = targetFrame;
-                    frameFound = true;
-                    break;
-                }
+        int ret = 0;
+        if (!eof) {
+            ret = av_read_frame(m_fmtCtx, pkt);
+            if (ret < 0) {
+                eof = true;
             }
         }
-        av_packet_unref(pkt);
+
+        if (eof) {
+            ret = avcodec_send_packet(m_decCtx, nullptr);
+        } else if (pkt->stream_index == m_streamIndex) {
+            ret = avcodec_send_packet(m_decCtx, pkt);
+        }
+
+        if (!eof) {
+            av_packet_unref(pkt);
+        }
+
+        while (ret >= 0 || ret == AVERROR(EAGAIN)) {
+            int rxRet = avcodec_receive_frame(m_decCtx, m_frame);
+            if (rxRet == AVERROR(EAGAIN) || rxRet == AVERROR_EOF) {
+                break;
+            }
+            if (rxRet < 0) {
+                break;
+            }
+
+            int64_t currentPts = m_frame->best_effort_timestamp != AV_NOPTS_VALUE ? m_frame->best_effort_timestamp : m_frame->pts;
+
+            if (currentPts >= targetPts) {
+                m_lastDecodedFrame = targetFrame;
+                frameFound = true;
+                break;
+            }
+        }
+
+        if (eof) {
+            break;
+        }
     }
 
     av_packet_free(&pkt);
@@ -380,7 +425,8 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) {
         QVideoFrameFormat format(QSize(m_decCtx->width, m_decCtx->height), qtFmt);
         QVideoFrame videoFrame(format);
 
-        if (videoFrame.map(QVideoFrame::WriteOnly)) {
+        bool mapped = videoFrame.map(QVideoFrame::WriteOnly);
+        if (mapped) {
             // 究極の最適化: linesize が完全に一致する場合は、プレーン全体を一気に memcpy する
             if (qtFmt == QVideoFrameFormat::Format_YUV420P) {
                 for (int i = 0; i < 3; ++i) {
@@ -431,12 +477,22 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) {
             videoFrame.setEndTime(-1);
         }
 
-        QMetaObject::invokeMethod(this, [this, videoFrame, targetFrame]() {
-            m_store->setVideoFrameSafe(QString::number(m_clipId), videoFrame);
-            emit frameReady(targetFrame);
+        QPointer<VideoDecoder> self(this);
+        QMetaObject::invokeMethod(this, [self, videoFrame, targetFrame, mapped]() {
+            if (!self || self->m_closing.load(std::memory_order_acquire))
+                return;
+            if (mapped && videoFrame.isValid()) {
+                self->m_store->setVideoFrameSafe(QString::number(self->m_clipId), videoFrame);
+            }
+            emit self->frameReady(targetFrame);
         });
     } else {
-        QMetaObject::invokeMethod(this, [this, targetFrame]() { emit frameReady(targetFrame); });
+        QPointer<VideoDecoder> self(this);
+        QMetaObject::invokeMethod(this, [self, targetFrame]() {
+            if (!self || self->m_closing.load(std::memory_order_acquire))
+                return;
+            emit self->frameReady(targetFrame);
+        });
     }
 }
 

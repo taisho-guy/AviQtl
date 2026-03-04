@@ -135,7 +135,18 @@ std::vector<float> AudioMixer::mix(int currentFrame, double fps, int samplesPerF
                 for (int i = 0; i < samplesPerFrame; ++i) {
                     double srcIdx = i * m_playbackSpeed;
                     int idx0 = static_cast<int>(srcIdx);
-                    int idx1 = std::min(idx0 + 1, availableSrcSamples - 1);
+                    int idx1 = idx0 + 1;
+
+                    // クランプして範囲外アクセス（SIGSEGV）を防止
+                    if (idx0 >= availableSrcSamples)
+                        idx0 = availableSrcSamples - 1;
+                    if (idx1 >= availableSrcSamples)
+                        idx1 = availableSrcSamples - 1;
+                    if (idx0 < 0)
+                        idx0 = 0;
+                    if (idx1 < 0)
+                        idx1 = 0;
+
                     double t = srcIdx - idx0;
 
                     // L ch
@@ -176,6 +187,8 @@ void AudioMixer::processFrame(int currentFrame, double fps, int samplesPerFrame)
     // 巻き戻し（ループ）検知: 前回のフレームより戻っていたらバッファをリセット
     if (m_lastFrame != -1 && currentFrame < m_lastFrame) {
         reset();
+        if (!m_audioOutput)
+            return;
     }
     m_lastFrame = currentFrame;
 

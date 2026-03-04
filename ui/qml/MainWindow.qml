@@ -28,6 +28,19 @@ ApplicationWindow {
 
     }
 
+    // 末尾到達時に一時停止するだけのシンプルなロジック
+    Connections {
+        function onCurrentFrameChanged() {
+            if (TimelineBridge && TimelineBridge.transport) {
+                if (TimelineBridge.transport.totalFrames > 0 && TimelineBridge.transport.currentFrame >= TimelineBridge.transport.totalFrames)
+                    TimelineBridge.transport.pause();
+
+            }
+        }
+
+        target: TimelineBridge ? TimelineBridge.transport : null
+    }
+
     FontLoader {
         source: "qrc:/resources/remixicon.ttf"
     }
