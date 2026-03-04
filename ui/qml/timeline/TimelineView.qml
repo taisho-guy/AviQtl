@@ -590,9 +590,6 @@ ScrollView {
 
             // プレイヘッド専用のドラッグ領域
             MouseArea {
-                property real startSceneX: 0
-                property real startFrame: 0
-
                 anchors.fill: parent
                 // つかみやすくするために幅を広げる
                 anchors.margins: -10
@@ -601,17 +598,17 @@ ScrollView {
                 onPressed: (mouse) => {
                     if (TimelineBridge && TimelineBridge.transport) {
                         TimelineBridge.transport.isScrubbing = true;
-                        startSceneX = mapToItem(timelineFlickable.contentItem, mouse.x, mouse.y).x;
-                        startFrame = TimelineBridge.transport.currentFrame;
+                        var sp = mapToItem(timelineFlickable.contentItem, mouse.x, mouse.y);
+                        var scale = TimelineBridge.timelineScale > 0 ? TimelineBridge.timelineScale : 1;
+                        TimelineBridge.transport.currentFrame = Math.max(0, Math.round(sp.x / scale));
                     }
                 }
                 onPositionChanged: (mouse) => {
                     if (pressed && TimelineBridge && TimelineBridge.transport) {
+                        // sp.x は contentItem 上の絶対ピクセル座標
                         var sp = mapToItem(timelineFlickable.contentItem, mouse.x, mouse.y);
-                        var deltaX = sp.x - startSceneX;
-                        var deltaFrame = deltaX / (TimelineBridge.timelineScale > 0 ? TimelineBridge.timelineScale : 1);
-                        var newFrame = Math.max(0, Math.round(startFrame + deltaFrame));
-                        TimelineBridge.transport.currentFrame = newFrame;
+                        var scale = TimelineBridge.timelineScale > 0 ? TimelineBridge.timelineScale : 1;
+                        TimelineBridge.transport.currentFrame = Math.max(0, Math.round(sp.x / scale));
                     }
                 }
                 onReleased: (mouse) => {

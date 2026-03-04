@@ -218,6 +218,8 @@ ApplicationWindow {
 
                 // シークバー
                 Slider {
+                    // 動かしている間は currentFrame を更新するがプレビューは止まる
+
                     id: seekSlider
 
                     Layout.fillWidth: true
@@ -236,19 +238,19 @@ ApplicationWindow {
                         return Math.max(1, maxEnd + 1);
                     }
                     onPressedChanged: {
+                        // 離した瞬間にプレビュー確定
+                        // 押した瞬間も同期
+
                         if (TimelineBridge && TimelineBridge.transport) {
                             TimelineBridge.transport.isScrubbing = pressed;
                             if (!pressed)
-                                // 離した瞬間にプレビュー確定
                                 TimelineBridge.transport.setCurrentFrame_seek(Math.floor(value));
                             else
-                                // 押した瞬間も同期
                                 TimelineBridge.transport.currentFrame = Math.floor(value);
                         }
                     }
                     onMoved: {
                         if (TimelineBridge && TimelineBridge.transport)
-                            // 動かしている間は currentFrame を更新するがプレビューは止まる
                             TimelineBridge.transport.currentFrame = Math.floor(value);
 
                     }

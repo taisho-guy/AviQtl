@@ -23,9 +23,6 @@ void TimelineMediaManager::onPlayingChanged() {
 }
 
 void TimelineMediaManager::onCurrentFrameChanged() {
-    // スクラブ中はUIのみの追従とし、プレビュー（映像・音声）の重いシークは行わない
-    if (m_controller->transport()->isScrubbing())
-        return;
 
     int nextFrame = m_controller->transport()->currentFrame();
     int fps = m_controller->project()->fps();

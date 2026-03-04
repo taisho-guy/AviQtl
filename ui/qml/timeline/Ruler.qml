@@ -17,7 +17,7 @@ Rectangle {
     function pxToFrame(px, contentX) {
         var scale = TimelineBridge ? TimelineBridge.timelineScale : 1;
         var x = px + contentX;
-        return Math.max(0, Math.round((x - timeWidth) / scale));
+        return Math.max(0, Math.round(x / scale));
     }
 
     function clamp(v, lo, hi) {
@@ -160,32 +160,36 @@ Rectangle {
 
             // マウス操作（スクラブ & ズーム）
             MouseArea {
+                property int lastSentFrame: -1
+
+                function scrub(frame) {
+                    frame = Math.max(0, frame);
+                    if (frame === lastSentFrame)
+                        return ;
+
+                    lastSentFrame = frame;
+                    if (TimelineBridge && TimelineBridge.transport)
+                        TimelineBridge.transport.setCurrentFrame_seek(frame);
+
+                }
+
                 anchors.fill: parent
                 hoverEnabled: true
                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                 onPressed: (mouse) => {
-                    if (mouse.button === Qt.LeftButton) {
-                        if (TimelineBridge && TimelineBridge.transport && targetFlickable) {
-                            TimelineBridge.transport.isScrubbing = true;
-                            TimelineBridge.transport.currentFrame = pxToFrame(mouse.x, targetFlickable.contentX);
-                        }
-                    }
+                    if (mouse.button === Qt.LeftButton && targetFlickable)
+                        scrub(pxToFrame(mouse.x, targetFlickable.contentX));
+
                 }
                 onPositionChanged: (mouse) => {
-                    if (pressed && (mouse.buttons & Qt.LeftButton)) {
-                        if (TimelineBridge && TimelineBridge.transport && targetFlickable) {
-                            TimelineBridge.transport.isScrubbing = true;
-                            TimelineBridge.transport.currentFrame = pxToFrame(mouse.x, targetFlickable.contentX);
-                        }
-                    }
+                    if (pressed && (mouse.buttons & Qt.LeftButton) && targetFlickable)
+                        scrub(pxToFrame(mouse.x, targetFlickable.contentX));
+
                 }
                 onReleased: (mouse) => {
-                    if (mouse.button === Qt.LeftButton) {
-                        if (TimelineBridge && TimelineBridge.transport) {
-                            TimelineBridge.transport.isScrubbing = false;
-                            TimelineBridge.transport.setCurrentFrame_seek(TimelineBridge.transport.currentFrame);
-                        }
-                    }
+                    if (mouse.button === Qt.LeftButton)
+                        lastSentFrame = -1;
+
                 }
                 onWheel: (wheel) => {
                     var dy = (wheel.angleDelta.y !== 0) ? wheel.angleDelta.y : (wheel.pixelDelta.y * 10);
