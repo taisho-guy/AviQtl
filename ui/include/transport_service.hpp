@@ -26,6 +26,35 @@ class TransportService : public QObject {
     void setCurrentFrame(int f);
     Q_INVOKABLE void setCurrentFrame_seek(int f); // シーク専用（起点リセット付き）
     Q_INVOKABLE void togglePlay();
+    Q_INVOKABLE void play() {
+        if (!m_isPlaying)
+            togglePlay();
+    }
+    Q_INVOKABLE void pause() {
+        if (m_isPlaying)
+            togglePlay();
+    }
+
+    Q_INVOKABLE void beginScrub() {
+        m_wasPlayingBeforeScrub = m_isPlaying;
+        if (m_isPlaying)
+            pause();
+        m_lastScrubFrame = -1;
+    }
+
+    Q_INVOKABLE void scrubTo(int frame) {
+        if (frame == m_lastScrubFrame)
+            return;
+        m_lastScrubFrame = frame;
+        setCurrentFrame_seek(frame);
+    }
+
+    Q_INVOKABLE void endScrub() {
+        m_lastScrubFrame = -1;
+        if (m_wasPlayingBeforeScrub)
+            play();
+        m_wasPlayingBeforeScrub = false;
+    }
     void updateTimerInterval(double fps); // 旧 API 互換
 
     void setPlaybackSpeed(double speed) {
@@ -73,6 +102,9 @@ class TransportService : public QObject {
     QElapsedTimer m_clock;      // 起動時からの単調増加クロック
     qint64 m_playStartTime = 0; // 再生開始時の m_clock.nsecsElapsed()
     int m_playStartFrame = 0;   // 再生開始時のフレーム番号
+
+    bool m_wasPlayingBeforeScrub = false;
+    int m_lastScrubFrame = -1;
 
     QTimer *m_timer;
 };

@@ -590,32 +590,31 @@ ScrollView {
 
             // プレイヘッド専用のドラッグ領域
             MouseArea {
+                function getFrame(mouseEvent) {
+                    var sp = mapToItem(timelineFlickable.contentItem, mouseEvent.x, mouseEvent.y);
+                    var scale = TimelineBridge.timelineScale > 0 ? TimelineBridge.timelineScale : 1;
+                    return Math.max(0, Math.round(sp.x / scale));
+                }
+
                 anchors.fill: parent
-                // つかみやすくするために幅を広げる
                 anchors.margins: -10
                 cursorShape: Qt.SizeHorCursor
                 preventStealing: true
                 onPressed: (mouse) => {
                     if (TimelineBridge && TimelineBridge.transport) {
-                        TimelineBridge.transport.isScrubbing = true;
-                        var sp = mapToItem(timelineFlickable.contentItem, mouse.x, mouse.y);
-                        var scale = TimelineBridge.timelineScale > 0 ? TimelineBridge.timelineScale : 1;
-                        TimelineBridge.transport.currentFrame = Math.max(0, Math.round(sp.x / scale));
+                        TimelineBridge.transport.beginScrub();
+                        TimelineBridge.transport.scrubTo(getFrame(mouse));
                     }
                 }
                 onPositionChanged: (mouse) => {
-                    if (pressed && TimelineBridge && TimelineBridge.transport) {
-                        // sp.x は contentItem 上の絶対ピクセル座標
-                        var sp = mapToItem(timelineFlickable.contentItem, mouse.x, mouse.y);
-                        var scale = TimelineBridge.timelineScale > 0 ? TimelineBridge.timelineScale : 1;
-                        TimelineBridge.transport.currentFrame = Math.max(0, Math.round(sp.x / scale));
-                    }
+                    if (pressed && TimelineBridge && TimelineBridge.transport)
+                        TimelineBridge.transport.scrubTo(getFrame(mouse));
+
                 }
                 onReleased: (mouse) => {
-                    if (TimelineBridge && TimelineBridge.transport) {
-                        TimelineBridge.transport.isScrubbing = false;
-                        TimelineBridge.transport.setCurrentFrame_seek(TimelineBridge.transport.currentFrame);
-                    }
+                    if (TimelineBridge && TimelineBridge.transport)
+                        TimelineBridge.transport.endScrub();
+
                 }
             }
 

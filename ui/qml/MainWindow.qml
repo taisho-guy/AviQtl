@@ -219,6 +219,8 @@ ApplicationWindow {
                 // シークバー
                 Slider {
                     // 動かしている間は currentFrame を更新するがプレビューは止まる
+                    // 離した瞬間にプレビュー確定
+                    // 押した瞬間も同期
 
                     id: seekSlider
 
@@ -238,9 +240,6 @@ ApplicationWindow {
                         return Math.max(1, maxEnd + 1);
                     }
                     onPressedChanged: {
-                        // 離した瞬間にプレビュー確定
-                        // 押した瞬間も同期
-
                         if (TimelineBridge && TimelineBridge.transport) {
                             TimelineBridge.transport.isScrubbing = pressed;
                             if (!pressed)

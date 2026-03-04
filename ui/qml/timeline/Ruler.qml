@@ -159,36 +159,25 @@ Rectangle {
             }
 
             // マウス操作（スクラブ & ズーム）
+            // マウス操作（スクラブ & ズーム）
             MouseArea {
-                property int lastSentFrame: -1
-
-                function scrub(frame) {
-                    frame = Math.max(0, frame);
-                    if (frame === lastSentFrame)
-                        return ;
-
-                    lastSentFrame = frame;
-                    if (TimelineBridge && TimelineBridge.transport)
-                        TimelineBridge.transport.setCurrentFrame_seek(frame);
-
-                }
-
                 anchors.fill: parent
                 hoverEnabled: true
                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                 onPressed: (mouse) => {
-                    if (mouse.button === Qt.LeftButton && targetFlickable)
-                        scrub(pxToFrame(mouse.x, targetFlickable.contentX));
-
+                    if (mouse.button === Qt.LeftButton && targetFlickable && TimelineBridge && TimelineBridge.transport) {
+                        TimelineBridge.transport.beginScrub();
+                        TimelineBridge.transport.scrubTo(pxToFrame(mouse.x, targetFlickable.contentX));
+                    }
                 }
                 onPositionChanged: (mouse) => {
-                    if (pressed && (mouse.buttons & Qt.LeftButton) && targetFlickable)
-                        scrub(pxToFrame(mouse.x, targetFlickable.contentX));
+                    if (pressed && (mouse.buttons & Qt.LeftButton) && targetFlickable && TimelineBridge && TimelineBridge.transport)
+                        TimelineBridge.transport.scrubTo(pxToFrame(mouse.x, targetFlickable.contentX));
 
                 }
                 onReleased: (mouse) => {
-                    if (mouse.button === Qt.LeftButton)
-                        lastSentFrame = -1;
+                    if (mouse.button === Qt.LeftButton && TimelineBridge && TimelineBridge.transport)
+                        TimelineBridge.transport.endScrub();
 
                 }
                 onWheel: (wheel) => {
