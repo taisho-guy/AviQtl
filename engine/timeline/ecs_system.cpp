@@ -36,6 +36,22 @@ ECS &ECS::instance() {
     return inst;
 }
 
+void ECS::syncClipIds(const QSet<int> &aliveIds) {
+    auto erase_dead = [&aliveIds](auto &map) {
+        for (auto it = map.begin(); it != map.end();) {
+            if (!aliveIds.contains(it->first)) {
+                it = map.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    };
+
+    erase_dead(g_ecsState.transforms);
+    erase_dead(g_ecsState.renderStates);
+    erase_dead(g_ecsState.audioStates);
+}
+
 void ECS::updateClipState(int clipId, int layer, double time) {
     // Transform コンポーネントの更新
     auto &transform = g_ecsState.transforms[clipId];
@@ -57,7 +73,7 @@ void ECS::updateClipState(int clipId, int layer, double time) {
         render->needsUpdate = true;
         g_ecsState.renderGraphDirty = true;
 
-        qDebug() << "[ECS] クリップ" << clipId << "を更新 -> レイヤー:" << layer << "時間:" << time;
+        // qDebug() << "[ECS] クリップ" << clipId << "を更新 -> レイヤー:" << layer << "時間:" << time;
     }
 }
 

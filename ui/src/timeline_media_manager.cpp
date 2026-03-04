@@ -28,10 +28,12 @@ void TimelineMediaManager::onCurrentFrameChanged() {
     int fps = m_controller->project()->fps();
 
     // ループ時のシーク
-    if (nextFrame == 0) {
+    static int lastFrame = -1;
+    if (nextFrame == 0 && lastFrame > 0) {
         for (auto *decoder : m_decoders)
             decoder->seek(0);
     }
+    lastFrame = nextFrame;
 
     if (m_controller->transport()->isPlaying()) {
         int sampleRate = m_controller->project()->sampleRate();

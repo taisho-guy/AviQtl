@@ -48,7 +48,11 @@ void TimelineEngineSynchronizer::rebuildClipIndex() {
     m_timelineDuration = 0;
     auto &clips = m_controller->timeline()->clipsMutable();
     m_sortedClips.reserve(clips.size());
+
+    QSet<int> aliveIds;
+
     for (auto &clip : clips) {
+        aliveIds.insert(clip.id);
         m_sortedClips.push_back(&clip);
         if (clip.durationFrames > m_maxDuration)
             m_maxDuration = clip.durationFrames;
@@ -58,5 +62,8 @@ void TimelineEngineSynchronizer::rebuildClipIndex() {
             m_timelineDuration = end;
     }
     std::sort(m_sortedClips.begin(), m_sortedClips.end(), [](const ClipData *a, const ClipData *b) { return a->startFrame < b->startFrame; });
+
+    // ECSの不要になったコンポーネントを掃除する
+    Rina::Engine::Timeline::ECS::instance().syncClipIds(aliveIds);
 }
 } // namespace Rina::UI

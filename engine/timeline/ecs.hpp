@@ -1,3 +1,4 @@
+#include <QSet>
 #pragma once
 #include <memory>
 #include <unordered_map>
@@ -22,6 +23,7 @@ class ECS {
     static ECS &instance();
 
     // UIからの操作を受け取るメソッド群
+    void syncClipIds(const QSet<int> &aliveIds);
     void updateClipState(int clipId, int layer, double time);
     void updateAudioClipState(int clipId, int startFrame, int durationFrames, float volume, float pan, bool mute);
     const std::unordered_map<int, std::unique_ptr<AudioComponent>> &getAudioComponents() const;
