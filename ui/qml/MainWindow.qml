@@ -255,15 +255,16 @@ ApplicationWindow {
                     onPressedChanged: {
                         if (TimelineBridge && TimelineBridge.transport) {
                             TimelineBridge.transport.isScrubbing = pressed;
-                            if (!pressed)
-                                TimelineBridge.transport.setCurrentFrame_seek(Math.floor(value));
+                            if (pressed)
+                                TimelineBridge.transport.beginScrub();
                             else
-                                TimelineBridge.transport.currentFrame = Math.floor(value);
+                                // シーク後は絶対に一時停止のままにするため、endScrub() は呼ばない
+                                TimelineBridge.transport.setCurrentFrame_seek(Math.floor(value));
                         }
                     }
                     onMoved: {
                         if (TimelineBridge && TimelineBridge.transport)
-                            TimelineBridge.transport.currentFrame = Math.floor(value);
+                            TimelineBridge.transport.scrubTo(Math.floor(value));
 
                     }
 
@@ -277,7 +278,18 @@ ApplicationWindow {
                 }
 
                 Label {
-                    text: Math.floor(seekSlider.value) + " / " + Math.floor(seekSlider.to)
+                    // 総フレーム数の桁数に合わせて0埋めし、等幅フォントを適用する
+                    text: {
+                        var total = Math.floor(seekSlider.to);
+                        var cur = Math.floor(seekSlider.value);
+                        var digits = String(total).length;
+                        // padStartを使用して先頭を0で埋める
+                        return String(cur).padStart(digits, "0") + " / " + String(total);
+                    }
+                    font.family: "Monospace" // 等幅フォントの強制
+                    font.features: {
+                        "tnum": 1
+                    } // OpenType tabular numerals
                     font.pixelSize: 12
                     color: mainWin.palette.text
                 }

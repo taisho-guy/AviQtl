@@ -48,6 +48,7 @@ void TimelineController::setupConnections() {
             emit clipsChanged();
             m_mediaManager->updateMediaDecoders();
             updateActiveClipsList();
+            m_transport->setTotalFrames(timelineDuration());
         },
         Qt::QueuedConnection);
 
