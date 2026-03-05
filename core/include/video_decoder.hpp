@@ -2,7 +2,7 @@
 
 #include "media_decoder.hpp"
 #include <QCache>
-#include <QImage>
+#include <QVideoFrame>
 
 extern "C" {
 struct AVFormatContext;
@@ -74,9 +74,9 @@ class VideoDecoder : public MediaDecoder {
     int m_lastDecodedFrame = -1;
     std::vector<FrameIndexEntry> m_index; // フレーム番号 -> PTS/Keyframe マップ
 
-    // LRUキャッシュ: Key="frameNumber", Value=QImage
+    // LRUキャッシュ: Key="frameNumber", Value=QVideoFrame
     // インスタンスごとにキャッシュを持つ
-    QCache<int, QImage> m_frameCache;
+    QCache<int, QVideoFrame> m_frameCache;
     std::atomic<int> m_lastRequestedFrame = -1; // Use std::atomic for thread-safe access
     std::atomic<bool> m_closing{false};         // デストラクト進行中のフラグ
     std::atomic<bool> m_isDecoding{false};      // デコードタスク多重起動防止用

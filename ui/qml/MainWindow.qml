@@ -254,11 +254,12 @@ ApplicationWindow {
                     }
                     onPressedChanged: {
                         if (TimelineBridge && TimelineBridge.transport) {
+                            // シーク後は絶対に一時停止のままにするため、endScrub() は呼ばない
+
                             TimelineBridge.transport.isScrubbing = pressed;
                             if (pressed)
                                 TimelineBridge.transport.beginScrub();
                             else
-                                // シーク後は絶対に一時停止のままにするため、endScrub() は呼ばない
                                 TimelineBridge.transport.setCurrentFrame_seek(Math.floor(value));
                         }
                     }

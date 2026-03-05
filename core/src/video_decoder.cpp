@@ -271,7 +271,7 @@ void VideoDecoder::seekToFrame(int frame, double fps) {
 
     // キャッシュにあれば即時適用
     if (m_frameCache.contains(frame)) {
-        m_store->setFrameSafe(QString::number(m_clipId), *m_frameCache[frame]);
+        m_store->setVideoFrameSafe(QString::number(m_clipId), *m_frameCache[frame]);
         emit frameReady(frame);
         return;
     }
@@ -483,6 +483,8 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) {
                 return;
             if (mapped && videoFrame.isValid()) {
                 self->m_store->setVideoFrameSafe(QString::number(self->m_clipId), videoFrame);
+                int cost = videoFrame.width() * videoFrame.height() * 4;
+                self->m_frameCache.insert(targetFrame, new QVideoFrame(videoFrame), cost);
             }
             emit self->frameReady(targetFrame);
         });
