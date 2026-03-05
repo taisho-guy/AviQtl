@@ -15,8 +15,9 @@ Common.RinaWindow {
     property bool inputting: false // 入力中フラグ（reloadループ防止用）
 
     function reload() {
-        if (!TimelineBridge || !TimelineBridge.selection)
+        if (!TimelineBridge || !TimelineBridge.selection || reloading)
             return ;
+        reloading = true;
 
         var id = TimelineBridge.selection.selectedClipId;
         targetClipId = id;
@@ -27,6 +28,7 @@ Common.RinaWindow {
             effectsModel = [];
             audioEffectsModel = [];
         }
+        reloading = false;
     }
 
     // UI定義を正規化してリストとして取得するヘルパー
@@ -75,7 +77,11 @@ Common.RinaWindow {
     visible: true
     x: 500
     y: 200
-    Component.onCompleted: reload()
+    property bool reloading: false
+    onVisibleChanged: {
+        if (visible)
+            Qt.callLater(reload);
+    }
 
     Component {
         id: easingDialogComponent
@@ -182,7 +188,7 @@ Common.RinaWindow {
                             property var effectModel: effectRoot.effectModel
                             property int effIdx: effectRoot.effectIndex
                             // キーフレーム
-                            property int curRelFrame: (TimelineBridge && TimelineBridge.transport) ? (TimelineBridge.transport.currentFrame - TimelineBridge.clipStartFrame) : 0
+                            property int curRelFrame: (TimelineBridge && TimelineBridge.transport) ? Math.max(0, TimelineBridge.transport.currentFrame - TimelineBridge.clipStartFrame) : 0
                             property int clipDur: TimelineBridge ? TimelineBridge.clipDurationFrames : 100
                             property var tracks: effectModel ? effectModel.keyframeTracks : null
                             property var track: (tracks && key) ? tracks[key] : null

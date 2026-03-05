@@ -892,7 +892,7 @@ void TimelineService::removeSceneInternal(int sceneId) {
     auto it = std::find_if(m_scenes.begin(), m_scenes.end(), [sceneId](const SceneData &s) { return s.id == sceneId; });
     if (it != m_scenes.end()) {
         for (auto &clip : it->clips)
-            qDeleteAll(clip.effects);
+            for (auto *eff : clip.effects) eff->deleteLater();
         if (m_currentSceneId == sceneId)
             switchScene(0);
         m_scenes.erase(it);
