@@ -253,9 +253,9 @@ ApplicationWindow {
                         return Math.max(1, maxEnd + 1);
                     }
                     onPressedChanged: {
-                        if (TimelineBridge && TimelineBridge.transport) {
-                            // シーク後は絶対に一時停止のままにするため、endScrub() は呼ばない
+                        // シーク後は絶対に一時停止のままにするため、endScrub() は呼ばない
 
+                        if (TimelineBridge && TimelineBridge.transport) {
                             TimelineBridge.transport.isScrubbing = pressed;
                             if (pressed)
                                 TimelineBridge.transport.beginScrub();
