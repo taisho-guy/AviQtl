@@ -16,6 +16,7 @@ void TimelineEngineSynchronizer::updateActiveClipsList() {
 
     m_clipModel->updateClips(active);
     updateECSState(active, current);
+    Rina::Engine::Timeline::ECS::instance().commit();
 }
 
 void TimelineEngineSynchronizer::updateECSState(const QList<ClipData *> &activeClips, int currentFrame) {

@@ -234,6 +234,7 @@ ApplicationWindow {
                     // 動かしている間は currentFrame を更新するがプレビューは止まる
                     // 離した瞬間にプレビュー確定
                     // 押した瞬間も同期
+                    // シーク後は絶対に一時停止のままにするため、endScrub() は呼ばない
 
                     id: seekSlider
 
@@ -253,8 +254,6 @@ ApplicationWindow {
                         return Math.max(1, maxEnd + 1);
                     }
                     onPressedChanged: {
-                        // シーク後は絶対に一時停止のままにするため、endScrub() は呼ばない
-
                         if (TimelineBridge && TimelineBridge.transport) {
                             TimelineBridge.transport.isScrubbing = pressed;
                             if (pressed)

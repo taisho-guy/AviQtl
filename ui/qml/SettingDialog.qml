@@ -13,12 +13,13 @@ Common.RinaWindow {
     property var effectsModel: []
     property var audioEffectsModel: []
     property bool inputting: false // 入力中フラグ（reloadループ防止用）
+    property bool reloading: false
 
     function reload() {
         if (!TimelineBridge || !TimelineBridge.selection || reloading)
             return ;
-        reloading = true;
 
+        reloading = true;
         var id = TimelineBridge.selection.selectedClipId;
         targetClipId = id;
         if (id >= 0) {
@@ -77,10 +78,10 @@ Common.RinaWindow {
     visible: true
     x: 500
     y: 200
-    property bool reloading: false
     onVisibleChanged: {
         if (visible)
             Qt.callLater(reload);
+
     }
 
     Component {

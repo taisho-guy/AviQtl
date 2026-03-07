@@ -124,8 +124,9 @@ int main(int argc, char *argv[]) {
 
         // Luaエンジンの初期化
         // ECSのインスタンス（g_ecsState）のアドレスをLuaに渡す
-        void *ecsPtr = Rina::Engine::Timeline::ECS::instance().getInternalStatePtr();
-        modEngine.initialize(ecsPtr);
+        // void *ecsPtr removed
+        modEngine.initialize(nullptr);
+
         // Lua API に controller を登録
         modEngine.registerController(timelineController);
         // プラグインのロード

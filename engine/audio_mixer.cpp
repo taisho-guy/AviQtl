@@ -25,10 +25,13 @@ AudioMixer::AudioMixer(QObject *parent) : QObject(parent) {
     m_format.setSampleFormat(QAudioFormat::Float);
 
     // 4.1 すべてのclipIdに対してPluginChainを初期化
-    const auto &audioStates = Timeline::ECS::instance().getAudioComponents();
-    for (const auto &[clipId, audio] : audioStates) {
-        if (!m_chains.contains(clipId)) {
-            m_chains[clipId] = std::make_shared<Plugin::AudioPluginChain>();
+    auto state = Timeline::ECS::instance().getSnapshot();
+    if (state) {
+        const auto &audioStates = state->audioStates;
+        for (const auto &[clipId, audio] : audioStates) {
+            if (!m_chains.contains(clipId)) {
+                m_chains[clipId] = std::make_shared<Plugin::AudioPluginChain>();
+            }
         }
     }
 
@@ -98,19 +101,21 @@ std::vector<float> AudioMixer::mix(int currentFrame, double fps, int samplesPerF
     std::vector<float> masterBuffer(samplesPerFrame * 2, 0.0f);
 
     // 2. ECSから現在の音声コンポーネントを取得
-    const auto &audioStates = Timeline::ECS::instance().getAudioComponents();
-
+    auto state = Timeline::ECS::instance().getSnapshot();
+    if (!state)
+        return masterBuffer;
+    const auto &audioStates = state->audioStates;
     for (const auto &[clipId, audio] : audioStates) {
-        if (audio->mute)
+        if (audio.mute)
             continue;
         if (m_decoders.find(clipId) == m_decoders.end())
             continue;
 
-        if (currentFrame < audio->startFrame || currentFrame >= audio->startFrame + audio->durationFrames)
+        if (currentFrame < audio.startFrame || currentFrame >= audio.startFrame + audio.durationFrames)
             continue;
 
         // 位相と連続再生の管理
-        double startTime = (double)(currentFrame - audio->startFrame) / fps;
+        double startTime = (double)(currentFrame - audio.startFrame) / fps;
         if (m_clipLastFrame.contains(clipId) && currentFrame == m_clipLastFrame[clipId] + 1) {
             startTime = m_clipPhase[clipId];
         } else {
@@ -168,8 +173,8 @@ std::vector<float> AudioMixer::mix(int currentFrame, double fps, int samplesPerF
         if (m_chains.contains(clipId))
             m_chains[clipId]->process(clipSamples.data(), samplesPerFrame);
 
-        float leftVol = audio->volume * (audio->pan <= 0 ? 1.0f : 1.0f - audio->pan);
-        float rightVol = audio->volume * (audio->pan >= 0 ? 1.0f : 1.0f + audio->pan);
+        float leftVol = audio.volume * (audio.pan <= 0 ? 1.0f : 1.0f - audio.pan);
+        float rightVol = audio.volume * (audio.pan >= 0 ? 1.0f : 1.0f + audio.pan);
 
         for (size_t i = 0; i < clipSamples.size() && i < masterBuffer.size(); i += 2) {
             masterBuffer[i] += clipSamples[i] * leftVol;

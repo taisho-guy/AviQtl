@@ -1,15 +1,13 @@
-#include <QSet>
 #pragma once
+#include <QSet>
+#include <QString>
+#include <atomic>
 #include <memory>
 #include <unordered_map>
 
 namespace Rina::Engine::Timeline {
 
-struct Component {
-    virtual ~Component() = default;
-};
-
-struct AudioComponent : Component {
+struct AudioComponent {
     int clipId = -1;
     int startFrame = 0;
     int durationFrames = 0;
@@ -18,20 +16,43 @@ struct AudioComponent : Component {
     bool mute = false;
 };
 
+struct TransformComponent {
+    int layer = 0;
+    double timePosition = 0.0;
+    int startFrame = 0;
+    int durationFrames = 0;
+};
+
+struct RenderComponent {
+    bool needsUpdate = true;
+    QString effectChain;
+};
+
+struct ECSState {
+    bool renderGraphDirty = false;
+    std::unordered_map<int, TransformComponent> transforms;
+    std::unordered_map<int, RenderComponent> renderStates;
+    std::unordered_map<int, AudioComponent> audioStates;
+};
+
 class ECS {
   public:
     static ECS &instance();
 
-    // UIからの操作を受け取るメソッド群
     void syncClipIds(const QSet<int> &aliveIds);
     void updateClipState(int clipId, int layer, double time);
     void updateAudioClipState(int clipId, int startFrame, int durationFrames, float volume, float pan, bool mute);
-    const std::unordered_map<int, std::unique_ptr<AudioComponent>> &getAudioComponents() const;
+
+    void commit();
+    std::shared_ptr<const ECSState> getSnapshot() const;
 
     bool isRenderGraphDirty() const;
     void markRenderGraphClean();
 
-    // Phase 2.2: 内部状態へのポインタを取得 (Lua MOD用)
-    void *getInternalStatePtr();
+  private:
+    ECS();
+    ECSState m_editState;
+    std::atomic<std::shared_ptr<const ECSState>> m_activeState;
 };
+
 } // namespace Rina::Engine::Timeline
