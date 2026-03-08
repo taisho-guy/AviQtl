@@ -7,6 +7,7 @@
 #include <QSet>
 #include <QVideoFrame>
 #include <QVideoSink>
+#include <QPointer>
 
 namespace Rina::Core {
 
@@ -35,7 +36,8 @@ class VideoFrameStore : public QObject {
   private:
     mutable QMutex m_mutex;
     QHash<QString, QImage> m_frames;
-    QHash<QString, QVideoSink *> m_sinks;
+    QHash<QString, QVideoFrame> m_lastVideoFrames;
+    QHash<QString, QPointer<QVideoSink>> m_sinks;
 };
 
 } // namespace Rina::Core
