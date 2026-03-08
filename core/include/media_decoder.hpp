@@ -37,7 +37,7 @@ class MediaDecoder : public QObject {
     int m_clipId;
     QUrl m_source;
     int m_sampleRate = 48000;
-    bool m_isReady = false;
+    std::atomic<bool> m_isReady{false};
     mutable QMutex m_mutex;
 };
 

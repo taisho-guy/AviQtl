@@ -1,4 +1,7 @@
 #include "video_frame_store.hpp"
+#include <QMetaObject>
+#include <QThread>
+#include <QDebug>
 
 namespace Rina::Core {
 
@@ -15,6 +18,15 @@ void VideoFrameStore::setFrameSafe(const QString &key, const QImage &frame) {
 }
 
 void VideoFrameStore::setVideoFrameSafe(const QString &key, const QVideoFrame &frame) {
+    // スレッドセーフ: QVideoSink の生成と操作は UI スレッドで行う必要がある
+    if (QThread::currentThread() != thread()) {
+        QVideoFrame copy(frame);
+        QMetaObject::invokeMethod(this, [this, key, copy]() mutable {
+            setVideoFrameSafe(key, copy);
+        }, Qt::QueuedConnection);
+        return;
+    }
+
     QVideoSink *s = nullptr;
     {
         QMutexLocker locker(&m_mutex);
@@ -30,6 +42,7 @@ void VideoFrameStore::setVideoFrameSafe(const QString &key, const QVideoFrame &f
 }
 
 QVideoSink *VideoFrameStore::sink(const QString &key) {
+    if (QThread::currentThread() != thread()) { qWarning() << "VideoFrameStore::sink called from non-UI thread!"; return nullptr; }
     QMutexLocker locker(&m_mutex);
     if (!m_sinks.contains(key)) {
         m_sinks.insert(key, new QVideoSink(this));
@@ -38,6 +51,7 @@ QVideoSink *VideoFrameStore::sink(const QString &key) {
 }
 
 void VideoFrameStore::registerSink(const QString &key, QVideoSink *sink) {
+    if (QThread::currentThread() != thread()) { QMetaObject::invokeMethod(this, [this, key, sink]() { registerSink(key, sink); }, Qt::QueuedConnection); return; }
     QMutexLocker locker(&m_mutex);
     if (m_sinks.contains(key) && m_sinks.value(key)->parent() == this) {
         m_sinks.value(key)->deleteLater();
@@ -51,12 +65,14 @@ bool VideoFrameStore::hasFrame(const QString &key) const {
 }
 
 void VideoFrameStore::invalidateFrame(const QString &key) {
+    if (QThread::currentThread() != thread()) { QMetaObject::invokeMethod(this, [this, key]() { invalidateFrame(key); }, Qt::QueuedConnection); return; }
     QMutexLocker locker(&m_mutex);
     m_frames.remove(key);
     // Note: QVideoSink 自体は削除しない（QML側で再利用されるため）
 }
 
 void VideoFrameStore::invalidateScene(int sceneId) {
+    if (QThread::currentThread() != thread()) { QMetaObject::invokeMethod(this, [this, sceneId]() { invalidateScene(sceneId); }, Qt::QueuedConnection); return; }
     QMutexLocker locker(&m_mutex);
     QString prefix = QString::number(sceneId) + "_";
     for (auto it = m_frames.begin(); it != m_frames.end();) {
@@ -69,6 +85,7 @@ void VideoFrameStore::invalidateScene(int sceneId) {
 }
 
 void VideoFrameStore::clear() {
+    if (QThread::currentThread() != thread()) { QMetaObject::invokeMethod(this, [this]() { clear(); }, Qt::QueuedConnection); return; }
     QMutexLocker locker(&m_mutex);
     m_frames.clear();
 }

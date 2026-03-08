@@ -3,7 +3,7 @@
 #include "../../scripting/mod_engine.hpp"
 #include "effect_registry.hpp"
 #include "rina_context.hpp"
-#include "scene_decoder.hpp" // 追加
+#include "scene_decoder.hpp"
 #include "settings_manager.hpp"
 #include "timeline_controller.hpp"
 #include "video_encoder.hpp"
@@ -15,7 +15,7 @@
 #include <QPixmap>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
-#include <QQuickStyle> // 追加
+#include <QQuickStyle>
 #include <QQuickWindow>
 #include <QSplashScreen>
 #include <QTimer>
