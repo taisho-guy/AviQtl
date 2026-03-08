@@ -45,6 +45,11 @@ VideoDecoder::VideoDecoder(int clipId, const QUrl &source, VideoFrameStore *stor
 VideoDecoder::~VideoDecoder() {
     // ワーカースレッドの新規タスク開始・invokeMethod実行をブロック
     m_closing.store(true, std::memory_order_release);
+
+    if (m_initFuture.isRunning())
+        m_initFuture.waitForFinished();
+    if (m_decodeFuture.isRunning())
+        m_decodeFuture.waitForFinished();
     {
         // 実行中のデコードタスクが完了するのを待機
         QMutexLocker locker(&m_mutex);
@@ -59,15 +64,20 @@ VideoDecoder::~VideoDecoder() {
 }
 
 void VideoDecoder::startDecoding() {
-    (void)QtConcurrent::run([this] {
+    m_initFuture = QtConcurrent::run([this] {
         QString path = m_source.toLocalFile();
         if (path.isEmpty())
             path = m_source.toString();
 
         if (open(path)) {
             m_isReady = true;
-            emit ready();
-            emit videoMetaReady((int)m_index.size(), m_sourceFps);
+            QMetaObject::invokeMethod(
+                this,
+                [this]() {
+                    emit ready();
+                    emit videoMetaReady((int)m_index.size(), m_sourceFps);
+                },
+                Qt::QueuedConnection);
         }
     });
 }
@@ -260,37 +270,26 @@ void VideoDecoder::seekToFrame(int frame, double fps) {
         return;
     if (frame < 0)
         return;
-    int maxFrame = (int)m_index.size();
-    if (maxFrame > 0)
-        frame = std::clamp(frame, 0, maxFrame - 1);
-    else
-        return;
 
-    // 最新の要求フレームを更新
+    // 要求フレームを更新
     m_lastRequestedFrame.store(frame, std::memory_order_release);
 
-    // キャッシュにあれば即時適用
-    if (m_frameCache.contains(frame)) {
-        m_store->setVideoFrameSafe(QString::number(m_clipId), *m_frameCache[frame]);
-        emit frameReady(frame);
-        return;
-    }
+    // キャッシュチェックと Store への転送は、排他制御下（decodeTask内）で行うよう委譲する。
+    // これにより、UIスレッドとワーカースレッド間での m_frameCache 競合によるSIGSEGVを完全に防ぐ。
 
     // isDecoding フラグで多重投入を防ぎ、単一ワーカーとして動かす
     bool expected = false;
     if (m_isDecoding.compare_exchange_strong(expected, true)) {
-        QPointer<VideoDecoder> self(this);
-        (void)QtConcurrent::run([self, fps]() {
-            // ループごとに self が有効か確認し、オブジェクト破棄時の SIGSEGV を防ぐ
-            while (self && !self->m_closing.load(std::memory_order_acquire)) {
-                int targetFrame = self->m_lastRequestedFrame.load(std::memory_order_acquire);
-                self->decodeTask(targetFrame, fps);
+        m_decodeFuture = QtConcurrent::run([this, fps]() {
+            while (!m_closing.load(std::memory_order_acquire)) {
+                int targetFrame = m_lastRequestedFrame.load(std::memory_order_acquire);
+                decodeTask(targetFrame, fps);
 
-                if (self && self->m_lastRequestedFrame.load(std::memory_order_acquire) == targetFrame) {
-                    self->m_isDecoding.store(false, std::memory_order_release);
-                    if (self && self->m_lastRequestedFrame.load(std::memory_order_acquire) != targetFrame) {
+                if (m_lastRequestedFrame.load(std::memory_order_acquire) == targetFrame) {
+                    m_isDecoding.store(false, std::memory_order_release);
+                    if (m_lastRequestedFrame.load(std::memory_order_acquire) != targetFrame) {
                         bool exp = false;
-                        if (self->m_isDecoding.compare_exchange_strong(exp, true)) {
+                        if (m_isDecoding.compare_exchange_strong(exp, true)) {
                             continue;
                         }
                     }
@@ -315,6 +314,14 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) {
 
     if (m_lastRequestedFrame != targetFrame)
         return;
+
+    // キャッシュに存在する場合はデコードをスキップして即反映
+    if (m_frameCache.contains(targetFrame)) {
+        m_store->setVideoFrameSafe(QString::number(m_clipId), *m_frameCache[targetFrame]);
+        // UIスレッドへ安全にシグナルを発火
+        QMetaObject::invokeMethod(this, [this, targetFrame]() { emit frameReady(targetFrame); }, Qt::QueuedConnection);
+        return;
+    }
 
     const auto &targetEntry = m_index[targetFrame];
     int64_t targetPts = targetEntry.pts;
@@ -389,9 +396,7 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) {
             }
         }
 
-        if (eof) {
-            break;
-        }
+        // Removed premature EOF break. We must drain the codec until AVERROR_EOF.
     }
 
     av_packet_free(&pkt);

@@ -2,6 +2,7 @@
 
 #include "media_decoder.hpp"
 #include <QCache>
+#include <QFuture>
 #include <QVideoFrame>
 
 extern "C" {
@@ -80,6 +81,8 @@ class VideoDecoder : public MediaDecoder {
     std::atomic<int> m_lastRequestedFrame = -1; // Use std::atomic for thread-safe access
     std::atomic<bool> m_closing{false};         // デストラクト進行中のフラグ
     std::atomic<bool> m_isDecoding{false};      // デコードタスク多重起動防止用
+    QFuture<void> m_initFuture;
+    QFuture<void> m_decodeFuture;
     double m_sourceFps = 0.0;
     AVRational m_timeBase{0, 1};
 
