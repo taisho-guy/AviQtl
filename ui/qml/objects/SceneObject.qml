@@ -1,8 +1,8 @@
 import QtQuick
 import QtQuick.Shapes
 import QtQuick3D
-import "qrc:/qt/qml/Rina/ui/qml/common" as Common
 import "qrc:/qt/qml/Rina/ui/qml" as Ui
+import "qrc:/qt/qml/Rina/ui/qml/common" as Common
 
 Common.BaseObject {
     id: root
@@ -11,7 +11,6 @@ Common.BaseObject {
     property real speed: evalParam("scene", "speed", 1)
     property int offset: evalParam("scene", "offset", 0)
     property real opacity: evalParam("scene", "opacity", 1)
-
     // シーン内時間計算
     property int sceneFrame: {
         var f = Math.floor(relFrame * speed) + offset;
@@ -37,7 +36,9 @@ Common.BaseObject {
             diffuseMap: Texture {
                 sourceItem: renderer.output
             }
+
         }
+
     }
 
     // 以前のImage/SceneDecoderベースの代わりに、SceneRendererを直接組み込む
@@ -48,4 +49,5 @@ Common.BaseObject {
         timelineBridge: typeof TimelineBridge !== "undefined" ? TimelineBridge : null
         visible: false // テクスチャソースとして用いるため可視化しない
     }
+
 }

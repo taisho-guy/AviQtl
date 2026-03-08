@@ -127,7 +127,16 @@ QUrl TimelineMediaManager::getClipSourceUrl(const ClipData &clip) const {
 }
 
 void TimelineMediaManager::updateMediaDecoders() {
-    const auto &clips = m_controller->timeline()->clips();
+    // 変更: 現在のシーンだけでなく、プロジェクト内のすべてのクリップを対象にする
+    QList<ClipData> allClips;
+    // getAllScenes() を使用して実際の SceneData を取得
+    const auto &scenes = m_controller->timeline()->getAllScenes();
+    for (const auto &scene : scenes) {
+        for (const auto &clip : scene.clips) {
+            allClips.append(clip);
+        }
+    }
+    const auto &clips = allClips;
     QSet<int> currentClipIds;
 
     for (const auto &clip : clips) {

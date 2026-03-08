@@ -96,7 +96,6 @@ int main(int argc, char *argv[]) {
     // VideoEncoderをQMLでインスタンス化可能な型として登録
     qmlRegisterType<Rina::Core::VideoEncoder>("Rina.Core", 1, 0, "VideoEncoder");
 
-
     // SettingsManager の登録
     engine.rootContext()->setContextProperty("SettingsManager", &Rina::Core::SettingsManager::instance());
 

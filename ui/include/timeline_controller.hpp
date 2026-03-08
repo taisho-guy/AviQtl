@@ -141,6 +141,7 @@ class TimelineController : public QObject {
     Q_INVOKABLE QVariantList getSceneClips(int sceneId) const;
     Q_INVOKABLE QVariantMap getSceneInfo(int sceneId) const;
     Q_INVOKABLE int getSceneDuration(int sceneId) const;
+    Q_INVOKABLE void requestVideoFrame(int clipId, int relFrame);
 
     // プロジェクトI/O
     Q_INVOKABLE bool saveProject(const QString &fileUrl);
@@ -179,6 +180,7 @@ class TimelineController : public QObject {
     int timelineDuration() const { return m_engineSync->timelineDuration(); }
 
   signals:
+    void videoFrameRequested(int clipId, int relFrame);
     void timelineScaleChanged();
     void clipStartFrameChanged();
     void clipDurationFramesChanged();

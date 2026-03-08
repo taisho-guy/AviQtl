@@ -739,4 +739,10 @@ QString TimelineController::debugRunLua(const QString &script) {
     return QString::number(result);
 }
 
+void TimelineController::requestVideoFrame(int clipId, int relFrame) {
+    // MediaManagerは直接触れないので、TimelineService側にイベントを発火させる等するか、
+    // MediaManagerに直接シグナルで飛ばす。
+    // ここでは一番手っ取り早い「シグナル」を追加してMediaManagerに拾わせる。
+    emit videoFrameRequested(clipId, relFrame);
+}
 } // namespace Rina::UI
