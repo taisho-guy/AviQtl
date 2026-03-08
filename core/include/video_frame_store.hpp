@@ -4,10 +4,10 @@
 #include <QImage>
 #include <QMutex>
 #include <QObject>
+#include <QPointer>
 #include <QSet>
 #include <QVideoFrame>
 #include <QVideoSink>
-#include <QPointer>
 
 namespace Rina::Core {
 

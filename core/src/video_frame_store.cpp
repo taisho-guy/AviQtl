@@ -1,8 +1,8 @@
 #include "video_frame_store.hpp"
-#include <QMetaObject>
-#include <QThread>
 #include <QDebug>
+#include <QMetaObject>
 #include <QPointer>
+#include <QThread>
 
 namespace Rina::Core {
 
@@ -21,9 +21,7 @@ void VideoFrameStore::setFrameSafe(const QString &key, const QImage &frame) {
 void VideoFrameStore::setVideoFrameSafe(const QString &key, const QVideoFrame &frame) {
     if (QThread::currentThread() != thread()) {
         QVideoFrame copy(frame);
-        QMetaObject::invokeMethod(this, [this, key, copy]() mutable {
-            setVideoFrameSafe(key, copy);
-        }, Qt::QueuedConnection);
+        QMetaObject::invokeMethod(this, [this, key, copy]() mutable { setVideoFrameSafe(key, copy); }, Qt::QueuedConnection);
         return;
     }
 
@@ -72,7 +70,7 @@ void VideoFrameStore::registerSink(const QString &key, QVideoSink *sink) {
             QObject::connect(sink, &QObject::destroyed, this, [this, key, rawSink = sink]() {
                 QMutexLocker locker(&m_mutex);
                 if (m_sinks.contains(key)) {
-                    QVideoSink* current = m_sinks.value(key).data();
+                    QVideoSink *current = m_sinks.value(key).data();
                     if (current == nullptr || current == rawSink) {
                         m_sinks.remove(key);
                     }
@@ -97,7 +95,10 @@ bool VideoFrameStore::hasFrame(const QString &key) const {
 }
 
 void VideoFrameStore::invalidateFrame(const QString &key) {
-    if (QThread::currentThread() != thread()) { QMetaObject::invokeMethod(this, [this, key]() { invalidateFrame(key); }, Qt::QueuedConnection); return; }
+    if (QThread::currentThread() != thread()) {
+        QMetaObject::invokeMethod(this, [this, key]() { invalidateFrame(key); }, Qt::QueuedConnection);
+        return;
+    }
     QMutexLocker locker(&m_mutex);
     m_frames.remove(key);
     m_lastVideoFrames.remove(key);
@@ -131,7 +132,10 @@ void VideoFrameStore::invalidateScene(int sceneId) {
 }
 
 void VideoFrameStore::clear() {
-    if (QThread::currentThread() != thread()) { QMetaObject::invokeMethod(this, [this]() { clear(); }, Qt::QueuedConnection); return; }
+    if (QThread::currentThread() != thread()) {
+        QMetaObject::invokeMethod(this, [this]() { clear(); }, Qt::QueuedConnection);
+        return;
+    }
     QMutexLocker locker(&m_mutex);
     m_frames.clear();
     m_lastVideoFrames.clear();

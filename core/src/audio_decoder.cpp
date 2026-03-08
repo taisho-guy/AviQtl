@@ -8,11 +8,17 @@ AudioDecoder::AudioDecoder(int clipId, const QUrl &source, QObject *parent) : Me
     // 生成とデコード開始を分離: 呼び出し元が scheduleStart() を呼ぶ
 }
 
-AudioDecoder::~AudioDecoder() { closeFFmpeg(); }
+AudioDecoder::~AudioDecoder() {
+    m_closing.store(true, std::memory_order_release);
+    if (m_decodeFuture.isRunning()) {
+        m_decodeFuture.waitForFinished();
+    }
+    closeFFmpeg();
+}
 
 void AudioDecoder::startDecoding() {
     // UIスレッドをブロックしないようバックグラウンドで全デコード
-    (void)QtConcurrent::run([this] {
+    m_decodeFuture = QtConcurrent::run([this] {
         closeFFmpeg();
         m_isReady = false;
 
@@ -73,6 +79,10 @@ void AudioDecoder::startDecoding() {
         std::vector<float> convertBuf;
 
         while (av_read_frame(m_fmtCtx, m_pkt) >= 0) {
+            if (m_closing.load(std::memory_order_acquire)) {
+                av_packet_unref(m_pkt);
+                break;
+            }
             if (m_pkt->stream_index != m_streamIdx) {
                 av_packet_unref(m_pkt);
                 continue;

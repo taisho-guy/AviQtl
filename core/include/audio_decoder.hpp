@@ -1,6 +1,8 @@
 #pragma once
 
 #include "media_decoder.hpp"
+#include <QFuture>
+#include <atomic>
 #include <mutex>
 #include <vector>
 
@@ -42,7 +44,9 @@ class AudioDecoder : public MediaDecoder {
     AVFrame *m_frame = nullptr;
     AVPacket *m_pkt = nullptr;
 
-    std::vector<float> m_fullAudioData; // インターリーブされたPCMデータ (L, R, L, R...)
+    std::vector<float> m_fullAudioData;
+    QFuture<void> m_decodeFuture;
+    std::atomic<bool> m_closing{false}; // インターリーブされたPCMデータ (L, R, L, R...)
 };
 
 } // namespace Rina::Core
