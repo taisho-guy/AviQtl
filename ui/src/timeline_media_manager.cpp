@@ -1,4 +1,5 @@
 #include "timeline_media_manager.hpp"
+#include "../../core/include/video_frame_store.hpp"
 #include "../../core/include/audio_decoder.hpp"
 #include "../../core/include/media_decoder.hpp"
 #include "../../core/include/video_decoder.hpp"
@@ -199,6 +200,9 @@ void TimelineMediaManager::updateMediaDecoders() {
         if (!currentClipIds.contains(it.key())) {
             if (qobject_cast<Rina::Core::AudioDecoder *>(it.value()))
                 m_audioMixer->unregisterDecoder(it.key());
+            if (m_videoFrameStore) {
+                m_videoFrameStore->invalidateFrame(QString::number(it.key()));
+            }
             it.value()->deleteLater();
             it = m_decoders.erase(it);
         } else {

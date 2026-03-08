@@ -50,11 +50,7 @@ VideoDecoder::~VideoDecoder() {
         m_initFuture.waitForFinished();
     if (m_decodeFuture.isRunning())
         m_decodeFuture.waitForFinished();
-    {
-        // 実行中のデコードタスクが完了するのを待機
-        QMutexLocker locker(&m_mutex);
-    }
-    close();
+    close(); // Removed unnecessary lock to prevent UI deadlock
     if (m_swsCtx)
         sws_freeContext(m_swsCtx);
     if (m_frame)
@@ -380,7 +376,11 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) {
 
         while (ret >= 0 || ret == AVERROR(EAGAIN)) {
             int rxRet = avcodec_receive_frame(m_decCtx, m_frame);
-            if (rxRet == AVERROR(EAGAIN) || rxRet == AVERROR_EOF) {
+            if (rxRet == AVERROR(EAGAIN)) {
+                break;
+            }
+            if (rxRet == AVERROR_EOF) {
+                eof = true;
                 break;
             }
             if (rxRet < 0) {
