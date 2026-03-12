@@ -58,27 +58,10 @@ find_package(PkgConfig REQUIRED)
 # FFmpeg Integration for Hardware Encoding
 pkg_check_modules(FFMPEG REQUIRED libavcodec libavformat libavutil libswscale libswresample)
 
+
+# Carla Audio Plugin Backend
+pkg_check_modules(CARLA REQUIRED carla-standalone carla-host-plugin carla-utils)
 pkg_check_modules(LUAJIT REQUIRED luajit)
-
-# オーディオプラグイン (ヘッダー探索のみ、リンクは後で行う)
-find_path(LADSPA_INCLUDE_DIR ladspa.h)
-pkg_check_modules(LILV REQUIRED lilv-0)
-find_path(CLAP_INCLUDE_DIR  clap/clap.h)
-if(CLAP_INCLUDE_DIR)
-    message(STATUS "Found CLAP headers: ${CLAP_INCLUDE_DIR}")
-else()
-    message(WARNING "clap headers not found. CLAP support disabled.")
-endif()
-
-# VST3 SDKのパス設定（CachyOS）
-set(VST3_SDK_ROOT "/usr/src/vst3sdk" CACHE PATH "Path to VST3 SDK")
-if(EXISTS "${VST3_SDK_ROOT}/pluginterfaces")
-    set(VST3SDK_FOUND TRUE)
-    message(STATUS "Found VST3 SDK: ${VST3_SDK_ROOT}")
-else()
-    set(VST3SDK_FOUND FALSE)
-    message(WARNING "VST3 SDK not found at ${VST3_SDK_ROOT}. VST3 support disabled.")
-endif()
 
 # macOSでのLuaJITリンク問題の修正
 if(APPLE)
@@ -190,8 +173,11 @@ target_link_libraries(
     Rina PRIVATE Qt6::Core Qt6::Gui Qt6::Quick Qt6::QuickControls2 Qt6::Quick3D Qt6::Widgets Qt6::Svg Qt6::Core5Compat Qt6::Multimedia Qt6::Concurrent Vulkan::Vulkan
                    ${LUAJIT_LIBRARIES}
                    ${FFMPEG_LIBRARIES}
-                   ${LILV_LIBRARIES})
+                   ${CARLA_LIBRARIES})
 
+
+# Carlaのライブラリパスを明示（/usr/lib/carla/ 等の非標準ディレクトリ対策）
+target_link_directories(Rina PRIVATE ${CARLA_LIBRARY_DIRS})
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_link_libraries(Rina PRIVATE Qt6::WaylandClient)
 endif()
@@ -202,36 +188,9 @@ target_include_directories(Rina PRIVATE
     ui/include
     ${LUAJIT_INCLUDE_DIRS}
     ${FFMPEG_INCLUDE_DIRS}
-    ${LADSPA_INCLUDE_DIR}
-    ${LILV_INCLUDE_DIRS}
+    ${CARLA_INCLUDE_DIRS}
 )
-if(CLAP_INCLUDE_DIR)
-    target_include_directories(Rina PRIVATE ${CLAP_INCLUDE_DIR})
-    target_compile_definitions(Rina PRIVATE RINA_HAS_CLAP=1)
-else()
-    target_compile_definitions(Rina PRIVATE RINA_HAS_CLAP=0)
-endif()
 
-if(VST3SDK_FOUND)
-    # SDKルートをインクルードパスに追加（pluginterfaces, public.sdk, base 等にアクセス可能）
-    target_include_directories(Rina PRIVATE ${VST3_SDK_ROOT})
-    target_compile_definitions(Rina PRIVATE RINA_HAS_VST3=1)
-
-    # VST3 SDKのビルド構成定義 (fdebug.hのエラー回避)
-    if(CMAKE_BUILD_TYPE MATCHES "Debug")
-        target_compile_definitions(Rina PRIVATE DEVELOPMENT=1)
-    else()
-        target_compile_definitions(Rina PRIVATE RELEASE=1)
-    endif()
-
-
-
-    # VST3 SDKのヘルパーソースを直接コンパイルに含める（リンクエラー防止）
-    # target_sources(Rina PRIVATE ${VST3_SOURCES})
-endif()
-
-
-# Suppress warnings in VST3 SDK headers
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
     target_compile_options(Rina PRIVATE
         -Wno-deprecated-declarations

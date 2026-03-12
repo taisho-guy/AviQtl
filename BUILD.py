@@ -124,7 +124,7 @@ class BuildWorker(QtCore.QThread):
                 "mesa", "vulkan-devel", "libxkbcommon", "wayland", "wayland-protocols",
                 "libffi", "ffmpeg", "luajit", "fftw", "qt6-base", "qt6-declarative",
                 "qt6-quick3d", "qt6-multimedia", "qt6-shadertools", "qt6-svg",
-                "qt6-5compat", "qt6-tools", "lilv", "ladspa", "clap", "vst3sdk"
+                "qt6-5compat", "qt6-tools", "lilv", "ladspa", "clap", "vst3sdk", "carla"
             ]
             # コンテナ内では sudo を使用してインストール
             self._run_cmd(["sudo", "pacman", "-Syu", "--needed", "--noconfirm"] + container_deps, in_container=True)

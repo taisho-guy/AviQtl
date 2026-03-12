@@ -1,282 +1,363 @@
 #include "audio_plugin_manager.hpp"
-#include "clap_plugin.hpp"
-#include "ladspa_plugin.hpp"
-#include "lv2_plugin.hpp"
-#include "vst3_plugin.hpp"
 #include <QDebug>
+#include <QDir>
 #include <QDirIterator>
-#include <QLibrary>
+#include <QElapsedTimer>
+#include <QFile>
+#include <QProcess>
 #include <QSet>
-#include <algorithm> // for std::sort
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wnullability-extension"
-#endif
-#include <lilv/lilv.h>
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
+#include <QStandardPaths>
+#include <QString>
+#include <QtConcurrent/QtConcurrent>
 
-// CLAPヘッダー定義 (スキャン用)
-#include <clap/clap.h>
+#include <CarlaBackend.h>
+#include <CarlaHost.h>
 
 namespace Rina::Engine::Plugin {
+
+namespace {
+
+const QStringList kDiscoverySearchPaths = {
+    "/usr/lib/carla/carla-discovery-native", "/usr/local/lib/carla/carla-discovery-native", "/usr/lib64/carla/carla-discovery-native", "/usr/bin/carla-discovery-native", "/usr/local/bin/carla-discovery-native",
+};
+
+struct FormatConfig {
+    QString type;
+    QString format;
+    QStringList envVars;
+    QStringList defaultPaths;
+    QString fileFilter;
+    bool bundleDir;
+};
+
+const QList<FormatConfig> kFormats = {
+    {"ladspa", "LADSPA", {"LADSPA_PATH"}, {"/usr/lib/ladspa", "/usr/local/lib/ladspa"}, "*.so", false},
+    {"lv2", "LV2", {"LV2_PATH"}, {"/usr/lib/lv2", "/usr/local/lib/lv2"}, "*.lv2", true},
+    {"vst2", "VST2", {"VST_PATH"}, {"/usr/lib/vst", "/usr/lib/vst2", "/usr/local/lib/vst", "/usr/local/lib/vst2"}, "*.so", false},
+    {"vst3", "VST3", {"VST3_PATH"}, {"/usr/lib/vst3", "/usr/local/lib/vst3"}, "*.vst3", true},
+    {"CLAP", "CLAP", {"CLAP_PATH"}, {"/usr/lib/clap", "/usr/local/lib/clap"}, "*.clap", false},
+};
+
+QString toCategoryStr(int cat) {
+    switch (static_cast<CarlaBackend::PluginCategory>(cat)) {
+    case CarlaBackend::PLUGIN_CATEGORY_SYNTH:
+        return "Synth";
+    case CarlaBackend::PLUGIN_CATEGORY_DELAY:
+        return "Delay";
+    case CarlaBackend::PLUGIN_CATEGORY_EQ:
+        return "EQ";
+    case CarlaBackend::PLUGIN_CATEGORY_FILTER:
+        return "Filter";
+    case CarlaBackend::PLUGIN_CATEGORY_DISTORTION:
+        return "Distortion";
+    case CarlaBackend::PLUGIN_CATEGORY_DYNAMICS:
+        return "Dynamics";
+    case CarlaBackend::PLUGIN_CATEGORY_MODULATOR:
+        return "Modulator";
+    case CarlaBackend::PLUGIN_CATEGORY_UTILITY:
+        return "Utility";
+    case CarlaBackend::PLUGIN_CATEGORY_OTHER:
+        return "Other";
+    default:
+        return "Unknown";
+    }
+}
+
+QList<PluginInfo> parseDiscoveryOutput(const QString &output, const QString &format, const QString &filePath) {
+    QList<PluginInfo> results;
+    PluginInfo current;
+    bool inBlock = false;
+
+    for (const QString &rawLine : output.split('\n')) {
+        const QString line = rawLine.trimmed();
+        if (!line.startsWith("carla-discovery::"))
+            continue;
+        const QStringList parts = line.split("::");
+        if (parts.size() < 2)
+            continue;
+        const QString &key = parts.at(1);
+        const QString val = parts.size() >= 3 ? parts.mid(2).join("::") : "";
+
+        if (key == "begin") {
+            current = PluginInfo{};
+            current.format = format;
+            current.path = filePath;
+            inBlock = true;
+        } else if (!inBlock) {
+            continue;
+        } else if (key == "name") {
+            current.name = val;
+        } else if (key == "label") {
+            current.label = val;
+        } else if (key == "maker") {
+            current.maker = val;
+        } else if (key == "uniqueId") {
+            current.uniqueId = val.toLongLong();
+        } else if (key == "category") {
+            current.category = toCategoryStr(val.toInt());
+        } else if (key == "audio.ins") {
+            current.audioIns = val.toInt();
+        } else if (key == "audio.outs") {
+            current.audioOuts = val.toInt();
+        } else if (key == "end") {
+            if (!current.name.isEmpty()) {
+                current.id = QString("%1:%2:%3").arg(current.format, current.label, QString::number(current.uniqueId));
+                results.append(current);
+            }
+            inBlock = false;
+        }
+    }
+    return results;
+}
+
+// 1ファイルに対してディスカバリを実行
+// stdout の逐次読み出しでバッファ詰まりデッドロックを回避
+// stdin を /dev/null に向けて子プロセスによる端末状態の汚染を防ぐ
+QList<PluginInfo> runDiscovery(const QString &tool, const QString &type, const QString &format, const QString &target, std::atomic<bool> &stopFlag) {
+    if (stopFlag)
+        return {};
+
+    QProcess proc;
+    proc.setStandardInputFile(QProcess::nullDevice());
+    proc.setProcessChannelMode(QProcess::SeparateChannels);
+    proc.start(tool, {type, target});
+
+    if (!proc.waitForStarted(3000)) {
+        qWarning() << "[Discovery] 起動失敗:" << target;
+        return {};
+    }
+
+    QByteArray output;
+    QElapsedTimer timer;
+    timer.start();
+    constexpr int kTimeoutMs = 5000;
+
+    while (!stopFlag) {
+        proc.waitForReadyRead(200);
+        output += proc.readAllStandardOutput();
+        if (proc.state() == QProcess::NotRunning)
+            break;
+        if (timer.elapsed() > kTimeoutMs) {
+            qWarning() << "[Discovery] タイムアウト:" << target;
+            proc.kill();
+            proc.waitForFinished(1000);
+            break;
+        }
+    }
+    output += proc.readAllStandardOutput();
+
+    QByteArray errOutput = proc.readAllStandardError();
+    if (!errOutput.isEmpty() && output.isEmpty() && !errOutput.contains("invalid string type")) {
+        qDebug() << "[Discovery] エラー:" << target << errOutput.trimmed();
+    }
+
+    return parseDiscoveryOutput(QString::fromUtf8(output), format, target);
+}
+
+QStringList collectSearchPaths(const FormatConfig &cfg) {
+    QStringList paths;
+    for (const QString &envKey : cfg.envVars) {
+        const QByteArray val = qgetenv(envKey.toUtf8().constData());
+        if (!val.isEmpty())
+            paths << QString::fromLocal8Bit(val).split(':');
+    }
+    paths << (QDir::homePath() + "/." + cfg.type);
+    paths << cfg.defaultPaths;
+    return paths;
+}
+
+QList<PluginInfo> discoverFormat(const QString &tool, const FormatConfig &cfg, std::atomic<bool> &stopFlag) {
+    QStringList targets;
+
+    if (cfg.type == "lv2") {
+        QProcess proc;
+        proc.start("lv2ls", {});
+        if (proc.waitForFinished()) {
+            targets = QString::fromUtf8(proc.readAllStandardOutput()).split('\n', Qt::SkipEmptyParts);
+            qDebug() << "[AudioPluginManager]" << cfg.format << "URI" << targets.size() << "個を検出";
+        } else {
+            qWarning() << "[AudioPluginManager] lv2lsの実行に失敗しました";
+        }
+    } else {
+        const QStringList searchPaths = collectSearchPaths(cfg);
+        QSet<QString> visited;
+
+        for (const QString &dirPath : searchPaths) {
+            if (stopFlag)
+                break;
+            QDir d(dirPath);
+            if (!d.exists())
+                continue;
+
+            const QString canonical = d.canonicalPath();
+            if (visited.contains(canonical))
+                continue;
+            visited.insert(canonical);
+
+            if (cfg.bundleDir) {
+                const QFileInfoList entries = d.entryInfoList({cfg.fileFilter}, QDir::Dirs | QDir::NoDotAndDotDot);
+                for (const QFileInfo &fi : entries) {
+                    targets << fi.absoluteFilePath();
+                }
+            } else {
+                QDirIterator it(dirPath, {cfg.fileFilter}, QDir::Files, QDirIterator::Subdirectories);
+                while (it.hasNext()) {
+                    targets << it.next();
+                }
+            }
+        }
+        qDebug() << "[AudioPluginManager]" << cfg.format << "ファイル" << targets.size() << "個を検出";
+    }
+
+    QList<PluginInfo> all;
+    QMutex mutex;
+
+    QThreadPool pool;
+    pool.setMaxThreadCount(std::max(2, QThread::idealThreadCount() - 1));
+
+    QtConcurrent::blockingMap(&pool, targets, [&](const QString &target) {
+        if (stopFlag)
+            return;
+        QList<PluginInfo> res = runDiscovery(tool, cfg.type, cfg.format, target, stopFlag);
+        if (!res.isEmpty()) {
+            QMutexLocker lock(&mutex);
+            all += res;
+        }
+    });
+
+    return all;
+}
+
+} // namespace
 
 AudioPluginManager &AudioPluginManager::instance() {
     static AudioPluginManager inst;
     return inst;
 }
 
-AudioPluginManager::AudioPluginManager() {
-    m_lilvWorld = lilv_world_new();
-    lilv_world_load_all(m_lilvWorld);
-    scanPlugins();
-}
+AudioPluginManager::AudioPluginManager() {}
 
 AudioPluginManager::~AudioPluginManager() {
-    if (m_lilvWorld) {
-        lilv_world_free(m_lilvWorld);
-        m_lilvWorld = nullptr;
+    stopScan();
+    if (m_carlaHost != nullptr) {
+        carla_engine_close(m_carlaHost);
+        m_carlaHost = nullptr;
     }
 }
 
-void AudioPluginManager::registerPlugin(const PluginInfo &info) {
-    m_plugins.append(info);
-    m_pluginMap.insert(info.id, info);
+void AudioPluginManager::stopScan() { m_stopRequested = true; }
+
+void AudioPluginManager::initialize() {
+    if (m_initialized)
+        return;
+    m_initialized = true;
+
+    (void)QtConcurrent::run([this] {
+        scanPlugins();
+        emit pluginsReady(m_plugins.size());
+    });
+}
+
+void AudioPluginManager::scanPlugins() {
+    bool expected = false;
+    if (!m_scanning.compare_exchange_strong(expected, true)) {
+        qDebug() << "[AudioPluginManager] スキャンは既に実行中";
+        return;
+    }
+    m_stopRequested = false;
+
+    QString tool;
+    for (const QString &p : kDiscoverySearchPaths) {
+        if (QFile::exists(p)) {
+            tool = p;
+            break;
+        }
+    }
+    if (tool.isEmpty())
+        tool = QStandardPaths::findExecutable("carla-discovery-native");
+    if (tool.isEmpty()) {
+        qWarning() << "[AudioPluginManager] carla-discovery-native が見つかりません";
+        qWarning() << "[AudioPluginManager] 検索パス:" << kDiscoverySearchPaths;
+        m_scanning = false;
+        return;
+    }
+    qDebug() << "[AudioPluginManager] ディスカバリツール:" << tool;
+
+    QList<PluginInfo> newPlugins;
+    QHash<QString, PluginInfo> newMap;
+
+    for (const FormatConfig &cfg : kFormats) {
+        if (m_stopRequested)
+            break;
+        qDebug() << "[AudioPluginManager] スキャン中:" << cfg.format;
+        const QList<PluginInfo> found = discoverFormat(tool, cfg, m_stopRequested);
+        qDebug() << "[AudioPluginManager]" << cfg.format << "→" << found.size() << "個";
+        for (const PluginInfo &p : found) {
+            if (!newMap.contains(p.id)) {
+                newPlugins.append(p);
+                newMap.insert(p.id, p);
+            }
+        }
+    }
+
+    {
+        QMutexLocker lock(&m_pluginsMutex);
+        m_plugins = std::move(newPlugins);
+        m_pluginMap = std::move(newMap);
+    }
+    qDebug() << "[AudioPluginManager] 検出プラグイン数:" << m_plugins.size();
+    m_scanning = false;
 }
 
 QVariantList AudioPluginManager::getPluginList() const {
+    QMutexLocker lock(&m_pluginsMutex);
     QVariantList list;
-    for (const auto &p : m_plugins) {
-        QVariantMap m;
-        m["id"] = p.id;
-        m["name"] = p.name;
-        m["format"] = p.format;
-        list.append(m);
+    list.reserve(m_plugins.size());
+    for (const auto &info : m_plugins) {
+        QVariantMap map;
+        map["id"] = info.id;
+        map["name"] = info.name;
+        map["format"] = info.format;
+        map["category"] = info.category;
+        map["maker"] = info.maker;
+        map["audioIns"] = info.audioIns;
+        map["audioOuts"] = info.audioOuts;
+        list.append(map);
     }
     return list;
 }
 
 QVariantList AudioPluginManager::getCategories() const {
-    QSet<QString> categories;
-    for (const auto &plugin : m_plugins) {
-        if (!plugin.category.isEmpty()) {
-            categories.insert(plugin.category);
-        } else {
-            categories.insert(plugin.format);
-        }
-    }
-
-    QStringList sortedCategories = categories.values();
-    std::sort(sortedCategories.begin(), sortedCategories.end());
-
+    QMutexLocker lock(&m_pluginsMutex);
+    QSet<QString> cats;
+    for (const auto &info : m_plugins)
+        cats.insert(info.category);
     QVariantList list;
-    for (const auto &cat : sortedCategories) {
-        list.append(cat);
-    }
+    for (const auto &c : cats)
+        list.append(c);
     return list;
 }
 
 QVariantList AudioPluginManager::getPluginsInCategory(const QString &category) const {
+    QMutexLocker lock(&m_pluginsMutex);
     QVariantList list;
-    for (const auto &plugin : m_plugins) {
-        if (plugin.category == category || (plugin.category.isEmpty() && plugin.format == category)) {
-            list.append(QVariantMap{{"id", plugin.id}, {"name", plugin.name}});
+    for (const auto &info : m_plugins) {
+        if (info.category == category) {
+            QVariantMap map;
+            map["id"] = info.id;
+            map["name"] = info.name;
+            map["format"] = info.format;
+            map["maker"] = info.maker;
+            list.append(map);
         }
     }
     return list;
 }
 
 std::unique_ptr<IAudioPlugin> AudioPluginManager::createPlugin(const QString &id) {
-    if (!m_pluginMap.contains(id))
-        return nullptr;
-
-    const auto &info = m_pluginMap[id];
-    std::unique_ptr<IAudioPlugin> plugin;
-
-    if (info.format == "LADSPA") {
-        plugin = std::make_unique<LadspaPlugin>();
-        plugin->load(info.path, info.index);
-    } else if (info.format == "LV2") {
-        plugin = std::make_unique<Lv2Plugin>();
-        plugin->load(info.uri);
-    } else if (info.format == "CLAP") {
-        plugin = std::make_unique<ClapPlugin>();
-        plugin->load(info.path, info.index);
-    } else if (info.format == "VST3") {
-        plugin = std::make_unique<Vst3Plugin>();
-        plugin->load(info.path);
-    }
-
-    return plugin;
-}
-
-void AudioPluginManager::scanPlugins() {
-    m_plugins.clear();
-    m_pluginMap.clear();
-    qInfo() << "[AudioPluginManager] Scanning plugins...";
-
-    scanLadspa();
-    scanLv2();
-    scanClap();
-
-    scanVst3();
-    qInfo() << "[AudioPluginManager] Scan complete. Found" << m_plugins.size() << "plugins.";
-}
-
-void AudioPluginManager::scanLadspa() {
-    QStringList paths = {"/usr/lib/ladspa", "/usr/local/lib/ladspa", QDir::homePath() + "/.ladspa"};
-    if (qEnvironmentVariableIsSet("LADSPA_PATH")) {
-        paths = QString::fromLocal8Bit(qgetenv("LADSPA_PATH")).split(':');
-    }
-
-    for (const auto &path : paths) {
-        QDir dir(path);
-        if (!dir.exists())
-            continue;
-
-        QDirIterator it(path, {"*.so"}, QDir::Files, QDirIterator::Subdirectories);
-        while (it.hasNext()) {
-            QString filePath = it.next();
-            QLibrary lib(filePath);
-            if (!lib.load())
-                continue;
-
-            auto descriptorFn = (LADSPA_Descriptor_Function)lib.resolve("ladspa_descriptor");
-            if (!descriptorFn)
-                continue;
-
-            unsigned long i = 0;
-            while (const LADSPA_Descriptor *desc = descriptorFn(i++)) {
-                PluginInfo info;
-                info.name = QString(desc->Name);
-                info.path = filePath;
-                info.index = (int)(i - 1);
-                info.format = "LADSPA";
-                info.id = QString("ladspa:%1:%2").arg(info.path).arg(info.index);
-                info.category = "LADSPA";
-                registerPlugin(info);
-            }
-        }
-    }
-}
-
-void AudioPluginManager::scanLv2() {
-    const LilvPlugins *plugins = lilv_world_get_all_plugins(m_lilvWorld);
-
-    LILV_FOREACH(plugins, i, plugins) {
-        const LilvPlugin *p = lilv_plugins_get(plugins, i);
-        const LilvNode *n = lilv_plugin_get_name(p);
-        const LilvNode *u = lilv_plugin_get_uri(p);
-
-        // Get Category using standard Lilv API
-        const LilvPluginClass *cls = lilv_plugin_get_class(p);
-        const LilvNode *cat_node = cls ? lilv_plugin_class_get_label(cls) : nullptr;
-
-        PluginInfo info;
-        if (n)
-            info.name = QString::fromUtf8(lilv_node_as_string(n));
-        if (u) {
-            info.uri = QString::fromUtf8(lilv_node_as_uri(u));
-            info.id = "lv2:" + info.uri;
-        }
-        info.format = "LV2";
-
-        if (cat_node) {
-            info.category = QString::fromUtf8(lilv_node_as_string(cat_node));
-        } else {
-            info.category = "LV2";
-        }
-
-        if (!info.id.isEmpty()) {
-            registerPlugin(info);
-        }
-    }
-}
-
-void AudioPluginManager::scanClap() {
-    QStringList paths = {"/usr/lib/clap", QDir::homePath() + "/.clap"};
-    if (qEnvironmentVariableIsSet("CLAP_PATH")) {
-        paths = QString::fromLocal8Bit(qgetenv("CLAP_PATH")).split(':');
-    }
-
-    for (const auto &path : paths) {
-        QDir dir(path);
-        if (!dir.exists())
-            continue;
-
-        QDirIterator it(path, {"*.clap"}, QDir::Files, QDirIterator::Subdirectories);
-        while (it.hasNext()) {
-            QString filePath = it.next();
-            QLibrary lib(filePath);
-            if (!lib.load())
-                continue;
-
-            auto entry = (const clap_plugin_entry_t *)lib.resolve("clap_entry");
-            if (!entry)
-                continue;
-
-            entry->init(filePath.toUtf8().constData());
-            auto factory = (const clap_plugin_factory_t *)entry->get_factory(CLAP_PLUGIN_FACTORY_ID);
-            if (factory) {
-                uint32_t count = factory->get_plugin_count(factory);
-                for (uint32_t i = 0; i < count; ++i) {
-                    auto desc = factory->get_plugin_descriptor(factory, i);
-                    if (!desc)
-                        continue;
-
-                    PluginInfo info;
-                    info.name = desc->name;
-                    info.path = filePath;
-                    info.index = (int)i;
-                    info.format = "CLAP";
-                    info.id = QString("clap:%1:%2").arg(info.path).arg(i);
-
-                    // Simple category heuristic for CLAP
-                    if (info.name.startsWith("Cardinal")) {
-                        info.category = "Cardinal";
-                    } else {
-                        info.category = "CLAP";
-                    }
-
-                    registerPlugin(info);
-                }
-            }
-        }
-    }
-}
-
-void AudioPluginManager::scanVst3() {
-    QStringList paths = {"/usr/lib/vst3", "/usr/local/lib/vst3", QDir::homePath() + "/.vst3"};
-    if (qEnvironmentVariableIsSet("VST3_PATH")) {
-        paths = QString::fromLocal8Bit(qgetenv("VST3_PATH")).split(':');
-    }
-
-    for (const auto &path : paths) {
-        QDir dir(path);
-        if (!dir.exists())
-            continue;
-
-        // VST3は通常ディレクトリ（バンドル）として配布される
-        QDirIterator it(path, {"*.vst3"}, QDir::AllDirs | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
-        while (it.hasNext()) {
-            QString bundlePath = it.next();
-            QFileInfo fi(bundlePath);
-
-            // Linux VST3 Bundle構造: Plugin.vst3/Contents/x86_64-linux/Plugin.so
-            QString binaryPath = bundlePath + "/Contents/x86_64-linux/" + fi.baseName() + ".so";
-
-            if (QFile::exists(binaryPath)) {
-                PluginInfo info;
-                info.name = fi.baseName(); // 仮の名前（ロード時に正式名取得）
-                info.path = binaryPath;    // ローダーにはバイナリの実パスを渡す
-                info.format = "VST3";
-                info.id = "vst3:" + binaryPath;
-                info.category = "VST3";
-                registerPlugin(info);
-            }
-        }
-    }
+    Q_UNUSED(id)
+    qWarning() << "[AudioPluginManager] createPlugin は次段で carla_add_plugin に接続します";
+    return nullptr;
 }
 
 } // namespace Rina::Engine::Plugin

@@ -60,6 +60,9 @@ int main(int argc, char *argv[]) {
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 #endif
     QApplication app(argc, argv);
+
+    // Carlaホストを含むオーディオプラグインマネージャーのグローバル初期化
+    Rina::Engine::Plugin::AudioPluginManager::instance().initialize();
     app.setApplicationName("Rina");
 
     // FFmpegのログコールバックを設定（ノイズ除去）
@@ -115,8 +118,7 @@ int main(int argc, char *argv[]) {
         // エフェクトレジストリの初期化
         Rina::Core::initializeStandardEffects();
 
-        // オーディオプラグインの初期化
-        Rina::Engine::Plugin::AudioPluginManager::instance().scanPlugins();
+        // オーディオプラグインは起動時 initialize() 内でスキャン済み
 
         // Luaエンジンの初期化
         // ECSのインスタンス（g_ecsState）のアドレスをLuaに渡す
