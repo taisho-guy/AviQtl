@@ -50,5 +50,14 @@ struct SceneData {
     // ネスト利用のためのメタデータ
     int startFrame = 0;
     int durationFrames = 0;
+
+    // Grid & Snap Settings (Moved from UI/System state to Scene state)
+    QString gridMode = "Auto"; // "Auto", "BPM", "Frame"
+    double gridBpm = 120.0;
+    double gridOffset = 0.0;
+    int gridInterval = 10;
+    int gridSubdivision = 4;
+    bool enableSnap = true;
+    int magneticSnapRange = 10;
 };
 } // namespace Rina::UI

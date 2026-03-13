@@ -698,6 +698,13 @@ QVariantList TimelineService::scenes() const {
         map["height"] = scene.height;
         map["fps"] = scene.fps;
         map["totalFrames"] = scene.totalFrames;
+        map["gridMode"] = scene.gridMode;
+        map["gridBpm"] = scene.gridBpm;
+        map["gridOffset"] = scene.gridOffset;
+        map["gridInterval"] = scene.gridInterval;
+        map["gridSubdivision"] = scene.gridSubdivision;
+        map["enableSnap"] = scene.enableSnap;
+        map["magneticSnapRange"] = scene.magneticSnapRange;
         list.append(map);
     }
     return list;
@@ -758,7 +765,8 @@ void TimelineService::switchScene(int sceneId) {
         m_selection->select(-1, QVariantMap());
 }
 
-void TimelineService::updateSceneSettings(int sceneId, const QString &name, int width, int height, double fps, int totalFrames) {
+void TimelineService::updateSceneSettings(int sceneId, const QString &name, int width, int height, double fps, int totalFrames, const QString &gridMode, double gridBpm, double gridOffset, int gridInterval, int gridSubdivision, bool enableSnap,
+                                          int magneticSnapRange) {
     SceneData newData, oldData;
     for (const auto &s : getAllScenes()) {
         if (s.id == sceneId) {
@@ -772,6 +780,13 @@ void TimelineService::updateSceneSettings(int sceneId, const QString &name, int 
     newData.height = height;
     newData.fps = fps;
     newData.totalFrames = totalFrames;
+    newData.gridMode = gridMode;
+    newData.gridBpm = gridBpm;
+    newData.gridOffset = gridOffset;
+    newData.gridInterval = gridInterval;
+    newData.gridSubdivision = gridSubdivision;
+    newData.enableSnap = enableSnap;
+    newData.magneticSnapRange = magneticSnapRange;
     m_undoStack->push(new UpdateSceneSettingsCommand(this, sceneId, oldData, newData));
 }
 
@@ -914,6 +929,13 @@ void TimelineService::applySceneSettingsInternal(int sceneId, const SceneData &d
             scene.height = data.height;
             scene.fps = data.fps;
             scene.totalFrames = data.totalFrames;
+            scene.gridMode = data.gridMode;
+            scene.gridBpm = data.gridBpm;
+            scene.gridOffset = data.gridOffset;
+            scene.gridInterval = data.gridInterval;
+            scene.gridSubdivision = data.gridSubdivision;
+            scene.enableSnap = data.enableSnap;
+            scene.magneticSnapRange = data.magneticSnapRange;
             emit scenesChanged();
             return;
         }

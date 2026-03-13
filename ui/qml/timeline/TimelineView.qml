@@ -17,15 +17,38 @@ ScrollView {
     }
     property int contextClickFrame: 0
     property int contextClickLayer: 0
-    property bool enableSnap: SettingsManager.settings.enableSnap
+    property var currentSceneData: {
+        if (!TimelineBridge || !TimelineBridge.scenes)
+            return null;
+
+        for (var i = 0; i < TimelineBridge.scenes.length; i++) {
+            if (TimelineBridge.scenes[i].id === TimelineBridge.currentSceneId)
+                return TimelineBridge.scenes[i];
+
+        }
+        return null;
+    }
+    property bool enableSnap: currentSceneData && currentSceneData.enableSnap !== undefined ? currentSceneData.enableSnap : (SettingsManager.settings ? SettingsManager.settings.enableSnap : true)
+    property int magneticSnapRange: currentSceneData && currentSceneData.magneticSnapRange !== undefined ? currentSceneData.magneticSnapRange : (SettingsManager.settings ? timelineViewRoot.magneticSnapRange : 10)
     property int tailPaddingFrames: 120
-    property var gridSettings: ({
-        "mode": "Auto",
-        "bpm": 120,
-        "offset": 0,
-        "interval": 10,
-        "subdivision": 4
-    })
+    property var gridSettings: {
+        if (currentSceneData)
+            return {
+            "mode": currentSceneData.gridMode || "Auto",
+            "bpm": currentSceneData.gridBpm || 120,
+            "offset": currentSceneData.gridOffset || 0,
+            "interval": currentSceneData.gridInterval || 10,
+            "subdivision": currentSceneData.gridSubdivision || 4
+        };
+
+        return {
+            "mode": "Auto",
+            "bpm": 120,
+            "offset": 0,
+            "interval": 10,
+            "subdivision": 4
+        };
+    }
     readonly property int maxClipEndFrame: {
         var maxEnd = 0;
         var clipList = (TimelineBridge && TimelineBridge.clips) ? TimelineBridge.clips : [];
@@ -38,8 +61,6 @@ ScrollView {
         return maxEnd;
     }
     readonly property int timelineLengthFrames: Math.max(100, maxClipEndFrame + tailPaddingFrames)
-
-    signal gridSettingsRequested()
 
     function clamp(v, lo, hi) {
         return Math.max(lo, Math.min(hi, v));
@@ -725,7 +746,6 @@ ScrollView {
                 TimelineBridge.pasteClip(contextClickFrame, contextClickLayer);
                 break;
             case "view.gridsettings":
-                gridSettingsRequested();
                 break;
             default:
                 console.log("Unknown command:", cmd);

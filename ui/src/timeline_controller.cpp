@@ -674,7 +674,10 @@ void TimelineController::removeScene(int sceneId) { m_timeline->removeScene(scen
 
 void TimelineController::switchScene(int sceneId) { m_timeline->switchScene(sceneId); }
 
-void TimelineController::updateSceneSettings(int sceneId, const QString &name, int width, int height, double fps, int totalFrames) { m_timeline->updateSceneSettings(sceneId, name, width, height, fps, totalFrames); }
+void TimelineController::updateSceneSettings(int sceneId, const QString &name, int width, int height, double fps, int totalFrames, const QString &gridMode, double gridBpm, double gridOffset, int gridInterval, int gridSubdivision, bool enableSnap,
+                                             int magneticSnapRange) {
+    m_timeline->updateSceneSettings(sceneId, name, width, height, fps, totalFrames, gridMode, gridBpm, gridOffset, gridInterval, gridSubdivision, enableSnap, magneticSnapRange);
+}
 
 QVariantList TimelineController::getSceneClips(int sceneId) const {
     QVariantList list;

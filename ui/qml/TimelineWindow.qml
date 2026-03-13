@@ -5,6 +5,8 @@ import "common" as Common
 import "timeline" // サブフォルダのモジュールをインポート
 
 Common.RinaWindow {
+    // グリッド設定ウィンドウ
+
     id: timelineWindow
 
     // 定数・設定
@@ -27,15 +29,6 @@ Common.RinaWindow {
     title: "Timeline"
     width: 1280
     height: 300
-
-    // グリッド設定ウィンドウ
-    Loader {
-        id: gridSettingsLoader
-
-        active: false
-        source: "timeline/GridSettingsWindow.qml"
-        onLoaded: item.open(timelineView)
-    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -81,7 +74,7 @@ Common.RinaWindow {
                                 onClicked: {
                                     var win = WindowManager.getWindow("sceneSettings");
                                     if (win)
-                                        win.openForScene(modelData.id, modelData.name, modelData.width !== undefined ? modelData.width : 1920, modelData.height !== undefined ? modelData.height : 1080, modelData.fps !== undefined ? modelData.fps : 60, modelData.totalFrames !== undefined ? modelData.totalFrames : 300);
+                                        win.openForScene(modelData.id, modelData.name, modelData.width !== undefined ? modelData.width : 1920, modelData.height !== undefined ? modelData.height : 1080, modelData.fps !== undefined ? modelData.fps : 60, modelData.totalFrames !== undefined ? modelData.totalFrames : 300, modelData.gridMode || "Auto", modelData.gridBpm !== undefined ? modelData.gridBpm : 120, modelData.gridOffset !== undefined ? modelData.gridOffset : 0, modelData.gridInterval !== undefined ? modelData.gridInterval : 10, modelData.gridSubdivision !== undefined ? modelData.gridSubdivision : 4, modelData.enableSnap !== undefined ? modelData.enableSnap : true, modelData.magneticSnapRange !== undefined ? modelData.magneticSnapRange : 10);
 
                                 }
                             }
@@ -198,12 +191,6 @@ Common.RinaWindow {
                 clipResizeHandleWidth: timelineWindow.clipResizeHandleWidth
                 getLayerLocked: (layer) => {
                     return layerHeader.getLayerLocked(layer);
-                }
-                onGridSettingsRequested: {
-                    if (!gridSettingsLoader.active)
-                        gridSettingsLoader.active = true;
-                    else
-                        gridSettingsLoader.item.open(timelineView);
                 }
             }
 

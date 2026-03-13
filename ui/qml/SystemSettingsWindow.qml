@@ -431,12 +431,6 @@ Common.RinaWindow {
                             }
 
                             CheckBox {
-                                text: "スナップを有効にする"
-                                checked: root.valueOr("enableSnap", true)
-                                onToggled: root.setValue("enableSnap", checked)
-                            }
-
-                            CheckBox {
                                 text: "分割時にカーソル位置を使う"
                                 checked: root.valueOr("splitAtCursor", true)
                                 onToggled: root.setValue("splitAtCursor", checked)
@@ -562,17 +556,6 @@ Common.RinaWindow {
                                 to: 100
                                 value: root.valueOr("minClipDurationFrames", 5)
                                 onValueModified: root.setValue("minClipDurationFrames", value)
-                            }
-
-                            Label {
-                                text: "磁力スナップ範囲"
-                            }
-
-                            SpinBox {
-                                from: 1
-                                to: 100
-                                value: root.valueOr("magneticSnapRange", 10)
-                                onValueModified: root.setValue("magneticSnapRange", value)
                             }
 
                             Label {
