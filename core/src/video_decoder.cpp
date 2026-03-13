@@ -142,10 +142,10 @@ hw_init_done:
         // HW初期化に失敗した場合はSWマルチスレッドを使用
         if (codec->capabilities & AV_CODEC_CAP_FRAME_THREADS) {
             m_decCtx->thread_type = FF_THREAD_FRAME;
-            m_decCtx->thread_count = 0;
+            m_decCtx->thread_count = Rina::Core::SettingsManager::instance().value("videoDecoderThreads", 0).toInt();
         } else if (codec->capabilities & AV_CODEC_CAP_SLICE_THREADS) {
             m_decCtx->thread_type = FF_THREAD_SLICE;
-            m_decCtx->thread_count = 0;
+            m_decCtx->thread_count = Rina::Core::SettingsManager::instance().value("videoDecoderThreads", 0).toInt();
         }
     }
 
@@ -352,7 +352,7 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) {
 
     bool frameFound = false;
     AVPacket *pkt = av_packet_alloc();
-    int maxDecodeCount = 500;
+    int maxDecodeCount = Rina::Core::SettingsManager::instance().value("videoDecoderMaxPrefetchCount", 500).toInt();
     bool eof = false;
 
     while (maxDecodeCount-- > 0 && !frameFound) {

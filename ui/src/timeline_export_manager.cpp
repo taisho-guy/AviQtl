@@ -28,7 +28,9 @@ bool TimelineExportManager::exportImageSequence(const QString &dir, int quality)
     QString baseName = dir;
     if (baseName.endsWith(".png"))
         baseName.chop(4);
-    const int sequencePadding = 6;
+    const int sequencePadding = Rina::Core::SettingsManager::instance().value("exportSequencePadding", 6).toInt();
+    const int timeoutMs = Rina::Core::SettingsManager::instance().value("exportFrameGrabTimeoutMs", 2000).toInt();
+    const int progressInterval = Rina::Core::SettingsManager::instance().value("exportProgressInterval", 5).toInt();
 
     QQuickItem *view = m_controller->compositeView();
     if (view)
@@ -43,14 +45,16 @@ bool TimelineExportManager::exportImageSequence(const QString &dir, int quality)
             if (grabResult) {
                 QEventLoop loop;
                 connect(grabResult.get(), &QQuickItemGrabResult::ready, &loop, &QEventLoop::quit);
-                QTimer::singleShot(2000, &loop, &QEventLoop::quit);
+                QTimer::singleShot(timeoutMs, &loop, &QEventLoop::quit);
                 loop.exec();
                 renderedFrame = grabResult->image();
             }
         }
         QString filename = QString("%1_%2.png").arg(baseName).arg(frame, sequencePadding, 10, QChar('0'));
         renderedFrame.save(filename, "PNG", quality);
-        emit m_controller->exportProgressChanged((frame * 100) / totalFrames, frame + 1, totalFrames);
+        if (frame % progressInterval == 0 || frame == totalFrames - 1) {
+            emit m_controller->exportProgressChanged((frame * 100) / totalFrames, frame + 1, totalFrames);
+        }
     }
     if (view)
         view->setProperty("exportMode", false);

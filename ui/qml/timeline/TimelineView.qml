@@ -487,8 +487,8 @@ ScrollView {
                                 var newDur = endFrame - newStart;
                                 var minDur = SettingsManager ? SettingsManager.value("minClipDurationFrames", 5) : 5;
                                 if (newDur < minDur) {
-                                    newStart = endFrame - 5;
-                                    newDur = 5;
+                                    newStart = endFrame - minDur;
+                                    newDur = minDur;
                                 }
                                 // ドラフトプロパティ経由で表示更新（バインディング破壊なし）
                                 clipDelegate.resizeDraftStart = newStart;

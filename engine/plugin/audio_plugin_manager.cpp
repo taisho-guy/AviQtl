@@ -125,7 +125,7 @@ QList<PluginInfo> runDiscovery(const QString &tool, const QString &type, const Q
     proc.setProcessChannelMode(QProcess::SeparateChannels);
     proc.start(tool, {type, target});
 
-    if (!proc.waitForStarted(3000)) {
+    if (!proc.waitForStarted(Rina::Core::SettingsManager::instance().value("pluginDiscoveryWaitStartedMs", 3000).toInt())) {
         qWarning() << "[Discovery] 起動失敗:" << target;
         return {};
     }
@@ -133,17 +133,17 @@ QList<PluginInfo> runDiscovery(const QString &tool, const QString &type, const Q
     QByteArray output;
     QElapsedTimer timer;
     timer.start();
-    constexpr int kTimeoutMs = 5000;
+    const int kTimeoutMs = Rina::Core::SettingsManager::instance().value("pluginDiscoveryTimeoutMs", 5000).toInt();
 
     while (!stopFlag) {
-        proc.waitForReadyRead(200);
+        proc.waitForReadyRead(Rina::Core::SettingsManager::instance().value("pluginDiscoveryWaitReadyReadMs", 200).toInt());
         output += proc.readAllStandardOutput();
         if (proc.state() == QProcess::NotRunning)
             break;
         if (timer.elapsed() > kTimeoutMs) {
             qWarning() << "[Discovery] タイムアウト:" << target;
             proc.kill();
-            proc.waitForFinished(1000);
+            proc.waitForFinished(Rina::Core::SettingsManager::instance().value("pluginDiscoveryWaitFinishedMs", 1000).toInt());
             break;
         }
     }
@@ -222,7 +222,7 @@ QList<PluginInfo> discoverFormat(const QString &tool, const FormatConfig &cfg, s
     QMutex mutex;
 
     QThreadPool pool;
-    pool.setMaxThreadCount(std::max(2, QThread::idealThreadCount() - 1));
+    pool.setMaxThreadCount(Rina::Core::SettingsManager::instance().value("pluginDiscoveryThreads", std::max(2, QThread::idealThreadCount() - 1)).toInt());
 
     QtConcurrent::blockingMap(&pool, targets, [&](const QString &target) {
         if (stopFlag)
