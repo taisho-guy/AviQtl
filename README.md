@@ -1,6 +1,6 @@
 # Rina - Rina is not AviUtl.
 
-### RinaはAviUtl 1.10（ExEdit 0.92）以上のユーザー体験をAviUtlの操作感で実現するプロジェクトです。
+### AviUtl 1.10（ExEdit 0.92）以上のユーザー体験をExEdit 0.xライクな操作感で実装するプロジェクトです。
 
 - [Rinaのお部屋](https://taisho-guy.codeberg.page/Rina)
 - [Wiki](https://codeberg.org/taisho-guy/Rina/wiki)
@@ -9,14 +9,10 @@
 
 - [Linux(x86_64)](https://codeberg.org/taisho-guy/Rina/releases)
 
-  - Linux版は依存関係を同梱しておりません。Qt6, LuaJIT, Vulkan, FFmpegをインストールしてください。
-  - Arch Linux上でビルドしているため、最新のランタイムが利用できないディストリビューションでは動作しない場合がございます。ローリングリリースのディストリビューションでご利用頂くことを推奨致します。
+  - 依存関係を同梱しておりません。Qt6全般、LuaJIT、Vulkan実装（Mesa等）、FFmpeg、Carlaをインストールしてからご利用ください。
+  - 最新のランタイム（glibc等）が利用できないディストリビューションでは動作しない場合がございます。
 
-- [Windows(x86_64)](https://codeberg.org/taisho-guy/Rina/releases)
-
-  - Windows版は依存関係を同梱しております。
-
-- macOS版は現在提供しておりません。手動でビルドして下さい。
+- Windows版/macOS版は現在提供しておりません。ビルドできるかもしれませんが......
 
 ## ビルド手順 (Linux/MSYS2)
 
@@ -41,7 +37,9 @@
   - Linux: `./build/Rina`
   - MSYS2: `./build/Rina.exe`
 
-
+> [!WARNING]
+> MSYS2やmacOS、Visual Studio上でのビルド検証は行っておりません。
+> ビルドが通らない場合はIssueを立てたり、`CMakeLists.txt`や`BUILD.py`を改良してプルリクエストを送信して頂けると有り難いです。
 
 ## サードパーティー製の埋め込みリソース
 
