@@ -26,10 +26,10 @@ void TimelineMediaManager::onPlayingChanged() {
 void TimelineMediaManager::onCurrentFrameChanged() {
 
     int nextFrame = m_controller->transport()->currentFrame();
-    int fps = m_controller->project()->fps();
+    double fps = m_controller->project()->fps();
     if (m_controller->transport()->isPlaying()) {
         int sampleRate = m_controller->project()->sampleRate();
-        m_audioMixer->processFrame(nextFrame, fps, sampleRate / fps);
+        m_audioMixer->processFrame(nextFrame, fps, std::round(static_cast<double>(sampleRate) / fps));
     }
 
     for (auto it = m_decoders.begin(); it != m_decoders.end(); ++it) {
