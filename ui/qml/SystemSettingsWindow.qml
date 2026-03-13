@@ -647,9 +647,23 @@ Common.RinaWindow {
                             }
 
                             ComboBox {
-                                model: root.themeLabels
-                                currentIndex: root.indexOfValue(root.themeValues, root.valueOr("theme", "Dark"), 0)
-                                onActivated: root.setValue("theme", root.themeValues[currentIndex])
+                                id: themeComboBox
+
+                                model: typeof ColorSchemeController !== "undefined" ? ColorSchemeController.schemesModel : null
+                                textRole: "display"
+                                Component.onCompleted: {
+                                    if (typeof ColorSchemeController !== "undefined") {
+                                        var idx = ColorSchemeController.indexOfSchemeId(ColorSchemeController.activeSchemeId);
+                                        if (idx !== -1)
+                                            currentIndex = idx;
+
+                                    }
+                                }
+                                onActivated: {
+                                    if (typeof ColorSchemeController !== "undefined")
+                                        ColorSchemeController.activeSchemeId = ColorSchemeController.schemeIdAt(currentIndex);
+
+                                }
                             }
 
                             Label {

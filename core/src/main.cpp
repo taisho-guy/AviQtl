@@ -1,9 +1,11 @@
 #include "../../engine/plugin/audio_plugin_manager.hpp"
 #include "../../engine/timeline/ecs.hpp"
 #include "../../scripting/mod_engine.hpp"
+#include "color_scheme_controller.hpp"
 #include "effect_registry.hpp"
 #include "rina_context.hpp"
 #include "settings_manager.hpp"
+#include "theme_controller.hpp"
 #include "timeline_controller.hpp"
 #include "video_encoder.hpp"
 #include "video_frame_provider.hpp"
@@ -49,6 +51,7 @@ int main(int argc, char *argv[]) {
 
     // メインスレッド上で設定管理を初期化する
     QVariantMap settings = Rina::Core::SettingsManager::instance().settings();
+    Rina::Core::ThemeController::instance();
 
     av_log_set_callback(rina_ffmpeg_log_callback);
     app.setWindowIcon(QIcon(":/assets/icon.svg"));
@@ -66,6 +69,7 @@ int main(int argc, char *argv[]) {
     luaHookTimer.start(Rina::Core::SettingsManager::instance().value("luaHookIntervalMs", 16).toInt());
 
     QQuickStyle::setFallbackStyle("Fusion");
+    auto *colorSchemeController = new Rina::Core::ColorSchemeController(&app);
     QQmlApplicationEngine engine;
 
     auto *videoFrameStore = new Rina::Core::VideoFrameStore(&app);
@@ -74,6 +78,7 @@ int main(int argc, char *argv[]) {
 
     qmlRegisterType<Rina::Core::VideoEncoder>("Rina.Core", 1, 0, "VideoEncoder");
     engine.rootContext()->setContextProperty("SettingsManager", &Rina::Core::SettingsManager::instance());
+    engine.rootContext()->setContextProperty("ColorSchemeController", colorSchemeController);
 
     auto *timelineController = new Rina::UI::TimelineController(&app);
     engine.rootContext()->setContextProperty("TimelineBridge", timelineController);

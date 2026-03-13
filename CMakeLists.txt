@@ -53,6 +53,9 @@ endif()
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick QuickControls2 Quick3D Widgets Core5Compat Sql Svg Multimedia Concurrent ShaderTools ${EXTRA_QT_COMPONENTS})
 find_package(Vulkan REQUIRED)
+find_package(ECM REQUIRED NO_MODULE)
+list(APPEND CMAKE_MODULE_PATH ${ECM_MODULE_PATH})
+find_package(KF6 REQUIRED COMPONENTS Kirigami ColorScheme)
 find_package(PkgConfig REQUIRED)
 
 # FFmpeg Integration for Hardware Encoding
@@ -93,6 +96,7 @@ file(GLOB_RECURSE COMMON_SHADERS "ui/qml/common/shaders/*.glsl")
 qt_add_executable(Rina
     ${CPP_SOURCES}
     core/src/settings_manager.cpp
+    core/src/color_scheme_controller.cpp
     ui/src/project_service.cpp
     ui/src/transport_service.cpp
     ui/src/selection_service.cpp
@@ -173,7 +177,8 @@ target_link_libraries(
     Rina PRIVATE Qt6::Core Qt6::Gui Qt6::Quick Qt6::QuickControls2 Qt6::Quick3D Qt6::Widgets Qt6::Svg Qt6::Core5Compat Qt6::Multimedia Qt6::Concurrent Vulkan::Vulkan
                    ${LUAJIT_LIBRARIES}
                    ${FFMPEG_LIBRARIES}
-                   ${CARLA_LIBRARIES})
+                   ${CARLA_LIBRARIES}
+                   KF6::Kirigami KF6::ColorScheme)
 
 
 # Carlaのライブラリパスを明示（/usr/lib/carla/ 等の非標準ディレクトリ対策）

@@ -125,7 +125,7 @@ class BuildWorker(QtCore.QThread):
                 "mesa", "vulkan-devel", "libxkbcommon", "wayland", "wayland-protocols",
                 "libffi", "ffmpeg", "luajit", "fftw", "qt6-base", "qt6-declarative",
                 "qt6-quick3d", "qt6-multimedia", "qt6-shadertools", "qt6-svg",
-                "qt6-5compat", "qt6-tools", "lilv", "ladspa", "clap", "vst3sdk", "carla"
+                "qt6-5compat", "qt6-tools", "lilv", "ladspa", "clap", "vst3sdk", "carla", "kirigami", "openmp", "extra-cmake-modules", "kcolorscheme"
             ]
             # コンテナ内では sudo を使用してインストール
             # ロックファイルの解除を試みる (過去のプロセス中断時の対策)
