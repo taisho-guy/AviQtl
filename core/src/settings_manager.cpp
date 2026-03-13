@@ -17,7 +17,25 @@ SettingsManager &SettingsManager::instance() {
 
 SettingsManager::SettingsManager(QObject *parent) : QObject(parent) {
     // デフォルト設定
-    m_settings = {// System
+    m_settings = {{"pluginEnableLADSPA", true},
+                  {"pluginPathsLADSPA", QStringList()},
+                  {"pluginEnableDSSI", true},
+                  {"pluginPathsDSSI", QStringList()},
+                  {"pluginEnableLV2", true},
+                  {"pluginPathsLV2", QStringList()},
+                  {"pluginEnableVST2", true},
+                  {"pluginPathsVST2", QStringList()},
+                  {"pluginEnableVST3", true},
+                  {"pluginPathsVST3", QStringList()},
+                  {"pluginEnableCLAP", true},
+                  {"pluginPathsCLAP", QStringList()},
+                  {"pluginEnableSF2", true},
+                  {"pluginPathsSF2", QStringList()},
+                  {"pluginEnableSFZ", true},
+                  {"pluginPathsSFZ", QStringList()},
+                  {"pluginEnableJSFX", true},
+                  {"pluginPathsJSFX", QStringList()},
+                  // System
                   {"maxImageSize", "1920x1080"},
                   {"cacheSize", 512},
                   {"undoCount", 32},

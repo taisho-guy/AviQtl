@@ -1,4 +1,5 @@
 #include "audio_plugin_manager.hpp"
+#include "../../core/include/settings_manager.hpp"
 #include <QDebug>
 #include <QDir>
 #include <QDirIterator>
@@ -30,13 +31,15 @@ struct FormatConfig {
     bool bundleDir;
 };
 
-const QList<FormatConfig> kFormats = {
-    {"ladspa", "LADSPA", {"LADSPA_PATH"}, {"/usr/lib/ladspa", "/usr/local/lib/ladspa"}, "*.so", false},
-    {"lv2", "LV2", {"LV2_PATH"}, {"/usr/lib/lv2", "/usr/local/lib/lv2"}, "*.lv2", true},
-    {"vst2", "VST2", {"VST_PATH"}, {"/usr/lib/vst", "/usr/lib/vst2", "/usr/local/lib/vst", "/usr/local/lib/vst2"}, "*.so", false},
-    {"vst3", "VST3", {"VST3_PATH"}, {"/usr/lib/vst3", "/usr/local/lib/vst3"}, "*.vst3", true},
-    {"CLAP", "CLAP", {"CLAP_PATH"}, {"/usr/lib/clap", "/usr/local/lib/clap"}, "*.clap", false},
-};
+const QList<FormatConfig> kFormats = {{"ladspa", "LADSPA", {"LADSPA_PATH"}, {"/usr/lib/ladspa", "/usr/local/lib/ladspa"}, "*.so", false},
+                                      {"lv2", "LV2", {"LV2_PATH"}, {"/usr/lib/lv2", "/usr/local/lib/lv2"}, "*.lv2", true},
+                                      {"vst2", "VST2", {"VST_PATH"}, {"/usr/lib/vst", "/usr/lib/vst2", "/usr/local/lib/vst", "/usr/local/lib/vst2"}, "*.so", false},
+                                      {"vst3", "VST3", {"VST3_PATH"}, {"/usr/lib/vst3", "/usr/local/lib/vst3"}, "*.vst3", true},
+                                      {"clap", "CLAP", {"CLAP_PATH"}, {"/usr/lib/clap", "/usr/local/lib/clap"}, "*.clap", false},
+                                      {"dssi", "DSSI", {"DSSI_PATH"}, {"/usr/lib/dssi", "/usr/local/lib/dssi"}, "*.so", false},
+                                      {"sf2", "SF2", {"SF2_PATH"}, {"/usr/share/soundfonts", "/usr/share/sounds/sf2"}, "*.sf2", false},
+                                      {"sfz", "SFZ", {"SFZ_PATH"}, {"/usr/share/sounds/sfz"}, "*.sfz", false},
+                                      {"jsfx", "JSFX", {"JSFX_PATH"}, {"/opt/REAPER/Plugins/FX", "~/.config/REAPER/Effects"}, "*.jsfx", false}};
 
 QString toCategoryStr(int cat) {
     switch (static_cast<CarlaBackend::PluginCategory>(cat)) {
@@ -179,7 +182,13 @@ QList<PluginInfo> discoverFormat(const QString &tool, const FormatConfig &cfg, s
             qWarning() << "[AudioPluginManager] lv2lsの実行に失敗しました";
         }
     } else {
-        const QStringList searchPaths = collectSearchPaths(cfg);
+        QStringList searchPaths = collectSearchPaths(cfg);
+        QStringList customPaths = Rina::Core::SettingsManager::instance().value("pluginPaths" + cfg.format, QStringList()).toStringList();
+        for (const QString &cp : customPaths) {
+            if (!cp.trimmed().isEmpty() && !searchPaths.contains(cp)) {
+                searchPaths.append(cp.trimmed());
+            }
+        }
         QSet<QString> visited;
 
         for (const QString &dirPath : searchPaths) {
@@ -289,6 +298,10 @@ void AudioPluginManager::scanPlugins() {
     for (const FormatConfig &cfg : kFormats) {
         if (m_stopRequested)
             break;
+        bool isEnabled = Rina::Core::SettingsManager::instance().value("pluginEnable" + cfg.format, true).toBool();
+        if (!isEnabled)
+            continue;
+
         qDebug() << "[AudioPluginManager] スキャン中:" << cfg.format;
         const QList<PluginInfo> found = discoverFormat(tool, cfg, m_stopRequested);
         qDebug() << "[AudioPluginManager]" << cfg.format << "→" << found.size() << "個";

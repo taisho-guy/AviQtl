@@ -119,6 +119,7 @@ class BuildWorker(QtCore.QThread):
 
             # 3. コンテナ内: ビルド依存関係のインストール
             self.log_signal.emit("コンテナ内の依存関係をインストール中...")
+            
             container_deps = [
                 "base-devel", "git", "cmake", "ninja", "clang", "mold", "zip",
                 "mesa", "vulkan-devel", "libxkbcommon", "wayland", "wayland-protocols",
@@ -127,8 +128,13 @@ class BuildWorker(QtCore.QThread):
                 "qt6-5compat", "qt6-tools", "lilv", "ladspa", "clap", "vst3sdk", "carla"
             ]
             # コンテナ内では sudo を使用してインストール
-            self._run_cmd(["sudo", "pacman", "-Syu", "--needed", "--noconfirm"] + container_deps, in_container=True)
+            # ロックファイルの解除を試みる (過去のプロセス中断時の対策)
+            try:
+                self._run_cmd(["sudo", "rm", "-f", "/var/lib/pacman/db.lck"], in_container=True)
+            except Exception:
+                pass
 
+            self._run_cmd(["sudo", "pacman", "-Syu", "--needed", "--noconfirm"] + container_deps, in_container=True)
     def _run_tidy_single(self, file, build_dir):
         """個別のファイルに対してclang-tidyを実行する（並列実行用）"""
         cmd = ["clang-tidy", "-p", str(build_dir), "--fix", "--format-style=file", "--quiet", file]

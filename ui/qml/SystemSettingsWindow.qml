@@ -1057,6 +1057,86 @@ Common.RinaWindow {
                 }
             }
 
+            ScrollView {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                contentWidth: availableWidth
+                clip: true
+
+                ColumnLayout {
+                    width: parent.width
+                    spacing: 15
+
+                    Repeater {
+                        model: ["LADSPA", "DSSI", "LV2", "VST2", "VST3", "CLAP", "SF2", "SFZ", "JSFX"]
+
+                        delegate: GroupBox {
+                            title: modelData
+                            Layout.fillWidth: true
+
+                            ColumnLayout {
+                                width: parent.width
+
+                                CheckBox {
+                                    text: qsTr("Enable %1").arg(modelData)
+                                    checked: root.settings["pluginEnable" + modelData] ?? true
+                                    onToggled: {
+                                        var s = root.settings;
+                                        s["pluginEnable" + modelData] = checked;
+                                        if (SettingsManager)
+                                            SettingsManager.settings = s;
+
+                                    }
+                                }
+
+                                Label {
+                                    text: qsTr("Custom Search Paths (one path per line):")
+                                    color: "gray"
+                                    font.pixelSize: 11
+                                }
+
+                                ScrollView {
+                                    Layout.fillWidth: true
+                                    Layout.preferredHeight: 80
+                                    clip: true
+
+                                    TextArea {
+                                        text: (root.settings["pluginPaths" + modelData] || []).join("
+")
+                                        wrapMode: TextArea.NoWrap
+                                        onEditingFinished: {
+                                            var s = root.settings;
+                                            var pathsArray = text.split("
+").map((p) => {
+                                                return p.trim();
+                                            }).filter((p) => {
+                                                return p.length > 0;
+                                            });
+                                            s["pluginPaths" + modelData] = pathsArray;
+                                            if (SettingsManager)
+                                                SettingsManager.settings = s;
+
+                                        }
+
+                                        background: Rectangle {
+                                            color: palette.base
+                                            border.color: "#444"
+                                        }
+
+                                    }
+
+                                }
+
+                            }
+
+                        }
+
+                    }
+
+                }
+
+            }
+
         }
 
     }
