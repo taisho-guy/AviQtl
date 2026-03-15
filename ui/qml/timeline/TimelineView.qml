@@ -70,6 +70,16 @@ ScrollView {
     }
     readonly property int timelineLengthFrames: Math.max(100, maxClipEndFrame + tailPaddingFrames)
 
+    function handleClipSelection(clipId, modifiers, isSelected) {
+        if (!TimelineBridge)
+            return ;
+
+        if (modifiers & Qt.ControlModifier)
+            TimelineBridge.toggleClipSelection(clipId);
+        else
+            TimelineBridge.selectSingleClip(clipId);
+    }
+
     function clipHitsBox(clip, frameA, frameB, layerA, layerB) {
         var minFrame = Math.min(frameA, frameB);
         var maxFrame = Math.max(frameA, frameB);

@@ -217,15 +217,6 @@ Item {
                     return ;
 
                 dragActive = false;
-                if (TimelineBridge) {
-                    if (mouse.modifiers & Qt.ControlModifier) {
-                        TimelineBridge.toggleClipSelection(modelData.id);
-                        return ;
-                    }
-                    if (!clipDelegate.isSelected)
-                        TimelineBridge.selectSingleClip(modelData.id);
-
-                }
                 var sp = mapToItem(flickableContentItem, mouse.x, mouse.y);
                 pressScenePos = sp;
                 dragStartScenePos = sp;
@@ -267,11 +258,12 @@ Item {
 
                 clipDelegate.y = finalL * layerHeight;
             }
-            onReleased: {
+            onReleased: (mouse) => {
                 if (!TimelineBridge)
                     return ;
 
                 if (!dragActive) {
+                    clipSelected(modelData.id, mouse.modifiers, clipDelegate.isSelected);
                     clipDelegate.x = Qt.binding(() => {
                         return (clipDelegate.resizeDraftStart >= 0 ? clipDelegate.resizeDraftStart : modelData.startFrame) * clipDelegate.scale;
                     });
@@ -326,11 +318,7 @@ Item {
                     startFrame = modelData.startFrame;
                     startDuration = modelData.durationFrames;
                     resizing = true;
-                    if (TimelineBridge)
-                        if (!(mouse.modifiers & Qt.ControlModifier))
-                        TimelineBridge.selectSingleClip(modelData.id);
-;
-
+                    clipSelected(modelData.id, mouse.modifiers, clipDelegate.isSelected);
                     mouse.accepted = true;
                 }
                 onPositionChanged: (mouse) => {
@@ -397,11 +385,7 @@ Item {
                     startFrame = modelData.startFrame;
                     startDuration = modelData.durationFrames;
                     resizing = true;
-                    if (TimelineBridge)
-                        if (!(mouse.modifiers & Qt.ControlModifier))
-                        TimelineBridge.selectSingleClip(modelData.id);
-;
-
+                    clipSelected(modelData.id, mouse.modifiers, clipDelegate.isSelected);
                     mouse.accepted = true;
                 }
                 onPositionChanged: (mouse) => {
