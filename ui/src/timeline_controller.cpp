@@ -258,6 +258,11 @@ void TimelineController::moveSelectedClips(int deltaLayer, int deltaFrame) {
         m_timeline->moveSelectedClips(deltaLayer, deltaFrame);
 }
 
+void TimelineController::applyClipBatchMove(const QVariantList &moves) {
+    if (m_timeline)
+        m_timeline->applyClipBatchMove(moves);
+}
+
 void TimelineController::resizeSelectedClips(int deltaStartFrame, int deltaDuration) {
     if (m_timeline)
         m_timeline->resizeSelectedClips(deltaStartFrame, deltaDuration);

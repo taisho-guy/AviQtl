@@ -28,6 +28,9 @@ ScrollView {
     property int activeDragDeltaFrame: 0
     property int activeDragDeltaLayer: 0
     property bool isDraggingMulti: false
+    property int selectionMinFrame: 0
+    property int selectionMinLayer: 0
+    property int selectionMaxLayer: 0
     property var currentSceneData: {
         if (!TimelineBridge || !TimelineBridge.scenes)
             return null;
@@ -231,24 +234,57 @@ ScrollView {
                 }
                 onClipMoved: (clipId, deltaLayer, deltaStart, unused) => {
                     if (TimelineBridge) {
-                        if (timelineViewRoot.selectionVisualLatchIds.includes(clipId) || 
-                           (TimelineBridge.selection && TimelineBridge.selection.selectedClipIds.includes(clipId))) {
-                            TimelineBridge.moveSelectedClips(deltaLayer, deltaStart);
+                        var selectedIds = timelineViewRoot.selectionVisualLatchIds;
+                        if (selectedIds.length === 0 && TimelineBridge.selection)
+                            selectedIds = TimelineBridge.selection.selectedClipIds;
+
+                        if (selectedIds.includes(clipId)) {
+                            var moves = [];
+                            for (var i = 0; i < TimelineBridge.clips.length; i++) {
+                                var c = TimelineBridge.clips[i];
+                                if (selectedIds.includes(c.id)) {
+                                    var newL = Math.round(Number(c.layer) + Number(deltaLayer));
+                                    var newF = Math.round(Number(c.startFrame) + Number(deltaStart));
+                                    if (newL < 0)
+                                        newL = 0;
+
+                                    if (newL >= timelineViewRoot.layerCount)
+                                        newL = timelineViewRoot.layerCount - 1;
+
+                                    if (newF < 0)
+                                        newF = 0;
+
+                                    moves.push({
+                                        "id": Number(c.id),
+                                        "layer": newL,
+                                        "startFrame": newF,
+                                        "duration": Number(c.durationFrames)
+                                    });
+                                }
+                            }
+                            TimelineBridge.applyClipBatchMove(moves);
                         } else {
                             // Should not happen with new UX fix, but fallback
-                            var c = TimelineBridge.clips.find(c => c.id === clipId);
-                            if (c) TimelineBridge.updateClip(clipId, Math.max(0, c.layer + deltaLayer), Math.max(0, c.startFrame + deltaStart), c.durationFrames);
+                            var c = TimelineBridge.clips.find((c) => {
+                                return c.id === clipId;
+                            });
+                            if (c)
+                                TimelineBridge.updateClip(clipId, Math.max(0, c.layer + deltaLayer), Math.max(0, c.startFrame + deltaStart), c.durationFrames);
+
                         }
                     }
                 }
                 onClipResized: (clipId, deltaStart, deltaDuration, unused) => {
                     if (TimelineBridge) {
-                        if (timelineViewRoot.selectionVisualLatchIds.includes(clipId) || 
-                           (TimelineBridge.selection && TimelineBridge.selection.selectedClipIds.includes(clipId))) {
+                        if (timelineViewRoot.selectionVisualLatchIds.includes(clipId) || (TimelineBridge.selection && TimelineBridge.selection.selectedClipIds.includes(clipId))) {
                             TimelineBridge.resizeSelectedClips(deltaStart, deltaDuration);
                         } else {
-                            var c = TimelineBridge.clips.find(c => c.id === clipId);
-                            if (c) TimelineBridge.updateClip(clipId, c.layer, Math.max(0, c.startFrame + deltaStart), Math.max(1, c.durationFrames + deltaDuration));
+                            var c = TimelineBridge.clips.find((c) => {
+                                return c.id === clipId;
+                            });
+                            if (c)
+                                TimelineBridge.updateClip(clipId, c.layer, Math.max(0, c.startFrame + deltaStart), Math.max(1, c.durationFrames + deltaDuration));
+
                         }
                     }
                 }

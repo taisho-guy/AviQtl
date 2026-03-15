@@ -27,6 +27,8 @@ Item {
     property int groupLayerCount: 0
     property var groupEffectModel: null
     property string clipDisplayName: modelData.type
+    property int dragDeltaStart: (isSelected && timelineViewRoot.isDraggingMulti) ? timelineViewRoot.activeDragDeltaFrame : 0
+    property int dragDeltaLayer: (isSelected && timelineViewRoot.isDraggingMulti) ? timelineViewRoot.activeDragDeltaLayer : 0
 
     signal clipSelected(int clipId, int modifiers, bool isSelected)
     signal clipMoved(int clipId, int newLayer, int newStartFrame, int duration)
@@ -49,8 +51,6 @@ Item {
         }
     }
 
-    property int dragDeltaStart: (isSelected && timelineViewRoot.isDraggingMulti) ? timelineViewRoot.activeDragDeltaFrame : 0
-    property int dragDeltaLayer: (isSelected && timelineViewRoot.isDraggingMulti) ? timelineViewRoot.activeDragDeltaLayer : 0
     x: (resizeDraftStart >= 0 ? resizeDraftStart : Math.max(0, modelData.startFrame + dragDeltaStart)) * scale
     y: Math.max(0, modelData.layer + dragDeltaLayer) * layerHeight
     width: (resizeDraftDuration >= 0 ? resizeDraftDuration : modelData.durationFrames) * scale
@@ -219,14 +219,12 @@ Item {
                     return ;
 
                 dragActive = false;
-
                 // UX Fix: If the clip being dragged is NOT selected, select it immediately before dragging
                 if (!clipDelegate.isSelected) {
-                    if (!(mouse.modifiers & Qt.ControlModifier)) {
+                    if (!(mouse.modifiers & Qt.ControlModifier))
                         clipSelected(modelData.id, mouse.modifiers, false);
-                    }
-                }
 
+                }
                 var sp = mapToItem(flickableContentItem, mouse.x, mouse.y);
                 pressScenePos = sp;
                 dragStartScenePos = sp;
@@ -245,6 +243,37 @@ Item {
                         return ;
 
                     dragActive = true;
+                    var minF = modelData.startFrame;
+                    var minL = modelData.layer;
+                    var maxL = modelData.layer;
+                    if (TimelineBridge && TimelineBridge.selection) {
+                        var ids = timelineViewRoot.selectionVisualLatchIds;
+                        if (ids.length === 0)
+                            ids = TimelineBridge.selection.selectedClipIds;
+
+                        if (ids.length > 0) {
+                            minF = 1e+07;
+                            minL = 1e+07;
+                            maxL = -1;
+                            for (var i = 0; i < TimelineBridge.clips.length; i++) {
+                                var c = TimelineBridge.clips[i];
+                                if (ids.includes(c.id)) {
+                                    if (c.startFrame < minF)
+                                        minF = c.startFrame;
+
+                                    if (c.layer < minL)
+                                        minL = c.layer;
+
+                                    if (c.layer > maxL)
+                                        maxL = c.layer;
+
+                                }
+                            }
+                        }
+                    }
+                    timelineViewRoot.selectionMinFrame = minF;
+                    timelineViewRoot.selectionMinLayer = minL;
+                    timelineViewRoot.selectionMaxLayer = maxL;
                     timelineViewRoot.isDraggingMulti = true;
                     timelineViewRoot.activeDragDeltaFrame = 0;
                     timelineViewRoot.activeDragDeltaLayer = 0;
@@ -253,22 +282,33 @@ Item {
                 var dY = sp.y - dragStartScenePos.y;
                 var rawF = initialFrame + dX / clipDelegate.scale;
                 var propF = snapFrameFunc(rawF);
-                var propL = Math.max(0, Math.min(initialLayer + Math.round(dY / layerHeight), layerCount - 1));
-                propF = Math.max(0, propF);
-                if (propF === lastProposedFrame && propL === lastProposedLayer)
-                    return ;
-
-                lastProposedFrame = propF;
-                lastProposedLayer = propL;
+                var propL = initialLayer + Math.round(dY / layerHeight);
                 var finalF = propF, finalL = propL;
                 if (TimelineBridge && typeof TimelineBridge.resolveDragPosition === "function") {
-                    var pos = TimelineBridge.resolveDragPosition(modelData.id, propL, propF);
+                    var activeIds = timelineViewRoot.selectionVisualLatchIds;
+                    if (activeIds.length === 0 && TimelineBridge.selection)
+                        activeIds = TimelineBridge.selection.selectedClipIds;
+
+                    var pos = TimelineBridge.resolveDragPosition(modelData.id, propL, propF, activeIds);
                     finalF = pos.x;
                     finalL = pos.y;
                 }
+                var deltaF = finalF - initialFrame;
+                var deltaL = finalL - initialLayer;
+                if (timelineViewRoot.selectionMinFrame + deltaF < 0)
+                    deltaF = -timelineViewRoot.selectionMinFrame;
 
-                timelineViewRoot.activeDragDeltaFrame = finalF - initialFrame;
-                timelineViewRoot.activeDragDeltaLayer = finalL - initialLayer;
+                if (timelineViewRoot.selectionMinLayer + deltaL < 0)
+                    deltaL = -timelineViewRoot.selectionMinLayer;
+
+                if (timelineViewRoot.selectionMaxLayer + deltaL >= timelineViewRoot.layerCount)
+                    deltaL = timelineViewRoot.layerCount - 1 - timelineViewRoot.selectionMaxLayer;
+
+                if (deltaF === timelineViewRoot.activeDragDeltaFrame && deltaL === timelineViewRoot.activeDragDeltaLayer)
+                    return ;
+
+                timelineViewRoot.activeDragDeltaFrame = deltaF;
+                timelineViewRoot.activeDragDeltaLayer = deltaL;
             }
             onReleased: (mouse) => {
                 if (!TimelineBridge)
@@ -278,15 +318,21 @@ Item {
                     clipSelected(modelData.id, mouse.modifiers, clipDelegate.isSelected);
                     return ;
                 }
-
                 var deltaF = timelineViewRoot.activeDragDeltaFrame;
                 var deltaL = timelineViewRoot.activeDragDeltaLayer;
-
-                timelineViewRoot.isDraggingMulti = false;
                 dragActive = false;
-
-                // Emit relative movement so TimelineView can move all selected clips
+                // Emit relative movement FIRST so backend updates
                 clipMoved(modelData.id, deltaL, deltaF, modelData.durationFrames);
+                // Delay dropping the visual multi-drag state so that bindings
+                // don't collapse before C++ model updates are fully propagated.
+                var viewRoot = timelineViewRoot;
+                Qt.callLater(function() {
+                    if (viewRoot) {
+                        viewRoot.isDraggingMulti = false;
+                        viewRoot.activeDragDeltaFrame = 0;
+                        viewRoot.activeDragDeltaLayer = 0;
+                    }
+                });
             }
             onDoubleClicked: {
                 if (WindowManager)
@@ -318,9 +364,8 @@ Item {
                     if (clipDelegate.isLayerLocked)
                         return ;
 
-                    if (!clipDelegate.isSelected && !(mouse.modifiers & Qt.ControlModifier)) {
+                    if (!clipDelegate.isSelected && !(mouse.modifiers & Qt.ControlModifier))
                         clipSelected(modelData.id, mouse.modifiers, false);
-                    }
 
                     var sp = mapToItem(flickableContentItem, mouse.x, mouse.y);
                     startSceneX = sp.x;
@@ -360,7 +405,6 @@ Item {
                         var deltaDuration = clipDelegate.resizeDraftDuration - startDuration;
                         clipResized(modelData.id, deltaStart, deltaDuration, 0); // using params to pass delta
                     }
-
                     // ドラフト解除 → バインディングが自動で正値を返す
                     clipDelegate.resizeDraftStart = -1;
                     clipDelegate.resizeDraftDuration = -1;
@@ -392,9 +436,8 @@ Item {
                     if (clipDelegate.isLayerLocked)
                         return ;
 
-                    if (!clipDelegate.isSelected && !(mouse.modifiers & Qt.ControlModifier)) {
+                    if (!clipDelegate.isSelected && !(mouse.modifiers & Qt.ControlModifier))
                         clipSelected(modelData.id, mouse.modifiers, false);
-                    }
 
                     var sp = mapToItem(flickableContentItem, mouse.x, mouse.y);
                     startSceneX = sp.x;
@@ -426,7 +469,6 @@ Item {
                         var deltaDuration = clipDelegate.resizeDraftDuration - startDuration;
                         clipResized(modelData.id, 0, deltaDuration, 0);
                     }
-
                     // ドラフト解除 → バインディングが自動で正値を返す
                     clipDelegate.resizeDraftDuration = -1;
                 }

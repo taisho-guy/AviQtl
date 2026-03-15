@@ -2,6 +2,7 @@
 #include "timeline_types.hpp"
 #include <QObject>
 #include <QPoint>
+#include <QSet>
 #include <QUndoStack>
 #include <memory>
 
@@ -35,10 +36,11 @@ class TimelineService : public QObject {
     void deleteClip(int clipId);
     void updateClip(int id, int layer, int startFrame, int duration);
     void moveSelectedClips(int deltaLayer, int deltaFrame);
+    void applyClipBatchMove(const QVariantList &moves);
     void resizeSelectedClips(int deltaStartFrame, int deltaDuration);
     void splitClip(int clipId, int frame);
     Q_INVOKABLE int computeMagneticSnapPosition(int clipId, int targetLayer, int proposedStartFrame); // Note: This is for a different snap feature
-    Q_INVOKABLE QPoint resolveDragPosition(int clipId, int targetLayer, int proposedStartFrame);
+    Q_INVOKABLE QPoint resolveDragPosition(int clipId, int targetLayer, int proposedStartFrame, const QVariantList &batchIds = QVariantList());
     void selectClip(int id);
     void selectSingleClip(int id);
     void toggleClipSelection(int id);
@@ -116,5 +118,6 @@ class TimelineService : public QObject {
     QUndoStack *m_undoStack;
     QList<ClipData> m_clipboard;
     SelectionService *m_selection;
+    QSet<int> m_batchExcludes;
 };
 } // namespace Rina::UI

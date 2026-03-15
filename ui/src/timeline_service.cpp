@@ -251,6 +251,75 @@ void TimelineService::updateClip(int id, int layer, int startFrame, int duration
     m_undoStack->push(new MoveClipCommand(this, id, clip->layer, clip->startFrame, clip->durationFrames, layer, startFrame, duration, clipName));
 }
 
+void TimelineService::applyClipBatchMove(const QVariantList &moves) {
+    if (moves.isEmpty())
+        return;
+
+    m_batchExcludes.clear();
+    for (const QVariant &vMove : moves) {
+        m_batchExcludes.insert(vMove.toMap().value("id").toInt());
+    }
+
+    struct PendingOp {
+        int id;
+        int oldLayer;
+        int oldStart;
+        int targetLayer;
+        int targetStart;
+        int duration;
+        QString name;
+    };
+
+    QVector<PendingOp> pending;
+    pending.reserve(moves.size());
+
+    for (const QVariant &vMove : moves) {
+        QVariantMap move = vMove.toMap();
+        int id = move.value("id").toInt();
+        const auto *clip = findClipById(id);
+        if (clip) {
+            pending.push_back(PendingOp{id, clip->layer, clip->startFrame, move.value("layer").toInt(), move.value("startFrame").toInt(), move.value("duration").toInt(), clip->effects.isEmpty() ? clip->type : clip->effects.first()->name()});
+        }
+    }
+
+    // 衝突回避ロジック:
+    // グループ全体の相対位置を崩さないため、どれか1つでも衝突したらグループ全体を右へ押し出す。
+    // それを他のクリップに当たらなくなるまで最大100回反復する。
+    int maxPush = 0;
+    bool needsPush = true;
+    int loopCount = 0;
+
+    while (needsPush && loopCount < 100) {
+        needsPush = false;
+        int currentPush = 0;
+
+        for (const auto &op : pending) {
+            int testStart = op.targetStart + maxPush;
+            int safeStart = findVacantFrame(op.targetLayer, testStart, op.duration, op.id);
+            if (safeStart > testStart) {
+                int push = safeStart - testStart;
+                if (push > currentPush) {
+                    currentPush = push;
+                }
+            }
+        }
+
+        if (currentPush > 0) {
+            maxPush += currentPush;
+            needsPush = true;
+        }
+        loopCount++;
+    }
+
+    m_undoStack->beginMacro(QString("複数クリップ絶対移動: %1").arg(pending.size()));
+    for (const auto &op : pending) {
+        int finalStart = op.targetStart + maxPush;
+        m_undoStack->push(new MoveClipCommand(this, op.id, op.oldLayer, op.oldStart, op.duration, op.targetLayer, finalStart, op.duration, op.name));
+    }
+    m_undoStack->endMacro();
+    m_batchExcludes.clear();
+}
+
 void TimelineService::moveSelectedClips(int deltaLayer, int deltaFrame) {
     if (!m_selection || (deltaLayer == 0 && deltaFrame == 0))
         return;
@@ -259,16 +328,45 @@ void TimelineService::moveSelectedClips(int deltaLayer, int deltaFrame) {
     if (ids.isEmpty())
         return;
 
-    m_undoStack->beginMacro(QString("複数クリップ移動: %1").arg(ids.size()));
+    struct PendingOp {
+        int id;
+        int oldLayer;
+        int oldStart;
+        int duration;
+        QString name;
+    };
+
+    QVector<PendingOp> pending;
+    pending.reserve(ids.size());
+
     for (const QVariant &value : ids) {
-        int id = value.toInt();
+        const int id = value.toInt();
         const auto *clip = findClipById(id);
-        if (clip) {
-            int newLayer = std::max(0, clip->layer + deltaLayer);
-            int newStart = std::max(0, clip->startFrame + deltaFrame);
-            QString name = clip->effects.isEmpty() ? clip->type : clip->effects.first()->name();
-            m_undoStack->push(new MoveClipCommand(this, id, clip->layer, clip->startFrame, clip->durationFrames, newLayer, newStart, clip->durationFrames, name));
-        }
+        if (!clip)
+            continue;
+
+        pending.push_back(PendingOp{id, clip->layer, clip->startFrame, clip->durationFrames, clip->effects.isEmpty() ? clip->type : clip->effects.first()->name()});
+    }
+
+    if (deltaFrame > 0 || (deltaFrame == 0 && deltaLayer > 0)) {
+        std::sort(pending.begin(), pending.end(), [](const PendingOp &a, const PendingOp &b) {
+            if (a.oldStart != b.oldStart)
+                return a.oldStart > b.oldStart;
+            return a.oldLayer > b.oldLayer;
+        });
+    } else {
+        std::sort(pending.begin(), pending.end(), [](const PendingOp &a, const PendingOp &b) {
+            if (a.oldStart != b.oldStart)
+                return a.oldStart < b.oldStart;
+            return a.oldLayer < b.oldLayer;
+        });
+    }
+
+    m_undoStack->beginMacro(QString("複数クリップ移動: %1").arg(pending.size()));
+    for (const PendingOp &clip : pending) {
+        const int newLayer = std::max(0, clip.oldLayer + deltaLayer);
+        const int newStart = std::max(0, clip.oldStart + deltaFrame);
+        m_undoStack->push(new MoveClipCommand(this, clip.id, clip.oldLayer, clip.oldStart, clip.duration, newLayer, newStart, clip.duration, clip.name));
     }
     m_undoStack->endMacro();
 }
@@ -281,16 +379,48 @@ void TimelineService::resizeSelectedClips(int deltaStartFrame, int deltaDuration
     if (ids.isEmpty())
         return;
 
-    m_undoStack->beginMacro(QString("複数クリップ変形: %1").arg(ids.size()));
+    struct PendingOp {
+        int id;
+        int oldLayer;
+        int oldStart;
+        int duration;
+        QString name;
+    };
+
+    QVector<PendingOp> pending;
+    pending.reserve(ids.size());
+
     for (const QVariant &value : ids) {
-        int id = value.toInt();
+        const int id = value.toInt();
         const auto *clip = findClipById(id);
-        if (clip) {
-            int newStart = std::max(0, clip->startFrame + deltaStartFrame);
-            int newDuration = std::max(1, clip->durationFrames + deltaDuration);
-            QString name = clip->effects.isEmpty() ? clip->type : clip->effects.first()->name();
-            m_undoStack->push(new MoveClipCommand(this, id, clip->layer, clip->startFrame, clip->durationFrames, clip->layer, newStart, newDuration, name));
-        }
+        if (!clip)
+            continue;
+
+        pending.push_back(PendingOp{id, clip->layer, clip->startFrame, clip->durationFrames, clip->effects.isEmpty() ? clip->type : clip->effects.first()->name()});
+    }
+
+    // Resize left side -> deltaStartFrame != 0. If deltaStartFrame > 0, left edge moves right.
+    // Resize right side -> deltaStartFrame == 0, deltaDuration != 0.
+    // In any case, order matters if they push each other.
+    if (deltaStartFrame > 0 || deltaDuration > 0) {
+        std::sort(pending.begin(), pending.end(), [](const PendingOp &a, const PendingOp &b) {
+            if (a.oldStart != b.oldStart)
+                return a.oldStart > b.oldStart;
+            return a.oldLayer > b.oldLayer;
+        });
+    } else {
+        std::sort(pending.begin(), pending.end(), [](const PendingOp &a, const PendingOp &b) {
+            if (a.oldStart != b.oldStart)
+                return a.oldStart < b.oldStart;
+            return a.oldLayer < b.oldLayer;
+        });
+    }
+
+    m_undoStack->beginMacro(QString("複数クリップ変形: %1").arg(pending.size()));
+    for (const PendingOp &clip : pending) {
+        const int newStart = std::max(0, clip.oldStart + deltaStartFrame);
+        const int newDuration = std::max(1, clip.duration + deltaDuration);
+        m_undoStack->push(new MoveClipCommand(this, clip.id, clip.oldLayer, clip.oldStart, clip.duration, clip.oldLayer, newStart, newDuration, clip.name));
     }
     m_undoStack->endMacro();
 }
@@ -368,52 +498,74 @@ int TimelineService::computeMagneticSnapPosition(int clipId, int targetLayer, in
     return finalStart;
 }
 
-QPoint TimelineService::resolveDragPosition(int clipId, int targetLayer, int proposedStartFrame) {
+QPoint TimelineService::resolveDragPosition(int clipId, int targetLayer, int proposedStartFrame, const QVariantList &batchIds) {
     const auto *movingClip = findClipById(clipId);
     if (!movingClip) {
         return QPoint(proposedStartFrame, targetLayer);
     }
 
-    const int duration = movingClip->durationFrames;
-    int candidateFrame = std::max(0, proposedStartFrame);
+    int deltaLayer = targetLayer - movingClip->layer;
+    int deltaFrame = proposedStartFrame - movingClip->startFrame;
 
-    // 1. 対象レイヤーの他のクリップをすべて取得
-    QList<const ClipData *> otherClips;
-    for (const auto &c : clips()) {
-        if (c.id != clipId && c.layer == targetLayer) {
-            otherClips.append(&c);
+    QSet<int> movingIds;
+    if (!batchIds.isEmpty()) {
+        for (const QVariant &v : batchIds) {
+            movingIds.insert(v.toInt());
         }
+    } else if (m_selection && m_selection->isSelected(clipId)) {
+        for (const QVariant &v : m_selection->selectedClipIds()) {
+            movingIds.insert(v.toInt());
+        }
+    } else {
+        movingIds.insert(clipId);
     }
 
-    // クリップがなければ衝突はありえない
-    if (otherClips.isEmpty()) {
-        return QPoint(candidateFrame, targetLayer);
-    }
+    int maxPush = 0;
+    bool needsPush = true;
+    int loopCount = 0;
 
-    // 2. 衝突解決ロジックのために、クリップを開始フレームでソートする
-    // これが欠けていたことが、クリップが重なってしまうバグの根本原因でした。
-    std::sort(otherClips.begin(), otherClips.end(), [](const ClipData *a, const ClipData *b) { return a->startFrame < b->startFrame; });
+    QSet<int> backupExcludes = m_batchExcludes;
 
-    // 3. 衝突解決 (Push-Right)
-    // QML側でグリッドスナップされた位置(`proposedStartFrame`)を尊重し、
-    // 衝突する場合のみ、重ならなくなるまで右に押し出す。
-    // このループは、押し出した結果、さらに別のクリップと衝突するケースを解決するために必要。
-    bool collisionFound;
-    do {
-        collisionFound = false;
-        for (const auto *c : otherClips) {
-            // Overlap check: (s1 < e2) && (s2 < e1)
-            if (candidateFrame < (c->startFrame + c->durationFrames) && c->startFrame < (candidateFrame + duration)) {
-                // 衝突した場合、そのクリップの右端に候補位置を移動
-                candidateFrame = c->startFrame + c->durationFrames;
-                // 位置を動かしたため、再度全クリップとの衝突を確認する必要がある
-                collisionFound = true;
-                break;
+    while (needsPush && loopCount < 100) {
+        needsPush = false;
+        int currentPush = 0;
+
+        for (int id : movingIds) {
+            const auto *c = findClipById(id);
+            if (!c)
+                continue;
+
+            int tLayer = c->layer + deltaLayer;
+            if (tLayer < 0)
+                tLayer = 0;
+            if (tLayer > 127)
+                tLayer = 127;
+
+            int testStart = c->startFrame + deltaFrame + maxPush;
+            if (testStart < 0)
+                testStart = 0;
+
+            m_batchExcludes = movingIds;
+            int safeStart = findVacantFrame(tLayer, testStart, c->durationFrames, id);
+            m_batchExcludes = backupExcludes;
+
+            if (safeStart > testStart) {
+                int push = safeStart - testStart;
+                if (push > currentPush) {
+                    currentPush = push;
+                }
             }
         }
-    } while (collisionFound);
 
-    return QPoint(candidateFrame, targetLayer);
+        if (currentPush > 0) {
+            maxPush += currentPush;
+            needsPush = true;
+        }
+        loopCount++;
+    }
+
+    int finalFrame = proposedStartFrame + maxPush;
+    return QPoint(finalFrame, targetLayer);
 }
 
 void TimelineService::updateClipInternal(int id, int layer, int startFrame, int duration) {
@@ -1112,8 +1264,32 @@ QList<ClipData *> TimelineService::resolvedActiveClipsAt(int frame) const {
 
 int TimelineService::findVacantFrame(int layer, int startFrame, int duration, int excludeClipId) const {
     QList<const ClipData *> layerClips;
+
+    // バッチ移動中は明示的に指定された集合を使い、そうでない場合は選択情報を使う
+    bool isBatchMode = !m_batchExcludes.isEmpty();
+    bool isSelected = m_selection && m_selection->isSelected(excludeClipId);
+    QVariantList selectedIds = isSelected ? m_selection->selectedClipIds() : QVariantList();
+
     for (const auto &clip : clips()) {
-        if (clip.id != excludeClipId && clip.layer == layer) {
+        if (clip.id == excludeClipId)
+            continue;
+
+        if (isBatchMode) {
+            if (m_batchExcludes.contains(clip.id))
+                continue;
+        } else if (isSelected) {
+            bool isPeer = false;
+            for (const QVariant &v : selectedIds) {
+                if (v.toInt() == clip.id) {
+                    isPeer = true;
+                    break;
+                }
+            }
+            if (isPeer)
+                continue;
+        }
+
+        if (clip.layer == layer) {
             layerClips.append(&clip);
         }
     }
