@@ -253,6 +253,16 @@ void TimelineController::updateActiveClipsList() { m_engineSync->updateActiveCli
 
 void TimelineController::log(const QString &msg) { qDebug() << "[TimelineBridge] " << msg; }
 
+void TimelineController::moveSelectedClips(int deltaLayer, int deltaFrame) {
+    if (m_timeline)
+        m_timeline->moveSelectedClips(deltaLayer, deltaFrame);
+}
+
+void TimelineController::resizeSelectedClips(int deltaStartFrame, int deltaDuration) {
+    if (m_timeline)
+        m_timeline->resizeSelectedClips(deltaStartFrame, deltaDuration);
+}
+
 void TimelineController::updateClip(int id, int layer, int startFrame, int duration) {
     const auto *clip = m_timeline->findClipById(id);
 

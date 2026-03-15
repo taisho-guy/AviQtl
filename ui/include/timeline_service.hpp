@@ -34,6 +34,8 @@ class TimelineService : public QObject {
     void createClip(const QString &type, int startFrame, int layer);
     void deleteClip(int clipId);
     void updateClip(int id, int layer, int startFrame, int duration);
+    void moveSelectedClips(int deltaLayer, int deltaFrame);
+    void resizeSelectedClips(int deltaStartFrame, int deltaDuration);
     void splitClip(int clipId, int frame);
     Q_INVOKABLE int computeMagneticSnapPosition(int clipId, int targetLayer, int proposedStartFrame); // Note: This is for a different snap feature
     Q_INVOKABLE QPoint resolveDragPosition(int clipId, int targetLayer, int proposedStartFrame);

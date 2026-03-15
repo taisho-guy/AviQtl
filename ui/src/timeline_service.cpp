@@ -251,6 +251,50 @@ void TimelineService::updateClip(int id, int layer, int startFrame, int duration
     m_undoStack->push(new MoveClipCommand(this, id, clip->layer, clip->startFrame, clip->durationFrames, layer, startFrame, duration, clipName));
 }
 
+void TimelineService::moveSelectedClips(int deltaLayer, int deltaFrame) {
+    if (!m_selection || (deltaLayer == 0 && deltaFrame == 0))
+        return;
+
+    const QVariantList ids = m_selection->selectedClipIds();
+    if (ids.isEmpty())
+        return;
+
+    m_undoStack->beginMacro(QString("複数クリップ移動: %1").arg(ids.size()));
+    for (const QVariant &value : ids) {
+        int id = value.toInt();
+        const auto *clip = findClipById(id);
+        if (clip) {
+            int newLayer = std::max(0, clip->layer + deltaLayer);
+            int newStart = std::max(0, clip->startFrame + deltaFrame);
+            QString name = clip->effects.isEmpty() ? clip->type : clip->effects.first()->name();
+            m_undoStack->push(new MoveClipCommand(this, id, clip->layer, clip->startFrame, clip->durationFrames, newLayer, newStart, clip->durationFrames, name));
+        }
+    }
+    m_undoStack->endMacro();
+}
+
+void TimelineService::resizeSelectedClips(int deltaStartFrame, int deltaDuration) {
+    if (!m_selection || (deltaStartFrame == 0 && deltaDuration == 0))
+        return;
+
+    const QVariantList ids = m_selection->selectedClipIds();
+    if (ids.isEmpty())
+        return;
+
+    m_undoStack->beginMacro(QString("複数クリップ変形: %1").arg(ids.size()));
+    for (const QVariant &value : ids) {
+        int id = value.toInt();
+        const auto *clip = findClipById(id);
+        if (clip) {
+            int newStart = std::max(0, clip->startFrame + deltaStartFrame);
+            int newDuration = std::max(1, clip->durationFrames + deltaDuration);
+            QString name = clip->effects.isEmpty() ? clip->type : clip->effects.first()->name();
+            m_undoStack->push(new MoveClipCommand(this, id, clip->layer, clip->startFrame, clip->durationFrames, clip->layer, newStart, newDuration, name));
+        }
+    }
+    m_undoStack->endMacro();
+}
+
 int TimelineService::computeMagneticSnapPosition(int clipId, int targetLayer, int proposedStartFrame) {
     // 0. 移動対象のクリップ情報を取得
     const auto *movingClip = findClipById(clipId);

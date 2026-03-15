@@ -25,6 +25,9 @@ ScrollView {
     property var boxSelectionPreviewIds: []
     property bool selectionVisualLatchActive: false
     property var selectionVisualLatchIds: []
+    property int activeDragDeltaFrame: 0
+    property int activeDragDeltaLayer: 0
+    property bool isDraggingMulti: false
     property var currentSceneData: {
         if (!TimelineBridge || !TimelineBridge.scenes)
             return null;
@@ -226,15 +229,28 @@ ScrollView {
                     timelineViewRoot.selectionVisualLatchIds = [];
                     timelineViewRoot.handleClipSelection(clipId, modifiers, isSelected);
                 }
-                onClipMoved: (clipId, newLayer, newStartFrame, duration) => {
-                    if (TimelineBridge)
-                        TimelineBridge.updateClip(clipId, newLayer, newStartFrame, duration);
-
+                onClipMoved: (clipId, deltaLayer, deltaStart, unused) => {
+                    if (TimelineBridge) {
+                        if (timelineViewRoot.selectionVisualLatchIds.includes(clipId) || 
+                           (TimelineBridge.selection && TimelineBridge.selection.selectedClipIds.includes(clipId))) {
+                            TimelineBridge.moveSelectedClips(deltaLayer, deltaStart);
+                        } else {
+                            // Should not happen with new UX fix, but fallback
+                            var c = TimelineBridge.clips.find(c => c.id === clipId);
+                            if (c) TimelineBridge.updateClip(clipId, Math.max(0, c.layer + deltaLayer), Math.max(0, c.startFrame + deltaStart), c.durationFrames);
+                        }
+                    }
                 }
-                onClipResized: (clipId, newLayer, newStartFrame, newDuration) => {
-                    if (TimelineBridge)
-                        TimelineBridge.updateClip(clipId, newLayer, newStartFrame, newDuration);
-
+                onClipResized: (clipId, deltaStart, deltaDuration, unused) => {
+                    if (TimelineBridge) {
+                        if (timelineViewRoot.selectionVisualLatchIds.includes(clipId) || 
+                           (TimelineBridge.selection && TimelineBridge.selection.selectedClipIds.includes(clipId))) {
+                            TimelineBridge.resizeSelectedClips(deltaStart, deltaDuration);
+                        } else {
+                            var c = TimelineBridge.clips.find(c => c.id === clipId);
+                            if (c) TimelineBridge.updateClip(clipId, c.layer, Math.max(0, c.startFrame + deltaStart), Math.max(1, c.durationFrames + deltaDuration));
+                        }
+                    }
                 }
                 onClipDoubleClicked: (clipId) => {
                     if (WindowManager)
