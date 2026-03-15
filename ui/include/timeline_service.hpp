@@ -41,6 +41,7 @@ class TimelineService : public QObject {
     void selectSingleClip(int id);
     void toggleClipSelection(int id);
     void selectClipsInRange(int frameA, int frameB, int layerA, int layerB, bool additive = false);
+    void applySelectionIds(const QVariantList &ids);
 
     // シーン管理
     QVariantList scenes() const;
@@ -61,6 +62,9 @@ class TimelineService : public QObject {
     void copyClip(int clipId);
     void cutClip(int clipId);
     void pasteClip(int frame, int layer);
+    void copySelectedClips();
+    void cutSelectedClips();
+    void deleteSelectedClips();
 
     // 内部用 (コマンドから呼び出される)
     void deleteClipInternal(int clipId);
@@ -72,6 +76,7 @@ class TimelineService : public QObject {
     void removeEffectInternal(int clipId, int effectIndex);
     void updateEffectParamInternal(int clipId, int effectIndex, const QString &paramName, const QVariant &value);
     void setClipboard(const ClipData &clip);
+    void setClipboard(const QList<ClipData> &clips);
     void createSceneInternal(int sceneId, const QString &name);
     void removeSceneInternal(int sceneId);
     void restoreSceneInternal(const SceneData &scene);
@@ -107,7 +112,7 @@ class TimelineService : public QObject {
     int m_nextClipId = 1;
     int m_nextSceneId = 1;
     QUndoStack *m_undoStack;
-    std::unique_ptr<ClipData> m_clipboard;
+    QList<ClipData> m_clipboard;
     SelectionService *m_selection;
 };
 } // namespace Rina::UI

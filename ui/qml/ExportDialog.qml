@@ -9,25 +9,30 @@ Window {
 
     property var project: TimelineBridge ? TimelineBridge.project : null
     readonly property double pFps: project ? project.fps : 60
+    property string defaultCodec: SettingsManager ? SettingsManager.value("exportDefaultCodec", "h264_vaapi") : "h264_vaapi"
+    property int defaultBitrateMbps: SettingsManager ? SettingsManager.value("exportDefaultBitrateMbps", 15) : 15
+    property int defaultCrf: SettingsManager ? SettingsManager.value("exportDefaultCrf", 20) : 20
+    property string defaultAudioCodec: SettingsManager ? SettingsManager.value("exportDefaultAudioCodec", "aac") : "aac"
+    property int defaultAudioKbps: SettingsManager ? SettingsManager.value("exportDefaultAudioBitrateKbps", 192) : 192
 
-    property string defaultCodec:      SettingsManager ? SettingsManager.value("exportDefaultCodec",      "h264_vaapi") : "h264_vaapi"
-    property int    defaultBitrateMbps: SettingsManager ? SettingsManager.value("exportDefaultBitrateMbps", 15)          : 15
-    property int    defaultCrf:         SettingsManager ? SettingsManager.value("exportDefaultCrf",         20)          : 20
-    property string defaultAudioCodec: SettingsManager ? SettingsManager.value("exportDefaultAudioCodec",  "aac")       : "aac"
-    property int    defaultAudioKbps:  SettingsManager ? SettingsManager.value("exportDefaultAudioBitrateKbps", 192)    : 192
+    function show() {
+        visible = true;
+    }
 
-    function show() { visible = true }
-    function open() { visible = true }
+    function open() {
+        visible = true;
+    }
 
-    title:    "メディアの書き出し"
-    width:    620
-    height:   580
+    title: "メディアの書き出し"
+    width: 620
+    height: 580
     modality: Qt.ApplicationModal
-    flags:    Qt.Dialog | Qt.WindowCloseButtonHint
+    flags: Qt.Dialog | Qt.WindowCloseButtonHint
 
     // ── 進捗オーバーレイ ───────────────────────────────────
     Rectangle {
         id: progressOverlay
+
         anchors.fill: parent
         color: Qt.rgba(0, 0, 0, 0.75)
         visible: TimelineBridge && TimelineBridge.isExporting
@@ -48,12 +53,16 @@ Window {
 
             ProgressBar {
                 id: exportProgressBar
+
                 Layout.fillWidth: true
-                from: 0; to: 100; value: 0
+                from: 0
+                to: 100
+                value: 0
             }
 
             Label {
                 id: progressLabel
+
                 Layout.alignment: Qt.AlignHCenter
                 text: "0 / 0 フレーム"
                 color: palette.mid
@@ -65,33 +74,43 @@ Window {
                 text: "キャンセル"
                 onClicked: TimelineBridge.cancelExport()
             }
+
         }
+
     }
 
     // ── 進捗シグナルの受信 ────────────────────────────────
     Connections {
-        target: TimelineBridge
         function onExportProgressChanged(progress, current, total) {
-            exportProgressBar.value = progress
-            progressLabel.text = current + " / " + total + " フレーム"
+            exportProgressBar.value = progress;
+            progressLabel.text = current + " / " + total + " フレーム";
         }
+
         function onExportFinished(success, message) {
-            resultPopup.message = message
-            resultPopup.success = success
-            resultPopup.open()
+            resultPopup.message = message;
+            resultPopup.success = success;
+            resultPopup.open();
         }
+
+        target: TimelineBridge
     }
 
     // ── 完了ポップアップ ──────────────────────────────────
     Dialog {
         id: resultPopup
+
         property string message: ""
-        property bool   success: true
-        title:   success ? "完了" : "エラー"
-        modal:   true
+        property bool success: true
+
+        title: success ? "完了" : "エラー"
+        modal: true
         anchors.centerIn: parent
         standardButtons: Dialog.Ok
-        Label { text: resultPopup.message }
+
+        Label {
+            text: resultPopup.message
+        }
+
     }
 
     // ── メインUI ─────────────────────────────────────────
@@ -103,15 +122,19 @@ Window {
         // ファイルパス
         RowLayout {
             Layout.fillWidth: true
+
             TextField {
                 id: filePathField
+
                 Layout.fillWidth: true
                 placeholderText: "保存先ファイルパス..."
             }
+
             Button {
                 text: "参照..."
                 onClicked: fileDialog.open()
             }
+
         }
 
         // ビデオ設定
@@ -125,93 +148,151 @@ Window {
                 columnSpacing: 12
                 width: parent.width
 
-                Label { text: "解像度:" }
                 Label {
-                    text: (project?.width ?? 1920) + " × " + (project?.height ?? 1080)
+                    text: "解像度:"
+                }
+
+                Label {
+                    text: ((project ? project.width : 1920)) + " × " + ((project ? project.height : 1080))
                     font.bold: true
                     Layout.columnSpan: 3
                 }
 
-                Label { text: "FPS:" }
+                Label {
+                    text: "FPS:"
+                }
+
                 Label {
                     text: pFps.toFixed(3)
                     font.bold: true
                     Layout.columnSpan: 3
                 }
 
-                Label { text: "コーデック:" }
+                Label {
+                    text: "コーデック:"
+                }
+
                 ComboBox {
                     id: codecCombo
+
                     Layout.columnSpan: 3
                     Layout.fillWidth: true
-                    model: [
-                        { text: "H.264 – libx264 (SW)",     value: "libx264"    },
-                        { text: "H.264 – NVENC (NVIDIA)",   value: "h264_nvenc" },
-                        { text: "H.264 – AMF (AMD)",        value: "h264_amf"   },
-                        { text: "H.264 – QSV (Intel)",      value: "h264_qsv"   },
-                        { text: "H.264 – VAAPI (Linux)",    value: "h264_vaapi" },
-                        { text: "HEVC – libx265 (SW)",      value: "libx265"    },
-                        { text: "HEVC – NVENC (NVIDIA)",    value: "hevc_nvenc" },
-                        { text: "HEVC – AMF (AMD)",         value: "hevc_amf"   },
-                        { text: "HEVC – QSV (Intel)",       value: "hevc_qsv"   },
-                        { text: "HEVC – VAAPI (Linux)",     value: "hevc_vaapi" },
-                        { text: "AV1 – libaom (SW)",        value: "libaom-av1" },
-                        { text: "AV1 – NVENC (NVIDIA)",     value: "av1_nvenc"  },
-                        { text: "AV1 – AMF (AMD)",          value: "av1_amf"    },
-                        { text: "AV1 – VAAPI (Linux)",      value: "av1_vaapi"  }
-                    ]
+                    model: [{
+                        "text": "H.264 – libx264 (SW)",
+                        "value": "libx264"
+                    }, {
+                        "text": "H.264 – NVENC (NVIDIA)",
+                        "value": "h264_nvenc"
+                    }, {
+                        "text": "H.264 – AMF (AMD)",
+                        "value": "h264_amf"
+                    }, {
+                        "text": "H.264 – QSV (Intel)",
+                        "value": "h264_qsv"
+                    }, {
+                        "text": "H.264 – VAAPI (Linux)",
+                        "value": "h264_vaapi"
+                    }, {
+                        "text": "HEVC – libx265 (SW)",
+                        "value": "libx265"
+                    }, {
+                        "text": "HEVC – NVENC (NVIDIA)",
+                        "value": "hevc_nvenc"
+                    }, {
+                        "text": "HEVC – AMF (AMD)",
+                        "value": "hevc_amf"
+                    }, {
+                        "text": "HEVC – QSV (Intel)",
+                        "value": "hevc_qsv"
+                    }, {
+                        "text": "HEVC – VAAPI (Linux)",
+                        "value": "hevc_vaapi"
+                    }, {
+                        "text": "AV1 – libaom (SW)",
+                        "value": "libaom-av1"
+                    }, {
+                        "text": "AV1 – NVENC (NVIDIA)",
+                        "value": "av1_nvenc"
+                    }, {
+                        "text": "AV1 – AMF (AMD)",
+                        "value": "av1_amf"
+                    }, {
+                        "text": "AV1 – VAAPI (Linux)",
+                        "value": "av1_vaapi"
+                    }]
                     textRole: "text"
                     Component.onCompleted: {
-                        var idx = -1
-                        for(var i=0; i<model.length; i++) {
-                            if(model[i].value === root.defaultCodec) {
-                                idx = i; break;
+                        var idx = -1;
+                        for (var i = 0; i < model.length; i++) {
+                            if (model[i].value === root.defaultCodec) {
+                                idx = i;
+                                break;
                             }
                         }
-                        if(idx >= 0) currentIndex = idx
-                        else currentIndex = 4
+                        if (idx >= 0)
+                            currentIndex = idx;
+                        else
+                            currentIndex = 4;
                     }
                 }
 
-                Label { text: "品質モード:" }
-                ButtonGroup { id: qualityModeGroup }
+                Label {
+                    text: "品質モード:"
+                }
+
+                ButtonGroup {
+                    id: qualityModeGroup
+                }
+
                 RadioButton {
                     id: crfRadio
+
                     text: "CRF"
                     ButtonGroup.group: qualityModeGroup
                     checked: true
                 }
+
                 RadioButton {
                     text: "ビットレート"
                     ButtonGroup.group: qualityModeGroup
                 }
 
-                Item { Layout.columnSpan: 1 }
+                Item {
+                    Layout.columnSpan: 1
+                }
 
                 // CRF スライダー
                 Label {
                     text: "CRF:"
                     visible: crfRadio.checked
                 }
+
                 RowLayout {
                     visible: crfRadio.checked
                     Layout.columnSpan: 3
                     Layout.fillWidth: true
+
                     Slider {
                         id: crfSlider
+
                         Layout.fillWidth: true
-                        from: 0; to: 51; value: root.defaultCrf; stepSize: 1
+                        from: 0
+                        to: 51
+                        value: root.defaultCrf
+                        stepSize: 1
                     }
+
                     Label {
                         text: crfSlider.value.toFixed(0)
                         Layout.preferredWidth: 28
                     }
+
                     Label {
                         text: crfSlider.value <= 17 ? "高品質" : crfSlider.value <= 28 ? "標準" : "低品質"
                         font.pixelSize: 10
-                        color: crfSlider.value <= 17 ? "#44cc88"
-                             : crfSlider.value <= 28 ? palette.text : "#cc4444"
+                        color: crfSlider.value <= 17 ? "#44cc88" : crfSlider.value <= 28 ? palette.text : "#cc4444"
                     }
+
                 }
 
                 // ビットレート入力
@@ -219,18 +300,31 @@ Window {
                     text: "ビットレート:"
                     visible: !crfRadio.checked
                 }
+
                 RowLayout {
                     visible: !crfRadio.checked
                     Layout.columnSpan: 3
+
                     SpinBox {
                         id: bitrateSpin
-                        from: 1; to: 500; value: root.defaultBitrateMbps; stepSize: 1
+
+                        from: 1
+                        to: 500
+                        value: root.defaultBitrateMbps
+                        stepSize: 1
                         editable: true
-                        textFromValue: v => v + " Mbps"
-                        valueFromText: t => parseInt(t)
+                        textFromValue: (v) => {
+                            return v + " Mbps";
+                        }
+                        valueFromText: (t) => {
+                            return parseInt(t);
+                        }
                     }
+
                 }
+
             }
+
         }
 
         // オーディオ設定
@@ -244,46 +338,71 @@ Window {
                 columnSpacing: 12
                 width: parent.width
 
-                Label { text: "コーデック:" }
+                Label {
+                    text: "コーデック:"
+                }
+
                 ComboBox {
                     id: audioCodecCombo
+
                     Layout.columnSpan: 3
                     Layout.fillWidth: true
-                    model: [
-                        { text: "AAC",        value: "aac"      },
-                        { text: "Opus",       value: "libopus"  },
-                        { text: "MP3",        value: "libmp3lame"},
-                        { text: "FLAC (可逆)", value: "flac"    },
-                        { text: "PCM 16-bit", value: "pcm_s16le"}
-                    ]
+                    model: [{
+                        "text": "AAC",
+                        "value": "aac"
+                    }, {
+                        "text": "Opus",
+                        "value": "libopus"
+                    }, {
+                        "text": "MP3",
+                        "value": "libmp3lame"
+                    }, {
+                        "text": "FLAC (可逆)",
+                        "value": "flac"
+                    }, {
+                        "text": "PCM 16-bit",
+                        "value": "pcm_s16le"
+                    }]
                     textRole: "text"
                     Component.onCompleted: {
-                        var idx = -1
-                        for(var i=0; i<model.length; i++) {
-                            if(model[i].value === root.defaultAudioCodec) {
-                                idx = i; break;
+                        var idx = -1;
+                        for (var i = 0; i < model.length; i++) {
+                            if (model[i].value === root.defaultAudioCodec) {
+                                idx = i;
+                                break;
                             }
                         }
-                        if(idx >= 0) currentIndex = idx
-                        else currentIndex = 0
+                        if (idx >= 0)
+                            currentIndex = idx;
+                        else
+                            currentIndex = 0;
                     }
                 }
 
-                Label { text: "ビットレート:" }
+                Label {
+                    text: "ビットレート:"
+                }
+
                 ComboBox {
                     id: audioBitrateCombo
-                    Layout.columnSpan: 3
-                    enabled: audioCodecCombo.currentIndex < 3  // PCM/FLACは無効
-                    model: ["96 kbps", "128 kbps", "192 kbps", "256 kbps", "320 kbps"] 
-                    Component.onCompleted: {
-                        var bitrateList = [96, 128, 192, 256, 320]
-                        var idx = bitrateList.indexOf(root.defaultAudioKbps)
-                        if (idx >= 0) currentIndex = idx
-                        else currentIndex = 2
-                    }
+
                     property int bitrate: [96000, 128000, 192000, 256000, 320000][currentIndex]
+
+                    Layout.columnSpan: 3
+                    enabled: audioCodecCombo.currentIndex < 3 // PCM/FLACは無効
+                    model: ["96 kbps", "128 kbps", "192 kbps", "256 kbps", "320 kbps"]
+                    Component.onCompleted: {
+                        var bitrateList = [96, 128, 192, 256, 320];
+                        var idx = bitrateList.indexOf(root.defaultAudioKbps);
+                        if (idx >= 0)
+                            currentIndex = idx;
+                        else
+                            currentIndex = 2;
+                    }
                 }
+
             }
+
         }
 
         // 範囲設定
@@ -297,13 +416,18 @@ Window {
 
                 CheckBox {
                     id: fullRangeCheck
+
                     text: "タイムライン全体"
                     checked: true
                 }
 
-                Label { text: "開始:" }
+                Label {
+                    text: "開始:"
+                }
+
                 SpinBox {
                     id: startFrameSpin
+
                     enabled: !fullRangeCheck.checked
                     from: 0
                     to: endFrameSpin.value - 1
@@ -311,9 +435,13 @@ Window {
                     editable: true
                 }
 
-                Label { text: "終了:" }
+                Label {
+                    text: "終了:"
+                }
+
                 SpinBox {
                     id: endFrameSpin
+
                     enabled: !fullRangeCheck.checked
                     from: startFrameSpin.value + 1
                     to: 99999
@@ -321,78 +449,92 @@ Window {
                     editable: true
                     Component.onCompleted: {
                         if (TimelineBridge && TimelineBridge.timelineDuration > 0)
-                            value = TimelineBridge.timelineDuration
+                            value = TimelineBridge.timelineDuration;
+
                     }
+
                     Connections {
-                        target: TimelineBridge
                         function onClipsChanged() {
                             if (TimelineBridge && TimelineBridge.timelineDuration > 0)
-                                endFrameSpin.value = TimelineBridge.timelineDuration
+                                endFrameSpin.value = TimelineBridge.timelineDuration;
+
                         }
+
+                        target: TimelineBridge
                     }
+
                 }
 
                 Label {
                     text: {
-                        var s = fullRangeCheck.checked ? 0 : startFrameSpin.value
-                        var e = fullRangeCheck.checked
-                            ? (TimelineBridge ? TimelineBridge.timelineDuration : 300)
-                            : endFrameSpin.value
-                        var sec = (e - s) / pFps
-                        return "(" + (e - s) + " フレーム / " + sec.toFixed(2) + " 秒)"
+                        var s = fullRangeCheck.checked ? 0 : startFrameSpin.value;
+                        var e = fullRangeCheck.checked ? (TimelineBridge ? TimelineBridge.timelineDuration : 300) : endFrameSpin.value;
+                        var sec = (e - s) / pFps;
+                        return "(" + (e - s) + " フレーム / " + sec.toFixed(2) + " 秒)";
                     }
                     font.pixelSize: 11
                     color: palette.mid
                 }
+
             }
+
         }
 
-        Item { Layout.fillHeight: true }
+        Item {
+            Layout.fillHeight: true
+        }
 
         // ボタン
         RowLayout {
             Layout.fillWidth: true
-            Item { Layout.fillWidth: true }
+
+            Item {
+                Layout.fillWidth: true
+            }
+
             Button {
                 text: "キャンセル"
                 onClicked: root.close()
             }
+
             Button {
                 text: "書き出し開始"
                 enabled: filePathField.text !== ""
                 highlighted: true
                 onClicked: {
-                    var codec = codecCombo.model[codecCombo.currentIndex].value
-                    var audioCodec = audioCodecCombo.model[audioCodecCombo.currentIndex].value
+                    var codec = codecCombo.model[codecCombo.currentIndex].value;
+                    var audioCodec = audioCodecCombo.model[audioCodecCombo.currentIndex].value;
                     TimelineBridge.exportVideoAsync({
-                        "width":          project?.width  ?? 1920,
-                        "height":         project?.height ?? 1080,
-                        "fps_num":        Math.round(pFps * 1000),
-                        "fps_den":        1000,
-                        "bitrate":        bitrateSpin.value * 1_000_000,
-                        "crf":            crfRadio.checked ? crfSlider.value : -1,
-                        "codecName":      codec,
+                        "width": (project ? project.width : 1920),
+                        "height": (project ? project.height : 1080),
+                        "fps_num": Math.round(pFps * 1000),
+                        "fps_den": 1000,
+                        "bitrate": bitrateSpin.value * 1e+06,
+                        "crf": crfRadio.checked ? crfSlider.value : -1,
+                        "codecName": codec,
                         "audioCodecName": audioCodec,
-                        "audioBitrate":   audioBitrateCombo.bitrate,
-                        "outputUrl":      filePathField.text,
-                        "startFrame":     fullRangeCheck.checked ? 0 : startFrameSpin.value,
-                        "endFrame":       fullRangeCheck.checked ? -1 : endFrameSpin.value
-                    })
+                        "audioBitrate": audioBitrateCombo.bitrate,
+                        "outputUrl": filePathField.text,
+                        "startFrame": fullRangeCheck.checked ? 0 : startFrameSpin.value,
+                        "endFrame": fullRangeCheck.checked ? -1 : endFrameSpin.value
+                    });
                 }
             }
+
         }
+
     }
 
     Dialogs.FileDialog {
         id: fileDialog
+
         title: "保存先を指定"
         fileMode: Dialogs.FileDialog.SaveFile
         nameFilters: ["MP4 Video (*.mp4)", "MKV Video (*.mkv)", "All files (*)"]
         onAccepted: {
-            var path = selectedFile.toString()
-            filePathField.text = Qt.platform.os === "windows"
-                ? path.replace(/^file:\/{3}/, "")
-                : path.replace(/^file:\/\//, "")
+            var path = selectedFile.toString();
+            filePathField.text = Qt.platform.os === "windows" ? path.replace(/^file:\/{3}/, "") : path.replace(/^file:\/\//, "");
         }
     }
+
 }

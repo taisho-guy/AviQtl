@@ -401,7 +401,7 @@ void TimelineService::updateClipInternal(int id, int layer, int startFrame, int 
                     data["layer"] = layer;
                     data["startFrame"] = startFrame;
                     data["durationFrames"] = duration;
-                    m_selection->select(id, data);
+                    m_selection->refreshSelectionData(id, data);
                 }
             }
             break;
@@ -460,6 +460,32 @@ void TimelineService::toggleClipSelection(int id) {
             return;
         }
     }
+}
+
+void TimelineService::applySelectionIds(const QVariantList &ids) {
+    int primaryId = -1;
+    QVariantMap primaryData;
+
+    // Find a valid primary clip from the given ids
+    for (const QVariant &vId : ids) {
+        int id = vId.toInt();
+        const auto *clip = findClipById(id);
+        if (clip) {
+            primaryId = clip->id;
+            for (auto *eff : clip->effects) {
+                QVariantMap params = eff->params();
+                for (auto it = params.begin(); it != params.end(); ++it)
+                    primaryData.insert(it.key(), it.value());
+            }
+            primaryData["startFrame"] = clip->startFrame;
+            primaryData["durationFrames"] = clip->durationFrames;
+            primaryData["layer"] = clip->layer;
+            primaryData["type"] = clip->type;
+            break; // take the first valid clip as primary
+        }
+    }
+
+    m_selection->replaceSelection(ids, primaryId, primaryData);
 }
 
 void TimelineService::selectClipsInRange(int frameA, int frameB, int layerA, int layerB, bool additive) {
@@ -676,8 +702,24 @@ ClipData TimelineService::deepCopyClip(const ClipData &source) {
 void TimelineService::copyClip(int clipId) {
     auto &currentClips = clipsMutable();
     auto it = std::find_if(currentClips.begin(), currentClips.end(), [clipId](const ClipData &c) { return c.id == clipId; });
-    if (it != currentClips.end())
-        m_clipboard = std::make_unique<ClipData>(deepCopyClip(*it));
+    if (it == currentClips.end())
+        return;
+
+    m_clipboard.clear();
+    m_clipboard.append(deepCopyClip(*it));
+}
+
+void TimelineService::copySelectedClips() {
+    QList<ClipData> copied;
+    const QVariantList ids = m_selection ? m_selection->selectedClipIds() : QVariantList();
+    for (const QVariant &value : ids) {
+        const int id = value.toInt();
+        const auto *clip = findClipById(id);
+        if (clip)
+            copied.append(deepCopyClip(*clip));
+    }
+    if (!copied.isEmpty())
+        setClipboard(copied);
 }
 
 void TimelineService::cutClip(int clipId) {
@@ -688,8 +730,62 @@ void TimelineService::cutClip(int clipId) {
     m_undoStack->push(new CutClipCommand(this, clipId, name));
 }
 
+void TimelineService::cutSelectedClips() {
+    if (!m_selection)
+        return;
+
+    const QVariantList ids = m_selection->selectedClipIds();
+    if (ids.isEmpty())
+        return;
+
+    QList<ClipData> copied;
+    for (const QVariant &value : ids) {
+        const int id = value.toInt();
+        const auto *clip = findClipById(id);
+        if (clip)
+            copied.append(deepCopyClip(*clip));
+    }
+    if (copied.isEmpty())
+        return;
+
+    setClipboard(copied);
+
+    m_undoStack->beginMacro(QString("複数クリップ切り取り: %1").arg(copied.size()));
+    for (const QVariant &value : ids) {
+        const int id = value.toInt();
+        const auto *clip = findClipById(id);
+        if (!clip)
+            continue;
+        QString name = clip->effects.isEmpty() ? clip->type : clip->effects.first()->name();
+        m_undoStack->push(new DeleteClipCommand(this, id, name));
+    }
+    m_undoStack->endMacro();
+    m_selection->clearSelection();
+}
+
+void TimelineService::deleteSelectedClips() {
+    if (!m_selection)
+        return;
+
+    const QVariantList ids = m_selection->selectedClipIds();
+    if (ids.isEmpty())
+        return;
+
+    m_undoStack->beginMacro(QString("複数クリップ削除: %1").arg(ids.size()));
+    for (const QVariant &value : ids) {
+        const int id = value.toInt();
+        const auto *clip = findClipById(id);
+        if (!clip)
+            continue;
+        QString name = clip->effects.isEmpty() ? clip->type : clip->effects.first()->name();
+        m_undoStack->push(new DeleteClipCommand(this, id, name));
+    }
+    m_undoStack->endMacro();
+    m_selection->clearSelection();
+}
+
 void TimelineService::pasteClip(int frame, int layer) {
-    if (!m_clipboard)
+    if (m_clipboard.isEmpty())
         return;
 
     if (frame < 0)
@@ -699,18 +795,48 @@ void TimelineService::pasteClip(int frame, int layer) {
 
     auto overlaps = [](int s1, int d1, int s2, int d2) { return (s1 < (s2 + d2)) && (s2 < (s1 + d1)); };
     auto &currentClips = clipsMutable();
-    for (const auto &c : currentClips) {
-        if (c.layer == layer && overlaps(frame, m_clipboard->durationFrames, c.startFrame, c.durationFrames)) {
-            qWarning() << "クリップ貼り付けを拒否: レイヤー" << layer << "の" << frame << "フレームで衝突が発生";
-            return;
-        }
+
+    int baseFrame = m_clipboard.first().startFrame;
+    int baseLayer = m_clipboard.first().layer;
+    for (const auto &clip : m_clipboard) {
+        baseFrame = std::min(baseFrame, clip.startFrame);
+        baseLayer = std::min(baseLayer, clip.layer);
     }
 
-    ClipData newClip = deepCopyClip(*m_clipboard);
-    newClip.startFrame = frame;
-    newClip.layer = layer;
-    int newId = m_nextClipId++;
-    m_undoStack->push(new PasteClipCommand(this, newId, newClip));
+    QList<ClipData> pending;
+    for (const auto &src : m_clipboard) {
+        ClipData newClip = deepCopyClip(src);
+        newClip.startFrame = frame + (src.startFrame - baseFrame);
+        newClip.layer = std::max(0, layer + (src.layer - baseLayer));
+
+        for (const auto &c : currentClips) {
+            if (c.layer == newClip.layer && overlaps(newClip.startFrame, newClip.durationFrames, c.startFrame, c.durationFrames)) {
+                qWarning() << "クリップ貼り付けを拒否: レイヤー" << newClip.layer << "の" << newClip.startFrame << "フレームで衝突が発生";
+                return;
+            }
+        }
+        for (const auto &c : pending) {
+            if (c.layer == newClip.layer && overlaps(newClip.startFrame, newClip.durationFrames, c.startFrame, c.durationFrames)) {
+                qWarning() << "クリップ貼り付けを拒否: 貼り付け対象同士が衝突";
+                return;
+            }
+        }
+
+        pending.append(newClip);
+    }
+
+    if (pending.size() == 1) {
+        int newId = m_nextClipId++;
+        m_undoStack->push(new PasteClipCommand(this, newId, pending.first()));
+        return;
+    }
+
+    m_undoStack->beginMacro(QString("複数クリップ貼り付け: %1").arg(pending.size()));
+    for (const auto &clip : pending) {
+        int newId = m_nextClipId++;
+        m_undoStack->push(new PasteClipCommand(this, newId, clip));
+    }
+    m_undoStack->endMacro();
 }
 
 void TimelineService::splitClip(int clipId, int frame) {
@@ -961,7 +1087,16 @@ int TimelineService::findVacantFrame(int layer, int startFrame, int duration, in
     return candidateStart;
 }
 
-void TimelineService::setClipboard(const ClipData &clip) { m_clipboard = std::make_unique<ClipData>(deepCopyClip(clip)); }
+void TimelineService::setClipboard(const ClipData &clip) {
+    m_clipboard.clear();
+    m_clipboard.append(deepCopyClip(clip));
+}
+
+void TimelineService::setClipboard(const QList<ClipData> &clips) {
+    m_clipboard.clear();
+    for (const auto &clip : clips)
+        m_clipboard.append(deepCopyClip(clip));
+}
 
 void TimelineService::createSceneInternal(int sceneId, const QString &name) {
     SceneData newScene;

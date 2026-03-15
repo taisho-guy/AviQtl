@@ -467,6 +467,11 @@ void TimelineController::selectClipsInRange(int frameA, int frameB, int layerA, 
         m_timeline->selectClipsInRange(frameA, frameB, layerA, layerB, additive);
 }
 
+void TimelineController::applySelectionIds(const QVariantList &ids) {
+    if (m_timeline)
+        m_timeline->applySelectionIds(ids);
+}
+
 // エフェクト・オブジェクト操作
 
 QVariantList TimelineController::getAvailableEffects() const {
@@ -678,6 +683,21 @@ void TimelineController::copyClip(int clipId) { m_timeline->copyClip(clipId); }
 void TimelineController::cutClip(int clipId) { m_timeline->cutClip(clipId); }
 
 void TimelineController::pasteClip(int frame, int layer) { m_timeline->pasteClip(frame, layer); }
+
+void TimelineController::copySelectedClips() {
+    if (m_timeline)
+        m_timeline->copySelectedClips();
+}
+
+void TimelineController::cutSelectedClips() {
+    if (m_timeline)
+        m_timeline->cutSelectedClips();
+}
+
+void TimelineController::deleteSelectedClips() {
+    if (m_timeline)
+        m_timeline->deleteSelectedClips();
+}
 
 QVariantList TimelineController::scenes() const { return m_timeline->scenes(); }
 

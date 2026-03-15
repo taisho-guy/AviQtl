@@ -160,6 +160,7 @@ class TimelineController : public QObject {
     Q_INVOKABLE void selectSingleClip(int id);
     Q_INVOKABLE void toggleClipSelection(int id);
     Q_INVOKABLE void selectClipsInRange(int frameA, int frameB, int layerA, int layerB, bool additive = false);
+    Q_INVOKABLE void applySelectionIds(const QVariantList &ids);
 
     Q_INVOKABLE void togglePlay();
     Q_INVOKABLE void undo();
@@ -171,6 +172,9 @@ class TimelineController : public QObject {
     Q_INVOKABLE void copyClip(int clipId);
     Q_INVOKABLE void cutClip(int clipId);
     Q_INVOKABLE void pasteClip(int frame, int layer);
+    Q_INVOKABLE void deleteSelectedClips();
+    Q_INVOKABLE void copySelectedClips();
+    Q_INVOKABLE void cutSelectedClips();
 
     void updateActiveClipsList();
 

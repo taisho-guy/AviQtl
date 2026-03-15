@@ -76,6 +76,15 @@ void SelectionService::toggleSelection(int id, const QVariantMap &data) {
         emit selectedClipIdsChanged();
 }
 
+void SelectionService::refreshSelectionData(int id, const QVariantMap &data) {
+    if (id < 0)
+        return;
+    if (!m_selectedClipIds.contains(id))
+        return;
+    if (m_selectedClipId == id)
+        updatePrimarySelection(id, data);
+}
+
 void SelectionService::replaceSelection(const QVariantList &ids, int primaryId, const QVariantMap &primaryData) {
     QSet<int> nextIds;
     for (const QVariant &value : ids) {

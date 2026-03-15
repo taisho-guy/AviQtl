@@ -24,6 +24,7 @@ class SelectionService : public QObject {
     void selectSingle(int id, const QVariantMap &data);
     void toggleSelection(int id, const QVariantMap &data);
     void replaceSelection(const QVariantList &ids, int primaryId, const QVariantMap &primaryData);
+    void refreshSelectionData(int id, const QVariantMap &data);
 
   signals:
     void selectedClipIdChanged();

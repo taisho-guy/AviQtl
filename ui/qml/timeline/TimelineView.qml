@@ -21,6 +21,10 @@ ScrollView {
     property point boxSelectionStart: Qt.point(0, 0)
     property point boxSelectionCurrent: Qt.point(0, 0)
     property real boxSelectionThreshold: 6
+    property bool boxSelectionAdditive: false
+    property var boxSelectionPreviewIds: []
+    property bool selectionVisualLatchActive: false
+    property var selectionVisualLatchIds: []
     property var currentSceneData: {
         if (!TimelineBridge || !TimelineBridge.scenes)
             return null;
@@ -66,6 +70,43 @@ ScrollView {
     }
     readonly property int timelineLengthFrames: Math.max(100, maxClipEndFrame + tailPaddingFrames)
 
+    function clipHitsBox(clip, frameA, frameB, layerA, layerB) {
+        var minFrame = Math.min(frameA, frameB);
+        var maxFrame = Math.max(frameA, frameB);
+        var minLayer = Math.min(layerA, layerB);
+        var maxLayer = Math.max(layerA, layerB);
+        var clipStart = clip.startFrame;
+        var clipEnd = clip.startFrame + clip.durationFrames;
+        var frameOverlap = clipStart < maxFrame && minFrame < clipEnd;
+        var layerMatch = clip.layer >= minLayer && clip.layer <= maxLayer;
+        return frameOverlap && layerMatch;
+    }
+
+    function updateBoxSelectionPreview() {
+        var scale = TimelineBridge ? TimelineBridge.timelineScale : 1;
+        var x1 = Math.min(boxSelectionStart.x, boxSelectionCurrent.x);
+        var x2 = Math.max(boxSelectionStart.x, boxSelectionCurrent.x);
+        var y1 = Math.min(boxSelectionStart.y, boxSelectionCurrent.y);
+        var y2 = Math.max(boxSelectionStart.y, boxSelectionCurrent.y);
+        var frameA = Math.floor(x1 / scale);
+        var frameB = Math.ceil(x2 / scale);
+        var layerA = Math.max(0, Math.floor(y1 / layerHeight));
+        var layerB = Math.max(0, Math.floor(y2 / layerHeight));
+        var ids = [];
+        if (boxSelectionAdditive && TimelineBridge && TimelineBridge.selection)
+            ids = TimelineBridge.selection.selectedClipIds.slice(0);
+
+        if (TimelineBridge && TimelineBridge.clips) {
+            for (var j = 0; j < TimelineBridge.clips.length; j++) {
+                var c = TimelineBridge.clips[j];
+                if (clipHitsBox(c, frameA, frameB, layerA, layerB) && !ids.includes(c.id))
+                    ids.push(c.id);
+
+            }
+        }
+        boxSelectionPreviewIds = ids;
+    }
+
     function clamp(v, lo, hi) {
         return Math.max(lo, Math.min(hi, v));
     }
@@ -106,7 +147,6 @@ ScrollView {
         return Math.max(0, Math.round((Math.round((frame - offset) / step) * step) + offset));
     }
 
-    onGridSettingsChanged: timelineGrid.requestPaint()
     clip: true
     ScrollBar.horizontal.policy: ScrollBar.AlwaysOn
     ScrollBar.vertical.policy: ScrollBar.AlwaysOn
@@ -120,11 +160,9 @@ ScrollView {
 
         Connections {
             function onContentXChanged() {
-                timelineGrid.requestPaint();
             }
 
             function onContentYChanged() {
-                timelineGrid.requestPaint();
             }
 
             target: timelineFlickable
@@ -132,7 +170,6 @@ ScrollView {
 
         Connections {
             function onTimelineScaleChanged() {
-                timelineGrid.requestPaint();
             }
 
             target: TimelineBridge ?? null
@@ -145,65 +182,18 @@ ScrollView {
             height: timelineFlickable.height
             z: -1
 
-            Canvas {
+            TimelineGrid {
                 id: timelineGrid
 
                 anchors.fill: parent
-                onPaint: {
-                    var ctx = getContext("2d");
-                    ctx.clearRect(0, 0, width, height);
-                    ctx.lineWidth = 1;
-                    // 水平区切り線
-                    ctx.strokeStyle = Qt.rgba(0.5, 0.5, 0.5, 0.2);
-                    var startY = timelineFlickable.contentY;
-                    for (var i = 0; i < layerCount; i++) {
-                        var ly = i * layerHeight - startY;
-                        if (ly < -layerHeight || ly > height)
-                            continue;
-
-                        ctx.beginPath();
-                        ctx.moveTo(0, ly);
-                        ctx.lineTo(width, ly);
-                        ctx.stroke();
-                    }
-                    if (!TimelineBridge)
-                        return ;
-
-                    // 垂直グリッド線
-                    var scale = TimelineBridge.timelineScale;
-                    var contentX = timelineFlickable.contentX;
-                    var step = timelineViewRoot.getGridInterval();
-                    var offsetF = (gridSettings.mode === "BPM" && TimelineBridge.project) ? gridSettings.offset * TimelineBridge.project.fps : 0;
-                    var isBpm = (gridSettings.mode === "BPM");
-                    var bpmDiv = isBpm ? (scale > 3 ? 4 : scale > 1.5 ? 2 : 1) : 1;
-                    var startN = Math.ceil((Math.floor(contentX / scale) - offsetF) / step);
-                    var endN = Math.floor((Math.ceil((contentX + width) / scale) - offsetF) / step);
-                    for (var n = startN; n <= endN; n++) {
-                        var f = offsetF + n * step;
-                        var x = f * scale - contentX;
-                        ctx.beginPath();
-                        if (isBpm) {
-                            var isMeasure = (n % (gridSettings.subdivision * bpmDiv) === 0);
-                            var isBeat = (n % bpmDiv === 0);
-                            if (isMeasure) {
-                                ctx.strokeStyle = Qt.rgba(0.5, 0.8, 1, 0.5);
-                                ctx.lineWidth = 1.5;
-                            } else if (isBeat) {
-                                ctx.strokeStyle = Qt.rgba(0.5, 0.5, 0.5, 0.3);
-                                ctx.lineWidth = 1;
-                            } else {
-                                ctx.strokeStyle = Qt.rgba(0.5, 0.5, 0.5, 0.15);
-                                ctx.lineWidth = 1;
-                            }
-                        } else {
-                            ctx.strokeStyle = Qt.rgba(0.5, 0.5, 0.5, 0.15);
-                            ctx.lineWidth = 1;
-                        }
-                        ctx.moveTo(x, 0);
-                        ctx.lineTo(x, height);
-                        ctx.stroke();
-                    }
-                }
+                width: timelineFlickable.width
+                height: timelineFlickable.height
+                contentX: timelineFlickable.contentX
+                contentY: timelineFlickable.contentY
+                gridInterval: timelineViewRoot.getGridInterval()
+                layerCount: timelineViewRoot.layerCount
+                layerHeight: timelineViewRoot.layerHeight
+                gridSettings: timelineViewRoot.gridSettings
             }
 
         }
@@ -211,404 +201,36 @@ ScrollView {
         Repeater {
             model: TimelineBridge ? TimelineBridge.clips : []
 
-            delegate: Item {
-                id: clipDelegate
-
-                property int resizeDraftStart: -1
-                property int resizeDraftDuration: -1
-                property double scale: TimelineBridge ? TimelineBridge.timelineScale : 1
-                readonly property bool isSelected: (TimelineBridge && TimelineBridge.selection) ? (TimelineBridge.selection.selectedClipIds.includes(modelData.id)) : false
-                readonly property bool isLayerLocked: getLayerLocked(modelData.layer)
-                property int groupLayerCount: 0
-                property var groupEffectModel: null
-                property string clipDisplayName: modelData.type
-
-                function updateGroupInfo() {
-                    groupLayerCount = 0;
-                    groupEffectModel = null;
-                    if (!isSelected || !TimelineBridge)
-                        return ;
-
-                    var effects = TimelineBridge.getClipEffectsModel(modelData.id);
-                    for (var i = 0; i < effects.length; i++) {
-                        if (effects[i].id === "GroupControl") {
-                            groupEffectModel = effects[i];
-                            groupLayerCount = groupEffectModel.params["layerCount"] || 0;
-                            break;
-                        }
-                    }
+            delegate: ClipItem {
+                layerHeight: timelineViewRoot.layerHeight
+                layerCount: timelineViewRoot.layerCount
+                clipResizeHandleWidth: timelineViewRoot.clipResizeHandleWidth
+                isBoxSelecting: timelineViewRoot.boxSelecting
+                boxSelectionPreviewIds: timelineViewRoot.boxSelectionPreviewIds
+                forceVisualSelection: timelineViewRoot.selectionVisualLatchActive
+                forcedSelectedIds: timelineViewRoot.selectionVisualLatchIds
+                flickableContentItem: timelineFlickable.contentItem
+                snapFrameFunc: timelineViewRoot.snapFrame
+                onClipSelected: (clipId, modifiers, isSelected) => {
+                    timelineViewRoot.selectionVisualLatchActive = false;
+                    timelineViewRoot.selectionVisualLatchIds = [];
+                    timelineViewRoot.handleClipSelection(clipId, modifiers, isSelected);
                 }
-
-                x: (resizeDraftStart >= 0 ? resizeDraftStart : modelData.startFrame) * scale
-                y: modelData.layer * layerHeight
-                width: (resizeDraftDuration >= 0 ? resizeDraftDuration : modelData.durationFrames) * scale
-                height: layerHeight
-                z: modelData.layer
-                onIsSelectedChanged: updateGroupInfo()
-                Component.onCompleted: updateGroupInfo()
-
-                Connections {
-                    function onClipEffectsChanged(clipId) {
-                        if (clipId === modelData.id)
-                            clipDelegate.updateGroupInfo();
-
-                    }
-
-                    target: TimelineBridge
-                }
-
-                Connections {
-                    function onParamsChanged() {
-                        if (clipDelegate.groupEffectModel)
-                            clipDelegate.groupLayerCount = clipDelegate.groupEffectModel.params["layerCount"] || 0;
-
-                    }
-
-                    target: clipDelegate.groupEffectModel
-                    ignoreUnknownSignals: true
-                }
-
-                Rectangle {
-                    visible: clipDelegate.isSelected && clipDelegate.groupLayerCount > 0
-                    x: 0
-                    y: layerHeight
-                    width: parent.width
-                    height: clipDelegate.groupLayerCount * layerHeight
-                    color: Qt.rgba(palette.highlight.r, palette.highlight.g, palette.highlight.b, 0.18)
-                    border.color: Qt.rgba(palette.highlight.r, palette.highlight.g, palette.highlight.b, 0.55)
-                    border.width: 1
-                    z: -1
-                }
-
-                Rectangle {
-                    id: clipRect
-
-                    anchors.fill: parent
-                    anchors.bottomMargin: 2
-                    color: {
-                        var c = TimelineBridge ? TimelineBridge.getClipTypeColor(modelData.type) : "";
-                        if (c !== "")
-                            return isSelected ? Qt.lighter(c, 1.3) : c;
-
-                        return isSelected ? palette.highlight : palette.mid;
-                    }
-                    border.color: isSelected ? palette.highlight : palette.midlight
-                    border.width: isSelected ? 2 : 1
-                    opacity: 0.8
-                    radius: 4
-
-                    Text {
-                        readonly property int padding: 4
-                        property real stickyX: Math.max(0, timelineFlickable.contentX - clipDelegate.x)
-
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: clipDelegate.clipDisplayName + " (" + modelData.id + ")"
-                        color: "white"
-                        font.pixelSize: 10
-                        elide: Text.ElideRight
-                        x: Math.min(stickyX, parent.width - width - padding) + padding
-                        width: Math.min(implicitWidth, parent.width - padding * 2)
-                    }
-
-                    Canvas {
-                        id: waveformCanvas
-
-                        readonly property bool isAudio: modelData.type === "audio"
-                        property int waveRev: 0
-                        property bool _paintPending: false
-                        readonly property int displayDuration: {
-                            if (clipDelegate.resizeDraftDuration >= 0)
-                                return clipDelegate.resizeDraftDuration;
-
-                            return modelData.durationFrames;
-                        }
-
-                        function _schedulePaint() {
-                            if (!isAudio)
-                                return ;
-
-                            if (_paintPending)
-                                return ;
-
-                            _paintPending = true;
-                            Qt.callLater(function() {
-                                _paintPending = false;
-                                waveformCanvas.requestPaint();
-                            });
-                        }
-
-                        anchors.fill: parent
-                        visible: isAudio
-                        opacity: 0.7
-                        onWidthChanged: _schedulePaint()
-                        onDisplayDurationChanged: _schedulePaint()
-                        onWaveRevChanged: _schedulePaint()
-                        onPaint: {
-                            var ctx = getContext("2d");
-                            ctx.clearRect(0, 0, width, height);
-                            if (!isAudio || width <= 0 || !TimelineBridge)
-                                return ;
-
-                            var pw = Math.floor(width);
-                            var dur = displayDuration;
-                            if (pw <= 0 || dur <= 0)
-                                return ;
-
-                            var peaks = TimelineBridge.getWaveformPeaks(modelData.id, pw, dur);
-                            if (!peaks || peaks.length === 0)
-                                return ;
-
-                            var cy = height / 2;
-                            var maxH = cy - 2;
-                            ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
-                            ctx.lineWidth = 1;
-                            for (var i = 0; i < peaks.length; i++) {
-                                var h = Math.max(1, peaks[i] * maxH);
-                                ctx.beginPath();
-                                ctx.moveTo(i + 0.5, cy - h);
-                                ctx.lineTo(i + 0.5, cy + h);
-                                ctx.stroke();
-                            }
-                        }
-
-                        Connections {
-                            function onClipsChanged() {
-                                waveformCanvas._schedulePaint();
-                            }
-
-                            target: TimelineBridge
-                        }
-
-                    }
-
-                    MouseArea {
-                        id: moveArea
-
-                        property point dragStartScenePos: Qt.point(0, 0)
-                        property int initialLayer: 0
-                        property int initialFrame: 0
-                        property int lastProposedFrame: -1
-                        property int lastProposedLayer: -1
-
-                        anchors.fill: parent
-                        anchors.leftMargin: clipResizeHandleWidth
-                        anchors.rightMargin: clipResizeHandleWidth
-                        acceptedButtons: Qt.LeftButton | Qt.RightButton
-                        cursorShape: clipDelegate.isLayerLocked ? Qt.ForbiddenCursor : Qt.OpenHandCursor
-                        preventStealing: true
-                        onPressed: (mouse) => {
-                            if (clipDelegate.isLayerLocked)
-                                return ;
-
-                            if (TimelineBridge)
-                                if (!(mouse.modifiers & Qt.ControlModifier))
-                                TimelineBridge.selectSingleClip(modelData.id);
-;
-
-                            var sp = mapToItem(timelineFlickable.contentItem, mouse.x, mouse.y);
-                            dragStartScenePos = sp;
-                            initialLayer = modelData.layer;
-                            initialFrame = modelData.startFrame;
-                            lastProposedFrame = -1;
-                            lastProposedLayer = -1;
-                        }
-                        onPositionChanged: (mouse) => {
-                            if (!pressed || clipDelegate.isLayerLocked)
-                                return ;
-
-                            var sp = mapToItem(timelineFlickable.contentItem, mouse.x, mouse.y);
-                            var dX = sp.x - dragStartScenePos.x;
-                            var dY = sp.y - dragStartScenePos.y;
-                            var rawF = initialFrame + dX / clipDelegate.scale;
-                            var propF = timelineViewRoot.snapFrame(rawF);
-                            var propL = Math.max(0, Math.min(initialLayer + Math.round(dY / layerHeight), timelineViewRoot.layerCount - 1));
-                            propF = Math.max(0, propF);
-                            if (propF === lastProposedFrame && propL === lastProposedLayer)
-                                return ;
-
-                            lastProposedFrame = propF;
-                            lastProposedLayer = propL;
-                            var finalF = propF, finalL = propL;
-                            if (TimelineBridge && typeof TimelineBridge.resolveDragPosition === "function") {
-                                var pos = TimelineBridge.resolveDragPosition(modelData.id, propL, propF);
-                                finalF = pos.x;
-                                finalL = pos.y;
-                            }
-                            if (finalF !== propF)
-                                timelineFlickable.contentX = Math.max(0, timelineFlickable.contentX + (finalF - propF) * clipDelegate.scale);
-
-                            clipDelegate.x = finalF * clipDelegate.scale;
-                            clipDelegate.y = finalL * layerHeight;
-                        }
-                        onReleased: {
-                            if (!TimelineBridge)
-                                return ;
-
-                            var newStart = Math.round(clipDelegate.x / clipDelegate.scale);
-                            var newLayer = Math.round(clipDelegate.y / layerHeight);
-                            TimelineBridge.updateClip(modelData.id, newLayer, newStart, modelData.durationFrames);
-                            // バインディング復元 (ドラフトは使っていないので x/y のみ)
-                            clipDelegate.x = Qt.binding(() => {
-                                return (clipDelegate.resizeDraftStart >= 0 ? clipDelegate.resizeDraftStart : modelData.startFrame) * clipDelegate.scale;
-                            });
-                            clipDelegate.y = Qt.binding(() => {
-                                return modelData.layer * layerHeight;
-                            });
-                        }
-                        onDoubleClicked: {
-                            if (WindowManager)
-                                WindowManager.raiseWindow("objectSettings");
-
-                        }
-                        onClicked: (mouse) => {
-                            if (mouse.button === Qt.RightButton) {
-                                var frame = timelineViewRoot.snapFrame((clipDelegate.x + mouse.x) / clipDelegate.scale);
-                                contextMenu.openAt(mouse.x, mouse.y, "clip", frame, modelData.layer, modelData.id);
-                            } else if (mouse.modifiers & Qt.ControlModifier) {
-                                TimelineBridge.toggleClipSelection(modelData.id);
-                            } else {
-                                TimelineBridge.selectSingleClip(modelData.id);
-                            }
-                        }
-                    }
-
-                    Rectangle {
-                        width: clipResizeHandleWidth
-                        height: parent.height
-                        anchors.left: parent.left
-                        color: "transparent"
-                        z: 10
-
-                        MouseArea {
-                            id: leftResizeArea
-
-                            property real startSceneX: 0 // Flickable contentItem 座標
-                            property int startFrame: 0
-                            property int startDuration: 0
-                            property bool resizing: false
-
-                            anchors.fill: parent
-                            cursorShape: Qt.SizeHorCursor
-                            hoverEnabled: true
-                            preventStealing: true
-                            onPressed: (mouse) => {
-                                if (clipDelegate.isLayerLocked)
-                                    return ;
-
-                                var sp = mapToItem(timelineFlickable.contentItem, mouse.x, mouse.y);
-                                startSceneX = sp.x;
-                                startFrame = modelData.startFrame;
-                                startDuration = modelData.durationFrames;
-                                resizing = true;
-                                if (TimelineBridge)
-                                    if (!(mouse.modifiers & Qt.ControlModifier))
-                                    TimelineBridge.selectSingleClip(modelData.id);
-;
-
-                                mouse.accepted = true;
-                            }
-                            onPositionChanged: (mouse) => {
-                                if (!resizing)
-                                    return ;
-
-                                var sp = mapToItem(timelineFlickable.contentItem, mouse.x, mouse.y);
-                                var delta = sp.x - startSceneX;
-                                // 右端（終点）を固定して左端のみ動かす
-                                var endFrame = startFrame + startDuration;
-                                var rawNewStart = startFrame + delta / clipDelegate.scale;
-                                var newStart = Math.max(0, timelineViewRoot.snapFrame(rawNewStart));
-                                var newDur = endFrame - newStart;
-                                var minDur = SettingsManager ? SettingsManager.value("minClipDurationFrames", 5) : 5;
-                                if (newDur < minDur) {
-                                    newStart = endFrame - minDur;
-                                    newDur = minDur;
-                                }
-                                // ドラフトプロパティ経由で表示更新（バインディング破壊なし）
-                                clipDelegate.resizeDraftStart = newStart;
-                                clipDelegate.resizeDraftDuration = newDur;
-                            }
-                            onReleased: {
-                                if (!resizing)
-                                    return ;
-
-                                resizing = false;
-                                if (TimelineBridge && clipDelegate.resizeDraftDuration > 0)
-                                    TimelineBridge.updateClip(modelData.id, modelData.layer, clipDelegate.resizeDraftStart >= 0 ? clipDelegate.resizeDraftStart : modelData.startFrame, clipDelegate.resizeDraftDuration);
-
-                                // ドラフト解除 → バインディングが自動で正値を返す
-                                clipDelegate.resizeDraftStart = -1;
-                                clipDelegate.resizeDraftDuration = -1;
-                            }
-                        }
-
-                    }
-
-                    Rectangle {
-                        width: clipResizeHandleWidth
-                        height: parent.height
-                        anchors.right: parent.right
-                        color: "transparent"
-                        z: 10
-
-                        MouseArea {
-                            id: rightResizeArea
-
-                            property real startSceneX: 0 // Flickable contentItem 座標
-                            property int startFrame: 0 // リサイズ開始時の startFrame
-                            property int startDuration: 0
-                            property bool resizing: false
-
-                            anchors.fill: parent
-                            cursorShape: Qt.SizeHorCursor
-                            hoverEnabled: true
-                            preventStealing: true
-                            onPressed: (mouse) => {
-                                if (clipDelegate.isLayerLocked)
-                                    return ;
-
-                                var sp = mapToItem(timelineFlickable.contentItem, mouse.x, mouse.y);
-                                startSceneX = sp.x;
-                                startFrame = modelData.startFrame;
-                                startDuration = modelData.durationFrames;
-                                resizing = true;
-                                if (TimelineBridge)
-                                    if (!(mouse.modifiers & Qt.ControlModifier))
-                                    TimelineBridge.selectSingleClip(modelData.id);
-;
-
-                                mouse.accepted = true;
-                            }
-                            onPositionChanged: (mouse) => {
-                                if (!resizing)
-                                    return ;
-
-                                var sp = mapToItem(timelineFlickable.contentItem, mouse.x, mouse.y);
-                                var delta = sp.x - startSceneX;
-                                // 右端フレームをスナップ
-                                var rawEndFrame = startFrame + (startDuration * clipDelegate.scale + delta) / clipDelegate.scale;
-                                var snappedEndFrame = timelineViewRoot.snapFrame(rawEndFrame);
-                                var minDur = SettingsManager ? SettingsManager.value("minClipDurationFrames", 5) : 5;
-                                var newDur = Math.max(minDur, snappedEndFrame - startFrame);
-                                // ドラフトプロパティ経由で表示更新（バインディング破壊なし）
-                                clipDelegate.resizeDraftDuration = newDur;
-                            }
-                            onReleased: {
-                                if (!resizing)
-                                    return ;
-
-                                resizing = false;
-                                if (TimelineBridge && clipDelegate.resizeDraftDuration > 0)
-                                    TimelineBridge.updateClip(modelData.id, modelData.layer, modelData.startFrame, clipDelegate.resizeDraftDuration);
-
-                                // ドラフト解除 → バインディングが自動で正値を返す
-                                clipDelegate.resizeDraftDuration = -1;
-                            }
-                        }
-
-                    }
+                onClipMoved: (clipId, newLayer, newStartFrame, duration) => {
+                    if (TimelineBridge)
+                        TimelineBridge.updateClip(clipId, newLayer, newStartFrame, duration);
 
                 }
+                onClipResized: (clipId, newLayer, newStartFrame, newDuration) => {
+                    if (TimelineBridge)
+                        TimelineBridge.updateClip(clipId, newLayer, newStartFrame, newDuration);
 
+                }
+                onClipDoubleClicked: (clipId) => {
+                    if (WindowManager)
+                        WindowManager.raiseWindow("objectSettings");
+
+                }
             }
 
         }
@@ -658,48 +280,67 @@ ScrollView {
         MouseArea {
             anchors.fill: parent
             z: -1
-            acceptedButtons: Qt.LeftButton | Qt.RightButton
-            onPressed: (mouse) => {
-                if (mouse.button !== Qt.RightButton)
-                    return ;
+            acceptedButtons: Qt.LeftButton
+            onReleased: (mouse) => {
+                var scale = TimelineBridge ? TimelineBridge.timelineScale : 1;
+                var frame = timelineViewRoot.snapFrame(mouse.x / scale);
+                if (TimelineBridge && TimelineBridge.transport)
+                    TimelineBridge.transport.setCurrentFrame_seek(frame);
 
+            }
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            z: 999
+            acceptedButtons: Qt.RightButton
+            preventStealing: true
+            onPressed: (mouse) => {
+                selectionVisualLatchActive = false;
+                selectionVisualLatchIds = [];
                 boxSelecting = false;
                 boxSelectionStart = mapToItem(timelineFlickable.contentItem, mouse.x, mouse.y);
                 boxSelectionCurrent = boxSelectionStart;
+                boxSelectionAdditive = !!(mouse.modifiers & Qt.ControlModifier);
+                boxSelectionPreviewIds = [];
             }
             onPositionChanged: (mouse) => {
-                if (!(mouse.buttons & Qt.RightButton))
-                    return ;
-
                 boxSelectionCurrent = mapToItem(timelineFlickable.contentItem, mouse.x, mouse.y);
-                if (Math.abs(boxSelectionCurrent.x - boxSelectionStart.x) >= boxSelectionThreshold || Math.abs(boxSelectionCurrent.y - boxSelectionStart.y) >= boxSelectionThreshold)
+                if (Math.abs(boxSelectionCurrent.x - boxSelectionStart.x) >= boxSelectionThreshold || Math.abs(boxSelectionCurrent.y - boxSelectionStart.y) >= boxSelectionThreshold) {
                     boxSelecting = true;
-
+                    timelineViewRoot.updateBoxSelectionPreview();
+                }
             }
             onReleased: (mouse) => {
                 var scale = TimelineBridge ? TimelineBridge.timelineScale : 1;
                 var frame = timelineViewRoot.snapFrame(mouse.x / scale);
-                if (mouse.button === Qt.LeftButton) {
-                    if (TimelineBridge && TimelineBridge.transport)
-                        TimelineBridge.transport.setCurrentFrame_seek(frame);
-
-                    return ;
-                }
                 if (!boxSelecting) {
                     var layer = Math.floor(mouse.y / layerHeight);
-                    contextMenu.openAt(mouse.x, mouse.y, "timeline", frame, layer, -1);
+                    var clickedClipId = -1;
+                    if (TimelineBridge && TimelineBridge.clips) {
+                        for (var i = TimelineBridge.clips.length - 1; i >= 0; i--) {
+                            var c = TimelineBridge.clips[i];
+                            if (c.layer === layer && frame >= c.startFrame && frame < c.startFrame + c.durationFrames) {
+                                clickedClipId = c.id;
+                                break;
+                            }
+                        }
+                    }
+                    if (clickedClipId >= 0 && TimelineBridge && TimelineBridge.selection && !TimelineBridge.selection.selectedClipIds.includes(clickedClipId))
+                        TimelineBridge.selectSingleClip(clickedClipId);
+
+                    contextMenu.openAt(mouse.x, mouse.y, clickedClipId >= 0 ? "clip" : "timeline", frame, layer, clickedClipId);
                     return ;
                 }
-                var x1 = Math.min(boxSelectionStart.x, boxSelectionCurrent.x);
-                var x2 = Math.max(boxSelectionStart.x, boxSelectionCurrent.x);
-                var y1 = Math.min(boxSelectionStart.y, boxSelectionCurrent.y);
-                var y2 = Math.max(boxSelectionStart.y, boxSelectionCurrent.y);
-                var frameA = Math.floor(x1 / scale);
-                var frameB = Math.ceil(x2 / scale);
-                var layerA = Math.max(0, Math.floor(y1 / layerHeight));
-                var layerB = Math.max(0, Math.floor(y2 / layerHeight));
-                TimelineBridge.selectClipsInRange(frameA, frameB, layerA, layerB, mouse.modifiers & Qt.ControlModifier);
+                // Update current position to exactly where the mouse was released
+                boxSelectionCurrent = mapToItem(timelineFlickable.contentItem, mouse.x, mouse.y);
+                timelineViewRoot.updateBoxSelectionPreview();
+                var finalIds = boxSelectionPreviewIds.slice(0);
+                timelineViewRoot.selectionVisualLatchIds = finalIds.slice(0);
+                timelineViewRoot.selectionVisualLatchActive = true;
+                TimelineBridge.applySelectionIds(finalIds);
                 boxSelecting = false;
+                boxSelectionPreviewIds = [];
             }
         }
 
@@ -771,6 +412,22 @@ ScrollView {
             contextMenu.addItem(menuSeparatorComp.createObject(null));
         }
 
+        function shouldApplyToSelection() {
+            if (!TimelineBridge || !TimelineBridge.selection || targetClipId < 0)
+                return false;
+
+            var ids = TimelineBridge.selection.selectedClipIds;
+            if (!ids || ids.length <= 1)
+                return false;
+
+            for (var i = 0; i < ids.length; i++) {
+                if (ids[i] === targetClipId)
+                    return true;
+
+            }
+            return false;
+        }
+
         function handleCommand(cmd) {
             if (!TimelineBridge)
                 return ;
@@ -787,16 +444,25 @@ ScrollView {
                 TimelineBridge.redo();
                 break;
             case "clip.delete":
-                TimelineBridge.deleteClip(targetClipId);
+                if (shouldApplyToSelection())
+                    TimelineBridge.deleteSelectedClips();
+                else
+                    TimelineBridge.deleteClip(targetClipId);
                 break;
             case "clip.split":
                 TimelineBridge.splitClip(targetClipId, contextClickFrame);
                 break;
             case "clip.cut":
-                TimelineBridge.cutClip(targetClipId);
+                if (shouldApplyToSelection())
+                    TimelineBridge.cutSelectedClips();
+                else
+                    TimelineBridge.cutClip(targetClipId);
                 break;
             case "clip.copy":
-                TimelineBridge.copyClip(targetClipId);
+                if (shouldApplyToSelection())
+                    TimelineBridge.copySelectedClips();
+                else
+                    TimelineBridge.copyClip(targetClipId);
                 break;
             case "edit.paste":
                 TimelineBridge.pasteClip(contextClickFrame, contextClickLayer);
