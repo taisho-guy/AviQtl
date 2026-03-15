@@ -17,6 +17,10 @@ ScrollView {
     }
     property int contextClickFrame: 0
     property int contextClickLayer: 0
+    property bool boxSelecting: false
+    property point boxSelectionStart: Qt.point(0, 0)
+    property point boxSelectionCurrent: Qt.point(0, 0)
+    property real boxSelectionThreshold: 6
     property var currentSceneData: {
         if (!TimelineBridge || !TimelineBridge.scenes)
             return null;
@@ -213,7 +217,7 @@ ScrollView {
                 property int resizeDraftStart: -1
                 property int resizeDraftDuration: -1
                 property double scale: TimelineBridge ? TimelineBridge.timelineScale : 1
-                readonly property bool isSelected: TimelineBridge && TimelineBridge.selection && TimelineBridge.selection.selectedClipId === modelData.id
+                readonly property bool isSelected: (TimelineBridge && TimelineBridge.selection) ? (TimelineBridge.selection.selectedClipIds.includes(modelData.id)) : false
                 readonly property bool isLayerLocked: getLayerLocked(modelData.layer)
                 property int groupLayerCount: 0
                 property var groupEffectModel: null
@@ -397,7 +401,9 @@ ScrollView {
                                 return ;
 
                             if (TimelineBridge)
-                                TimelineBridge.selectClip(modelData.id);
+                                if (!(mouse.modifiers & Qt.ControlModifier))
+                                TimelineBridge.selectSingleClip(modelData.id);
+;
 
                             var sp = mapToItem(timelineFlickable.contentItem, mouse.x, mouse.y);
                             dragStartScenePos = sp;
@@ -458,6 +464,10 @@ ScrollView {
                             if (mouse.button === Qt.RightButton) {
                                 var frame = timelineViewRoot.snapFrame((clipDelegate.x + mouse.x) / clipDelegate.scale);
                                 contextMenu.openAt(mouse.x, mouse.y, "clip", frame, modelData.layer, modelData.id);
+                            } else if (mouse.modifiers & Qt.ControlModifier) {
+                                TimelineBridge.toggleClipSelection(modelData.id);
+                            } else {
+                                TimelineBridge.selectSingleClip(modelData.id);
                             }
                         }
                     }
@@ -491,7 +501,9 @@ ScrollView {
                                 startDuration = modelData.durationFrames;
                                 resizing = true;
                                 if (TimelineBridge)
-                                    TimelineBridge.selectClip(modelData.id);
+                                    if (!(mouse.modifiers & Qt.ControlModifier))
+                                    TimelineBridge.selectSingleClip(modelData.id);
+;
 
                                 mouse.accepted = true;
                             }
@@ -560,7 +572,9 @@ ScrollView {
                                 startDuration = modelData.durationFrames;
                                 resizing = true;
                                 if (TimelineBridge)
-                                    TimelineBridge.selectClip(modelData.id);
+                                    if (!(mouse.modifiers & Qt.ControlModifier))
+                                    TimelineBridge.selectSingleClip(modelData.id);
+;
 
                                 mouse.accepted = true;
                             }
@@ -645,18 +659,60 @@ ScrollView {
             anchors.fill: parent
             z: -1
             acceptedButtons: Qt.LeftButton | Qt.RightButton
-            onClicked: (mouse) => {
+            onPressed: (mouse) => {
+                if (mouse.button !== Qt.RightButton)
+                    return ;
+
+                boxSelecting = false;
+                boxSelectionStart = mapToItem(timelineFlickable.contentItem, mouse.x, mouse.y);
+                boxSelectionCurrent = boxSelectionStart;
+            }
+            onPositionChanged: (mouse) => {
+                if (!(mouse.buttons & Qt.RightButton))
+                    return ;
+
+                boxSelectionCurrent = mapToItem(timelineFlickable.contentItem, mouse.x, mouse.y);
+                if (Math.abs(boxSelectionCurrent.x - boxSelectionStart.x) >= boxSelectionThreshold || Math.abs(boxSelectionCurrent.y - boxSelectionStart.y) >= boxSelectionThreshold)
+                    boxSelecting = true;
+
+            }
+            onReleased: (mouse) => {
                 var scale = TimelineBridge ? TimelineBridge.timelineScale : 1;
                 var frame = timelineViewRoot.snapFrame(mouse.x / scale);
                 if (mouse.button === Qt.LeftButton) {
                     if (TimelineBridge && TimelineBridge.transport)
                         TimelineBridge.transport.setCurrentFrame_seek(frame);
 
-                } else {
+                    return ;
+                }
+                if (!boxSelecting) {
                     var layer = Math.floor(mouse.y / layerHeight);
                     contextMenu.openAt(mouse.x, mouse.y, "timeline", frame, layer, -1);
+                    return ;
                 }
+                var x1 = Math.min(boxSelectionStart.x, boxSelectionCurrent.x);
+                var x2 = Math.max(boxSelectionStart.x, boxSelectionCurrent.x);
+                var y1 = Math.min(boxSelectionStart.y, boxSelectionCurrent.y);
+                var y2 = Math.max(boxSelectionStart.y, boxSelectionCurrent.y);
+                var frameA = Math.floor(x1 / scale);
+                var frameB = Math.ceil(x2 / scale);
+                var layerA = Math.max(0, Math.floor(y1 / layerHeight));
+                var layerB = Math.max(0, Math.floor(y2 / layerHeight));
+                TimelineBridge.selectClipsInRange(frameA, frameB, layerA, layerB, mouse.modifiers & Qt.ControlModifier);
+                boxSelecting = false;
             }
+        }
+
+        Rectangle {
+            visible: boxSelecting
+            z: 1000
+            color: "#3388aaff"
+            border.color: "#88aaff"
+            border.width: 1
+            x: Math.min(boxSelectionStart.x, boxSelectionCurrent.x)
+            y: Math.min(boxSelectionStart.y, boxSelectionCurrent.y)
+            width: Math.abs(boxSelectionCurrent.x - boxSelectionStart.x)
+            height: Math.abs(boxSelectionCurrent.y - boxSelectionStart.y)
         }
 
         MouseArea {

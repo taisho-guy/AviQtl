@@ -38,6 +38,9 @@ class TimelineService : public QObject {
     Q_INVOKABLE int computeMagneticSnapPosition(int clipId, int targetLayer, int proposedStartFrame); // Note: This is for a different snap feature
     Q_INVOKABLE QPoint resolveDragPosition(int clipId, int targetLayer, int proposedStartFrame);
     void selectClip(int id);
+    void selectSingleClip(int id);
+    void toggleClipSelection(int id);
+    void selectClipsInRange(int frameA, int frameB, int layerA, int layerB, bool additive = false);
 
     // シーン管理
     QVariantList scenes() const;

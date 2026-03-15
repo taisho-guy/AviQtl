@@ -409,9 +409,13 @@ void TimelineService::updateClipInternal(int id, int layer, int startFrame, int 
     }
 }
 
-void TimelineService::selectClip(int id) {
-    if (m_selection->selectedClipId() == id)
+void TimelineService::selectClip(int id) { selectSingleClip(id); }
+
+void TimelineService::selectSingleClip(int id) {
+    if (id < 0) {
+        m_selection->clearSelection();
         return;
+    }
 
     for (const auto &clip : clips()) {
         if (clip.id == id) {
@@ -421,17 +425,88 @@ void TimelineService::selectClip(int id) {
                 for (auto it = params.begin(); it != params.end(); ++it)
                     cache.insert(it.key(), it.value());
             }
-
             cache["startFrame"] = clip.startFrame;
             cache["durationFrames"] = clip.durationFrames;
             cache["layer"] = clip.layer;
             cache["type"] = clip.type;
 
-            m_selection->select(id, cache);
+            m_selection->selectSingle(id, cache);
             return;
         }
     }
-    m_selection->select(-1, {});
+    m_selection->clearSelection();
+}
+
+void TimelineService::toggleClipSelection(int id) {
+    if (id < 0) {
+        m_selection->clearSelection();
+        return;
+    }
+
+    for (const auto &clip : clips()) {
+        if (clip.id == id) {
+            QVariantMap cache;
+            for (auto *eff : clip.effects) {
+                QVariantMap params = eff->params();
+                for (auto it = params.begin(); it != params.end(); ++it)
+                    cache.insert(it.key(), it.value());
+            }
+            cache["startFrame"] = clip.startFrame;
+            cache["durationFrames"] = clip.durationFrames;
+            cache["layer"] = clip.layer;
+            cache["type"] = clip.type;
+
+            m_selection->toggleSelection(id, cache);
+            return;
+        }
+    }
+}
+
+void TimelineService::selectClipsInRange(int frameA, int frameB, int layerA, int layerB, bool additive) {
+    const int minFrame = std::min(frameA, frameB);
+    const int maxFrame = std::max(frameA, frameB);
+    const int minLayer = std::min(layerA, layerB);
+    const int maxLayer = std::max(layerA, layerB);
+
+    QVariantList ids;
+    int primaryId = -1;
+    QVariantMap primaryData;
+
+    for (const auto &clip : clips()) {
+        const int clipStart = clip.startFrame;
+        const int clipEnd = clip.startFrame + clip.durationFrames;
+        const bool frameOverlap = clipStart < maxFrame && minFrame < clipEnd;
+        const bool layerMatch = clip.layer >= minLayer && clip.layer <= maxLayer;
+        if (!frameOverlap || !layerMatch)
+            continue;
+
+        ids.append(clip.id);
+
+        if (primaryId == -1) {
+            primaryId = clip.id;
+            for (auto *eff : clip.effects) {
+                QVariantMap params = eff->params();
+                for (auto it = params.begin(); it != params.end(); ++it)
+                    primaryData.insert(it.key(), it.value());
+            }
+            primaryData["startFrame"] = clip.startFrame;
+            primaryData["durationFrames"] = clip.durationFrames;
+            primaryData["layer"] = clip.layer;
+            primaryData["type"] = clip.type;
+        }
+    }
+
+    if (additive) {
+        QVariantList merged = m_selection->selectedClipIds();
+        for (const QVariant &id : ids) {
+            if (!merged.contains(id))
+                merged.append(id);
+        }
+        m_selection->replaceSelection(merged, primaryId, primaryData);
+        return;
+    }
+
+    m_selection->replaceSelection(ids, primaryId, primaryData);
 }
 
 void TimelineService::deleteClip(int clipId) {
