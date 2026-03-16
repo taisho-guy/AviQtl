@@ -83,7 +83,7 @@ ScrollView {
         var newIds = [];
         if (modifiers & Qt.ControlModifier) {
             // Box selection と同じロジックで選択状態の配列を作成し、一括適用する
-            var currentIds = TimelineBridge.selection.selectedClipIds.slice(0);
+            var currentIds = timelineViewRoot.selectionVisualLatchActive ? timelineViewRoot.selectionVisualLatchIds.slice(0) : TimelineBridge.selection.selectedClipIds.slice(0);
             var idx = currentIds.indexOf(clipId);
             if (idx >= 0)
                 currentIds.splice(idx, 1);
@@ -240,8 +240,6 @@ ScrollView {
                 flickableContentItem: timelineFlickable.contentItem
                 snapFrameFunc: timelineViewRoot.snapFrame
                 onClipSelected: (clipId, modifiers, isSelected) => {
-                    timelineViewRoot.selectionVisualLatchActive = false;
-                    timelineViewRoot.selectionVisualLatchIds = [];
                     timelineViewRoot.handleClipSelection(clipId, modifiers, isSelected);
                 }
                 onClipMoved: (clipId, deltaLayer, deltaStart, unused) => {
@@ -400,9 +398,12 @@ ScrollView {
                             }
                         }
                     }
-                    if (clickedClipId >= 0 && TimelineBridge && TimelineBridge.selection && !TimelineBridge.selection.selectedClipIds.includes(clickedClipId))
+                    var currentSel = timelineViewRoot.selectionVisualLatchActive ? timelineViewRoot.selectionVisualLatchIds : (TimelineBridge && TimelineBridge.selection ? TimelineBridge.selection.selectedClipIds : []);
+                    if (clickedClipId >= 0 && !currentSel.includes(clickedClipId)) {
+                        timelineViewRoot.selectionVisualLatchIds = [clickedClipId];
+                        timelineViewRoot.selectionVisualLatchActive = true;
                         TimelineBridge.applySelectionIds([clickedClipId]);
-
+                    }
                     contextMenu.openAt(mouse.x, mouse.y, clickedClipId >= 0 ? "clip" : "timeline", frame, layer, clickedClipId);
                     return ;
                 }
