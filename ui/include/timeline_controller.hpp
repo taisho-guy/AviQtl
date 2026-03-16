@@ -160,8 +160,6 @@ class TimelineController : public QObject {
     bool isExporting() const;
 
     Q_INVOKABLE void selectClip(int id);
-    Q_INVOKABLE void selectSingleClip(int id);
-    Q_INVOKABLE void toggleClipSelection(int id);
     Q_INVOKABLE void selectClipsInRange(int frameA, int frameB, int layerA, int layerB, bool additive = false);
     Q_INVOKABLE void applySelectionIds(const QVariantList &ids);
 

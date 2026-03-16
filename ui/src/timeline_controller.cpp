@@ -464,17 +464,7 @@ bool TimelineController::isExporting() const { return m_exportManager->isExporti
 
 void TimelineController::selectClip(int id) {
     if (m_timeline)
-        m_timeline->selectSingleClip(id);
-}
-
-void TimelineController::selectSingleClip(int id) {
-    if (m_timeline)
-        m_timeline->selectSingleClip(id);
-}
-
-void TimelineController::toggleClipSelection(int id) {
-    if (m_timeline)
-        m_timeline->toggleClipSelection(id);
+        m_timeline->applySelectionIds(QVariantList{id});
 }
 
 void TimelineController::selectClipsInRange(int frameA, int frameB, int layerA, int layerB, bool additive) {

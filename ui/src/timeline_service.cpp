@@ -605,58 +605,7 @@ void TimelineService::updateClipInternal(int id, int layer, int startFrame, int 
     }
 }
 
-void TimelineService::selectClip(int id) { selectSingleClip(id); }
-
-void TimelineService::selectSingleClip(int id) {
-    if (id < 0) {
-        m_selection->clearSelection();
-        return;
-    }
-
-    for (const auto &clip : clips()) {
-        if (clip.id == id) {
-            QVariantMap cache;
-            for (auto *eff : clip.effects) {
-                QVariantMap params = eff->params();
-                for (auto it = params.begin(); it != params.end(); ++it)
-                    cache.insert(it.key(), it.value());
-            }
-            cache["startFrame"] = clip.startFrame;
-            cache["durationFrames"] = clip.durationFrames;
-            cache["layer"] = clip.layer;
-            cache["type"] = clip.type;
-
-            m_selection->selectSingle(id, cache);
-            return;
-        }
-    }
-    m_selection->clearSelection();
-}
-
-void TimelineService::toggleClipSelection(int id) {
-    if (id < 0) {
-        m_selection->clearSelection();
-        return;
-    }
-
-    for (const auto &clip : clips()) {
-        if (clip.id == id) {
-            QVariantMap cache;
-            for (auto *eff : clip.effects) {
-                QVariantMap params = eff->params();
-                for (auto it = params.begin(); it != params.end(); ++it)
-                    cache.insert(it.key(), it.value());
-            }
-            cache["startFrame"] = clip.startFrame;
-            cache["durationFrames"] = clip.durationFrames;
-            cache["layer"] = clip.layer;
-            cache["type"] = clip.type;
-
-            m_selection->toggleSelection(id, cache);
-            return;
-        }
-    }
-}
+void TimelineService::selectClip(int id) { applySelectionIds(QVariantList{id}); }
 
 void TimelineService::applySelectionIds(const QVariantList &ids) {
     int primaryId = -1;

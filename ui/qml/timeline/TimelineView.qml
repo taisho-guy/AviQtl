@@ -76,6 +76,17 @@ ScrollView {
     }
     readonly property int timelineLengthFrames: Math.max(100, maxClipEndFrame + tailPaddingFrames)
 
+    function committedSelectionIds() {
+        if (TimelineBridge && TimelineBridge.selection)
+            return TimelineBridge.selection.selectedClipIds.slice(0);
+
+        return [];
+    }
+
+    function effectiveSelectionIds() {
+        return selectionVisualLatchActive ? selectionVisualLatchIds.slice(0) : committedSelectionIds();
+    }
+
     function handleClipSelection(clipId, modifiers, isSelected) {
         if (!TimelineBridge || !TimelineBridge.selection)
             return ;
@@ -83,7 +94,7 @@ ScrollView {
         var newIds = [];
         if (modifiers & Qt.ControlModifier) {
             // Box selection と同じロジックで選択状態の配列を作成し、一括適用する
-            var currentIds = timelineViewRoot.selectionVisualLatchActive ? timelineViewRoot.selectionVisualLatchIds.slice(0) : TimelineBridge.selection.selectedClipIds.slice(0);
+            var currentIds = effectiveSelectionIds();
             var idx = currentIds.indexOf(clipId);
             if (idx >= 0)
                 currentIds.splice(idx, 1);
@@ -121,8 +132,8 @@ ScrollView {
         var layerA = Math.max(0, Math.floor(y1 / layerHeight));
         var layerB = Math.max(0, Math.floor(y2 / layerHeight));
         var ids = [];
-        if (boxSelectionAdditive && TimelineBridge && TimelineBridge.selection)
-            ids = TimelineBridge.selection.selectedClipIds.slice(0);
+        if (boxSelectionAdditive)
+            ids = effectiveSelectionIds();
 
         if (TimelineBridge && TimelineBridge.clips) {
             for (var j = 0; j < TimelineBridge.clips.length; j++) {
@@ -244,10 +255,7 @@ ScrollView {
                 }
                 onClipMoved: (clipId, deltaLayer, deltaStart, unused) => {
                     if (TimelineBridge) {
-                        var selectedIds = timelineViewRoot.selectionVisualLatchIds;
-                        if (selectedIds.length === 0 && TimelineBridge.selection)
-                            selectedIds = TimelineBridge.selection.selectedClipIds;
-
+                        var selectedIds = effectiveSelectionIds();
                         if (selectedIds.includes(clipId)) {
                             var moves = [];
                             for (var i = 0; i < TimelineBridge.clips.length; i++) {
@@ -398,7 +406,7 @@ ScrollView {
                             }
                         }
                     }
-                    var currentSel = timelineViewRoot.selectionVisualLatchActive ? timelineViewRoot.selectionVisualLatchIds : (TimelineBridge && TimelineBridge.selection ? TimelineBridge.selection.selectedClipIds : []);
+                    var currentSel = effectiveSelectionIds();
                     if (clickedClipId >= 0 && !currentSel.includes(clickedClipId)) {
                         timelineViewRoot.selectionVisualLatchIds = [clickedClipId];
                         timelineViewRoot.selectionVisualLatchActive = true;

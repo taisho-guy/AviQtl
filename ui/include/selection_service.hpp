@@ -21,8 +21,6 @@ class SelectionService : public QObject {
     Q_INVOKABLE bool isSelected(int id) const;
     Q_INVOKABLE void clearSelection();
     void select(int id, const QVariantMap &data);
-    void selectSingle(int id, const QVariantMap &data);
-    void toggleSelection(int id, const QVariantMap &data);
     void replaceSelection(const QVariantList &ids, int primaryId, const QVariantMap &primaryData);
     void refreshSelectionData(int id, const QVariantMap &data);
 
