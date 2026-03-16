@@ -1,4 +1,7 @@
-# Rina - Rina is not AviUtl.
+<div align="center">
+    <img src="./assets/icon.svg" alt="" width="192" align="center" />
+    <h1 align="center">Rina - Rina is not AviUtl</h1>
+</div>
 
 ### AviUtl 1.10（ExEdit 0.92）以上のユーザー体験をExEdit 0.xライクな操作感で実装するプロジェクトです。
 
