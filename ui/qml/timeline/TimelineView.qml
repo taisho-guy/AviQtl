@@ -77,13 +77,25 @@ ScrollView {
     readonly property int timelineLengthFrames: Math.max(100, maxClipEndFrame + tailPaddingFrames)
 
     function handleClipSelection(clipId, modifiers, isSelected) {
-        if (!TimelineBridge)
+        if (!TimelineBridge || !TimelineBridge.selection)
             return ;
 
-        if (modifiers & Qt.ControlModifier)
-            TimelineBridge.toggleClipSelection(clipId);
-        else
-            TimelineBridge.selectSingleClip(clipId);
+        var newIds = [];
+        if (modifiers & Qt.ControlModifier) {
+            // Box selection と同じロジックで選択状態の配列を作成し、一括適用する
+            var currentIds = TimelineBridge.selection.selectedClipIds.slice(0);
+            var idx = currentIds.indexOf(clipId);
+            if (idx >= 0)
+                currentIds.splice(idx, 1);
+            else
+                currentIds.push(clipId);
+            newIds = currentIds;
+        } else {
+            newIds = [clipId];
+        }
+        timelineViewRoot.selectionVisualLatchIds = newIds.slice(0);
+        timelineViewRoot.selectionVisualLatchActive = true;
+        TimelineBridge.applySelectionIds(newIds);
     }
 
     function clipHitsBox(clip, frameA, frameB, layerA, layerB) {
@@ -389,7 +401,7 @@ ScrollView {
                         }
                     }
                     if (clickedClipId >= 0 && TimelineBridge && TimelineBridge.selection && !TimelineBridge.selection.selectedClipIds.includes(clickedClipId))
-                        TimelineBridge.selectSingleClip(clickedClipId);
+                        TimelineBridge.applySelectionIds([clickedClipId]);
 
                     contextMenu.openAt(mouse.x, mouse.y, clickedClipId >= 0 ? "clip" : "timeline", frame, layer, clickedClipId);
                     return ;

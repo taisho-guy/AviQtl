@@ -199,6 +199,7 @@ Item {
 
             id: moveArea
 
+            property int pressModifiers: 0
             property point dragStartScenePos: Qt.point(0, 0)
             property point pressScenePos: Qt.point(0, 0)
             property int initialLayer: 0
@@ -219,12 +220,14 @@ Item {
                     return ;
 
                 dragActive = false;
-                // UX Fix: If the clip being dragged is NOT selected, select it immediately before dragging
-                if (!clipDelegate.isSelected) {
-                    if (!(mouse.modifiers & Qt.ControlModifier))
-                        clipSelected(modelData.id, mouse.modifiers, false);
-
-                }
+                pressModifiers = mouse.modifiers;
+                // [FIX] REMOVED early selection logic here.
+                // We rely on onReleased for both single-click and Ctrl-click,
+                // to avoid state desync and input branching issues.
+                // If dragging happens without selection, it will select it during drag or drop.
+                // Wait! If dragging without selection, you drag an unselected clip?
+                // The UX fix was exactly for that.
+                // Let's bring it back BUT ONLY IF WE START DRAGGING!
                 var sp = mapToItem(flickableContentItem, mouse.x, mouse.y);
                 pressScenePos = sp;
                 dragStartScenePos = sp;
@@ -243,6 +246,11 @@ Item {
                         return ;
 
                     dragActive = true;
+                    // UX Fix: Select the clip immediately before dragging starts, if it's not selected
+                    // AND if it's not a Ctrl+Drag (which usually isn't standard in this app).
+                    if (!clipDelegate.isSelected)
+                        clipSelected(modelData.id, pressModifiers, false);
+
                     var minF = modelData.startFrame;
                     var minL = modelData.layer;
                     var maxL = modelData.layer;
@@ -315,7 +323,7 @@ Item {
                     return ;
 
                 if (!dragActive) {
-                    clipSelected(modelData.id, mouse.modifiers, clipDelegate.isSelected);
+                    clipSelected(modelData.id, pressModifiers, clipDelegate.isSelected);
                     return ;
                 }
                 var deltaF = timelineViewRoot.activeDragDeltaFrame;
