@@ -46,7 +46,6 @@ class AudioPluginManager : public QObject {
 
   private:
     AudioPluginManager();
-    CarlaHostHandle m_carlaHost = nullptr;
     bool m_initialized = false;
     std::atomic<bool> m_scanning{false};
     std::atomic<bool> m_stopRequested{false};

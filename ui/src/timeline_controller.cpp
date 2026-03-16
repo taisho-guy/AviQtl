@@ -82,7 +82,7 @@ void TimelineController::setupConnections() {
 void TimelineController::onPlayingChanged() { m_mediaManager->onPlayingChanged(); }
 
 void TimelineController::onCurrentFrameChanged() {
-    int nextFrame = m_transport->currentFrame();
+    [[maybe_unused]] int nextFrame = m_transport->currentFrame();
     m_mediaManager->onCurrentFrameChanged();
     updateActiveClipsList();
 }
@@ -356,7 +356,7 @@ void TimelineController::updateClip(int id, int layer, int startFrame, int durat
             int targetSceneId = 0;
             double speed = 1.0;
             int offset = 0;
-            bool isDirectMode = false;
+            [[maybe_unused]] bool isDirectMode = false;
 
             for (const auto *eff : clip->effects) {
                 if (eff->id() != "scene")
