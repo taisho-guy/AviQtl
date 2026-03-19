@@ -269,7 +269,7 @@ Common.RinaWindow {
                                 from: 0
                                 to: 10000
                                 stepSize: 100
-                                value: root.valueOr("splashDuration", 1000)
+                                value: root.valueOr("splashDuration", 512)
                                 onValueModified: root.setValue("splashDuration", value)
                             }
 
@@ -281,7 +281,7 @@ Common.RinaWindow {
                                 from: 128
                                 to: 2048
                                 stepSize: 64
-                                value: root.valueOr("splashSize", 512)
+                                value: root.valueOr("splashSize", 128)
                                 onValueModified: root.setValue("splashSize", value)
                             }
 

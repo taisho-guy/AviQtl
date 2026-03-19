@@ -2,7 +2,6 @@
 <RCC>
   <qresource prefix="/">
     <file>../assets/icon.svg</file>
-    <file>../assets/splash.svg</file>
     <file>resources/remixicon.ttf</file>
   </qresource>
 </RCC>
