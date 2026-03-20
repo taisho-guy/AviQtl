@@ -2,12 +2,6 @@
     <img src="./assets/icon.svg" alt="" width="256"/>
     <h1>Rina is not AviUtl</h1>
     <p>AviUtlのまま、AviUtlを超える。安全・高速・自由な動画編集ソフト。</p>
-    <p>
-        <a href="https://codeberg.org/taisho-guy/Rina/wiki"><img src="https://img.shields.io/badge/Docs-Wiki-3e4348?style=flat-square" alt="Wiki"></a>
-        <a href="https://codeberg.org/taisho-guy/Rina/releases"><img src="https://img.shields.io/gitea/v/release/taisho-guy/Rina?gitea_url=https%3A%2F%2Fcodeberg.org&style=flat-square&color=2185d0" alt="Release"></a>
-        <a href="https://codeberg.org/taisho-guy/Rina/stars"><img src="https://img.shields.io/gitea/stars/taisho-guy/Rina?gitea_url=https%3A%2F%2Fcodeberg.org&style=flat-square&color=609926" alt="Stars"></a>
-        <a href="https://codeberg.org/taisho-guy/Rina/issues"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fcodeberg.org%2Fapi%2Fv1%2Frepos%2Ftaisho-guy%2FRina&query=%24.open_issues_count&label=issues&style=flat-square&color=f2711c" alt="Issues"></a>
-    </p>
 </div>
 
 ## ダウンロード
