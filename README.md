@@ -208,4 +208,4 @@ Linuxユーザーであれば`BUILD.py`1つで簡単にビルドできます。
 
 ## ライセンス
 
-Rinaは[GNU AFFERO GENERAL PUBLIC LICENSE Version 3](https://www.gnu.org/licenses/agpl-3.0.txt)に基づいて公開されています。
+Rinaは[GNU Affero General Public License Version 3](https://www.gnu.org/licenses/agpl-3.0.txt)に基づいて公開されています。
