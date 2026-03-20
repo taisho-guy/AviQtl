@@ -264,8 +264,70 @@ QString toCategoryStr(int cat) {
     case CarlaBackend::PLUGIN_CATEGORY_OTHER:
         return "Other";
     default:
-        return "Unknown";
+        return "Other";
     }
+}
+
+QString normalizeCategoryTitle(QString category) {
+    category = category.trimmed();
+    if (category.isEmpty())
+        return "Other";
+    const QString lower = category.toLower();
+    if (lower == "synth" || lower == "instrument")
+        return "Synth";
+    if (lower == "delay")
+        return "Delay";
+    if (lower == "eq")
+        return "EQ";
+    if (lower == "filter")
+        return "Filter";
+    if (lower == "distortion")
+        return "Distortion";
+    if (lower == "dynamics")
+        return "Dynamics";
+    if (lower == "modulator" || lower == "modulation")
+        return "Modulator";
+    if (lower == "utility" || lower == "tools" || lower == "tool")
+        return "Utility";
+    if (lower == "other" || lower == "unknown" || lower == "misc")
+        return "Other";
+    return category;
+}
+
+QString normalizePluginName(QString name, const QString &label, const QString &filePath) {
+    name = name.trimmed();
+    if (!name.isEmpty())
+        return name;
+    const QString l = label.trimmed();
+    if (!l.isEmpty())
+        return l;
+    return QFileInfo(filePath).completeBaseName().trimmed();
+}
+
+QString normalizePluginLabel(QString label, const QString &name) {
+    label = label.trimmed();
+    return label.isEmpty() ? name.trimmed() : label;
+}
+
+int categoryRank(const QString &category) {
+    const QString c = normalizeCategoryTitle(category);
+    if (c == "Filter")
+        return 0;
+    if (c == "EQ")
+        return 1;
+    if (c == "Dynamics")
+        return 2;
+    if (c == "Delay")
+        return 3;
+    if (c == "Distortion")
+        return 4;
+    if (c == "Modulator")
+        return 5;
+    if (c == "Utility")
+        return 6;
+    if (c == "Synth")
+        return 7;
+    return 100;
 }
 
 QList<PluginInfo> parseDiscoveryOutput(const QString &output, const QString &format, const QString &filePath) {
@@ -283,7 +345,7 @@ QList<PluginInfo> parseDiscoveryOutput(const QString &output, const QString &for
         const QString &key = parts.at(1);
         const QString val = parts.size() >= 3 ? parts.mid(2).join("::") : "";
 
-        if (key == "begin") {
+        if (key == "begin" || key == "init") {
             current = PluginInfo{};
             current.format = format;
             current.path = filePath;
@@ -305,6 +367,9 @@ QList<PluginInfo> parseDiscoveryOutput(const QString &output, const QString &for
         } else if (key == "audio.outs") {
             current.audioOuts = val.toInt();
         } else if (key == "end") {
+            current.name = normalizePluginName(current.name, current.label, filePath);
+            current.label = normalizePluginLabel(current.label, current.name);
+            current.category = normalizeCategoryTitle(current.category);
             if (!current.name.isEmpty()) {
                 current.id = QString("%1:%2:%3").arg(current.format, current.label, QString::number(current.uniqueId));
                 results.append(current);
@@ -352,8 +417,12 @@ QList<PluginInfo> runDiscovery(const QString &tool, const QString &type, const Q
     output += proc.readAllStandardOutput();
 
     QByteArray errOutput = proc.readAllStandardError();
-    if (!errOutput.isEmpty() && output.isEmpty() && !errOutput.contains("invalid string type")) {
-        qDebug() << "[Discovery] エラー:" << target << errOutput.trimmed();
+
+    // stdout が空かつ stderr に discovery 出力がある場合はフォールバック
+    if (output.isEmpty() && errOutput.contains("carla-discovery::")) {
+        output = errOutput;
+    } else if (!errOutput.isEmpty() && output.isEmpty()) {
+        qDebug() << "[Discovery] エラー出力:" << target << errOutput.left(200).trimmed();
     }
 
     return parseDiscoveryOutput(QString::fromUtf8(output), format, target);
@@ -371,18 +440,47 @@ QStringList collectSearchPaths(const FormatConfig &cfg) {
     return paths;
 }
 
+bool isDiscoveryTypeSupported(const QString &tool, const QString &type) {
+    QProcess probe;
+    probe.setStandardInputFile(QProcess::nullDevice());
+    probe.setProcessChannelMode(QProcess::SeparateChannels);
+    probe.start(tool, {type, "__probe__"});
+    if (!probe.waitForFinished(3000))
+        probe.kill();
+    return !probe.readAllStandardError().contains("invalid string type");
+}
+
 QList<PluginInfo> discoverFormat(const QString &tool, const FormatConfig &cfg, std::atomic<bool> &stopFlag) {
+    if (!isDiscoveryTypeSupported(tool, cfg.type)) {
+        qWarning() << "[AudioPluginManager]" << cfg.format << "はインストール済みCarlaバージョンで未対応のためスキップ";
+        return {};
+    }
+
     QStringList targets;
 
     if (cfg.type == "lv2") {
-        QProcess proc;
-        proc.start("lv2ls", {});
-        if (proc.waitForFinished()) {
-            targets = QString::fromUtf8(proc.readAllStandardOutput()).split('\n', Qt::SkipEmptyParts);
-            qDebug() << "[AudioPluginManager]" << cfg.format << "URI" << targets.size() << "個を検出";
-        } else {
-            qWarning() << "[AudioPluginManager] lv2lsの実行に失敗しました";
+        // carla-discovery-native lv2 はURIではなく .lv2 バンドルパスを要求する
+        QStringList lv2SearchPaths;
+        const QByteArray lv2PathEnv = qgetenv("LV2_PATH");
+        if (!lv2PathEnv.isEmpty())
+            lv2SearchPaths << QString::fromLocal8Bit(lv2PathEnv).split(':', Qt::SkipEmptyParts);
+        lv2SearchPaths << QDir::homePath() + "/.lv2" << "/usr/lib/lv2"
+                       << "/usr/local/lib/lv2";
+
+        QSet<QString> visited;
+        for (const QString &searchPath : lv2SearchPaths) {
+            QDir dir(searchPath);
+            if (!dir.exists())
+                continue;
+            for (const QFileInfo &fi : dir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+                const QString bundlePath = fi.absoluteFilePath();
+                if (fi.suffix() == "lv2" && !visited.contains(bundlePath)) {
+                    visited.insert(bundlePath);
+                    targets.append(bundlePath);
+                }
+            }
         }
+        qDebug() << "[AudioPluginManager]" << cfg.format << "バンドル" << targets.size() << "個を検出";
     } else {
         QStringList searchPaths = collectSearchPaths(cfg);
         QStringList customPaths = Rina::Core::SettingsManager::instance().value("pluginPaths" + cfg.format, QStringList()).toStringList();
@@ -457,10 +555,14 @@ void AudioPluginManager::initialize() {
         return;
     m_initialized = true;
 
-    (void)QtConcurrent::run([this] {
+    // scanPlugins()はワーカースレッドで実行する
+    // blockingMap内のQProcessがメインスレッドで動くと
+    // waitForReadyRead()がイベントループのブロックで機能しないため
+    auto future = QtConcurrent::run([this] {
         scanPlugins();
         emit pluginsReady(m_plugins.size());
     });
+    future.waitForFinished();
 }
 
 void AudioPluginManager::scanPlugins() {
@@ -538,9 +640,16 @@ QVariantList AudioPluginManager::getPluginList() const {
 
 QVariantList AudioPluginManager::getCategories() const {
     QMutexLocker lock(&m_pluginsMutex);
-    QSet<QString> cats;
-    for (const auto &info : m_plugins)
-        cats.insert(info.category);
+    QStringList cats;
+    for (const auto &info : m_plugins) {
+        const QString c = normalizeCategoryTitle(info.category);
+        if (!cats.contains(c))
+            cats.append(c);
+    }
+    std::sort(cats.begin(), cats.end(), [](const QString &a, const QString &b) {
+        const int ra = categoryRank(a), rb = categoryRank(b);
+        return ra != rb ? ra < rb : a.toLower() < b.toLower();
+    });
     QVariantList list;
     for (const auto &c : cats)
         list.append(c);
@@ -549,16 +658,22 @@ QVariantList AudioPluginManager::getCategories() const {
 
 QVariantList AudioPluginManager::getPluginsInCategory(const QString &category) const {
     QMutexLocker lock(&m_pluginsMutex);
-    QVariantList list;
+    const QString wanted = normalizeCategoryTitle(category);
+    QList<PluginInfo> matched;
     for (const auto &info : m_plugins) {
-        if (info.category == category) {
-            QVariantMap map;
-            map["id"] = info.id;
-            map["name"] = info.name;
-            map["format"] = info.format;
-            map["maker"] = info.maker;
-            list.append(map);
-        }
+        if (normalizeCategoryTitle(info.category) == wanted)
+            matched.append(info);
+    }
+    std::sort(matched.begin(), matched.end(), [](const PluginInfo &a, const PluginInfo &b) { return a.name.toLower() < b.name.toLower(); });
+    QVariantList list;
+    for (const auto &info : matched) {
+        QVariantMap map;
+        map["id"] = info.id;
+        map["name"] = normalizePluginName(info.name, info.label, info.path);
+        map["format"] = info.format;
+        map["maker"] = info.maker;
+        map["category"] = normalizeCategoryTitle(info.category);
+        list.append(map);
     }
     return list;
 }
