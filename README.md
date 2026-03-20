@@ -1,7 +1,7 @@
 <div align="center">
     <img src="./assets/icon.svg" alt="" width="256"/>
     <h1>Rina is not AviUtl</h1>
-    <p>AviUtl以上のユーザー体験をExEdit0.xライクに実装するプロジェクト</p>
+    <p>AviUtlのまま、AviUtlを超える。安全・高速・自由な動画編集ソフト。</p>
     <p>
         <a href="https://codeberg.org/taisho-guy/Rina/wiki"><img src="https://img.shields.io/badge/Docs-Wiki-3e4348?style=flat-square" alt="Wiki"></a>
         <a href="https://codeberg.org/taisho-guy/Rina/releases"><img src="https://img.shields.io/gitea/v/release/taisho-guy/Rina?gitea_url=https%3A%2F%2Fcodeberg.org&style=flat-square&color=2185d0" alt="Release"></a>
@@ -27,7 +27,7 @@
 
   ### OSの壁と決定的敗北
 
-  私が愛用する**CachyOS(Linux)**上でAviUtlを運用しようとして失敗したことがきっかけです。
+  私が愛用する**CachyOS**上でAviUtlを運用しようとして失敗したことがきっかけです。
   この失敗は「LinuxとWindowsを往復する」という**非効率的なワークフロー**を続けなければならないことを意味していました。
   
   **AviUtlのためだけにWindows環境を維持し続けること**は私にとって受け入れがたいものでした。
@@ -39,7 +39,7 @@
 
   ### プロジェクトの目標とミッション
 
-  私は、[鹿児島県立甲南高等学校](https://edunet002.synapse-blog.jp/konan)の課題研究において、この現状を打破すべくAviUtlクローンの独自開発を決意しました。
+  私は、[鹿児島県立甲南高等学校](https://edunet002.synapse-blog.jp/konan)の課題研究において、この現状を打破すべくRinaの独自開発を決意しました。
   
   #### 個人的な目標
 
@@ -47,7 +47,7 @@
   
   #### Rinaのミッション
 
-  AviUtlを「仕方なく」使っている人々を**全員**救済すること。
+  AviUtlを「仕方なく」使っている方々を**全員**救うこと。
 
 </details>
 
