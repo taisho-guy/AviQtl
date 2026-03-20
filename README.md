@@ -1,9 +1,8 @@
 <div align="center">
-    <img src="./assets/icon.svg" alt="" width="128"/>
+    <img src="./assets/icon.svg" alt="" width="256"/>
     <h1>Rina is not AviUtl</h1>
     <p>AviUtl以上のユーザー体験をExEdit0.xライクに実装するプロジェクト</p>
     <p>
-        <a href="https://taisho-guy.codeberg.page/Rina"><img src="https://img.shields.io/badge/Home-Rina%E3%81%AE%E3%81%8A%E9%83%A8%E5%B1%8B-609926?style=flat-square" alt="Home"></a>
         <a href="https://codeberg.org/taisho-guy/Rina/wiki"><img src="https://img.shields.io/badge/Docs-Wiki-3e4348?style=flat-square" alt="Wiki"></a>
         <a href="https://codeberg.org/taisho-guy/Rina/releases"><img src="https://img.shields.io/gitea/v/release/taisho-guy/Rina?gitea_url=https%3A%2F%2Fcodeberg.org&style=flat-square&color=2185d0" alt="Release"></a>
         <a href="https://codeberg.org/taisho-guy/Rina/stars"><img src="https://img.shields.io/gitea/stars/taisho-guy/Rina?gitea_url=https%3A%2F%2Fcodeberg.org&style=flat-square&color=609926" alt="Stars"></a>
@@ -16,7 +15,7 @@
 - [Linux(x86_64)](https://codeberg.org/taisho-guy/Rina/releases)
 
   - 依存関係を同梱しておりません。Qt6全般、LuaJIT、Vulkan実装（Mesa等）、FFmpeg、Carlaをインストールしてからご利用ください。
-  - 最新のランタイムが利用できないディストリビューションでは動作しない場合がございます。
+  - 最新のパッケージが利用できないディストリビューション（Ubuntu等）では動作しない場合がございます。
   - [CachyOS](https://cachyos.org/)でのご利用を推奨しております。
   - Windows版/macOS版は現在提供しておりません。手動でビルドして下さい。
 
@@ -71,8 +70,7 @@
   ![Icon](./assets/icon.svg)
   
   Tatsh & NAOKIによる楽曲「RED ZONE」のアルバムカバーのフォントからインスピレーションを得ています。
-  紫は、[鹿児島県立甲南高等学校](https://edunet002.synapse-blog.jp/konan)のブランドカラーです......が、特に思い入れがある訳ではないです。
-  AviUtlのアイコンからは一切影響を受けておりません。
+  紫は、[鹿児島県立甲南高等学校](https://edunet002.synapse-blog.jp/konan)のブランドカラーです。
 
 </details>
 
