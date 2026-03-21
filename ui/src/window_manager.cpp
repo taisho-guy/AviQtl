@@ -51,6 +51,7 @@ void WindowManager::onProjectSelected(const QString &path, int w, int h, double 
     spawnWindow(m_engine, "projectSettings", "qrc:/qt/qml/Rina/ui/qml/ProjectSettingsWindow.qml", "Project Settings", 450, 250, 800, 100, false);
     spawnWindow(m_engine, "objectSettings", "qrc:/qt/qml/Rina/ui/qml/SettingDialog.qml", "Object Settings", 400, 600, 800, 420, false);
     spawnWindow(m_engine, "systemSettings", "qrc:/qt/qml/Rina/ui/qml/SystemSettingsWindow.qml", "System Settings", 600, 500, 200, 200, false);
+    spawnWindow(m_engine, "about", "qrc:/qt/qml/Rina/ui/qml/AboutWindow.qml", "Rinaについて", 400, 250, 400, 300, false);
     spawnWindow(m_engine, "sceneSettings", "qrc:/qt/qml/Rina/ui/qml/SceneSettingsWindow.qml", "Scene Settings", 450, 300, 300, 200, false);
     spawnWindow(m_engine, "export", "qrc:/qt/qml/Rina/ui/qml/ExportDialog.qml", "メディアの書き出し", 620, 580, 240, 160, false);
     spawnWindow(m_engine, "easingConfig", "qrc:/qt/qml/Rina/ui/qml/common/EasingConfigWindow.qml", "イージング設定", 820, 540, 420, 180, false);

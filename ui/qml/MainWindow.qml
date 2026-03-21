@@ -125,14 +125,6 @@ ApplicationWindow {
         buttons: Platform.MessageDialog.Ok
     }
 
-    Platform.MessageDialog {
-        id: aboutDialog
-
-        title: "Rinaについて"
-        text: "Rina (Rolling Release)\n\nRina is not AviUtl.\n\nこのソフトウェアはGNU Affero General Public License Version 3に基づいて公開されています。\n\nhttps://codeberg.org/taisho-guy/Rina"
-        buttons: Platform.MessageDialog.Ok
-    }
-
     Connections {
         function onErrorOccurred(message) {
             errorDialog.text = message;
@@ -431,14 +423,9 @@ ApplicationWindow {
                 iconName: "movie_line"
                 enabled: TimelineBridge && TimelineBridge.project
                 onTriggered: {
-                    var win = WindowManager.getWindow("export");
-                    if (win) {
-                        win.x = mainWin.x + (mainWin.width - win.width) / 2;
-                        win.y = mainWin.y + (mainWin.height - win.height) / 2;
-                        win.show();
-                        win.raise();
-                        win.requestActivate();
-                    }
+                    exportDialog.x = mainWin.x + (mainWin.width - exportDialog.width) / 2;
+                    exportDialog.y = mainWin.y + (mainWin.height - exportDialog.height) / 2;
+                    exportDialog.open();
                 }
             }
 
@@ -572,7 +559,16 @@ ApplicationWindow {
             Common.IconMenuItem {
                 text: "バージョン情報"
                 iconName: "information_line"
-                onTriggered: aboutDialog.open()
+                onTriggered: {
+                    var win = WindowManager.getWindow("about");
+                    if (win) {
+                        win.x = mainWin.x + (mainWin.width - win.width) / 2;
+                        win.y = mainWin.y + (mainWin.height - win.height) / 2;
+                        win.show();
+                        win.raise();
+                        win.requestActivate();
+                    }
+                }
             }
 
         }

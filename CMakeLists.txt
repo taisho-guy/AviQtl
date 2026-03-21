@@ -145,8 +145,8 @@ qt_add_qml_module(Rina
         ui/qml/timeline/Ruler.qml
         ui/qml/timeline/LayerHeader.qml
         ui/qml/timeline/TimelineView.qml
-    ui/qml/timeline/ClipItem.qml
-    ui/qml/timeline/TimelineGrid.qml
+        ui/qml/timeline/ClipItem.qml
+        ui/qml/timeline/TimelineGrid.qml
         ui/qml/timeline/GridSettingsWindow.qml
         ui/qml/ProjectLauncherWindow.qml
         ui/qml/ProjectSettingsWindow.qml
@@ -155,6 +155,7 @@ qt_add_qml_module(Rina
         ui/qml/SceneSettingsWindow.qml
         ui/qml/CompositeView.qml
         ui/qml/ExportDialog.qml
+        ui/qml/AboutWindow.qml
         
         ui/qml/common/RinaWindow.qml
         ui/qml/common/ParamControl.qml
