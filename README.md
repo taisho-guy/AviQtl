@@ -8,10 +8,36 @@
 
 - [Linux(x86_64)](https://codeberg.org/taisho-guy/Rina/releases)
 
-  - 依存関係を同梱しておりません。Qt6全般、LuaJIT、Vulkan実装（Mesa等）、FFmpeg、Carlaをインストールしてからご利用ください。
-  - 最新のパッケージが利用できないディストリビューション（Ubuntu等）では動作しない場合がございます。
-  - [CachyOS](https://cachyos.org/)でのご利用を推奨しております。
-  - Windows版/macOS版は現在提供しておりません。手動でビルドして下さい。
+> [!WARNING]
+> ### ダウンロード前にご確認下さい
+> - 現在RinaはLinux(x86_64)のみに対応しております。**Windows/macOSではご利用になれません**。
+> - 最新のパッケージが使えないディストリビューション（Ubuntu等）では正しく動作しない可能性がございます。
+> - [CachyOS](https://cachyos.org/)でのご利用を推奨しております。
+
+>[!NOTE]
+> ### ダウンロード・インストール方法
+> - Qt6全般、LuaJIT、Vulkan実装（Mesa等）、FFmpeg、Carlaをインストールします。
+> - `Rina-Linux-x86_64-v3.7z`をダウンロードします。
+> - ダウンロードしたファイルを展開します。
+> - `Rina`に実行権限を付与します。
+> - `Rina`を実行します。
+
+>[!TIP]
+> ### フィードバック・バグの報告
+> - [taisho-guy](https://www.instagram.com/taisho_guy/)宛にメッセージを送信して下さい。
+> - 些細なことでも、開発に大きく役立ちます。
+> 
+> ### 貢献
+> - 本プロジェクトへプルリクエストやその他の貢献を送信した場合、あなたは自分の貢献物を[GNU Affero General Public License Version 3](https://www.gnu.org/licenses/agpl-3.0.txt)の下で本プロジェクトに提供することに同意したものとみなします。あなたの貢献物の著作権はあなたに残りますが、受理されたコードは[GNU Affero General Public License Version 3](https://www.gnu.org/licenses/agpl-3.0.txt)の条件に従って利用・改変・再配布されます。
+> 
+>   - Rinaをフォークし、フォーク済みのリポジトリを`clone`します。
+>   - `cd Rina`
+>   - `git checkout -b fix/some-change`
+>   - 変更を行います。
+>   - `git add .`
+>   - `git commit -m "変更内容"`
+>   - `git push -u origin fix/some-change`
+>   - [Codeberg](https://codeberg.org/taisho-guy/Rina/pulls)でプルリクエストを作成します。
 
 ## Q & A
 
@@ -159,8 +185,17 @@
   <summary>開発を手伝いたいのですが、何から始めればいいですか？</summary>
 
   ありがとうございます！
-  Issueでのバグ報告や機能提案はもちろん、C++、Qt、GLSLに興味があるコントリビューターを歓迎しています。
-  まずは下記のビルド手順を参照し、自身の環境でビルドすることから始めてみてください。
+
+  - Issueでのバグ報告や機能提案
+  - コントリビュート（プルリクエスト等）
+  - 下記のビルド手順を参照し、自身の環境でビルドする
+  - [Rina Wiki](https://codeberg.org/taisho-guy/Rina/wiki)を拡充
+  - SNS等のプラットフォームでRinaを宣伝
+  - Rinaで編集した動画を公開
+
+  等、様々な形で手伝っていただけます。
+  よくわからない場合は[taisho-guy](https://www.instagram.com/taisho_guy)迄その旨をお伝え下さい。
+  あなたに最適なポジションを提案できるかもしれません。
 
 </details>
 
@@ -202,10 +237,43 @@ Linuxユーザーであれば`BUILD.py`1つで簡単にビルドできます。
 > - Windows、macOS上でのビルド検証は行っておりません。
 > - Distrobox内でビルドを行います。ホストの環境でビルドしたい場合は`BUILD.py`はご利用になれません。
 
-## サードパーティー製の埋め込みリソース
+## 謝辞
 
-- [Remix Icon](https://github.com/Remix-Design/RemixIcon) ([Remix Icon License v1.0](https://raw.githubusercontent.com/Remix-Design/RemixIcon/refs/heads/master/License))
+| プロジェクト名 | ライセンス | 詳細 |
+| --- | --- | --- |
+| [Remix Icon](https://github.com/Remix-Design/RemixIcon) | [Remix Icon License v1.0](https://raw.githubusercontent.com/Remix-Design/RemixIcon/refs/heads/master/License) | Rina内のシンボルアイコンに採用されています。 |
+| [Zrythm](https://github.com/zrythm/zrythm) | [GNU Affero General Public License Version 3](https://www.gnu.org/licenses/agpl-3.0.txt) | 音声プラグインの対応において、実装を参考にしました。 |
+
+Rinaは、この他にも様々なプロジェクトの上に成り立っています。この場を借りて、感謝を申し上げます。
 
 ## ライセンス
 
 Rinaは[GNU Affero General Public License Version 3](https://www.gnu.org/licenses/agpl-3.0.txt)に基づいて公開されています。
+
+### できること
+
+- ソースコードの自由な使用・複製・改変・配布
+
+- 商用利用
+  - ただし条件あり
+  - 私はデュアルライセンスの提供を考えておりません
+
+### 義務・制限
+
+- ソースコード公開
+  - バイナリ配布する場合は対応するソースコードを提供しなければならない
+
+- ネットワーク対話条項
+  - 改変版をネットワーク経由でユーザーに提供する場合（SaaS・Web API含む）もソースコードを無償公開しなければならない
+
+- ライセンスの継承
+  - ソフトウェアを改変・組み合わせた派生物もAGPLv3でリリースしなければならない
+
+- ライセンス文・著作権表示の保持
+  - 改変・再配布時に元のライセンス文と著作権表示を維持する必要がある
+
+- Tivoization禁止
+  - ハードウェア側でユーザーによる改変を制限することを禁止
+
+- DRM対策
+  - デジタル制限管理への対抗措置が含まれる
