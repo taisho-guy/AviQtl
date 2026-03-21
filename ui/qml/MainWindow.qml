@@ -194,10 +194,6 @@ ApplicationWindow {
         }
     }
 
-    ExportDialog {
-        id: exportDialog
-    }
-
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
@@ -435,9 +431,14 @@ ApplicationWindow {
                 iconName: "movie_line"
                 enabled: TimelineBridge && TimelineBridge.project
                 onTriggered: {
-                    exportDialog.x = mainWin.x + (mainWin.width - exportDialog.width) / 2;
-                    exportDialog.y = mainWin.y + (mainWin.height - exportDialog.height) / 2;
-                    exportDialog.open();
+                    var win = WindowManager.getWindow("export");
+                    if (win) {
+                        win.x = mainWin.x + (mainWin.width - win.width) / 2;
+                        win.y = mainWin.y + (mainWin.height - win.height) / 2;
+                        win.show();
+                        win.raise();
+                        win.requestActivate();
+                    }
                 }
             }
 

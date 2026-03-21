@@ -84,14 +84,6 @@ Common.RinaWindow {
 
     }
 
-    Component {
-        id: easingDialogComponent
-
-        Common.EasingConfigDialog {
-        }
-
-    }
-
     // 選択変更やデータ更新を監視してモデルをリロード
     Connections {
         function onSelectedClipIdChanged() {
@@ -342,15 +334,15 @@ Common.RinaWindow {
 
                                     // 区間キーフレームがない場合は生成
                                     ensureRangeKeyframes();
-                                    var dialog = easingDialogComponent.createObject(root, {
+                                    var win = WindowManager.getWindow("easingConfig");
+                                    if (win)
+                                        win.openConfig({
                                         "clipId": targetClipId,
                                         "effectIndex": effIdx,
                                         "effectModel": effectModel,
                                         "paramName": key,
                                         "keyframeFrame": startFrame
                                     });
-                                    if (dialog)
-                                        dialog.open();
 
                                 }
                             }
@@ -373,15 +365,15 @@ Common.RinaWindow {
                                         return ;
 
                                     ensureRangeKeyframes();
-                                    var dialog = easingDialogComponent.createObject(root, {
+                                    var win = WindowManager.getWindow("easingConfig");
+                                    if (win)
+                                        win.openConfig({
                                         "clipId": targetClipId,
                                         "effectIndex": effIdx,
                                         "effectModel": effectModel,
                                         "paramName": key,
                                         "keyframeFrame": startFrame
                                     });
-                                    if (dialog)
-                                        dialog.open();
 
                                 }
                             }

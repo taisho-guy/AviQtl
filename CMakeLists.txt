@@ -163,7 +163,7 @@ qt_add_qml_module(Rina
         ui/qml/common/BaseObject.qml
         ui/qml/common/BaseEffect.qml
         ui/qml/common/Logger.js
-        ui/qml/common/EasingConfigDialog.qml
+        ui/qml/common/EasingConfigWindow.qml
         ui/qml/common/NodeLoader.qml
         ui/qml/common/Icons.js
         ui/qml/common/RinaIcon.qml
