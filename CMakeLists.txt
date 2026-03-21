@@ -205,10 +205,17 @@ if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
     )
 endif()
 
-# エフェクト/オブジェクト定義JSONをビルドディレクトリにコピー
-file(COPY ui/qml/objects/ DESTINATION ${CMAKE_BINARY_DIR}/objects)
-file(COPY ui/qml/effects/ DESTINATION ${CMAKE_BINARY_DIR}/effects)
-file(COPY plugins/ DESTINATION ${CMAKE_BINARY_DIR}/plugins)
+# QMLオブジェクト/エフェクト/プラグインをビルド時に毎回コピー
+add_custom_target(copy_runtime_assets ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/ui/qml/objects ${CMAKE_BINARY_DIR}/objects
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/ui/qml/effects ${CMAKE_BINARY_DIR}/effects
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/plugins        ${CMAKE_BINARY_DIR}/plugins
+    COMMENT "Runtime assets をビルドディレクトリへコピー"
+    VERBATIM
+)
 
 # シェーダーのコンパイル (.frag -> .qsb)
 function(compile_shaders TARGET_SUFFIX SRC_DIR DEST_DIR)

@@ -16,6 +16,7 @@ Item {
     property int projectWidth: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.width : 1920
     property int projectHeight: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.height : 1080
     property int currentFrame: (TimelineBridge && TimelineBridge.transport) ? TimelineBridge.transport.currentFrame : 0
+    property int sceneId: -1
     readonly property int hiddenZ: -9999
     // Component cache to prevent redundant Qt.createComponent calls
     property var _componentCache: ({
@@ -329,6 +330,9 @@ Item {
                         "clipId": _clipData.id,
                         "clipStartFrame": _clipData.startFrame,
                         "clipDurationFrames": _clipData.durationFrames,
+                        "currentFrame": Qt.binding(function() {
+                            return root.currentFrame;
+                        }),
                         "renderHost": offscreenRenderHost,
                         "clipParams": Qt.binding(function() {
                             return _clipData.params || {
@@ -352,6 +356,10 @@ Item {
                             // レイヤー番号を注入 (グループ制御判定用)
                             if ("clipLayer" in item)
                                 item.clipLayer = _clipData.layer;
+
+                            // sceneId を持つオブジェクト(BaseObject派生)にのみ注入
+                            if ("sceneId" in item)
+                                item.sceneId = root.sceneId;
 
                             // グループ制御オブジェクトなら登録
                             if (item.isGroupControl && root.registerGroupControl)

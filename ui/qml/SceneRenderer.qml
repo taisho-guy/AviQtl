@@ -37,6 +37,7 @@ Item {
         anchors.fill: parent
         // 外部から注入されたデータを使用
         clipModel: (root.timelineBridge && root.sceneId >= 0) ? root.timelineBridge.getSceneClips(root.sceneId) : []
+        sceneId: root.sceneId
         projectWidth: root.sceneWidth
         projectHeight: root.sceneHeight
         currentFrame: root.currentFrame

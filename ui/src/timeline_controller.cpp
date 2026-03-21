@@ -77,6 +77,9 @@ void TimelineController::setupConnections() {
 
     // 再生位置が変わったらプレビュー更新
     connect(m_transport, &TransportService::currentFrameChanged, this, &TimelineController::onCurrentFrameChanged);
+
+    // QML(VideoObject)からのフレーム要求をMediaManagerへ中継
+    connect(this, &TimelineController::videoFrameRequested, m_mediaManager, &TimelineMediaManager::requestVideoFrame);
 }
 
 void TimelineController::onPlayingChanged() { m_mediaManager->onPlayingChanged(); }

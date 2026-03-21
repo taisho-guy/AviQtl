@@ -6,6 +6,7 @@
 
 namespace Rina::Core {
 class MediaDecoder;
+class VideoDecoder;
 class VideoFrameStore;
 } // namespace Rina::Core
 namespace Rina::Engine {
@@ -26,6 +27,7 @@ class TimelineMediaManager : public QObject {
     void onCurrentFrameChanged();
     void syncPlaybackSpeed();
     void updateAudioSampleRate();
+    void requestVideoFrame(int clipId, int relFrame);
 
     Rina::Engine::AudioMixer *audioMixer() const { return m_audioMixer; }
 
@@ -37,6 +39,8 @@ class TimelineMediaManager : public QObject {
 
   private:
     QUrl getClipSourceUrl(const ClipData &clip) const;
+    void updateVideoClipFrame(Rina::Core::VideoDecoder *vid, const ClipData *clip, int relFrame);
+    int sceneIdForClip(int clipId) const;
 
     TimelineController *m_controller;
     Rina::Engine::AudioMixer *m_audioMixer = nullptr;

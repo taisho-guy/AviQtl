@@ -10,6 +10,7 @@ Node {
     property var owned2D: []
     // CompositeView から自動注入されるプロパティ
     property int clipId: -1
+    property int sceneId: -1
     property int clipStartFrame: 0
     property int clipDurationFrames: 0
     property var clipParams: ({
@@ -65,6 +66,7 @@ Node {
     readonly property int cullMode: hasTransform ? transformLoader.item.outputCullMode : DefaultMaterial.NoCulling
     // 自動計算プロパティ
     property int currentFrame: (TimelineBridge && TimelineBridge.transport) ? TimelineBridge.transport.currentFrame : 0
+    // Will be overridden by CompositeView
     readonly property int relFrame: currentFrame - clipStartFrame
     property var rawEffectModels: (TimelineBridge && clipId > 0) ? TimelineBridge.getClipEffectsModel(clipId) : []
     // フィルタ系エフェクト（transform/object以外）

@@ -95,6 +95,12 @@ Common.BaseObject {
 
                 }
 
+                function onInstanceKeyChanged() {
+                    if (base.clipId > 0 && typeof videoFrameStore !== "undefined")
+                        videoFrameStore.registerSink(base.instanceKey, videoOut.videoSink);
+
+                }
+
                 target: base
             }
 
