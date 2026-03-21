@@ -322,39 +322,8 @@ ScrollView {
             y: 0
             width: 2
             height: parent.height
-            color: "red"
+            color: palette.highlight
             z: 100
-
-            // プレイヘッド専用のドラッグ領域
-            MouseArea {
-                function getFrame(mouseEvent) {
-                    var sp = mapToItem(timelineFlickable.contentItem, mouseEvent.x, mouseEvent.y);
-                    var scale = TimelineBridge.timelineScale > 0 ? TimelineBridge.timelineScale : 1;
-                    return Math.max(0, Math.round(sp.x / scale));
-                }
-
-                anchors.fill: parent
-                anchors.margins: -10
-                cursorShape: Qt.SizeHorCursor
-                preventStealing: true
-                onPressed: (mouse) => {
-                    if (TimelineBridge && TimelineBridge.transport) {
-                        TimelineBridge.transport.beginScrub();
-                        TimelineBridge.transport.scrubTo(getFrame(mouse));
-                    }
-                }
-                onPositionChanged: (mouse) => {
-                    if (pressed && TimelineBridge && TimelineBridge.transport)
-                        TimelineBridge.transport.scrubTo(getFrame(mouse));
-
-                }
-                onReleased: (mouse) => {
-                    if (TimelineBridge && TimelineBridge.transport)
-                        TimelineBridge.transport.endScrub();
-
-                }
-            }
-
         }
 
         MouseArea {

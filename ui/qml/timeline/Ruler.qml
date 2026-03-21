@@ -158,7 +158,18 @@ Rectangle {
                 }
             }
 
+            Rectangle {
+                id: rulerPlayhead
+
+                x: Math.round(((TimelineBridge && TimelineBridge.transport ? TimelineBridge.transport.currentFrame : 0) * (TimelineBridge ? TimelineBridge.timelineScale : 1)) - (targetFlickable ? targetFlickable.contentX : 0))
+                y: 0
+                width: 2
+                height: parent.height
+                color: palette.highlight
+                z: 10
+            }
             // マウス操作（スクラブ & ズーム）
+
             // マウス操作（スクラブ & ズーム）
             MouseArea {
                 anchors.fill: parent
