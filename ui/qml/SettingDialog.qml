@@ -14,6 +14,77 @@ Common.RinaWindow {
     property var audioEffectsModel: []
     property bool inputting: false // 入力中フラグ（reloadループ防止用）
     property bool reloading: false
+    property bool enableSnap: SettingsManager && SettingsManager.settings ? SettingsManager.settings.enableSnap : true
+
+    function currentSceneData() {
+        if (!TimelineBridge || !TimelineBridge.scenes)
+            return null;
+
+        for (let i = 0; i < TimelineBridge.scenes.length; i++) {
+            if (TimelineBridge.scenes[i].id === TimelineBridge.currentSceneId)
+                return TimelineBridge.scenes[i];
+
+        }
+        return null;
+    }
+
+    function gridSettings() {
+        const s = currentSceneData();
+        if (s)
+            return {
+            "mode": s.gridMode || "Auto",
+            "bpm": s.gridBpm || 120,
+            "offset": s.gridOffset || 0,
+            "interval": s.gridInterval || 10,
+            "subdivision": s.gridSubdivision || 4
+        };
+
+        return {
+            "mode": "Auto",
+            "bpm": 120,
+            "offset": 0,
+            "interval": 10,
+            "subdivision": 4
+        };
+    }
+
+    function getGridInterval() {
+        if (!TimelineBridge)
+            return 1;
+
+        const gs = gridSettings();
+        const scale = TimelineBridge.timelineScale;
+        const fps = (TimelineBridge.project && TimelineBridge.project.fps) ? TimelineBridge.project.fps : 60;
+        if (gs.mode === "BPM") {
+            const beatFrames = fps / (gs.bpm / 60);
+            const bpmDiv = scale > 3 ? 4 : scale > 1.5 ? 2 : 1;
+            return beatFrames / bpmDiv;
+        }
+        if (gs.mode === "Frame")
+            return gs.interval;
+
+        if (scale < 0.5)
+            return Math.ceil(fps);
+
+        if (scale < 1.5)
+            return 10;
+
+        return 1;
+    }
+
+    function snapRelativeFrame(relFrame) {
+        if (!TimelineBridge || !enableSnap)
+            return Math.max(0, Math.round(relFrame));
+
+        const gs = gridSettings();
+        const absFrame = TimelineBridge.clipStartFrame + relFrame;
+        const step = getGridInterval();
+        const offset = (gs.mode === "BPM" && TimelineBridge.project) ? gs.offset * TimelineBridge.project.fps : 0;
+        const snappedAbs = Math.max(0, Math.round((Math.round((absFrame - offset) / step) * step) + offset));
+        const newRelFrame = snappedAbs - TimelineBridge.clipStartFrame;
+        // Don't snap outside the clip bounds if it goes negative
+        return Math.max(0, newRelFrame);
+    }
 
     function reload() {
         if (!TimelineBridge || !TimelineBridge.selection || reloading)
@@ -174,6 +245,10 @@ Common.RinaWindow {
                         model: getUiModel(effectModel)
 
                         delegate: ColumnLayout {
+                            id: paramDelegate
+
+                            property int activeDragOriginal: -1
+                            property int activeDragCurrent: -1
                             property var def: modelData
                             property string key: (def && (def.param || def.name)) || ""
                             property var effVal: effectRoot.currentParams[key]
@@ -217,7 +292,7 @@ Common.RinaWindow {
                                 var raw = effectModel.evaluatedParam(key, f);
                                 var v = (raw !== undefined && raw !== null) ? raw : effVal;
                                 var interp = (def.type === "color") ? "constant" : "linear";
-                                effectModel.setKeyframe(key, f, v, {
+                                paramDelegate.effectModel.setKeyframe(paramDelegate.key, f, v, {
                                     "interp": interp
                                 });
                             }
@@ -269,6 +344,33 @@ Common.RinaWindow {
                                 return "linear";
                             }
 
+                            function getGridLines() {
+                                if (!TimelineBridge || !enableSnap)
+                                    return [];
+
+                                let step = getGridInterval();
+                                if (step <= 0)
+                                    return [];
+
+                                let gs = gridSettings();
+                                let fps = (TimelineBridge.project && TimelineBridge.project.fps) ? TimelineBridge.project.fps : 60;
+                                let offsetF = (gs.mode === "BPM") ? gs.offset * fps : 0;
+                                let lines = [];
+                                let startAbs = TimelineBridge.clipStartFrame;
+                                let endAbs = startAbs + clipDur;
+                                let firstLine = Math.ceil((startAbs - offsetF) / step) * step + offsetF;
+                                if (clipDur / step > 150)
+                                    return [];
+
+                                for (let f = firstLine; f <= endAbs; f += step) {
+                                    let rel = f - startAbs;
+                                    if (rel >= 0 && rel <= clipDur)
+                                        lines.push(rel);
+
+                                }
+                                return lines;
+                            }
+
                             function updateParam(frame, val) {
                                 if (!effectModel || !key)
                                     return ;
@@ -285,7 +387,7 @@ Common.RinaWindow {
                                 if (type === "constant")
                                     type = "linear";
 
-                                effectModel.setKeyframe(key, frame, val, {
+                                paramDelegate.effectModel.setKeyframe(paramDelegate.key, frame, val, {
                                     "interp": type
                                 });
                             }
@@ -318,13 +420,11 @@ Common.RinaWindow {
                                 decimals: (def.decimals !== undefined) ? def.decimals : 2
                                 onStartValueModified: function(val) {
                                     root.inputting = true;
-                                    ensureRangeKeyframes();
                                     updateParam(startFrame, val);
                                     root.inputting = false;
                                 }
                                 onEndValueModified: function(val) {
                                     root.inputting = true;
-                                    ensureRangeKeyframes();
                                     updateParam(endFrame, val);
                                     root.inputting = false;
                                 }
@@ -380,6 +480,8 @@ Common.RinaWindow {
 
                             // ミニタイムラインバー
                             Item {
+                                id: trackItem
+
                                 Layout.fillWidth: true
                                 Layout.preferredHeight: 12
                                 Layout.leftMargin: 4
@@ -393,13 +495,30 @@ Common.RinaWindow {
                                     color: palette.mid
 
                                     Rectangle {
+                                        property int vStart: (paramDelegate && paramDelegate.activeDragOriginal === startFrame) ? paramDelegate.activeDragCurrent : startFrame
+                                        property int vEnd: (paramDelegate && paramDelegate.activeDragOriginal === endFrame) ? paramDelegate.activeDragCurrent : endFrame
+
                                         height: 4
                                         anchors.verticalCenter: parent.verticalCenter
                                         color: palette.highlight
                                         opacity: 0.7
-                                        x: (startFrame / clipDur) * parent.width
-                                        width: Math.max(0, ((endFrame - startFrame) / clipDur) * parent.width)
+                                        x: (Math.min(vStart, vEnd) / clipDur) * parent.width
+                                        width: Math.max(0, (Math.abs(vEnd - vStart) / clipDur) * parent.width)
                                         visible: clipDur > 0
+                                    }
+
+                                }
+
+                                Repeater {
+                                    model: enableSnap ? getGridLines() : []
+
+                                    Rectangle {
+                                        width: 1
+                                        height: 8
+                                        color: palette.midlight
+                                        opacity: 0.6
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        x: (modelData / clipDur) * trackItem.width
                                     }
 
                                 }
@@ -407,18 +526,119 @@ Common.RinaWindow {
                                 Repeater {
                                     model: kfs
 
-                                    Rectangle {
-                                        width: 4
-                                        height: 4
-                                        radius: 2
-                                        color: palette.text
+                                    Item {
+                                        id: kfItem
+
+                                        property int originalFrame: modelData.frame
+                                        property int currentFrame: originalFrame
+                                        // Capture outer scope variables here, where visual tree resolution works perfectly
+                                        property var targetModel: effectModel
+                                        property string targetKey: key
+                                        property var rootWindow: root
+                                        property int minDragFrame: 0
+                                        property int maxDragFrame: clipDur
+
+                                        width: 16
+                                        height: 16
                                         anchors.verticalCenter: parent.verticalCenter
-                                        x: (modelData.frame / clipDur) * parent.width - 2
+                                        x: (currentFrame / clipDur) * trackItem.width - width / 2
+
+                                        Rectangle {
+                                            width: 8
+                                            height: 8
+                                            color: kfMa.containsMouse || pointDrag.active ? palette.highlight : palette.text
+                                            anchors.centerIn: parent
+                                            rotation: 45
+                                            antialiasing: true
+                                        }
 
                                         MouseArea {
+                                            id: kfMa
+
                                             anchors.fill: parent
-                                            acceptedButtons: Qt.RightButton
-                                            onClicked: effectModel.removeKeyframe(key, modelData.frame)
+                                            hoverEnabled: true
+                                            acceptedButtons: Qt.LeftButton | Qt.RightButton
+                                            onClicked: function(mouse) {
+                                                if (mouse.button === Qt.RightButton)
+                                                    kfItem.targetModel.removeKeyframe(kfItem.targetKey, modelData.frame);
+
+                                            }
+                                            onDoubleClicked: function(mouse) {
+                                                mouse.accepted = true;
+                                            }
+                                        }
+
+                                        DragHandler {
+                                            id: pointDrag
+
+                                            property real startX: 0
+
+                                            target: null
+                                            acceptedButtons: Qt.LeftButton
+                                            onActiveChanged: {
+                                                if (active) {
+                                                    startX = kfItem.x;
+                                                    kfItem.rootWindow.inputting = true;
+                                                    let minF = 0;
+                                                    let maxF = clipDur;
+                                                    for (let i = 0; i < kfs.length; i++) {
+                                                        let f = kfs[i].frame;
+                                                        if (f < kfItem.originalFrame && f >= minF)
+                                                            minF = f + 1;
+
+                                                        if (f > kfItem.originalFrame && f <= maxF)
+                                                            maxF = f - 1;
+
+                                                    }
+                                                    kfItem.minDragFrame = minF;
+                                                    kfItem.maxDragFrame = maxF;
+                                                    if (typeof paramDelegate !== "undefined") {
+                                                        paramDelegate.activeDragOriginal = kfItem.originalFrame;
+                                                        paramDelegate.activeDragCurrent = kfItem.originalFrame;
+                                                    }
+                                                } else {
+                                                    if (typeof paramDelegate !== "undefined")
+                                                        paramDelegate.activeDragOriginal = -1;
+
+                                                    if (kfItem.currentFrame !== kfItem.originalFrame) {
+                                                        var val = kfItem.targetModel.evaluatedParam(kfItem.targetKey, kfItem.originalFrame);
+                                                        var track = kfItem.targetModel.keyframeTracks[kfItem.targetKey] || [];
+                                                        var interp = "linear";
+                                                        var pts = [];
+                                                        for (let i = 0; i < track.length; i++) {
+                                                            if (track[i].frame === kfItem.originalFrame) {
+                                                                val = track[i].value;
+                                                                interp = track[i].interp || "linear";
+                                                                if (track[i].points)
+                                                                    pts = track[i].points;
+
+                                                                break;
+                                                            }
+                                                        }
+                                                        kfItem.targetModel.removeKeyframe(kfItem.targetKey, kfItem.originalFrame);
+                                                        let options = {
+                                                            "interp": interp
+                                                        };
+                                                        if (pts.length > 0)
+                                                            options.points = pts;
+
+                                                        kfItem.targetModel.setKeyframe(kfItem.targetKey, kfItem.currentFrame, val, options);
+                                                    }
+                                                    kfItem.rootWindow.inputting = false;
+                                                }
+                                            }
+                                            onTranslationChanged: {
+                                                if (active) {
+                                                    let newX = startX + translation.x;
+                                                    let rawRelFrame = ((newX + kfItem.width / 2) / trackItem.width) * clipDur;
+                                                    let snappedFrame = snapRelativeFrame(rawRelFrame);
+                                                    snappedFrame = Math.max(kfItem.minDragFrame, Math.min(kfItem.maxDragFrame, snappedFrame));
+                                                    kfItem.currentFrame = snappedFrame;
+                                                    if (typeof paramDelegate !== "undefined")
+                                                        paramDelegate.activeDragCurrent = snappedFrame;
+
+                                                }
+                                            }
                                         }
 
                                     }
@@ -436,12 +656,15 @@ Common.RinaWindow {
                                 MouseArea {
                                     anchors.fill: parent
                                     acceptedButtons: Qt.LeftButton
-                                    onDoubleClicked: (mouse) => {
-                                        let f = Math.round((mouse.x / width) * clipDur);
+                                    onDoubleClicked: function(mouse) {
+                                        let rawRelFrame = (mouse.x / trackItem.width) * clipDur;
+                                        let f = snapRelativeFrame(rawRelFrame);
+                                        f = Math.max(0, Math.min(clipDur, f));
                                         let val = effectModel.evaluatedParam(key, f);
-                                        effectModel.setKeyframe(key, f, val, {
+                                        let options = {
                                             "interp": "linear"
-                                        });
+                                        };
+                                        effectModel.setKeyframe(key, f, val, options);
                                     }
                                 }
 
