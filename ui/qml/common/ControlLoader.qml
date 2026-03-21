@@ -107,6 +107,12 @@ Loader {
         }
     }
 
+    SystemPalette {
+        id: sysPalette
+
+        colorGroup: SystemPalette.Active
+    }
+
     Component {
         id: floatComponent
 
@@ -139,7 +145,7 @@ Loader {
 
             Label {
                 text: controlLoader._label()
-                color: "white"
+                color: sysPalette.text
                 Layout.preferredWidth: 80
                 elide: Text.ElideRight
             }
@@ -165,7 +171,7 @@ Loader {
 
             Label {
                 text: controlLoader.definition.unit || ""
-                color: "#888"
+                color: Qt.rgba(sysPalette.text.r, sysPalette.text.g, sysPalette.text.b, 0.6)
                 visible: text.length > 0
             }
 
@@ -269,7 +275,7 @@ Loader {
                 height: 24
                 radius: 3
                 color: controlLoader._resolveSwatchColor(colorRow._startVal)
-                border.color: startSwatchMa.containsMouse ? "#ffffff" : "#555555"
+                border.color: startSwatchMa.containsMouse ? sysPalette.highlight : sysPalette.mid
                 border.width: 1
                 ToolTip.visible: startSwatchMa.containsMouse
                 ToolTip.text: colorRow._hasKf ? "開始色 (f" + colorRow._startFrame + ")" : "色を選択"
@@ -342,7 +348,7 @@ Loader {
                 height: 24
                 radius: 3
                 color: controlLoader._resolveSwatchColor(colorRow._endVal)
-                border.color: endSwatchMa.containsMouse ? "#ffffff" : "#555555"
+                border.color: endSwatchMa.containsMouse ? sysPalette.highlight : sysPalette.mid
                 border.width: 1
                 ToolTip.visible: endSwatchMa.containsMouse
                 ToolTip.text: "終了色 (f" + colorRow._endFrame + ")"
@@ -374,7 +380,7 @@ Loader {
 
             Label {
                 text: controlLoader._label()
-                color: "white"
+                color: sysPalette.text
                 Layout.preferredWidth: 80
             }
 
@@ -427,7 +433,7 @@ Loader {
 
             Label {
                 text: controlLoader._label()
-                color: "white"
+                color: sysPalette.text
                 Layout.preferredWidth: 80
             }
 
@@ -460,7 +466,7 @@ Loader {
 
             Label {
                 text: controlLoader._label()
-                color: "white"
+                color: sysPalette.text
                 Layout.preferredWidth: 80
             }
 
@@ -485,7 +491,7 @@ Loader {
 
             Label {
                 text: controlLoader._label()
-                color: "white"
+                color: sysPalette.text
                 Layout.preferredWidth: 80
             }
 
@@ -517,13 +523,13 @@ Loader {
                 text: controlLoader.definition.label || "Settings"
                 font.bold: true
                 font.pixelSize: 13
-                color: "#cccccc"
+                color: sysPalette.text
             }
 
             Rectangle {
                 Layout.fillWidth: true
                 height: 1
-                color: "#444444"
+                color: sysPalette.mid
             }
 
         }
@@ -538,7 +544,7 @@ Loader {
 
             Label {
                 text: controlLoader._label()
-                color: "white"
+                color: sysPalette.text
                 Layout.preferredWidth: 80
             }
 
@@ -599,7 +605,7 @@ Loader {
 
             Label {
                 text: controlLoader._label()
-                color: "white"
+                color: sysPalette.text
                 Layout.preferredWidth: 80
                 elide: Text.ElideRight
             }
@@ -623,7 +629,7 @@ Loader {
 
         Text {
             text: "Unknown Type: " + (controlLoader.definition ? controlLoader.definition.type : "null")
-            color: "red"
+            color: sysPalette.highlight
             font.pixelSize: 10
         }
 

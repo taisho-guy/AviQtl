@@ -390,12 +390,12 @@ Common.RinaWindow {
                                     anchors.centerIn: parent
                                     width: parent.width
                                     height: 2
-                                    color: "#555"
+                                    color: palette.mid
 
                                     Rectangle {
                                         height: 4
                                         anchors.verticalCenter: parent.verticalCenter
-                                        color: "#48f"
+                                        color: palette.highlight
                                         opacity: 0.7
                                         x: (startFrame / clipDur) * parent.width
                                         width: Math.max(0, ((endFrame - startFrame) / clipDur) * parent.width)
@@ -411,7 +411,7 @@ Common.RinaWindow {
                                         width: 4
                                         height: 4
                                         radius: 2
-                                        color: "white"
+                                        color: palette.text
                                         anchors.verticalCenter: parent.verticalCenter
                                         x: (modelData.frame / clipDur) * parent.width - 2
 
@@ -428,7 +428,7 @@ Common.RinaWindow {
                                 Rectangle {
                                     width: 1
                                     height: parent.height
-                                    color: "red"
+                                    color: palette.highlight
                                     x: (curRelFrame / clipDur) * parent.width
                                     visible: clipDur > 0
                                 }
