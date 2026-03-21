@@ -1,6 +1,7 @@
 #pragma once
 #include <QAbstractItemModel>
 #include <QObject>
+#include <QPointer>
 #include <QString>
 
 class KColorSchemeManager;

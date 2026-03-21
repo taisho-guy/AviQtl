@@ -1,6 +1,8 @@
 #pragma once
+#include "clip_model.hpp"
 #include "timeline_types.hpp"
 #include <QObject>
+#include <QPointer>
 
 namespace Rina::UI {
 class TimelineController;

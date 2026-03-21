@@ -1,7 +1,9 @@
 #pragma once
+#include "../../core/include/media_decoder.hpp"
 #include "timeline_types.hpp"
 #include <QHash>
 #include <QObject>
+#include <QPointer>
 #include <QUrl>
 
 namespace Rina::Core {
@@ -43,8 +45,8 @@ class TimelineMediaManager : public QObject {
     int sceneIdForClip(int clipId) const;
 
     TimelineController *m_controller;
-    Rina::Engine::AudioMixer *m_audioMixer = nullptr;
+    QPointer<Rina::Engine::AudioMixer> m_audioMixer;
     Rina::Core::VideoFrameStore *m_videoFrameStore = nullptr;
-    QHash<int, Rina::Core::MediaDecoder *> m_decoders;
+    QHash<int, QPointer<Rina::Core::MediaDecoder>> m_decoders;
 };
 } // namespace Rina::UI

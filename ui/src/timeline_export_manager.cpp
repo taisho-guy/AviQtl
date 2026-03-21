@@ -13,6 +13,13 @@ namespace Rina::UI {
 
 TimelineExportManager::TimelineExportManager(TimelineController *controller, QObject *parent) : QObject(parent), m_controller(controller) {}
 
+TimelineExportManager::~TimelineExportManager() {
+    if (m_exportThread) {
+        m_cancelRequested = true;
+        m_exportThread->wait();
+    }
+}
+
 bool TimelineExportManager::exportMedia(const QString &fileUrl, const QString &format, int quality) {
     QString localPath = QUrl(fileUrl).toLocalFile();
     if (localPath.isEmpty())

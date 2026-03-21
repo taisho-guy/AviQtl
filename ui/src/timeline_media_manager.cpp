@@ -20,7 +20,9 @@ void TimelineMediaManager::setVideoFrameStore(Rina::Core::VideoFrameStore *store
 
 void TimelineMediaManager::onPlayingChanged() {
     bool playing = m_controller->transport()->isPlaying();
-    for (auto *decoder : m_decoders) {
+    for (auto decoder : m_decoders) {
+        if (!decoder)
+            continue;
         decoder->setPlaying(playing);
     }
 }
@@ -70,7 +72,9 @@ void TimelineMediaManager::onCurrentFrameChanged() {
 
 void TimelineMediaManager::syncPlaybackSpeed() {
     double speed = m_controller->transport()->playbackSpeed();
-    for (auto *decoder : m_decoders) {
+    for (auto decoder : m_decoders) {
+        if (!decoder)
+            continue;
         decoder->setPlaybackRate(speed);
     }
     if (m_audioMixer)
@@ -81,7 +85,9 @@ void TimelineMediaManager::updateAudioSampleRate() {
     int rate = m_controller->project()->sampleRate();
     if (m_audioMixer)
         m_audioMixer->setSampleRate(rate);
-    for (auto *decoder : m_decoders) {
+    for (auto decoder : m_decoders) {
+        if (!decoder)
+            continue;
         decoder->setSampleRate(rate);
     }
 }
@@ -125,7 +131,8 @@ void TimelineMediaManager::updateMediaDecoders() {
             if (m_decoders.contains(clip.id)) {
                 if (qobject_cast<Rina::Core::AudioDecoder *>(m_decoders[clip.id]))
                     m_audioMixer->unregisterDecoder(clip.id);
-                m_decoders[clip.id]->deleteLater();
+                if (m_decoders[clip.id])
+                    m_decoders[clip.id]->deleteLater();
                 m_decoders.remove(clip.id);
             }
             continue;
@@ -137,7 +144,8 @@ void TimelineMediaManager::updateMediaDecoders() {
             if (existingDecoder->property("sourceUrl").toUrl() != sourceUrl) {
                 if (qobject_cast<Rina::Core::AudioDecoder *>(existingDecoder))
                     m_audioMixer->unregisterDecoder(clip.id);
-                existingDecoder->deleteLater();
+                if (existingDecoder)
+                    existingDecoder->deleteLater();
                 m_decoders.remove(clip.id);
             } else {
                 continue;
@@ -206,7 +214,8 @@ void TimelineMediaManager::updateMediaDecoders() {
             if (m_videoFrameStore) {
                 m_videoFrameStore->invalidateFrame(QString::number(clipToScene.value(it.key(), -1)) + "_" + QString::number(it.key()));
             }
-            it.value()->deleteLater();
+            if (it.value())
+                it.value()->deleteLater();
             it = m_decoders.erase(it);
         } else {
             ++it;

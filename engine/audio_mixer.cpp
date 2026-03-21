@@ -46,7 +46,7 @@ AudioMixer::AudioMixer(QObject *parent) : QObject(parent) {
         m_format = device.preferredFormat();
     }
 
-    m_audioSink = new QAudioSink(device, m_format, this);
+    m_audioSink = std::make_unique<QAudioSink>(device, m_format);
     // 低レイテンシを目指しつつ、音飛びしない程度のバッファサイズ (例: 100ms)
     m_audioSink->setBufferSize(sampleRate * 2 * sizeof(float) / 10);
     m_audioOutput = m_audioSink->start();
@@ -70,11 +70,10 @@ void AudioMixer::setSampleRate(int sampleRate) {
 
     if (m_audioSink) {
         m_audioSink->stop();
-        delete m_audioSink;
     }
 
     QAudioDevice device = QMediaDevices::defaultAudioOutput();
-    m_audioSink = new QAudioSink(device, m_format, this);
+    m_audioSink = std::make_unique<QAudioSink>(device, m_format);
     m_audioSink->setBufferSize(sampleRate * 2 * sizeof(float) / 10);
     m_audioOutput = m_audioSink->start();
 }

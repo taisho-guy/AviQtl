@@ -1,6 +1,7 @@
 #pragma once
 #include "../../core/include/video_encoder.hpp"
 #include <QObject>
+#include <QPointer>
 #include <QString>
 #include <QThread>
 #include <atomic>
@@ -16,6 +17,8 @@ class TimelineExportManager : public QObject {
     Q_OBJECT
   public:
     explicit TimelineExportManager(TimelineController *controller, QObject *parent = nullptr);
+
+    ~TimelineExportManager() override;
 
     void exportVideoAsync(const Rina::Core::VideoEncoder::Config &config);
     void cancelExport();
@@ -33,7 +36,7 @@ class TimelineExportManager : public QObject {
     void runExport(const Rina::Core::VideoEncoder::Config &config);
     bool exportImageSequence(const QString &dir, int quality);
     TimelineController *m_controller;
-    QThread *m_exportThread = nullptr;
+    QPointer<QThread> m_exportThread;
     std::atomic<bool> m_exporting{false};
     std::atomic<bool> m_cancelRequested{false};
 };

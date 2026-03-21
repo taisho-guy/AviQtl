@@ -2,6 +2,7 @@
 #include "timeline_types.hpp"
 #include <QObject>
 #include <QPoint>
+#include <QPointer>
 #include <QSet>
 #include <QUndoStack>
 #include <memory>

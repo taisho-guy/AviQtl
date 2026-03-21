@@ -5,6 +5,7 @@
 #include <QHash>
 #include <QIODevice>
 #include <QObject>
+#include <QPointer>
 #include <memory>
 #include <unordered_map>
 
@@ -43,7 +44,7 @@ class AudioMixer : public QObject {
     void setSampleRate(int sampleRate);
 
   private:
-    QAudioSink *m_audioSink = nullptr;
+    std::unique_ptr<QAudioSink> m_audioSink;
     QIODevice *m_audioOutput = nullptr;
     QAudioFormat m_format;
     std::unordered_map<int, Rina::Core::AudioDecoder *> m_decoders;
