@@ -4,7 +4,10 @@
 
 namespace Rina::Engine::Timeline {
 
-ECS::ECS() { m_activeState = std::make_shared<ECSState>(); }
+ECS::ECS() {
+    m_activeIndex.store(0, std::memory_order_relaxed);
+    m_editIndex = 1;
+}
 
 ECS &ECS::instance() {
     static ECS inst;
@@ -12,23 +15,15 @@ ECS &ECS::instance() {
 }
 
 void ECS::syncClipIds(const QSet<int> &aliveIds) {
-    auto erase_dead = [&aliveIds](auto &map) {
-        for (auto it = map.begin(); it != map.end();) {
-            if (!aliveIds.contains(it->first)) {
-                it = map.erase(it);
-            } else {
-                ++it;
-            }
-        }
-    };
-
-    erase_dead(m_editState.transforms);
-    erase_dead(m_editState.renderStates);
-    erase_dead(m_editState.audioStates);
+    auto &editState = m_buffers[m_editIndex];
+    editState.transforms.syncAlive(aliveIds);
+    editState.renderStates.syncAlive(aliveIds);
+    editState.audioStates.syncAlive(aliveIds);
 }
 
 void ECS::updateClipState(int clipId, int layer, double time) {
-    auto &transform = m_editState.transforms[clipId];
+    auto &editState = m_buffers[m_editIndex];
+    auto &transform = editState.transforms[clipId];
 
     bool changed = (transform.layer != layer || std::abs(transform.timePosition - time) > 0.001);
 
@@ -36,14 +31,15 @@ void ECS::updateClipState(int clipId, int layer, double time) {
         transform.layer = layer;
         transform.timePosition = time;
 
-        auto &render = m_editState.renderStates[clipId];
+        auto &render = editState.renderStates[clipId];
         render.needsUpdate = true;
-        m_editState.renderGraphDirty = true;
+        editState.renderGraphDirty = true;
     }
 }
 
 void ECS::updateAudioClipState(int clipId, int startFrame, int durationFrames, float volume, float pan, bool mute) {
-    auto &audio = m_editState.audioStates[clipId];
+    auto &editState = m_buffers[m_editIndex];
+    auto &audio = editState.audioStates[clipId];
     audio.clipId = clipId;
     audio.startFrame = startFrame;
     audio.durationFrames = durationFrames;
@@ -53,20 +49,33 @@ void ECS::updateAudioClipState(int clipId, int startFrame, int durationFrames, f
 }
 
 void ECS::commit() {
-    auto newState = std::make_shared<ECSState>(m_editState);
-    m_activeState.store(newState, std::memory_order_release);
+    // 現在の edit バッファのインデックスを新しい active バッファにする
+    int nextActive = m_editIndex;
+
+    // 次の edit バッファを選ぶ (0, 1, 2 を循環)
+    m_editIndex = (m_editIndex + 1) % 3;
+
+    // 次の edit バッファが現在 active として使われているなら、もう一つ進める
+    if (m_editIndex == m_activeIndex.load(std::memory_order_acquire)) {
+        m_editIndex = (m_editIndex + 1) % 3;
+    }
+
+    // 次の edit バッファに、今の確定済み状態をコピーしておく(差分更新のベースとして)
+    m_buffers[m_editIndex] = m_buffers[nextActive];
+
+    // 最新の active インデックスを公開
+    m_activeIndex.store(nextActive, std::memory_order_release);
 }
 
-std::shared_ptr<const ECSState> ECS::getSnapshot() const { return m_activeState.load(std::memory_order_acquire); }
+const ECSState *ECS::getSnapshot() const { return &m_buffers[m_activeIndex.load(std::memory_order_acquire)]; }
 
-bool ECS::isRenderGraphDirty() const { return m_editState.renderGraphDirty; }
+bool ECS::isRenderGraphDirty() const { return m_buffers[m_editIndex].renderGraphDirty; }
 
-void ECS::markRenderGraphClean() { m_editState.renderGraphDirty = false; }
+void ECS::markRenderGraphClean() { m_buffers[m_editIndex].renderGraphDirty = false; }
 
 } // namespace Rina::Engine::Timeline
 
 extern "C" {
-// Lua連携用の安全なヘルパー関数
 float rina_lua_get_audio_volume(int clipId) {
     auto state = Rina::Engine::Timeline::ECS::instance().getSnapshot();
     if (!state)
