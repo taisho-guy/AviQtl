@@ -1,6 +1,5 @@
 #pragma once
 #include "audio_plugin_host.hpp"
-#include <CarlaHost.h>
 #include <QHash>
 #include <QMutex>
 #include <QObject>

@@ -14,8 +14,7 @@
 #include <cstring>
 #include <vector>
 
-#include <CarlaBackend.h>
-#include <CarlaHost.h>
+#include <CarlaNativePlugin.h>
 
 namespace Rina::Engine::Plugin {
 
@@ -65,10 +64,10 @@ class CarlaHostedPlugin final : public IAudioPlugin {
         if (frames <= 0)
             return;
         if ((int)m_inL.size() < frames) {
-            m_inL.resize(frames);
-            m_inR.resize(frames);
-            m_outL.resize(frames);
-            m_outR.resize(frames);
+            m_inL.resize(frames, 0.0f);
+            m_inR.resize(frames, 0.0f);
+            m_outL.resize(frames, 0.0f);
+            m_outR.resize(frames, 0.0f);
         }
     }
 
@@ -77,8 +76,6 @@ class CarlaHostedPlugin final : public IAudioPlugin {
         for (int i = 0; i < frames; ++i) {
             m_inL[i] = src[i * 2 + 0];
             m_inR[i] = src[i * 2 + 1];
-            m_outL[i] = m_inL[i];
-            m_outR[i] = m_inR[i];
         }
     }
 
@@ -89,62 +86,130 @@ class CarlaHostedPlugin final : public IAudioPlugin {
         }
     }
 
+    // NativeHostDescriptor コールバック (static)
+    static uint32_t s_getBufferSize(NativeHostHandle h) { return static_cast<uint32_t>(static_cast<CarlaHostedPlugin *>(h)->m_maxBlockSize); }
+    static double s_getSampleRate(NativeHostHandle h) { return static_cast<CarlaHostedPlugin *>(h)->m_sampleRate; }
+    static bool s_isOffline(NativeHostHandle) { return false; }
+    static const NativeTimeInfo *s_getTimeInfo(NativeHostHandle h) { return &static_cast<CarlaHostedPlugin *>(h)->m_timeInfo; }
+    static bool s_writeMidiEvent(NativeHostHandle, const NativeMidiEvent *) { return false; }
+    static void s_uiParameterChanged(NativeHostHandle, uint32_t, float) {}
+    static void s_uiMidiProgramChanged(NativeHostHandle, uint8_t, uint32_t, uint32_t) {}
+    static void s_uiCustomDataChanged(NativeHostHandle, const char *, const char *) {}
+    static void s_uiClosed(NativeHostHandle) {}
+    static const char *s_uiOpenFile(NativeHostHandle, bool, const char *, const char *) { return nullptr; }
+    static const char *s_uiSaveFile(NativeHostHandle, bool, const char *, const char *) { return nullptr; }
+    static intptr_t s_dispatcher(NativeHostHandle, NativeHostDispatcherOpcode, int32_t, intptr_t, void *, float) { return 0; }
+
     bool load(const QString &path, int index = 0) override {
         Q_UNUSED(index)
 
-        // 1プラグインにつき1つの独立したCarlaHostを生成
-        m_host = carla_standalone_host_init();
-        if (m_host == nullptr) {
-            qWarning() << "[CarlaHostedPlugin] carla_standalone_host_init failed for" << m_info.name;
-            return false;
-        }
-
         CarlaBackend::PluginType ptype = CarlaBackend::PLUGIN_NONE;
         if (!mapFormatToCarlaType(m_info.format, ptype)) {
-            qWarning() << "[CarlaHostedPlugin] 未対応フォーマット:" << m_info.format << m_info.name;
+            qWarning() << "[CarlaHostedPlugin] 未対応フォーマット:" << m_info.format;
             return false;
         }
 
+        const auto &sm = Rina::Core::SettingsManager::instance();
+        if (m_sampleRate <= 1.0)
+            m_sampleRate = sm.value("defaultProjectSampleRate", 48000).toDouble();
+        if (m_maxBlockSize <= 0)
+            m_maxBlockSize = sm.value("audioPluginMaxBlockSize", 512).toInt();
+
+        m_uiNameBuf = m_info.name.toUtf8();
+
+        m_hostDesc.handle = static_cast<NativeHostHandle>(this);
+        m_hostDesc.resourceDir = "/usr/share/carla/resources";
+        m_hostDesc.uiName = m_uiNameBuf.constData();
+        m_hostDesc.uiParentId = 0;
+        m_hostDesc.get_buffer_size = s_getBufferSize;
+        m_hostDesc.get_sample_rate = s_getSampleRate;
+        m_hostDesc.is_offline = s_isOffline;
+        m_hostDesc.get_time_info = s_getTimeInfo;
+        m_hostDesc.write_midi_event = s_writeMidiEvent;
+        m_hostDesc.ui_parameter_changed = s_uiParameterChanged;
+        m_hostDesc.ui_midi_program_changed = s_uiMidiProgramChanged;
+        m_hostDesc.ui_custom_data_changed = s_uiCustomDataChanged;
+        m_hostDesc.ui_closed = s_uiClosed;
+        m_hostDesc.ui_open_file = s_uiOpenFile;
+        m_hostDesc.ui_save_file = s_uiSaveFile;
+        m_hostDesc.dispatcher = s_dispatcher;
+
+        m_descriptor = carla_get_native_rack_plugin();
+        if (m_descriptor == nullptr) {
+            qWarning() << "[CarlaHostedPlugin] carla_get_native_rack_plugin が nullptr:" << m_info.name;
+            return false;
+        }
+
+        m_nativeHandle = m_descriptor->instantiate(&m_hostDesc);
+        if (m_nativeHandle == nullptr) {
+            qWarning() << "[CarlaHostedPlugin] instantiate() が nullptr:" << m_info.name;
+            m_descriptor = nullptr;
+            return false;
+        }
+
+        m_hostHandle = carla_create_native_plugin_host_handle(m_descriptor, m_nativeHandle);
+        if (m_hostHandle == nullptr) {
+            qWarning() << "[CarlaHostedPlugin] carla_create_native_plugin_host_handle が nullptr:" << m_info.name;
+            m_descriptor->cleanup(m_nativeHandle);
+            m_nativeHandle = nullptr;
+            m_descriptor = nullptr;
+            return false;
+        }
+
+        // Native Rack はデフォルトで CONTINUOUS_RACK かつステレオ強制のため設定不要
         const QByteArray filename = path.toUtf8();
         const QByteArray name = m_info.name.toUtf8();
-        const QByteArray label = m_info.label.toUtf8();
 
-        m_loaded = carla_add_plugin(m_host, CarlaBackend::BINARY_POSIX64, ptype, filename.isEmpty() ? nullptr : filename.constData(), name.isEmpty() ? nullptr : name.constData(), label.isEmpty() ? nullptr : label.constData(), m_info.uniqueId, nullptr,
-                                    CarlaBackend::PLUGIN_OPTIONS_NULL);
+        // LV2: carla-discovery は label を "bundle.lv2/http://..." 形式で出力する。
+        // carla_add_plugin に渡す label は純粋な URI でなければならないため抽出する。
+        QString lv2UriStr = m_info.label;
+        if (ptype == CarlaBackend::PLUGIN_LV2) {
+            const int dotLv2 = lv2UriStr.indexOf(QLatin1String(".lv2/"));
+            if (dotLv2 >= 0)
+                lv2UriStr = lv2UriStr.mid(dotLv2 + 5);
+        }
+        const QByteArray label = lv2UriStr.toUtf8();
+
+        m_loaded = carla_add_plugin(m_hostHandle, CarlaBackend::BINARY_POSIX64, ptype, filename.isEmpty() ? nullptr : filename.constData(), name.isEmpty() ? nullptr : name.constData(), label.isEmpty() ? nullptr : label.constData(), m_info.uniqueId,
+                                    nullptr, CarlaBackend::PLUGIN_OPTIONS_NULL);
 
         if (!m_loaded) {
             qWarning() << "[CarlaHostedPlugin] carla_add_plugin failed:" << m_info.name << m_info.path;
-            carla_engine_close(m_host);
-            m_host = nullptr;
+            carla_host_handle_free(m_hostHandle);
+            m_hostHandle = nullptr;
+            m_descriptor->cleanup(m_nativeHandle);
+            m_nativeHandle = nullptr;
+            m_descriptor = nullptr;
+            return false;
         }
 
-        return m_loaded;
+        carla_set_active(m_hostHandle, m_pluginId, true);
+        m_descriptor->activate(m_nativeHandle);
+        ensureBuffers(m_maxBlockSize);
+        qDebug() << "[CarlaHostedPlugin] NativePlugin ロード完了:" << m_info.name;
+        return true;
     }
 
     void prepare(double sampleRate, int maxBlockSize) override {
         m_sampleRate = sampleRate > 1.0 ? sampleRate : 48000.0;
         m_maxBlockSize = maxBlockSize > 0 ? maxBlockSize : 512;
         ensureBuffers(m_maxBlockSize);
-
-        if (m_host == nullptr)
-            return;
-
-        carla_set_engine_option(m_host, CarlaBackend::ENGINE_OPTION_PROCESS_MODE, CarlaBackend::ENGINE_PROCESS_MODE_CONTINUOUS_RACK, nullptr);
-        carla_set_engine_option(m_host, CarlaBackend::ENGINE_OPTION_FORCE_STEREO, 1, nullptr);
-        carla_set_engine_option(m_host, CarlaBackend::ENGINE_OPTION_AUDIO_BUFFER_SIZE, m_maxBlockSize, nullptr);
-        carla_set_engine_option(m_host, CarlaBackend::ENGINE_OPTION_AUDIO_SAMPLE_RATE, static_cast<int>(m_sampleRate), nullptr);
+        // サンプルレート/バッファサイズは NativeHostDescriptor コールバックで動的に返す
     }
 
     void process(float *buf, int frameCount) override {
-        if (!m_loaded || m_host == nullptr || buf == nullptr || frameCount <= 0)
+        if (!m_loaded || m_descriptor == nullptr || m_nativeHandle == nullptr || buf == nullptr || frameCount <= 0)
             return;
 
         deinterleave(buf, frameCount);
 
-        // Stage 2 安全版:
-        // ここではアダプタ層のみ確定実装する。
-        // m_inL/m_inR -> Carla処理 -> m_outL/m_outR の実呼び出しは
-        // 次段で Carla 側の process シグネチャ確定後に接続する。
+        std::fill(m_outL.begin(), m_outL.begin() + frameCount, 0.0f);
+        std::fill(m_outR.begin(), m_outR.begin() + frameCount, 0.0f);
+
+        float *inBufs[2] = {m_inL.data(), m_inR.data()};
+        float *outBufs[2] = {m_outL.data(), m_outR.data()};
+
+        m_descriptor->process(m_nativeHandle, inBufs, outBufs, static_cast<uint32_t>(frameCount), nullptr, 0);
 
         interleave(buf, frameCount);
     }
@@ -152,11 +217,21 @@ class CarlaHostedPlugin final : public IAudioPlugin {
     bool active() const override { return m_loaded; }
 
     void release() override {
-        m_loaded = false;
-        if (m_host != nullptr) {
-            carla_engine_close(m_host);
-            m_host = nullptr;
+        if (m_descriptor != nullptr && m_nativeHandle != nullptr)
+            m_descriptor->deactivate(m_nativeHandle);
+
+        if (m_hostHandle != nullptr) {
+            carla_host_handle_free(m_hostHandle);
+            m_hostHandle = nullptr;
         }
+
+        if (m_descriptor != nullptr && m_nativeHandle != nullptr) {
+            m_descriptor->cleanup(m_nativeHandle);
+            m_nativeHandle = nullptr;
+        }
+
+        m_descriptor = nullptr;
+        m_loaded = false;
         m_inL.clear();
         m_inR.clear();
         m_outL.clear();
@@ -165,50 +240,53 @@ class CarlaHostedPlugin final : public IAudioPlugin {
 
     QString name() const override { return m_info.name; }
     QString format() const override { return m_info.format; }
+
     int paramCount() const override {
-        if (!m_loaded || m_host == nullptr)
+        if (!m_loaded || m_hostHandle == nullptr)
             return 0;
-        return static_cast<int>(carla_get_parameter_count(m_host, m_pluginId));
+        return static_cast<int>(carla_get_parameter_count(m_hostHandle, m_pluginId));
     }
 
     QString paramName(int i) const override {
-        if (!m_loaded || m_host == nullptr || i < 0)
+        if (!m_loaded || m_hostHandle == nullptr || i < 0)
             return {};
-        const CarlaParameterInfo *info = carla_get_parameter_info(m_host, m_pluginId, static_cast<uint32_t>(i));
-        if (info == nullptr)
-            return {};
-        return safeQString(info->name);
+        const CarlaParameterInfo *info = carla_get_parameter_info(m_hostHandle, m_pluginId, static_cast<uint32_t>(i));
+        return info ? safeQString(info->name) : QString{};
     }
 
     float getParam(int i) const override {
-        if (!m_loaded || m_host == nullptr || i < 0)
+        if (!m_loaded || m_hostHandle == nullptr || i < 0)
             return 0.0f;
-        return carla_get_current_parameter_value(m_host, m_pluginId, static_cast<uint32_t>(i));
+        return carla_get_current_parameter_value(m_hostHandle, m_pluginId, static_cast<uint32_t>(i));
     }
 
     void setParam(int i, float v) override {
-        if (!m_loaded || m_host == nullptr || i < 0)
+        if (!m_loaded || m_hostHandle == nullptr || i < 0)
             return;
-        carla_set_parameter_value(m_host, m_pluginId, static_cast<uint32_t>(i), clamp01(v));
+        carla_set_parameter_value(m_hostHandle, m_pluginId, static_cast<uint32_t>(i), clamp01(v));
     }
 
     ParamInfo getParamInfo(int i) const override {
         ParamInfo out;
-        if (!m_loaded || m_host == nullptr || i < 0)
+        if (!m_loaded || m_hostHandle == nullptr || i < 0)
             return out;
-
         const uint32_t pid = static_cast<uint32_t>(i);
-        const CarlaParameterInfo *info = carla_get_parameter_info(m_host, m_pluginId, pid);
-        if (info != nullptr)
+        const CarlaParameterInfo *info = carla_get_parameter_info(m_hostHandle, m_pluginId, pid);
+        if (info)
             out.name = safeQString(info->name);
-        out.defaultValue = carla_get_default_parameter_value(m_host, m_pluginId, pid);
+        out.defaultValue = carla_get_default_parameter_value(m_hostHandle, m_pluginId, pid);
         out.min = 0.0f;
         out.max = 1.0f;
         return out;
     }
 
   private:
-    CarlaHostHandle m_host = nullptr;
+    const NativePluginDescriptor *m_descriptor = nullptr;
+    NativePluginHandle m_nativeHandle = nullptr;
+    CarlaHostHandle m_hostHandle = nullptr;
+    NativeHostDescriptor m_hostDesc = {};
+    NativeTimeInfo m_timeInfo = {};
+    QByteArray m_uiNameBuf;
     uint m_pluginId = 0;
     PluginInfo m_info;
     bool m_loaded = false;
@@ -275,7 +353,7 @@ QString normalizeCategoryTitle(QString category) {
     const QString lower = category.toLower();
     if (lower == "synth" || lower == "instrument")
         return "Synth";
-    if (lower == "delay")
+    if (lower == "delay" || lower == "reverb")
         return "Delay";
     if (lower == "eq")
         return "EQ";
@@ -289,7 +367,7 @@ QString normalizeCategoryTitle(QString category) {
         return "Modulator";
     if (lower == "utility" || lower == "tools" || lower == "tool")
         return "Utility";
-    if (lower == "other" || lower == "unknown" || lower == "misc")
+    if (lower == "other" || lower == "unknown" || lower == "misc" || lower == "none" || lower == "null")
         return "Other";
     return category;
 }
@@ -361,7 +439,10 @@ QList<PluginInfo> parseDiscoveryOutput(const QString &output, const QString &for
         } else if (key == "uniqueId") {
             current.uniqueId = val.toLongLong();
         } else if (key == "category") {
-            current.category = toCategoryStr(val.toInt());
+            // 旧APIは整数、新APIは文字列("none","filter"等)で返す
+            bool catIsInt = false;
+            const int catInt = val.toInt(&catIsInt);
+            current.category = (catIsInt && val.trimmed() != "0") ? toCategoryStr(catInt) : normalizeCategoryTitle(val);
         } else if (key == "audio.ins") {
             current.audioIns = val.toInt();
         } else if (key == "audio.outs") {
@@ -417,14 +498,11 @@ QList<PluginInfo> runDiscovery(const QString &tool, const QString &type, const Q
     output += proc.readAllStandardOutput();
 
     QByteArray errOutput = proc.readAllStandardError();
-
-    // stdout が空かつ stderr に discovery 出力がある場合はフォールバック
     if (output.isEmpty() && errOutput.contains("carla-discovery::")) {
         output = errOutput;
     } else if (!errOutput.isEmpty() && output.isEmpty()) {
         qDebug() << "[Discovery] エラー出力:" << target << errOutput.left(200).trimmed();
     }
-
     return parseDiscoveryOutput(QString::fromUtf8(output), format, target);
 }
 
@@ -455,18 +533,14 @@ QList<PluginInfo> discoverFormat(const QString &tool, const FormatConfig &cfg, s
         qWarning() << "[AudioPluginManager]" << cfg.format << "はインストール済みCarlaバージョンで未対応のためスキップ";
         return {};
     }
-
     QStringList targets;
 
     if (cfg.type == "lv2") {
-        // carla-discovery-native lv2 はURIではなく .lv2 バンドルパスを要求する
         QStringList lv2SearchPaths;
         const QByteArray lv2PathEnv = qgetenv("LV2_PATH");
         if (!lv2PathEnv.isEmpty())
             lv2SearchPaths << QString::fromLocal8Bit(lv2PathEnv).split(':', Qt::SkipEmptyParts);
-        lv2SearchPaths << QDir::homePath() + "/.lv2" << "/usr/lib/lv2"
-                       << "/usr/local/lib/lv2";
-
+        lv2SearchPaths << QDir::homePath() + "/.lv2" << "/usr/lib/lv2" << "/usr/local/lib/lv2";
         QSet<QString> visited;
         for (const QString &searchPath : lv2SearchPaths) {
             QDir dir(searchPath);
@@ -555,9 +629,6 @@ void AudioPluginManager::initialize() {
         return;
     m_initialized = true;
 
-    // scanPlugins()はワーカースレッドで実行する
-    // blockingMap内のQProcessがメインスレッドで動くと
-    // waitForReadyRead()がイベントループのブロックで機能しないため
     auto future = QtConcurrent::run([this] {
         scanPlugins();
         emit pluginsReady(m_plugins.size());

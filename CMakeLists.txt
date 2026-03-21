@@ -63,7 +63,7 @@ pkg_check_modules(FFMPEG REQUIRED libavcodec libavformat libavutil libswscale li
 
 
 # Carla Audio Plugin Backend
-pkg_check_modules(CARLA REQUIRED carla-standalone carla-host-plugin carla-utils)
+pkg_check_modules(CARLA REQUIRED carla-standalone carla-native-plugin carla-host-plugin carla-utils)
 pkg_check_modules(LUAJIT REQUIRED luajit)
 
 # macOSでのLuaJITリンク問題の修正
