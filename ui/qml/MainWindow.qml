@@ -60,9 +60,13 @@ ApplicationWindow {
         text: "プロジェクトの上書き保存"
         shortcut: "Ctrl+S"
         onTriggered: {
-            if (TimelineBridge)
-                TimelineBridge.saveProject("");
-
+            if (TimelineBridge) {
+                // 現在のプロジェクトパスが未設定の場合は名前を付けて保存ダイアログを開く
+                if (TimelineBridge.currentProjectUrl === "")
+                    saveDialog.open();
+                else
+                    TimelineBridge.saveProject("");
+            }
         }
     }
 

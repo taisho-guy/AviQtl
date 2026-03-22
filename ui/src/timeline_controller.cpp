@@ -399,9 +399,23 @@ void TimelineController::moveClipWithCollisionCheck(int clipId, int layer, int s
 }
 
 bool TimelineController::saveProject(const QString &fileUrl) {
+    // 渡されたパスが空の場合は内部で保持しているパスを割り当てる
+    QString targetUrl = fileUrl.isEmpty() ? m_currentProjectUrl : fileUrl;
+
+    // パスが空の場合は新規作成直後なのでエラーで返す
+    if (targetUrl.isEmpty()) {
+        emit errorOccurred("保存先のファイルパスが不明です");
+        return false;
+    }
+
     QString error;
-    bool result = Rina::Core::ProjectSerializer::save(fileUrl, m_timeline, m_project, &error);
-    if (!result) {
+    bool result = Rina::Core::ProjectSerializer::save(targetUrl, m_timeline, m_project, &error);
+
+    if (result) {
+        // 保存に成功したパスを現在のプロジェクトパスとして記憶する
+        m_currentProjectUrl = targetUrl;
+        emit currentProjectUrlChanged();
+    } else {
         emit errorOccurred(error);
     }
     return result;
@@ -410,7 +424,12 @@ bool TimelineController::saveProject(const QString &fileUrl) {
 bool TimelineController::loadProject(const QString &fileUrl) {
     QString error;
     bool result = Rina::Core::ProjectSerializer::load(fileUrl, m_timeline, m_project, &error);
-    if (!result) {
+
+    if (result) {
+        // 読み込みに成功したパスを現在のプロジェクトパスとして記憶する
+        m_currentProjectUrl = fileUrl;
+        emit currentProjectUrlChanged();
+    } else {
         emit errorOccurred(error);
     }
     return result;

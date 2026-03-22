@@ -53,6 +53,7 @@ class TimelineController : public QObject {
     Q_PROPERTY(int selectedLayer READ selectedLayer WRITE setSelectedLayer NOTIFY selectedLayerChanged)
     Q_PROPERTY(QVariantList scenes READ scenes NOTIFY scenesChanged)
     Q_PROPERTY(int currentSceneId READ currentSceneId NOTIFY currentSceneIdChanged)
+    Q_PROPERTY(QString currentProjectUrl READ currentProjectUrl NOTIFY currentProjectUrlChanged)
 
   public:
     explicit TimelineController(QObject *parent = nullptr);
@@ -137,6 +138,7 @@ class TimelineController : public QObject {
     // シーン操作 (未実装)
     QVariantList scenes() const;
     int currentSceneId() const;
+    QString currentProjectUrl() const { return m_currentProjectUrl; }
     Q_INVOKABLE void createScene(const QString &name);
     Q_INVOKABLE void removeScene(int sceneId);
     Q_INVOKABLE void switchScene(int sceneId);
@@ -199,6 +201,7 @@ class TimelineController : public QObject {
     void clipsChanged();            // 追加
     void scenesChanged();
     void currentSceneIdChanged();
+    void currentProjectUrlChanged();
     void clipEffectsChanged(int clipId);
     void selectedLayerChanged();
     void errorOccurred(const QString &message);
@@ -220,6 +223,7 @@ class TimelineController : public QObject {
 
     bool m_isClipActive = false;
     int m_selectedLayer = 0;
+    QString m_currentProjectUrl;
 
     // 各機能を担当するサービス群
     ProjectService *m_project;
