@@ -105,6 +105,9 @@ Common.RinaWindow {
 
     // UI定義を正規化してリストとして取得するヘルパー
     function getUiModel(effectModel) {
+        if (!effectModel)
+            return [];
+
         var ui = effectModel.uiDefinition;
         if (ui) {
             // 1. 標準形式：{ controls: [...] } または { params: [...] }
