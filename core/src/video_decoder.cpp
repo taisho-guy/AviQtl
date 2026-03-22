@@ -267,11 +267,6 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) {
         while (keyIndex > 0 && !mindex[keyIndex].isKeyframe)
             --keyIndex;
         int64_t seekPts = mindex[keyIndex].pts;
-        if (keyIndex == 0) {
-            int64_t startTime = mfmtCtx->streams[mstreamIndex]->start_time;
-            if (startTime != AV_NOPTS_VALUE)
-                seekPts += startTime;
-        }
         int ret = av_seek_frame(mfmtCtx, mstreamIndex, seekPts, AVSEEK_FLAG_BACKWARD);
         if (ret < 0)
             av_seek_frame(mfmtCtx, -1, seekPts, AVSEEK_FLAG_BACKWARD);
@@ -308,9 +303,68 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) {
             }
             if (rxRet < 0)
                 break;
+
             int64_t currentPts = mframe->best_effort_timestamp != AV_NOPTS_VALUE ? mframe->best_effort_timestamp : mframe->pts;
+
+            auto it = std::lower_bound(mindex.begin(), mindex.end(), currentPts, [](const FrameIndexEntry &e, int64_t pts) { return e.pts < pts; });
+            int decodedFrameIndex = -1;
+            if (it != mindex.end() && it->pts == currentPts) {
+                decodedFrameIndex = std::distance(mindex.begin(), it);
+            }
+
+            if (decodedFrameIndex != -1 && !mframeCache.contains(decodedFrameIndex)) {
+                AVFrame *srcFrame = mframe;
+                AVFrame *swFrame = nullptr;
+
+                if (mframe->format == mhwPixFmt) {
+                    swFrame = av_frame_alloc();
+                    if (av_hwframe_transfer_data(swFrame, mframe, 0) == 0) {
+                        srcFrame = swFrame;
+                    } else {
+                        av_frame_free(&swFrame);
+                        srcFrame = nullptr;
+                    }
+                }
+
+                if (srcFrame) {
+                    QVideoFrameFormat::PixelFormat qtFmt = QVideoFrameFormat::Format_Invalid;
+                    switch (srcFrame->format) {
+                    case AV_PIX_FMT_YUV420P:
+                    case AV_PIX_FMT_YUVJ420P:
+                        qtFmt = QVideoFrameFormat::Format_YUV420P;
+                        break;
+                    case AV_PIX_FMT_NV12:
+                        qtFmt = QVideoFrameFormat::Format_NV12;
+                        break;
+                    case AV_PIX_FMT_RGBA:
+                        qtFmt = QVideoFrameFormat::Format_RGBA8888;
+                        break;
+                    default:
+                        qtFmt = QVideoFrameFormat::Format_YUV420P;
+                        break;
+                    }
+
+                    AVFrame *ownedFrame = av_frame_alloc();
+                    av_frame_ref(ownedFrame, srcFrame);
+                    if (swFrame)
+                        av_frame_free(&swFrame);
+
+                    QVideoFrameFormat format(QSize(mdecCtx->width, mdecCtx->height), qtFmt);
+                    QVideoFrame videoFrame(new FFmpegVideoBuffer(ownedFrame, format), format);
+                    av_frame_free(&ownedFrame);
+
+                    videoFrame.setStartTime(-1);
+                    videoFrame.setEndTime(-1);
+
+                    if (videoFrame.isValid()) {
+                        int cost = videoFrame.width() * videoFrame.height();
+                        mframeCache.insert(decodedFrameIndex, new QVideoFrame(videoFrame), cost);
+                    }
+                }
+            }
+
             if (currentPts >= targetPts) {
-                mlastDecodedFrame = targetFrame;
+                mlastDecodedFrame = decodedFrameIndex != -1 ? decodedFrameIndex : targetFrame;
                 frameFound = true;
                 break;
             }
@@ -318,60 +372,14 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) {
     }
     av_packet_free(&pkt);
 
-    if (frameFound) {
-        AVFrame *srcFrame = mframe;
-        AVFrame *swFrame = nullptr;
-
-        if (mframe->format == mhwPixFmt) {
-            swFrame = av_frame_alloc();
-            if (av_hwframe_transfer_data(swFrame, mframe, 0) != 0) {
-                av_frame_free(&swFrame);
-                return;
-            }
-            srcFrame = swFrame;
-        }
-
-        QVideoFrameFormat::PixelFormat qtFmt = QVideoFrameFormat::Format_Invalid;
-        switch (srcFrame->format) {
-        case AV_PIX_FMT_YUV420P:
-        case AV_PIX_FMT_YUVJ420P:
-            qtFmt = QVideoFrameFormat::Format_YUV420P;
-            break;
-        case AV_PIX_FMT_NV12:
-            qtFmt = QVideoFrameFormat::Format_NV12;
-            break;
-        case AV_PIX_FMT_RGBA:
-            qtFmt = QVideoFrameFormat::Format_RGBA8888;
-            break;
-        default:
-            qtFmt = QVideoFrameFormat::Format_YUV420P;
-            break;
-        }
-
-        AVFrame *ownedFrame = av_frame_alloc();
-        av_frame_ref(ownedFrame, srcFrame);
-        if (swFrame)
-            av_frame_free(&swFrame);
-
-        QVideoFrameFormat format(QSize(mdecCtx->width, mdecCtx->height), qtFmt);
-        QVideoFrame videoFrame(new FFmpegVideoBuffer(ownedFrame, format), format);
-        av_frame_free(&ownedFrame);
-
-        videoFrame.setStartTime(-1);
-        videoFrame.setEndTime(-1);
-
+    if (mframeCache.contains(targetFrame)) {
+        mstore->setVideoFrameSafe(QString::number(clipId()), *mframeCache[targetFrame]);
         QPointer<VideoDecoder> self(this);
         QMetaObject::invokeMethod(
             this,
-            [self, videoFrame, targetFrame]() mutable {
-                if (!self || self->mclosing.load(std::memory_order_acquire))
-                    return;
-                if (videoFrame.isValid()) {
-                    self->mstore->setVideoFrameSafe(QString::number(self->clipId()), videoFrame);
-                    int cost = videoFrame.width() * videoFrame.height();
-                    self->mframeCache.insert(targetFrame, new QVideoFrame(videoFrame), cost);
+            [self, targetFrame]() {
+                if (self && !self->mclosing.load(std::memory_order_acquire))
                     emit self->frameReady(targetFrame);
-                }
             },
             Qt::QueuedConnection);
     } else {
@@ -379,9 +387,8 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) {
         QMetaObject::invokeMethod(
             this,
             [self, targetFrame]() {
-                if (!self || self->mclosing.load(std::memory_order_acquire))
-                    return;
-                emit self->frameReady(targetFrame);
+                if (self && !self->mclosing.load(std::memory_order_acquire))
+                    emit self->frameError(targetFrame);
             },
             Qt::QueuedConnection);
     }

@@ -29,6 +29,7 @@ class MediaDecoder : public QObject {
     void ready();
     void seekRequested(qint64 ms);
     void frameReady(int frameNum);
+    void frameError(int frameNum);
 
   protected:
     // 派生クラスで実装: scheduleStart() から QueuedConnection で呼ばれる
