@@ -198,7 +198,8 @@ class TimelineController : public QObject {
     void layerChanged();
     void isClipActiveChanged();
     void activeObjectTypeChanged(); // 選択中クリップの種別 (text, rectなど)
-    void clipsChanged();            // 追加
+    void clipsChanged();
+    void effectParamChanged(int clipId, int effectIndex, const QString &paramName, const QVariant &value); // 追加
     void scenesChanged();
     void currentSceneIdChanged();
     void currentProjectUrlChanged();

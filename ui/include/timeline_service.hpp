@@ -103,6 +103,7 @@ class TimelineService : public QObject {
     void scenesChanged();
     void currentSceneIdChanged();
     void clipEffectsChanged(int clipId);
+    void effectParamChanged(int clipId, int effectIndex, const QString &paramName, const QVariant &value);
     void clipCreated(int id, int layer, int startFrame, int duration, const QString &type);
 
   private:

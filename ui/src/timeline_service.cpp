@@ -802,7 +802,7 @@ void TimelineService::updateEffectParamInternal(int clipId, int effectIndex, con
         if (clip.id == clipId) {
             if (effectIndex >= 0 && effectIndex < clip.effects.size()) {
                 clip.effects[effectIndex]->setParam(paramName, value);
-                emit clipsChanged();
+                emit effectParamChanged(clipId, effectIndex, paramName, value);
                 if (m_selection->selectedClipId() == clipId) {
                     QVariantMap data = m_selection->selectedClipData();
                     data[paramName] = value;

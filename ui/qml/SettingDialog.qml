@@ -405,6 +405,7 @@ Common.RinaWindow {
                                 visible: isNumber
                                 enabled: isNumber
                                 isRangeMode: isMoving
+                                interpolationType: interpType
                                 paramName: {
                                     var interpLabel = {
                                         "linear": " (直線)",

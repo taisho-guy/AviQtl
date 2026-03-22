@@ -63,6 +63,7 @@ void TimelineController::setupConnections() {
     connect(m_timeline, &TimelineService::scenesChanged, this, &TimelineController::scenesChanged);
     connect(m_timeline, &TimelineService::currentSceneIdChanged, this, &TimelineController::currentSceneIdChanged);
     connect(m_timeline, &TimelineService::clipEffectsChanged, this, &TimelineController::clipEffectsChanged);
+    connect(m_timeline, &TimelineService::effectParamChanged, this, [this]() { updateActiveClipsList(); });
 
     connect(m_exportManager, &TimelineExportManager::exportStarted, this, &TimelineController::exportStarted);
     connect(m_exportManager, &TimelineExportManager::exportProgressChanged, this, &TimelineController::exportProgressChanged);

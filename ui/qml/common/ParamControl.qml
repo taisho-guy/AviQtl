@@ -12,15 +12,78 @@ RowLayout {
     property real startValue: 0
     property real endValue: 0
     property int decimals: 0
-    property string interpolationType: "linear"
+    property string interpolationType: "constant"
     property bool enabled: true
     property bool isRangeMode: Math.abs(startValue - endValue) > 0.001
+    property bool interpolationSelected: interpolationType !== "" && interpolationType !== "constant"
+    property bool rightLinked: !interpolationSelected
+    property bool rightInteractive: root.enabled && root.isRangeMode && root.interpolationSelected
 
     signal startValueModified(real value)
     signal endValueModified(real value)
     signal paramButtonClicked()
 
+    function formatValue(val) {
+        var num = Number(val);
+        if (isNaN(num))
+            num = 0;
+
+        return root.decimals === 0 ? num.toFixed(0) : num.toFixed(root.decimals);
+    }
+
+    function syncRightDisplay(val) {
+        var text = formatValue(val);
+        if (rightValueField.text !== text)
+            rightValueField.text = text;
+
+    }
+
+    function pushLeftValue(val) {
+        var text = formatValue(val);
+        if (leftValueField.text !== text)
+            leftValueField.text = text;
+
+        root.startValueModified(val);
+        if (root.rightLinked) {
+            syncRightDisplay(val);
+            root.endValueModified(val);
+        }
+    }
+
     spacing: 8
+    Component.onCompleted: {
+        if (root.rightLinked)
+            syncRightDisplay(root.startValue);
+
+    }
+    onStartValueChanged: {
+        var text = formatValue(root.startValue);
+        if (leftValueField.text !== text)
+            leftValueField.text = text;
+
+        if (root.rightLinked)
+            syncRightDisplay(root.startValue);
+
+    }
+    onEndValueChanged: {
+        if (root.rightLinked)
+            return ;
+
+        var text = formatValue(root.endValue);
+        if (rightValueField.text !== text)
+            rightValueField.text = text;
+
+    }
+    onInterpolationSelectedChanged: {
+        if (root.rightLinked) {
+            syncRightDisplay(root.startValue);
+        } else {
+            var text = formatValue(root.endValue);
+            if (rightValueField.text !== text)
+                rightValueField.text = text;
+
+        }
+    }
 
     SystemPalette {
         id: palette
@@ -43,8 +106,7 @@ RowLayout {
         }
         onMoved: {
             var val = decimals === 0 ? Math.round(value) : value;
-            leftValueField.text = (root.decimals === 0) ? val.toFixed(0) : val.toFixed(root.decimals);
-            root.startValueModified(val);
+            root.pushLeftValue(val);
         }
     }
 
@@ -53,14 +115,14 @@ RowLayout {
         id: leftValueField
 
         Layout.preferredWidth: 70
-        text: root.decimals === 0 ? root.startValue.toFixed(0) : root.startValue.toFixed(root.decimals)
+        text: root.formatValue(root.startValue)
         horizontalAlignment: TextInput.AlignHCenter
         selectByMouse: true
         enabled: root.enabled
         onEditingFinished: {
             var newVal = parseFloat(text);
             if (!isNaN(newVal))
-                root.startValueModified(newVal);
+                root.pushLeftValue(newVal);
 
         }
 
@@ -87,10 +149,11 @@ RowLayout {
         id: rightValueField
 
         Layout.preferredWidth: 70
-        text: root.decimals === 0 ? root.endValue.toFixed(0) : root.endValue.toFixed(root.decimals)
+        text: root.formatValue(root.rightLinked ? root.startValue : root.endValue)
         horizontalAlignment: TextInput.AlignHCenter
         selectByMouse: true
-        enabled: root.enabled
+        enabled: root.rightInteractive
+        opacity: root.rightInteractive ? 1 : 0.45
         onEditingFinished: {
             var newVal = parseFloat(text);
             if (!isNaN(newVal))
@@ -114,16 +177,17 @@ RowLayout {
         Layout.preferredWidth: 120
         from: root.minValue
         to: root.maxValue
-        enabled: root.enabled
+        enabled: root.rightInteractive
+        opacity: root.rightInteractive ? 1 : 0.45
         // ボックスの値をバインディング
         value: {
             var val = parseFloat(rightValueField.text);
-            return isNaN(val) ? root.endValue : val;
+            return isNaN(val) ? (root.rightLinked ? root.startValue : root.endValue) : val;
         }
         onMoved: {
             // スライダー操作時はボックスを更新
             var val = decimals === 0 ? Math.round(value) : value;
-            rightValueField.text = (root.decimals === 0) ? val.toFixed(0) : val.toFixed(root.decimals);
+            rightValueField.text = root.formatValue(val);
             root.endValueModified(val);
         }
     }
