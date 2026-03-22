@@ -6,6 +6,8 @@ import QtQuick.Window
 import "common" as Common
 
 ApplicationWindow {
+    // --- Global Shortcuts ---
+
     id: mainWin
 
     visible: true
@@ -26,6 +28,48 @@ ApplicationWindow {
         if (TimelineBridge)
             TimelineBridge.setCompositeView(compositeView);
 
+    }
+
+    Shortcut {
+        sequence: newAction.shortcutText
+        context: Qt.ApplicationShortcut
+        onActivated: newAction.trigger()
+    }
+
+    Shortcut {
+        sequence: saveProjectAction.shortcutText
+        context: Qt.ApplicationShortcut
+        onActivated: saveProjectAction.trigger()
+    }
+
+    Shortcut {
+        sequence: loadAction.shortcutText
+        context: Qt.ApplicationShortcut
+        onActivated: loadAction.trigger()
+    }
+
+    Shortcut {
+        sequence: saveAsProjectAction.shortcutText
+        context: Qt.ApplicationShortcut
+        onActivated: saveAsProjectAction.trigger()
+    }
+
+    Shortcut {
+        sequence: quitAction.shortcutText
+        context: Qt.ApplicationShortcut
+        onActivated: quitAction.trigger()
+    }
+
+    Shortcut {
+        sequence: undoAction.shortcutText
+        context: Qt.ApplicationShortcut
+        onActivated: undoAction.trigger()
+    }
+
+    Shortcut {
+        sequence: redoAction.shortcutText
+        context: Qt.ApplicationShortcut
+        onActivated: redoAction.trigger()
     }
 
     // 末尾到達時に一時停止するだけのシンプルなロジック
@@ -49,16 +93,18 @@ ApplicationWindow {
     Action {
         id: newAction
 
+        property string shortcutText: SettingsManager ? SettingsManager.shortcut("project.new", "Ctrl+N") : "Ctrl+N"
+
         text: "新規プロジェクト"
-        shortcut: "Ctrl+N"
         onTriggered: console.log("New Project")
     }
 
     Action {
         id: saveProjectAction // プロジェクトの上書き保存用アクション
 
+        property string shortcutText: SettingsManager ? SettingsManager.shortcut("project.save", "Ctrl+S") : "Ctrl+S"
+
         text: "プロジェクトの上書き保存"
-        shortcut: "Ctrl+S"
         onTriggered: {
             if (TimelineBridge) {
                 // 現在のプロジェクトパスが未設定の場合は名前を付けて保存ダイアログを開く
@@ -73,24 +119,27 @@ ApplicationWindow {
     Action {
         id: loadAction
 
+        property string shortcutText: SettingsManager ? SettingsManager.shortcut("project.open", "Ctrl+O") : "Ctrl+O"
+
         text: "プロジェクトを開く"
-        shortcut: "Ctrl+O"
         onTriggered: loadDialog.open()
     }
 
     Action {
         id: saveAsProjectAction // プロジェクトを名前を付けて保存用アクション
 
+        property string shortcutText: SettingsManager ? SettingsManager.shortcut("project.saveAs", "Ctrl+Shift+S") : "Ctrl+Shift+S"
+
         text: "プロジェクトを名前を付けて保存..."
-        shortcut: "Ctrl+Shift+S"
         onTriggered: saveDialog.open()
     }
 
     Action {
         id: quitAction
 
+        property string shortcutText: SettingsManager ? SettingsManager.shortcut("app.quit", "Ctrl+Q") : "Ctrl+Q"
+
         text: "終了"
-        shortcut: "Ctrl+Q"
         onTriggered: {
             if (WindowManager)
                 WindowManager.requestQuit();
@@ -101,8 +150,9 @@ ApplicationWindow {
     Action {
         id: undoAction
 
+        property string shortcutText: SettingsManager ? SettingsManager.shortcut("edit.undo", "Ctrl+Z") : "Ctrl+Z"
+
         text: "元に戻す"
-        shortcut: "Ctrl+Z"
         onTriggered: {
             if (TimelineBridge)
                 TimelineBridge.undo();
@@ -113,8 +163,9 @@ ApplicationWindow {
     Action {
         id: redoAction
 
+        property string shortcutText: SettingsManager ? SettingsManager.shortcut("edit.redo", "Ctrl+Shift+Z") : "Ctrl+Shift+Z"
+
         text: "やり直す"
-        shortcut: "Ctrl+Shift+Z"
         onTriggered: {
             if (TimelineBridge)
                 TimelineBridge.redo();

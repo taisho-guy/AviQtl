@@ -49,7 +49,7 @@ MenuItem {
 
         // ショートカットキー表示
         Text {
-            text: control.action ? control.action.shortcut : ""
+            text: control.action ? (control.action.shortcutText !== undefined ? control.action.shortcutText : control.action.shortcut) : ""
             font: control.font
             opacity: enabled ? 1 : 0.3
             color: control.highlighted ? control.palette.highlightedText : control.palette.text

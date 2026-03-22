@@ -20,6 +20,8 @@ class SettingsManager : public QObject {
 
     Q_INVOKABLE void setValue(const QString &key, const QVariant &value);
     Q_INVOKABLE QVariant value(const QString &key, const QVariant &defaultValue = QVariant()) const;
+    Q_INVOKABLE QVariantMap shortcuts() const;
+    Q_INVOKABLE QString shortcut(const QString &actionId, const QString &fallbackValue = QString()) const;
 
   signals:
     void settingsChanged();
@@ -27,6 +29,7 @@ class SettingsManager : public QObject {
   private:
     explicit SettingsManager(QObject *parent = nullptr);
     QString getSettingsFilePath() const;
+    QVariantMap defaultShortcutSettings() const;
 
     QVariantMap m_settings;
 };

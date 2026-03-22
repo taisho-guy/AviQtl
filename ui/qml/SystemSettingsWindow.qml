@@ -23,6 +23,45 @@ Common.RinaWindow {
     property var videoCodecLabels: ["H.264 (VAAPI)", "HEVC (VAAPI)", "H.264 (CPU)"]
     property var audioCodecValues: ["aac", "opus", "flac", "pcm_s16le"]
     property var audioCodecLabels: ["AAC", "Opus", "FLAC", "PCM 16bit"]
+    property var shortcutList: [{
+        "id": "project.new",
+        "name": "新規プロジェクト"
+    }, {
+        "id": "project.open",
+        "name": "プロジェクトを開く"
+    }, {
+        "id": "project.save",
+        "name": "上書き保存"
+    }, {
+        "id": "project.saveAs",
+        "name": "名前を付けて保存"
+    }, {
+        "id": "app.quit",
+        "name": "終了"
+    }, {
+        "id": "edit.undo",
+        "name": "元に戻す"
+    }, {
+        "id": "edit.redo",
+        "name": "やり直す"
+    }]
+
+    function getShortcutValue(actionId, fallback) {
+        if (!draftSettings["shortcuts"])
+            return fallback;
+
+        return draftSettings["shortcuts"][actionId] !== undefined ? draftSettings["shortcuts"][actionId] : fallback;
+    }
+
+    function setShortcutValue(actionId, value) {
+        var next = cloneSettings(draftSettings);
+        if (!next["shortcuts"])
+            next["shortcuts"] = {
+        };
+
+        next["shortcuts"][actionId] = value;
+        draftSettings = next;
+    }
 
     function cloneSettings(source) {
         return JSON.parse(JSON.stringify(source || {
@@ -138,6 +177,10 @@ Common.RinaWindow {
 
             TabButton {
                 text: "プラグイン"
+            }
+
+            TabButton {
+                text: "ショートカット"
             }
 
         }
@@ -1127,6 +1170,72 @@ Common.RinaWindow {
                                     text: "1行に1パスを入力します"
                                     color: palette.mid
                                     font.pixelSize: 11
+                                }
+
+                            }
+
+                        }
+
+                    }
+
+                    Item {
+                        Layout.fillHeight: true
+                    }
+
+                }
+
+            }
+
+            ScrollView {
+                id: shortcutPage
+
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                contentWidth: availableWidth
+                clip: true
+
+                ColumnLayout {
+                    width: shortcutPage.availableWidth
+                    spacing: 14
+
+                    Label {
+                        text: "キーボードショートカット"
+                        font.bold: true
+                        font.pixelSize: 16
+                    }
+
+                    Label {
+                        text: "「Ctrl+S」や「Alt+Shift+N」の形式で入力してください"
+                        color: palette.mid
+                    }
+
+                    GridLayout {
+                        columns: 2
+                        Layout.fillWidth: true
+                        columnSpacing: 16
+                        rowSpacing: 10
+
+                        Repeater {
+                            model: root.shortcutList
+
+                            delegate: RowLayout {
+                                Layout.columnSpan: 2
+                                Layout.fillWidth: true
+
+                                Label {
+                                    text: modelData.name
+                                    Layout.preferredWidth: 150
+                                }
+
+                                TextField {
+                                    id: shortcutInput
+
+                                    Layout.fillWidth: true
+                                    text: root.getShortcutValue(modelData.id, "")
+                                    placeholderText: "未設定"
+                                    onEditingFinished: {
+                                        root.setShortcutValue(modelData.id, text);
+                                    }
                                 }
 
                             }

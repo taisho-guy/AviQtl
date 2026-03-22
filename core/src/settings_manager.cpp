@@ -16,7 +16,6 @@ SettingsManager &SettingsManager::instance() {
 }
 
 SettingsManager::SettingsManager(QObject *parent) : QObject(parent) {
-    // デフォルト設定
     m_settings = {{"pluginEnableLADSPA", true},
                   {"pluginPathsLADSPA", QStringList()},
                   {"pluginEnableDSSI", true},
@@ -35,7 +34,6 @@ SettingsManager::SettingsManager(QObject *parent) : QObject(parent) {
                   {"pluginPathsSFZ", QStringList()},
                   {"pluginEnableJSFX", true},
                   {"pluginPathsJSFX", QStringList()},
-                  // System
                   {"maxImageSize", "1920x1080"},
                   {"cacheSize", 512},
                   {"undoCount", 32},
@@ -44,14 +42,12 @@ SettingsManager::SettingsManager(QObject *parent) : QObject(parent) {
                   {"showConfirmOnClose", true},
                   {"enableAutoBackup", true},
                   {"backupInterval", 5},
-                  // Project Defaults
                   {"defaultProjectWidth", 1920},
                   {"defaultProjectHeight", 1080},
                   {"defaultProjectFps", 60.0},
                   {"defaultProjectFrames", 3600},
                   {"defaultProjectSampleRate", 48000},
                   {"defaultClipDuration", 100},
-                  // Timeline UI
                   {"timeUnit", "frame"},
                   {"enableSnap", true},
                   {"splitAtCursor", true},
@@ -63,24 +59,19 @@ SettingsManager::SettingsManager(QObject *parent) : QObject(parent) {
                   {"timelineLayerHeaderWidth", 60},
                   {"timelineRulerTimeWidth", 70},
                   {"timelineClipResizeHandleWidth", 10},
-                  // App Behavior
                   {"splashDuration", 1000},
                   {"splashSize", 512},
                   {"appStartupDelay", 1000},
-                  // Export
                   {"exportImageQuality", 95},
                   {"exportSequencePadding", 6},
-                  // ▼ 新規追加: タイムライン編集
                   {"minClipDurationFrames", 5},
                   {"magneticSnapRange", 10},
                   {"timelineZoomMin", 10},
                   {"timelineZoomMax", 400},
                   {"timelineZoomStep", 10},
-                  // ▼ 新規追加: 映像デコード
                   {"videoDecoderIndexReserve", 108000},
                   {"videoDecoderMinCacheMB", 64},
                   {"hwFramePoolSize", 32},
-                  // ▼ 新規追加: エクスポート
                   {"exportDefaultCodec", "h264_vaapi"},
                   {"exportDefaultBitrateMbps", 15},
                   {"exportDefaultCrf", 20},
@@ -88,21 +79,22 @@ SettingsManager::SettingsManager(QObject *parent) : QObject(parent) {
                   {"exportDefaultAudioBitrateKbps", 192},
                   {"exportFrameGrabTimeoutMs", 2000},
                   {"exportProgressInterval", 5},
-                  // ▼ 新規追加: オーディオ
                   {"audioChannels", 2},
                   {"audioPluginMaxBlockSize", 4096},
-                  // ▼ 新規追加: シーン設定UI上限
                   {"sceneWidthMax", 8000},
                   {"sceneHeightMax", 8000},
                   {"sceneFramesMin", 100},
                   {"sceneFramesMax", 24000},
                   {"sceneFramesStep", 100},
-                  // ▼ 新規追加: アプリ
                   {"recentProjectMaxCount", 10},
                   {"luaHookIntervalMs", 16},
-                  // Misc
-                  {"textPaddingMultiplier", 4.0}};
+                  {"textPaddingMultiplier", 4.0},
+                  {"shortcuts", defaultShortcutSettings()}};
     load();
+}
+
+QVariantMap SettingsManager::defaultShortcutSettings() const {
+    return {{"project.new", "Ctrl+N"}, {"project.save", "Ctrl+S"}, {"project.open", "Ctrl+O"}, {"project.saveAs", "Ctrl+Shift+S"}, {"app.quit", "Ctrl+Q"}, {"edit.undo", "Ctrl+Z"}, {"edit.redo", "Ctrl+Shift+Z"}};
 }
 
 QString SettingsManager::getSettingsFilePath() const {
@@ -151,8 +143,15 @@ void SettingsManager::load() {
     QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
     if (doc.isObject()) {
         QVariantMap loaded = doc.object().toVariantMap();
-        // デフォルトとマージ (不明なキーは保持し、デフォルト値を上書き)
         for (auto it = loaded.begin(); it != loaded.end(); ++it) {
+            if (it.key() == "shortcuts" && it.value().canConvert<QVariantMap>()) {
+                QVariantMap mergedShortcuts = m_settings.value("shortcuts").toMap();
+                QVariantMap loadedShortcuts = it.value().toMap();
+                for (auto shortcutIt = loadedShortcuts.begin(); shortcutIt != loadedShortcuts.end(); ++shortcutIt)
+                    mergedShortcuts[shortcutIt.key()] = shortcutIt.value();
+                m_settings[it.key()] = mergedShortcuts;
+                continue;
+            }
             m_settings[it.key()] = it.value();
         }
         emit settingsChanged();
@@ -186,5 +185,13 @@ void SettingsManager::setValue(const QString &key, const QVariant &value) {
 }
 
 QVariant SettingsManager::value(const QString &key, const QVariant &defaultValue) const { return m_settings.value(key, defaultValue); }
+
+QVariantMap SettingsManager::shortcuts() const { return m_settings.value("shortcuts").toMap(); }
+
+QString SettingsManager::shortcut(const QString &actionId, const QString &fallbackValue) const {
+    const QVariantMap shortcutMap = shortcuts();
+    const QString value = shortcutMap.value(actionId, fallbackValue).toString();
+    return value.isEmpty() ? fallbackValue : value;
+}
 
 } // namespace Rina::Core
