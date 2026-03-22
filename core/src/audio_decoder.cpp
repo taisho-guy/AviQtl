@@ -215,4 +215,9 @@ double AudioDecoder::totalDurationSec() const {
     return frames / static_cast<double>(m_sampleRate);
 }
 
+void AudioDecoder::setPlaying(bool playing) {
+    // 再生状態をスレッドセーフに更新
+    m_isPlaying.store(playing, std::memory_order_release);
+}
+
 } // namespace Rina::Core

@@ -24,7 +24,7 @@ class AudioDecoder : public MediaDecoder {
 
     void setSampleRate(int sampleRate) override;
     void seek(qint64 ms) override;
-    void setPlaying(bool) override {}
+    void setPlaying(bool playing) override;
 
     std::vector<float> getSamples(double startTime, int count) override;
     double totalDurationSec() const;
@@ -46,7 +46,8 @@ class AudioDecoder : public MediaDecoder {
 
     std::vector<float> m_fullAudioData;
     QFuture<void> m_decodeFuture;
-    std::atomic<bool> m_closing{false}; // インターリーブされたPCMデータ (L, R, L, R...)
+    std::atomic<bool> m_closing{false};
+    std::atomic<bool> m_isPlaying{false}; // インターリーブされたPCMデータ (L, R, L, R...)
 };
 
 } // namespace Rina::Core

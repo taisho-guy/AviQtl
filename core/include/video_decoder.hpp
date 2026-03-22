@@ -1,5 +1,5 @@
 #pragma once
-
+#include "ffmpeg_video_buffer.hpp"
 #include "media_decoder.hpp"
 #include <QCache>
 #include <QFuture>
@@ -13,15 +13,15 @@ struct AVFrame;
 struct AVPacket;
 struct AVBufferRef;
 struct SwsContext;
+}
 #include <libavutil/pixfmt.h>
 #include <libavutil/rational.h>
-}
 
 namespace Rina::Core {
 
-class VideoFrameStore; // forward declaration
+class VideoFrameStore;
 
-class VideoDecoder : public MediaDecoder {
+class VideoDecoder : public Rina::Core::MediaDecoder {
     Q_OBJECT
   public:
     explicit VideoDecoder(int clipId, const QUrl &source, VideoFrameStore *store, QObject *parent = nullptr);
@@ -32,60 +32,54 @@ class VideoDecoder : public MediaDecoder {
     double sourceFps() const;
     int totalFrameCount() const;
     void seek(qint64 ms) override;
-    void setPlaying(bool playing) override {}
+    void setPlaying(bool playing) override;
 
   signals:
     void videoMetaReady(int totalFrameCount, double sourceFps);
 
   protected:
     void startDecoding() override;
-
-    // Not used by video
     std::vector<float> getSamples(double startTime, int count) override { return {}; }
 
   private:
     bool buildIndex();
-    int frameIndexFromSeconds(double seconds) const; // 全フレームスキャンしてインデックス構築
+    int frameIndexFromSeconds(double seconds) const;
 
     struct FrameIndexEntry {
         int64_t pts;
         int64_t dts;
         bool isKeyframe;
     };
+
     void decodeTask(int targetFrame, double fps);
     bool open(const QString &path);
     void close();
-
     void updateCacheSize();
 
-    VideoFrameStore *m_store = nullptr;
+    VideoFrameStore *mstore = nullptr;
 
-    // FFmpeg Contexts
-    AVFormatContext *m_fmtCtx = nullptr;
-    AVCodecContext *m_decCtx = nullptr;
-    AVStream *m_stream = nullptr;
-    int m_streamIndex = -1;
-    AVFrame *m_frame = nullptr;
-    AVFrame *m_swFrame = nullptr; // HW download用
-    SwsContext *m_swsCtx = nullptr;
-    AVBufferRef *m_hwDeviceCtx = nullptr;
-    int m_hwPixFmt = -1; // AV_PIX_FMT_NONE
+    AVFormatContext *mfmtCtx = nullptr;
+    AVCodecContext *mdecCtx = nullptr;
+    AVStream *mstream = nullptr;
+    int mstreamIndex = -1;
+    AVFrame *mframe = nullptr;
+    SwsContext *mswsCtx = nullptr;
+    AVBufferRef *mhwDeviceCtx = nullptr;
+    int mhwPixFmt = -1; // AV_PIX_FMT_NONE
 
-    // State
-    int m_lastDecodedFrame = -1;
-    std::vector<FrameIndexEntry> m_index; // フレーム番号 -> PTS/Keyframe マップ
+    int mlastDecodedFrame = -1;
+    std::vector<FrameIndexEntry> mindex;
+    QCache<int, QVideoFrame> mframeCache;
+    std::atomic<int> mlastRequestedFrame{-1};
+    std::atomic<bool> mclosing{false};
+    std::atomic<bool> misPlaying{false};
+    std::atomic<bool> misDecoding{false};
+    QFuture<void> minitFuture;
+    QFuture<void> mdecodeFuture;
+    double msourceFps = 0.0;
+    AVRational mtimeBase{0, 1};
 
-    // LRUキャッシュ: Key="frameNumber", Value=QVideoFrame
-    // インスタンスごとにキャッシュを持つ
-    QCache<int, QVideoFrame> m_frameCache;
-    std::atomic<int> m_lastRequestedFrame = -1; // Use std::atomic for thread-safe access
-    std::atomic<bool> m_closing{false};         // デストラクト進行中のフラグ
-    std::atomic<bool> m_isDecoding{false};      // デコードタスク多重起動防止用
-    QFuture<void> m_initFuture;
-    QFuture<void> m_decodeFuture;
-    double m_sourceFps = 0.0;
-    AVRational m_timeBase{0, 1};
-
-    static enum AVPixelFormat get_hw_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts);
+    static enum AVPixelFormat gethwformat(AVCodecContext *ctx, const enum AVPixelFormat *pixfmts);
 };
+
 } // namespace Rina::Core
