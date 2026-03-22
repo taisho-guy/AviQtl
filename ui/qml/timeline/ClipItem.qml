@@ -11,7 +11,7 @@ Item {
     property bool isBoxSelecting: false
     property var boxSelectionPreviewIds: []
     property Item flickableContentItem: null
-    property var snapFrameFunc: function(f) {
+    property var snapFrameFunc: function(f, ignoreSnap) {
         return f;
     }
     property int resizeDraftStart: -1
@@ -289,7 +289,8 @@ Item {
                 var dX = sp.x - dragStartScenePos.x;
                 var dY = sp.y - dragStartScenePos.y;
                 var rawF = initialFrame + dX / clipDelegate.scale;
-                var propF = snapFrameFunc(rawF);
+                var ignoreSnap = (mouse.modifiers & Qt.ShiftModifier);
+                var propF = snapFrameFunc(rawF, ignoreSnap);
                 var propL = initialLayer + Math.round(dY / layerHeight);
                 var finalF = propF, finalL = propL;
                 if (TimelineBridge && typeof TimelineBridge.resolveDragPosition === "function") {
@@ -391,7 +392,8 @@ Item {
                     // 右端（終点）を固定して左端のみ動かす
                     var endFrame = startFrame + startDuration;
                     var rawNewStart = startFrame + delta / clipDelegate.scale;
-                    var newStart = Math.max(0, snapFrameFunc(rawNewStart));
+                    var ignoreSnap = (mouse.modifiers & Qt.ShiftModifier);
+                    var newStart = Math.max(0, snapFrameFunc(rawNewStart, ignoreSnap));
                     var newDur = endFrame - newStart;
                     var minDur = SettingsManager ? SettingsManager.value("minClipDurationFrames", 5) : 5;
                     if (newDur < minDur) {
@@ -462,7 +464,8 @@ Item {
                     var delta = sp.x - startSceneX;
                     // 右端フレームをスナップ
                     var rawEndFrame = startFrame + (startDuration * clipDelegate.scale + delta) / clipDelegate.scale;
-                    var snappedEndFrame = snapFrameFunc(rawEndFrame);
+                    var ignoreSnap = (mouse.modifiers & Qt.ShiftModifier);
+                    var snappedEndFrame = snapFrameFunc(rawEndFrame, ignoreSnap);
                     var minDur = SettingsManager ? SettingsManager.value("minClipDurationFrames", 5) : 5;
                     var newDur = Math.max(minDur, snappedEndFrame - startFrame);
                     // ドラフトプロパティ経由で表示更新（バインディング破壊なし）

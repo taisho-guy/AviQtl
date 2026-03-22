@@ -7,6 +7,7 @@ import "common" as Common
 
 ApplicationWindow {
     // --- Global Shortcuts ---
+    // --- Global Shortcuts ---
 
     id: mainWin
 
@@ -28,48 +29,6 @@ ApplicationWindow {
         if (TimelineBridge)
             TimelineBridge.setCompositeView(compositeView);
 
-    }
-
-    Shortcut {
-        sequence: newAction.shortcutText
-        context: Qt.ApplicationShortcut
-        onActivated: newAction.trigger()
-    }
-
-    Shortcut {
-        sequence: saveProjectAction.shortcutText
-        context: Qt.ApplicationShortcut
-        onActivated: saveProjectAction.trigger()
-    }
-
-    Shortcut {
-        sequence: loadAction.shortcutText
-        context: Qt.ApplicationShortcut
-        onActivated: loadAction.trigger()
-    }
-
-    Shortcut {
-        sequence: saveAsProjectAction.shortcutText
-        context: Qt.ApplicationShortcut
-        onActivated: saveAsProjectAction.trigger()
-    }
-
-    Shortcut {
-        sequence: quitAction.shortcutText
-        context: Qt.ApplicationShortcut
-        onActivated: quitAction.trigger()
-    }
-
-    Shortcut {
-        sequence: undoAction.shortcutText
-        context: Qt.ApplicationShortcut
-        onActivated: undoAction.trigger()
-    }
-
-    Shortcut {
-        sequence: redoAction.shortcutText
-        context: Qt.ApplicationShortcut
-        onActivated: redoAction.trigger()
     }
 
     // 末尾到達時に一時停止するだけのシンプルなロジック
@@ -169,6 +128,245 @@ ApplicationWindow {
         onTriggered: {
             if (TimelineBridge)
                 TimelineBridge.redo();
+
+        }
+    }
+
+    Action {
+        id: playPauseAction
+
+        property string shortcutText: SettingsManager ? SettingsManager.shortcut("transport.playPause", "Space") : "Space"
+
+        text: "再生 / 一時停止"
+        onTriggered: {
+            if (TimelineBridge)
+                TimelineBridge.togglePlay();
+
+        }
+    }
+
+    Action {
+        id: splitAction
+
+        property string shortcutText: SettingsManager ? SettingsManager.shortcut("timeline.split", "S") : "S"
+
+        text: "クリップを分割"
+        onTriggered: {
+            if (TimelineBridge && TimelineBridge.transport) {
+                var f = TimelineBridge.transport.currentFrame;
+                if (TimelineBridge.selection && TimelineBridge.selection.selectedClipId >= 0) {
+                    TimelineBridge.splitClip(TimelineBridge.selection.selectedClipId, f);
+                } else {
+                    if (TimelineBridge.selection && TimelineBridge.selection.selectedClipIds.length > 0) {
+                        for (var i = 0; i < TimelineBridge.selection.selectedClipIds.length; i++) {
+                            TimelineBridge.splitClip(TimelineBridge.selection.selectedClipIds[i], f);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Action {
+        id: deleteAction
+
+        property string shortcutText: SettingsManager ? SettingsManager.shortcut("edit.delete", "Delete") : "Delete"
+
+        text: "削除"
+        onTriggered: {
+            if (TimelineBridge)
+                TimelineBridge.deleteSelectedClips();
+
+        }
+    }
+
+    Action {
+        id: copyAction
+
+        property string shortcutText: SettingsManager ? SettingsManager.shortcut("edit.copy", "Ctrl+C") : "Ctrl+C"
+
+        text: "コピー"
+        onTriggered: {
+            if (TimelineBridge)
+                TimelineBridge.copySelectedClips();
+
+        }
+    }
+
+    Action {
+        id: cutAction
+
+        property string shortcutText: SettingsManager ? SettingsManager.shortcut("edit.cut", "Ctrl+X") : "Ctrl+X"
+
+        text: "カット"
+        onTriggered: {
+            if (TimelineBridge)
+                TimelineBridge.cutSelectedClips();
+
+        }
+    }
+
+    Action {
+        id: pasteAction
+
+        property string shortcutText: SettingsManager ? SettingsManager.shortcut("edit.paste", "Ctrl+V") : "Ctrl+V"
+
+        text: "貼り付け"
+        onTriggered: {
+            if (TimelineBridge && TimelineBridge.transport) {
+                var f = TimelineBridge.transport.currentFrame;
+                var l = TimelineBridge.selectedLayer !== undefined ? TimelineBridge.selectedLayer : 0;
+                TimelineBridge.pasteClip(f, l);
+            }
+        }
+    }
+
+    Action {
+        id: duplicateAction
+
+        property string shortcutText: SettingsManager ? SettingsManager.shortcut("edit.duplicate", "Ctrl+D") : "Ctrl+D"
+
+        text: "複製"
+        onTriggered: {
+            if (TimelineBridge) {
+                TimelineBridge.copySelectedClips();
+                var f = TimelineBridge.transport ? TimelineBridge.transport.currentFrame : 0;
+                var l = TimelineBridge.selectedLayer !== undefined ? TimelineBridge.selectedLayer : 0;
+                TimelineBridge.pasteClip(f, l);
+            }
+        }
+    }
+
+    Action {
+        id: nextFrameAction
+
+        property string shortcutText: SettingsManager ? SettingsManager.shortcut("transport.nextFrame", "Right") : "Right"
+
+        text: "1フレーム進む"
+        onTriggered: {
+            if (TimelineBridge && TimelineBridge.transport)
+                TimelineBridge.transport.currentFrame = Math.min(TimelineBridge.transport.currentFrame + 1, TimelineBridge.transport.totalFrames);
+
+        }
+    }
+
+    Action {
+        id: prevFrameAction
+
+        property string shortcutText: SettingsManager ? SettingsManager.shortcut("transport.prevFrame", "Left") : "Left"
+
+        text: "1フレーム戻る"
+        onTriggered: {
+            if (TimelineBridge && TimelineBridge.transport)
+                TimelineBridge.transport.currentFrame = Math.max(TimelineBridge.transport.currentFrame - 1, 0);
+
+        }
+    }
+
+    Action {
+        id: jumpStartAction
+
+        property string shortcutText: SettingsManager ? SettingsManager.shortcut("transport.jumpStart", "Home") : "Home"
+
+        text: "先頭へ移動"
+        onTriggered: {
+            if (TimelineBridge && TimelineBridge.transport)
+                TimelineBridge.transport.currentFrame = 0;
+
+        }
+    }
+
+    Action {
+        id: jumpEndAction
+
+        property string shortcutText: SettingsManager ? SettingsManager.shortcut("transport.jumpEnd", "End") : "End"
+
+        text: "末尾へ移動"
+        onTriggered: {
+            if (TimelineBridge && TimelineBridge.transport)
+                TimelineBridge.transport.currentFrame = TimelineBridge.transport.totalFrames;
+
+        }
+    }
+
+    Action {
+        id: zoomInAction
+
+        property string shortcutText: SettingsManager ? SettingsManager.shortcut("view.zoomIn", "Ctrl++") : "Ctrl++"
+
+        text: "ズームイン"
+        onTriggered: {
+            if (TimelineBridge) {
+                var step = SettingsManager ? SettingsManager.value("timelineZoomStep", 10) : 10;
+                var maxZ = SettingsManager ? SettingsManager.value("timelineZoomMax", 400) : 400;
+                TimelineBridge.timelineScale = Math.min(TimelineBridge.timelineScale + step / 100, maxZ / 100);
+            }
+        }
+    }
+
+    Action {
+        id: zoomOutAction
+
+        property string shortcutText: SettingsManager ? SettingsManager.shortcut("view.zoomOut", "Ctrl+-") : "Ctrl+-"
+
+        text: "ズームアウト"
+        onTriggered: {
+            if (TimelineBridge) {
+                var step = SettingsManager ? SettingsManager.value("timelineZoomStep", 10) : 10;
+                var minZ = SettingsManager ? SettingsManager.value("timelineZoomMin", 10) : 10;
+                TimelineBridge.timelineScale = Math.max(TimelineBridge.timelineScale - step / 100, minZ / 100);
+            }
+        }
+    }
+
+    Action {
+        id: moveUpAction
+
+        property string shortcutText: SettingsManager ? SettingsManager.shortcut("timeline.moveUp", "Alt+Up") : "Alt+Up"
+
+        text: "レイヤーを上へ移動"
+        onTriggered: {
+            if (TimelineBridge)
+                TimelineBridge.moveSelectedClips(-1, 0);
+
+        }
+    }
+
+    Action {
+        id: moveDownAction
+
+        property string shortcutText: SettingsManager ? SettingsManager.shortcut("timeline.moveDown", "Alt+Down") : "Alt+Down"
+
+        text: "レイヤーを下へ移動"
+        onTriggered: {
+            if (TimelineBridge)
+                TimelineBridge.moveSelectedClips(1, 0);
+
+        }
+    }
+
+    Action {
+        id: nudgeLeftAction
+
+        property string shortcutText: SettingsManager ? SettingsManager.shortcut("timeline.nudgeLeft", "Alt+Left") : "Alt+Left"
+
+        text: "1フレーム左へ移動"
+        onTriggered: {
+            if (TimelineBridge)
+                TimelineBridge.moveSelectedClips(0, -1);
+
+        }
+    }
+
+    Action {
+        id: nudgeRightAction
+
+        property string shortcutText: SettingsManager ? SettingsManager.shortcut("timeline.nudgeRight", "Alt+Right") : "Alt+Right"
+
+        text: "1フレーム右へ移動"
+        onTriggered: {
+            if (TimelineBridge)
+                TimelineBridge.moveSelectedClips(0, 1);
 
         }
     }
@@ -436,6 +634,151 @@ ApplicationWindow {
 
         }
 
+    }
+
+    // --- Global Shortcuts ---
+    Shortcut {
+        sequence: newAction.shortcutText
+        context: Qt.ApplicationShortcut
+        onActivated: newAction.trigger()
+    }
+
+    Shortcut {
+        sequence: saveProjectAction.shortcutText
+        context: Qt.ApplicationShortcut
+        onActivated: saveProjectAction.trigger()
+    }
+
+    Shortcut {
+        sequence: loadAction.shortcutText
+        context: Qt.ApplicationShortcut
+        onActivated: loadAction.trigger()
+    }
+
+    Shortcut {
+        sequence: saveAsProjectAction.shortcutText
+        context: Qt.ApplicationShortcut
+        onActivated: saveAsProjectAction.trigger()
+    }
+
+    Shortcut {
+        sequence: quitAction.shortcutText
+        context: Qt.ApplicationShortcut
+        onActivated: quitAction.trigger()
+    }
+
+    Shortcut {
+        sequence: undoAction.shortcutText
+        context: Qt.ApplicationShortcut
+        onActivated: undoAction.trigger()
+    }
+
+    Shortcut {
+        sequence: redoAction.shortcutText
+        context: Qt.ApplicationShortcut
+        onActivated: redoAction.trigger()
+    }
+
+    Shortcut {
+        sequence: playPauseAction.shortcutText
+        context: Qt.ApplicationShortcut
+        onActivated: playPauseAction.trigger()
+    }
+
+    Shortcut {
+        sequence: splitAction.shortcutText
+        context: Qt.ApplicationShortcut
+        onActivated: splitAction.trigger()
+    }
+
+    Shortcut {
+        sequence: deleteAction.shortcutText
+        context: Qt.ApplicationShortcut
+        onActivated: deleteAction.trigger()
+    }
+
+    Shortcut {
+        sequence: copyAction.shortcutText
+        context: Qt.ApplicationShortcut
+        onActivated: copyAction.trigger()
+    }
+
+    Shortcut {
+        sequence: cutAction.shortcutText
+        context: Qt.ApplicationShortcut
+        onActivated: cutAction.trigger()
+    }
+
+    Shortcut {
+        sequence: pasteAction.shortcutText
+        context: Qt.ApplicationShortcut
+        onActivated: pasteAction.trigger()
+    }
+
+    Shortcut {
+        sequence: duplicateAction.shortcutText
+        context: Qt.ApplicationShortcut
+        onActivated: duplicateAction.trigger()
+    }
+
+    Shortcut {
+        sequence: nextFrameAction.shortcutText
+        context: Qt.ApplicationShortcut
+        onActivated: nextFrameAction.trigger()
+    }
+
+    Shortcut {
+        sequence: prevFrameAction.shortcutText
+        context: Qt.ApplicationShortcut
+        onActivated: prevFrameAction.trigger()
+    }
+
+    Shortcut {
+        sequence: jumpStartAction.shortcutText
+        context: Qt.ApplicationShortcut
+        onActivated: jumpStartAction.trigger()
+    }
+
+    Shortcut {
+        sequence: jumpEndAction.shortcutText
+        context: Qt.ApplicationShortcut
+        onActivated: jumpEndAction.trigger()
+    }
+
+    Shortcut {
+        sequence: zoomInAction.shortcutText
+        context: Qt.ApplicationShortcut
+        onActivated: zoomInAction.trigger()
+    }
+
+    Shortcut {
+        sequence: zoomOutAction.shortcutText
+        context: Qt.ApplicationShortcut
+        onActivated: zoomOutAction.trigger()
+    }
+
+    Shortcut {
+        sequence: moveUpAction.shortcutText
+        context: Qt.ApplicationShortcut
+        onActivated: moveUpAction.trigger()
+    }
+
+    Shortcut {
+        sequence: moveDownAction.shortcutText
+        context: Qt.ApplicationShortcut
+        onActivated: moveDownAction.trigger()
+    }
+
+    Shortcut {
+        sequence: nudgeLeftAction.shortcutText
+        context: Qt.ApplicationShortcut
+        onActivated: nudgeLeftAction.trigger()
+    }
+
+    Shortcut {
+        sequence: nudgeRightAction.shortcutText
+        context: Qt.ApplicationShortcut
+        onActivated: nudgeRightAction.trigger()
     }
 
     // View3D の背後に黒背景を強制しない

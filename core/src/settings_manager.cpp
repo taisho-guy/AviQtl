@@ -94,7 +94,39 @@ SettingsManager::SettingsManager(QObject *parent) : QObject(parent) {
 }
 
 QVariantMap SettingsManager::defaultShortcutSettings() const {
-    return {{"project.new", "Ctrl+N"}, {"project.save", "Ctrl+S"}, {"project.open", "Ctrl+O"}, {"project.saveAs", "Ctrl+Shift+S"}, {"app.quit", "Ctrl+Q"}, {"edit.undo", "Ctrl+Z"}, {"edit.redo", "Ctrl+Shift+Z"}};
+    return {// Project
+            {"project.new", "Ctrl+N"},
+            {"project.save", "Ctrl+S"},
+            {"project.open", "Ctrl+O"},
+            {"project.saveAs", "Ctrl+Shift+S"},
+            {"app.quit", "Ctrl+Q"},
+
+            // Edit
+            {"edit.undo", "Ctrl+Z"},
+            {"edit.redo", "Ctrl+Shift+Z"},
+            {"edit.cut", "Ctrl+X"},
+            {"edit.copy", "Ctrl+C"},
+            {"edit.paste", "Ctrl+V"},
+            {"edit.delete", "Delete"},
+            {"edit.duplicate", "Ctrl+D"},
+
+            // Transport
+            {"transport.playPause", "Space"},
+            {"transport.nextFrame", "Right"},
+            {"transport.prevFrame", "Left"},
+            {"transport.jumpStart", "Home"},
+            {"transport.jumpEnd", "End"},
+
+            // View
+            {"view.zoomIn", "Ctrl++"},
+            {"view.zoomOut", "Ctrl+-"},
+
+            // Timeline
+            {"timeline.split", "S"},
+            {"timeline.moveUp", "Alt+Up"},
+            {"timeline.moveDown", "Alt+Down"},
+            {"timeline.nudgeLeft", "Alt+Left"},
+            {"timeline.nudgeRight", "Alt+Right"}};
 }
 
 QString SettingsManager::getSettingsFilePath() const {

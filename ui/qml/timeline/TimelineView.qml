@@ -177,10 +177,11 @@ ScrollView {
         return 1;
     }
 
-    function snapFrame(frame) {
-        if (!enableSnap)
+    function snapFrame(frame, ignoreSnap) {
+        if (!enableSnap || ignoreSnap)
             return Math.round(frame);
 
+        // グリッド無視時は整数丸めのみ
         var step = getGridInterval();
         var offset = (gridSettings.mode === "BPM" && TimelineBridge && TimelineBridge.project) ? gridSettings.offset * TimelineBridge.project.fps : 0;
         return Math.max(0, Math.round((Math.round((frame - offset) / step) * step) + offset));
@@ -414,10 +415,31 @@ ScrollView {
             onWheel: (wheel) => {
                 var dy = (wheel.pixelDelta && wheel.pixelDelta.y !== 0) ? wheel.pixelDelta.y * 10 : wheel.angleDelta.y;
                 var dx = (wheel.pixelDelta && wheel.pixelDelta.x !== 0) ? wheel.pixelDelta.x * 10 : wheel.angleDelta.x;
-                if (wheel.modifiers & Qt.ShiftModifier) {
+                if (wheel.modifiers & Qt.AltModifier || wheel.modifiers & Qt.ControlModifier) {
+                    // Zoom
+                    if (TimelineBridge) {
+                        var step = SettingsManager ? SettingsManager.value("timelineZoomStep", 10) : 10;
+                        var minZ = SettingsManager ? SettingsManager.value("timelineZoomMin", 10) : 10;
+                        var maxZ = SettingsManager ? SettingsManager.value("timelineZoomMax", 400) : 400;
+                        var direction = (Math.abs(dy) > Math.abs(dx) ? dy : dx) > 0 ? 1 : -1;
+                        var newScale = TimelineBridge.timelineScale + (direction * step / 100);
+                        newScale = clamp(newScale, minZ / 100, maxZ / 100);
+                        // Zoom keeping the mouse position stationary if possible
+                        var contentX = timelineFlickable.contentX;
+                        var mouseX = wheel.x;
+                        var frameAtMouse = (contentX + mouseX) / TimelineBridge.timelineScale;
+                        TimelineBridge.timelineScale = newScale;
+                        // Adjust scroll to keep frameAtMouse at mouseX
+                        var newContentX = frameAtMouse * newScale - mouseX;
+                        var maxX = Math.max(0, timelineFlickable.contentWidth - timelineFlickable.width);
+                        timelineFlickable.contentX = clamp(newContentX, 0, maxX);
+                    }
+                } else if (wheel.modifiers & Qt.ShiftModifier) {
+                    // Vertical Scroll
                     var maxY = Math.max(0, timelineFlickable.contentHeight - timelineFlickable.height);
                     timelineFlickable.contentY = clamp(timelineFlickable.contentY - dy, 0, maxY);
                 } else {
+                    // Horizontal Scroll
                     var delta = (Math.abs(dx) > Math.abs(dy)) ? dx : dy;
                     var maxX = Math.max(0, timelineFlickable.contentWidth - timelineFlickable.width);
                     timelineFlickable.contentX = clamp(timelineFlickable.contentX - delta, 0, maxX);

@@ -44,6 +44,57 @@ Common.RinaWindow {
     }, {
         "id": "edit.redo",
         "name": "やり直す"
+    }, {
+        "id": "edit.cut",
+        "name": "カット"
+    }, {
+        "id": "edit.copy",
+        "name": "コピー"
+    }, {
+        "id": "edit.paste",
+        "name": "貼り付け"
+    }, {
+        "id": "edit.delete",
+        "name": "削除"
+    }, {
+        "id": "edit.duplicate",
+        "name": "複製"
+    }, {
+        "id": "transport.playPause",
+        "name": "再生 / 一時停止"
+    }, {
+        "id": "transport.nextFrame",
+        "name": "1フレーム進む"
+    }, {
+        "id": "transport.prevFrame",
+        "name": "1フレーム戻る"
+    }, {
+        "id": "transport.jumpStart",
+        "name": "先頭へ移動"
+    }, {
+        "id": "transport.jumpEnd",
+        "name": "末尾へ移動"
+    }, {
+        "id": "view.zoomIn",
+        "name": "ズームイン"
+    }, {
+        "id": "view.zoomOut",
+        "name": "ズームアウト"
+    }, {
+        "id": "timeline.split",
+        "name": "クリップを分割"
+    }, {
+        "id": "timeline.moveUp",
+        "name": "レイヤーを上へ移動"
+    }, {
+        "id": "timeline.moveDown",
+        "name": "レイヤーを下へ移動"
+    }, {
+        "id": "timeline.nudgeLeft",
+        "name": "1フレーム左へ移動"
+    }, {
+        "id": "timeline.nudgeRight",
+        "name": "1フレーム右へ移動"
     }]
 
     function getShortcutValue(actionId, fallback) {
