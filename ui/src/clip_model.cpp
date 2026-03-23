@@ -16,6 +16,7 @@ QHash<int, QByteArray> ClipModel::roleNames() const {
     QHash<int, QByteArray> roles;
     roles[IdRole] = "id";
     roles[TypeRole] = "type";
+    roles[NameRole] = "name";
     roles[StartFrameRole] = "startFrame";
     roles[DurationRole] = "durationFrames";
     roles[LayerRole] = "layer";
@@ -35,6 +36,10 @@ QVariant ClipModel::data(const QModelIndex &index, int role) const {
         return clip->id;
     case TypeRole:
         return clip->type;
+    case NameRole: {
+        auto meta = Rina::Core::EffectRegistry::instance().getEffect(clip->type);
+        return meta.name;
+    }
     case StartFrameRole:
         return clip->startFrame;
     case DurationRole:

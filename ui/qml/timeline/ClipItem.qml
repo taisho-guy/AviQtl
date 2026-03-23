@@ -26,7 +26,7 @@ Item {
     readonly property bool isLayerLocked: getLayerLocked(modelData.layer)
     property int groupLayerCount: 0
     property var groupEffectModel: null
-    property string clipDisplayName: modelData.type
+    property string clipDisplayName: (typeof modelData.name === "string" && modelData.name.length > 0) ? modelData.name : modelData.type
     property int dragDeltaStart: (isSelected && timelineViewRoot.isDraggingMulti) ? timelineViewRoot.activeDragDeltaFrame : 0
     property int dragDeltaLayer: (isSelected && timelineViewRoot.isDraggingMulti) ? timelineViewRoot.activeDragDeltaLayer : 0
 
@@ -114,7 +114,7 @@ Item {
             property real stickyX: Math.max(0, timelineFlickable.contentX - clipDelegate.x)
 
             anchors.verticalCenter: parent.verticalCenter
-            text: clipDelegate.clipDisplayName + " (" + modelData.id + ")"
+            text: clipDelegate.clipDisplayName
             color: "white"
             font.pixelSize: 10
             elide: Text.ElideRight

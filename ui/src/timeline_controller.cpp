@@ -228,6 +228,7 @@ QVariantList TimelineController::clips() const {
 
         // オブジェクトのQMLパスを取得して追加
         auto meta = Rina::Core::EffectRegistry::instance().getEffect(clip.type);
+        map["name"] = !meta.name.isEmpty() ? meta.name : clip.type;
         if (!meta.qmlSource.isEmpty()) {
             map["qmlSource"] = meta.qmlSource;
         }
