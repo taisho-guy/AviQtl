@@ -203,6 +203,16 @@ Loader {
             property var _interval: controlLoader._findKeyframeInterval(_kfs, _curFrame, _clipDur)
             property int _startFrame: _interval.start
             property int _endFrame: _interval.end
+            property var _startKf: {
+                for (var i = 0; i < _kfs.length; i++) {
+                    if (_kfs[i].frame === _startFrame)
+                        return _kfs[i];
+
+                }
+                return null;
+            }
+            property string _interp: (_startKf && _startKf.interp) ? _startKf.interp : ""
+            property bool _rightInteractive: _hasKf && _interp !== "" && _interp !== "constant" && _interp !== "none"
             property var _startVal: {
                 var _ = colorRow._rev;
                 return (_hasKf && _em) ? (_em.evaluatedParam(_key, _startFrame) || controlLoader.value || "#ffffff") : (controlLoader.value || "#ffffff");
@@ -328,6 +338,8 @@ Loader {
                 Layout.preferredWidth: 70
                 Layout.minimumWidth: 50
                 text: colorRow._endVal
+                enabled: colorRow._rightInteractive
+                opacity: colorRow._rightInteractive ? 1 : 0.45
                 horizontalAlignment: TextInput.AlignHCenter
                 selectByMouse: true
                 onEditingFinished: {
@@ -348,9 +360,10 @@ Loader {
                 height: 24
                 radius: 3
                 color: controlLoader._resolveSwatchColor(colorRow._endVal)
-                border.color: endSwatchMa.containsMouse ? sysPalette.highlight : sysPalette.mid
+                opacity: colorRow._rightInteractive ? 1 : 0.45
+                border.color: colorRow._rightInteractive ? (endSwatchMa.containsMouse ? sysPalette.highlight : sysPalette.mid) : sysPalette.dark
                 border.width: 1
-                ToolTip.visible: endSwatchMa.containsMouse
+                ToolTip.visible: colorRow._rightInteractive && endSwatchMa.containsMouse
                 ToolTip.text: "終了色 (f" + colorRow._endFrame + ")"
 
                 MouseArea {
@@ -358,6 +371,7 @@ Loader {
 
                     anchors.fill: parent
                     hoverEnabled: true
+                    enabled: colorRow._rightInteractive
                     onClicked: {
                         var c = colorRow._endVal || "#ffffff";
                         // HexArgb (#aarrggbb) を Qt color 型に安全変換

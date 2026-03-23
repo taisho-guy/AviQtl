@@ -29,7 +29,7 @@ Window {
     modality: Qt.ApplicationModal
     flags: Qt.Dialog | Qt.WindowCloseButtonHint
 
-    // ── 進捗オーバーレイ ───────────────────────────────────
+    // 進捗オーバーレイ
     Rectangle {
         id: progressOverlay
 
@@ -79,7 +79,7 @@ Window {
 
     }
 
-    // ── 進捗シグナルの受信 ────────────────────────────────
+    // 進捗シグナルの受信
     Connections {
         function onExportProgressChanged(progress, current, total) {
             exportProgressBar.value = progress;
@@ -95,7 +95,7 @@ Window {
         target: TimelineBridge
     }
 
-    // ── 完了ポップアップ ──────────────────────────────────
+    // 完了ポップアップ
     Dialog {
         id: resultPopup
 
@@ -113,7 +113,7 @@ Window {
 
     }
 
-    // ── メインUI ─────────────────────────────────────────
+    // メインUI
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 16

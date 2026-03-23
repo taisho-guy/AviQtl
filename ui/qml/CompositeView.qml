@@ -23,9 +23,9 @@ Item {
     })
     property bool exportMode: false
     property alias view3D: view
-    // ─── グループ制御管理 ─────────────────────────────────────────
+    // グループ制御管理
     property var groupControls: []
-    // ─── カメラ制御管理 ─────────────────────────────────────────
+    // カメラ制御管理
     property var activeCameraControl: null
 
     function registerCameraControl(cc) {
@@ -198,7 +198,7 @@ Item {
                 readonly property real baseScale: pScale * 0.01
                 readonly property real aspectX: pAspect >= 0 ? (1 + pAspect) : 1
                 readonly property real aspectY: pAspect < 0 ? (1 - pAspect) : 1
-                // ─── 実効トランスフォーム計算 (グループ制御適用) ───────────
+                // 実効トランスフォーム計算 (グループ制御適用)
                 property var effectiveTransform: {
                     // 依存関係を明示的に登録 (groupControlsの変更を検知)
                     var _gcList = root.groupControls;

@@ -6,8 +6,7 @@ import QtQuick.Window
 import "common" as Common
 
 ApplicationWindow {
-    // --- Global Shortcuts ---
-    // --- Global Shortcuts ---
+    // Global Shortcuts
 
     id: mainWin
 
@@ -636,7 +635,7 @@ ApplicationWindow {
 
     }
 
-    // --- Global Shortcuts ---
+    // Global Shortcuts
     Shortcut {
         sequence: newAction.shortcutText
         context: Qt.ApplicationShortcut

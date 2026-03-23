@@ -330,8 +330,8 @@ ApplicationWindow {
         }
         if (selectedType === "random" || selectedType === "alternate")
             options.modeParams = {
-                "stepFrames": Math.max(1, stepFrames)
-            };
+            "stepFrames": Math.max(1, stepFrames)
+        };
 
         TimelineBridge.setKeyframe(clipId, effectIndex, paramName, keyframeFrame, kf.value, options);
     }
