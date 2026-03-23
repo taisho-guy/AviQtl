@@ -1,3 +1,4 @@
+import Qt5Compat.GraphicalEffects
 import QtQuick
 import QtQuick.Effects
 import QtQuick3D
@@ -61,6 +62,7 @@ Common.BaseObject {
         }
 
         // テキスト＋縁取りをまとめるコンテナ
+        // テキスト本体と「クールな」GPU 縁取り
         Item {
             id: textWrapper
 
@@ -68,94 +70,6 @@ Common.BaseObject {
             width: textItem.implicitWidth + root._pad * 2
             height: textItem.implicitHeight + root._pad * 2
 
-            // Bug2修正: Canvas による可変幅縁取り
-            // ctx.lineWidth = outlineWidth * 2 で幅を制御できる
-            Canvas {
-                id: outlineCanvas
-
-                anchors.fill: parent
-                visible: root.outlineEnabled && root.outlineWidth > 0
-                onWidthChanged: requestPaint()
-                onHeightChanged: requestPaint()
-                onPaint: {
-                    var ctx2d = getContext("2d");
-                    ctx2d.clearRect(0, 0, width, height);
-                    if (!root.outlineEnabled || root.outlineWidth <= 0)
-                        return ;
-
-                    var wt = root.fontBold ? "bold" : "normal";
-                    var st = root.fontItalic ? "italic" : "normal";
-                    var lsp = root.letterSpacing !== 0 ? " letter-spacing: " + root.letterSpacing + "px;" : "";
-                    ctx2d.font = st + " " + wt + " " + root.fontSize + "px '" + root.fontFamily + "'";
-                    ctx2d.strokeStyle = root.outlineColor.toString();
-                    ctx2d.lineWidth = root.outlineWidth * 2;
-                    ctx2d.lineJoin = "round";
-                    ctx2d.lineCap = "round";
-                    var alignStr;
-                    if (root.alignment === Text.AlignLeft)
-                        alignStr = "left";
-                    else if (root.alignment === Text.AlignRight)
-                        alignStr = "right";
-                    else
-                        alignStr = "center";
-                    ctx2d.textAlign = alignStr;
-                    ctx2d.textBaseline = "alphabetic";
-                    var xPos = (alignStr === "left") ? root._pad : (alignStr === "right") ? width - root._pad : width / 2;
-                    var lines = root.textContent.split("\n");
-                    var lh = textItem.lineCount > 0 ? textItem.contentHeight / textItem.lineCount : 0;
-                    var baselineY = textItem.y + textItem.baselineOffset;
-                    for (var i = 0; i < lines.length; i++) {
-                        ctx2d.strokeText(lines[i], xPos, baselineY + i * lh);
-                    }
-                }
-
-                Connections {
-                    function onOutlineWidthChanged() {
-                        outlineCanvas.requestPaint();
-                    }
-
-                    function onOutlineColorChanged() {
-                        outlineCanvas.requestPaint();
-                    }
-
-                    function onOutlineEnabledChanged() {
-                        outlineCanvas.requestPaint();
-                    }
-
-                    function onTextContentChanged() {
-                        outlineCanvas.requestPaint();
-                    }
-
-                    function onFontFamilyChanged() {
-                        outlineCanvas.requestPaint();
-                    }
-
-                    function onFontSizeChanged() {
-                        outlineCanvas.requestPaint();
-                    }
-
-                    function onFontBoldChanged() {
-                        outlineCanvas.requestPaint();
-                    }
-
-                    function onFontItalicChanged() {
-                        outlineCanvas.requestPaint();
-                    }
-
-                    function onAlignmentChanged() {
-                        outlineCanvas.requestPaint();
-                    }
-
-                    function onLineSpacingChanged() {
-                        outlineCanvas.requestPaint();
-                    }
-
-                    target: root
-                }
-
-            }
-
-            // メインテキスト (縁取りは Canvas に任せ style は Normal 固定)
             Text {
                 id: textItem
 
@@ -172,16 +86,26 @@ Common.BaseObject {
                 horizontalAlignment: root.alignment
                 verticalAlignment: Text.AlignVCenter
                 color: root.textColor
-                // Bug2修正: Text.Outline はスタイル幅を制御できないため Normal に変更
-                // 縁取りは上の Canvas が担当する
-                style: Text.Normal
+                renderType: Text.CurveRendering
+            }
+
+            // Glow の spread: 1.0 は、ぼかしを一切行わず、100% の濃さで指定ピクセル分を
+            // 押し広げるため、単一の描画パスで完璧なソリッド縁取り(アウトライン)が完成します。
+            Glow {
+                anchors.fill: textItem
+                source: textItem
+                visible: root.outlineEnabled && root.outlineWidth > 0
+                color: root.outlineColor
+                radius: Math.ceil(root.outlineWidth)
+                samples: Math.min(64, 1 + Math.ceil(root.outlineWidth) * 2)
+                spread: 1
+                transparentBorder: true
+                // Textの上に被らないように z を下げる
+                z: -1
             }
 
         }
 
-        // Bug1修正: ShaderEffectSource で textWrapper をキャプチャする
-        // hideSource: true にすると textWrapper の直接描画を非表示にしつつ
-        // FBO にレンダリングし続けるため、MultiEffect のソースとして使える
         ShaderEffectSource {
             id: textCapture
 

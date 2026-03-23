@@ -463,20 +463,38 @@ Loader {
 
         RowLayout {
             spacing: 8
+            Layout.alignment: Qt.AlignTop
 
             Label {
                 text: controlLoader._label()
                 color: sysPalette.text
                 Layout.preferredWidth: 80
+                Layout.alignment: Qt.AlignTop
+                Layout.topMargin: 8
             }
 
-            TextField {
-                text: String(controlLoader.value || "")
+            ScrollView {
                 Layout.fillWidth: true
-                selectByMouse: true
-                onEditingFinished: {
-                    controlLoader.valueModified(text);
+                Layout.maximumHeight: 400
+                Layout.preferredHeight: Math.max(40, textAreaItem.implicitHeight)
+                clip: true
+
+                TextArea {
+                    id: textAreaItem
+
+                    text: String(controlLoader.value || "")
+                    selectByMouse: true
+                    wrapMode: TextArea.Wrap
+                    onTextChanged: {
+                        if (activeFocus)
+                            controlLoader.valueModified(text);
+
+                    }
+                    onEditingFinished: {
+                        controlLoader.valueModified(text);
+                    }
                 }
+
             }
 
         }
