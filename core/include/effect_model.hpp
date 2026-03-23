@@ -43,8 +43,10 @@ class EffectModel : public QObject {
     // Must be public to be invokable from QML
     Q_INVOKABLE QStringList availableEasings() const {
         QStringList keys;
+        keys << "none";
         for (const auto &[k, v] : easingFunctions())
             keys << k;
+        keys << "random" << "alternate";
         return keys;
     }
 
@@ -68,10 +70,12 @@ class EffectModel : public QObject {
         QVariantMap kf;
         kf["frame"] = frame;
         kf["value"] = value;
-        kf["interp"] = options.value("interp", "linear");
+        kf["interp"] = options.value("interp", "none");
 
         if (options.contains("points"))
             kf["points"] = options.value("points");
+        if (options.contains("modeParams"))
+            kf["modeParams"] = options.value("modeParams");
         bool updated = false;
         for (int i = 0; i < track.size(); ++i) {
             const auto m = track[i].toMap();
@@ -340,6 +344,7 @@ class EffectModel : public QObject {
         auto getFrame = [](const QVariant &v) { return v.toMap().value("frame").toInt(); };
         auto getValue = [](const QVariant &v) { return v.toMap().value("value"); };
         auto getInterp = [](const QVariant &v) { return v.toMap().value("interp").toString(); };
+        auto getModeParams = [](const QVariant &v) { return v.toMap().value("modeParams").toMap(); };
         // ベジェ制御点の取得ヘルパー
         auto getBezierParams = [](const QVariant &v) -> std::vector<double> {
             const auto map = v.toMap();
@@ -375,9 +380,10 @@ class EffectModel : public QObject {
             const double tRaw = (frame - f0) / double(f1 - f0);
 
             QString type = getInterp(track[i]);
+            const QVariantMap modeParams = getModeParams(track[i]);
 
-            if (!easingFunctions().count(type))
-                type = "linear";
+            if (type == "none")
+                return v0;
 
             // 色 (文字列) の補間
             if (v0.typeId() == QMetaType::QString && v1.typeId() == QMetaType::QString) {
@@ -388,6 +394,8 @@ class EffectModel : public QObject {
                     if (type == "custom") {
                         params = getBezierParams(track[i]);
                     }
+                    if (!easingFunctions().count(type))
+                        type = "linear";
                     const double t = easingFunctions().at(type)(tRaw, params);
 
                     int r = static_cast<int>(c0.red() + (c1.red() - c0.red()) * t);
@@ -407,11 +415,29 @@ class EffectModel : public QObject {
             const double a = v0.toDouble();
             const double b = v1.toDouble();
 
+            if (type == "random") {
+                const int stepFrames = std::max(1, modeParams.value("stepFrames", 1).toInt());
+                const int stepIndex = (frame - f0) / stepFrames;
+                const quint32 seed = qHash(QString("%1:%2:%3:%4:%5").arg(f0).arg(f1).arg(stepIndex).arg(a, 0, 'g', 16).arg(b, 0, 'g', 16));
+                const double r = double(seed % 1000000u) / 999999.0;
+                const double lo = std::min(a, b);
+                const double hi = std::max(a, b);
+                return lo + (hi - lo) * r;
+            }
+
+            if (type == "alternate") {
+                const int stepFrames = std::max(1, modeParams.value("stepFrames", 1).toInt());
+                const int stepIndex = (frame - f0) / stepFrames;
+                return (stepIndex % 2 == 0) ? a : b;
+            }
+
             std::vector<double> params;
             if (type == "custom") {
                 params = getBezierParams(track[i]);
             }
 
+            if (!easingFunctions().count(type))
+                type = "linear";
             const double t = easingFunctions().at(type)(tRaw, params);
             return a + (b - a) * t;
         }

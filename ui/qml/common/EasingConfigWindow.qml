@@ -10,7 +10,8 @@ ApplicationWindow {
     property var effectModel: null
     property string paramName: ""
     property int keyframeFrame: 0
-    property string selectedType: "linear"
+    property string selectedType: "none"
+    property int stepFrames: 1
     property var bezierParams: [0.33, 0, 0.66, 1, 1, 1]
     property real previewScale: 1 // 0.25 ～ 4.0
     property real previewOffsetX: 0 // 論理座標 (0-1空間) での平行移動
@@ -287,7 +288,8 @@ ApplicationWindow {
                 continue;
 
             const kf = track[i];
-            selectedType = kf.interp || "linear";
+            selectedType = kf.interp || "none";
+            stepFrames = (kf.modeParams && kf.modeParams.stepFrames) ? kf.modeParams.stepFrames : 1;
             if (selectedType === "bezier")
                 selectedType = "custom";
 
@@ -326,10 +328,15 @@ ApplicationWindow {
             for (let j = 0; j < bezierParams.length; j++) pts.push(bezierParams[j])
             options.points = pts;
         }
+        if (selectedType === "random" || selectedType === "alternate")
+            options.modeParams = {
+                "stepFrames": Math.max(1, stepFrames)
+            };
+
         TimelineBridge.setKeyframe(clipId, effectIndex, paramName, keyframeFrame, kf.value, options);
     }
 
-    title: "イージング設定: " + paramName + " [" + selectedType + "]"
+    title: "補間設定: " + paramName
     width: 820
     height: 540
     onSelectedTypeChanged: {
@@ -1143,6 +1150,88 @@ ApplicationWindow {
 
                 }
 
+            }
+
+        }
+
+    }
+
+    header: ToolBar {
+        RowLayout {
+            anchors.fill: parent
+            anchors.margins: 4
+            spacing: 8
+
+            Label {
+                text: "補間方法:"
+                font.pixelSize: 12
+            }
+
+            ComboBox {
+                id: displayTypeCombo
+
+                font.pixelSize: 12
+                Layout.preferredWidth: 150
+                textRole: "text"
+                valueRole: "value"
+                model: [{
+                    "text": "瞬間移動",
+                    "value": "none"
+                }, {
+                    "text": "直線移動",
+                    "value": "linear"
+                }, {
+                    "text": "曲線移動",
+                    "value": "custom"
+                }, {
+                    "text": "ランダム移動",
+                    "value": "random"
+                }, {
+                    "text": "反復移動",
+                    "value": "alternate"
+                }]
+                currentIndex: {
+                    for (var i = 0; i < count; i++) {
+                        if (model[i].value === root.selectedType)
+                            return i;
+
+                    }
+                    return -1;
+                }
+                onActivated: {
+                    if (currentIndex >= 0)
+                        root.selectedType = model[currentIndex].value;
+
+                }
+            }
+
+            RowLayout {
+                visible: root.selectedType === "random" || root.selectedType === "alternate"
+                spacing: 4
+
+                Label {
+                    text: "更新間隔:"
+                    font.pixelSize: 12
+                }
+
+                SpinBox {
+                    from: 1
+                    to: 9999
+                    value: root.stepFrames
+                    onValueModified: root.stepFrames = value
+                    font.pixelSize: 12
+                }
+
+                Label {
+                    text: "フレーム"
+                    font.pixelSize: 12
+                }
+
+            }
+
+            // spacer
+            Item {
+                Layout.fillWidth: true
             }
 
         }
