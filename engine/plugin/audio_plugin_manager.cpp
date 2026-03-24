@@ -198,6 +198,10 @@ class CarlaHostedPlugin final : public IAudioPlugin {
     }
 
     void process(float *buf, int frameCount) override {
+        // 無効な場合は何もせずリターンする（インプレース処理なので入力がそのまま出力となる＝バイパス）
+        if (!m_enabled)
+            return;
+
         if (!m_loaded || m_descriptor == nullptr || m_nativeHandle == nullptr || buf == nullptr || frameCount <= 0)
             return;
 
@@ -215,6 +219,9 @@ class CarlaHostedPlugin final : public IAudioPlugin {
     }
 
     bool active() const override { return m_loaded; }
+
+    void setEnabled(bool enabled) override { m_enabled = enabled; }
+    bool isEnabled() const override { return m_enabled; }
 
     void release() override {
         if (m_descriptor != nullptr && m_nativeHandle != nullptr)
@@ -290,6 +297,7 @@ class CarlaHostedPlugin final : public IAudioPlugin {
     uint m_pluginId = 0;
     PluginInfo m_info;
     bool m_loaded = false;
+    bool m_enabled = true;
     double m_sampleRate = 48000.0;
     int m_maxBlockSize = 512;
     std::vector<float> m_inL;

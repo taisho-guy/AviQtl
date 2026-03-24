@@ -12,7 +12,7 @@ namespace Rina::Engine {
 void AudioMixer::processChain(float *buffer, int samples, const Plugin::AudioPluginChain &chain) {
     for (int i = 0; i < chain.count(); ++i) {
         Plugin::IAudioPlugin *plugin = chain.get(i);
-        if (plugin && plugin->active()) {
+        if (plugin && plugin->active() && plugin->isEnabled()) {
             plugin->process(buffer, samples);
         }
     }

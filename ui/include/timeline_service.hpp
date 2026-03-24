@@ -45,6 +45,8 @@ class TimelineService : public QObject {
     void selectClip(int id);
     void selectClipsInRange(int frameA, int frameB, int layerA, int layerB, bool additive = false);
     void applySelectionIds(const QVariantList &ids);
+    void setEffectEnabled(int clipId, int effectIndex, bool enabled);
+    void reorderEffects(int clipId, int fromIndex, int toIndex);
 
     // シーン管理
     QVariantList scenes() const;

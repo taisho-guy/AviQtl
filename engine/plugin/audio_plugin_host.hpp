@@ -25,6 +25,9 @@ class IAudioPlugin {
     // インターリーブステレオ (L,R,L,R...) float をインプレース処理
     virtual void process(float *buf, int frameCount) = 0;
     virtual bool active() const { return true; }
+    // バイパス制御 (true: 処理有効, false: バイパス)
+    virtual void setEnabled(bool enabled) = 0;
+    virtual bool isEnabled() const = 0;
     virtual void release() = 0;
 
     virtual QString name() const = 0;

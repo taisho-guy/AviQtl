@@ -103,6 +103,23 @@ Common.RinaWindow {
         reloading = false;
     }
 
+    function scrollToEffect(index) {
+        var isAudio = TimelineBridge && TimelineBridge.isAudioClip(targetClipId);
+        var repeater = isAudio ? audioEffectsRepeater : videoEffectsRepeater;
+        if (!repeater)
+            return ;
+
+        var item = repeater.itemAt(index);
+        if (item) {
+            // ターゲットのY座標を取得
+            var targetY = item.y;
+            // スクロール可能な最大値を計算 (コンテンツ全体の高さ - ビューポートの高さ)
+            var maxScroll = Math.max(0, mainScrollView.contentHeight - mainScrollView.height);
+            // ターゲット位置へワープ (0 ～ maxScroll の範囲に収める)
+            mainScrollView.contentY = Math.min(Math.max(0, targetY), maxScroll);
+        }
+    }
+
     // UI定義を正規化してリストとして取得するヘルパー
     function getUiModel(effectModel) {
         if (!effectModel)
@@ -184,528 +201,155 @@ Common.RinaWindow {
         target: TimelineBridge
     }
 
-    ScrollView {
+    RowLayout {
         anchors.fill: parent
-        contentWidth: availableWidth
-        clip: true
+        spacing: 0
 
-        ColumnLayout {
-            width: parent.width
-            spacing: 1
+        // 左側: エフェクト一覧サイドバー
+        Rectangle {
+            Layout.fillHeight: true
+            Layout.preferredWidth: 200
+            Layout.minimumWidth: 150
+            color: palette.midlight
+            border.width: 1
+            border.color: palette.mid
 
-            Repeater {
-                model: effectsModel
+            ListView {
+                id: sidebarList
 
-                delegate: ColumnLayout {
-                    id: effectRoot
+                anchors.fill: parent
+                clip: true
+                // 選択中のクリップタイプに応じてモデルを切り替え
+                model: (TimelineBridge && TimelineBridge.isAudioClip(targetClipId)) ? audioEffectsModel : effectsModel
+                boundsBehavior: Flickable.StopAtBounds
 
-                    // 親デリゲートでデータとインデックスを公開
-                    property int effectIndex: index
-                    property var effectModel: modelData
-                    property var currentParams: effectModel ? effectModel.params : ({
-                    })
+                delegate: Item {
+                    width: sidebarList.width
+                    height: 32
 
-                    width: root.width
-                    spacing: 0
-
-                    // エフェクトヘッダー
                     Rectangle {
-                        Layout.fillWidth: true
-                        height: 24
-                        color: palette.midlight
+                        anchors.fill: parent
+                        color: (sidebarList.currentIndex === index) ? palette.highlight : "transparent"
+                        opacity: (sidebarList.currentIndex === index) ? 0.2 : 1
+                    }
 
-                        Label {
-                            text: modelData.name
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 8
+                        anchors.rightMargin: 8
+                        spacing: 8
+
+                        // ドラッグ用ハンドル
+                        Common.RinaIcon {
+                            iconName: "drag_move_line" // 適切なアイコン名に変更してください
+                            size: 16
                             color: palette.text
-                            font.bold: true
-                            anchors.verticalCenter: parent.verticalCenter
-                            anchors.left: parent.left
-                            anchors.leftMargin: 10
-                        }
+                            opacity: 0.5
 
-                        // 削除ボタン (Transform以外)
-                        Button {
-                            visible: modelData.category === "filter"
-                            anchors.right: parent.right
-                            anchors.verticalCenter: parent.verticalCenter
-                            flat: true
-                            width: 24
-                            height: 24
-                            onClicked: TimelineBridge.removeEffect(targetClipId, effectRoot.effectIndex)
+                            MouseArea {
+                                id: dragArea
 
-                            contentItem: Common.RinaIcon {
-                                iconName: "close_line"
-                                size: 16
-                                color: parent.hovered ? "red" : parent.palette.text
+                                property int startY: 0
+
+                                anchors.fill: parent
+                                preventStealing: true
+                                cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+                                onPressed: (mouse) => {
+                                    startY = mouse.y;
+                                    sidebarList.interactive = false;
+                                }
+                                onReleased: (mouse) => {
+                                    sidebarList.interactive = true;
+                                    // コンテンツ座標系に変換してドロップ先のインデックスを取得
+                                    var pt = mapToItem(sidebarList.contentItem, mouse.x, mouse.y);
+                                    var targetIndex = sidebarList.indexAt(10, pt.y);
+                                    if (targetIndex !== -1 && targetIndex !== index) {
+                                        if (TimelineBridge.isAudioClip(targetClipId))
+                                            TimelineBridge.reorderAudioPlugins(targetClipId, index, targetIndex);
+                                        else
+                                            TimelineBridge.reorderEffects(targetClipId, index, targetIndex);
+                                    }
+                                }
                             }
 
+                        }
+
+                        // 有効・無効切り替えチェックボックス
+                        CheckBox {
+                            checked: modelData.enabled !== undefined ? modelData.enabled : true
+                            Layout.preferredHeight: 20
+                            Layout.preferredWidth: 20
+                            onToggled: {
+                                if (TimelineBridge) {
+                                    if (TimelineBridge.isAudioClip(targetClipId))
+                                        TimelineBridge.setAudioPluginEnabled(targetClipId, index, checked);
+                                    else
+                                        TimelineBridge.setEffectEnabled(targetClipId, index, checked);
+                                }
+                            }
+                        }
+
+                        // エフェクト名 (クリックでワープ)
+                        Label {
+                            text: modelData.name
+                            Layout.fillWidth: true
+                            elide: Text.ElideRight
+                            color: palette.text
                         }
 
                     }
 
-                    // 全パラメータ（統一処理）
-                    Repeater {
-                        model: getUiModel(effectModel)
-
-                        delegate: ColumnLayout {
-                            id: paramDelegate
-
-                            property int activeDragOriginal: -1
-                            property int activeDragCurrent: -1
-                            property var def: modelData
-                            property string key: (def && (def.param || def.name)) || ""
-                            property var effVal: effectRoot.currentParams[key]
-                            property bool isNumber: typeof effVal === "number" && (!def.type || ["float", "number", "slider", "spinner"].indexOf(def.type) !== -1)
-                            property var effectModel: effectRoot.effectModel
-                            property int effIdx: effectRoot.effectIndex
-                            // キーフレーム
-                            property int curRelFrame: (TimelineBridge && TimelineBridge.transport) ? Math.max(0, TimelineBridge.transport.currentFrame - TimelineBridge.clipStartFrame) : 0
-                            property int clipDur: TimelineBridge ? TimelineBridge.clipDurationFrames : 100
-                            property var tracks: effectModel ? effectModel.keyframeTracks : null
-                            property var track: (tracks && key) ? tracks[key] : null
-                            property var kfs: track || []
-                            property bool hasKeyframes: kfs.length > 0
-                            property var interval: findInterval(kfs, curRelFrame, clipDur)
-                            property int startFrame: interval.start
-                            property int endFrame: interval.end
-                            property var startVal: isNumber ? (effectModel ? effectModel.evaluatedParam(key, startFrame) : effVal) : effVal
-                            property var endVal: isNumber ? (effectModel ? effectModel.evaluatedParam(key, endFrame) : effVal) : effVal
-                            property string interpType: hasKeyframes ? getInterpAt(startFrame) : "constant"
-                            property bool isMoving: isNumber && (hasKeyframes || interpType !== "constant")
-
-                            function hasKeyframeAt(f) {
-                                if (!kfs)
-                                    return false;
-
-                                for (var i = 0; i < kfs.length; i++) {
-                                    if (kfs[i].frame === f)
-                                        return true;
-
-                                }
-                                return false;
-                            }
-
-                            function ensureKeyframeAt(f) {
-                                if (!effectModel || !key)
-                                    return ;
-
-                                if (hasKeyframeAt(f))
-                                    return ;
-
-                                var raw = effectModel.evaluatedParam(key, f);
-                                var v = (raw !== undefined && raw !== null) ? raw : effVal;
-                                var interp = (def.type === "color") ? "constant" : "linear";
-                                paramDelegate.effectModel.setKeyframe(paramDelegate.key, f, v, {
-                                    "interp": interp
-                                });
-                            }
-
-                            function ensureRangeKeyframes() {
-                                ensureKeyframeAt(startFrame);
-                                ensureKeyframeAt(endFrame);
-                            }
-
-                            function findInterval(kfs, cur, totalDur) {
-                                let s = 0, e = totalDur;
-                                if (!kfs || kfs.length === 0)
-                                    return {
-                                    "start": s,
-                                    "end": e
-                                };
-
-                                let foundStart = false;
-                                for (let i = kfs.length - 1; i >= 0; i--) {
-                                    if (kfs[i].frame <= cur) {
-                                        s = kfs[i].frame;
-                                        foundStart = true;
-                                        if (i + 1 < kfs.length)
-                                            e = kfs[i + 1].frame;
-                                        else
-                                            e = totalDur;
-                                        break;
-                                    }
-                                }
-                                if (!foundStart) {
-                                    e = kfs[0].frame;
-                                    s = 0;
-                                }
-                                return {
-                                    "start": s,
-                                    "end": e
-                                };
-                            }
-
-                            function getInterpAt(f) {
-                                if (!kfs)
-                                    return "linear";
-
-                                for (var i = 0; i < kfs.length; i++) {
-                                    if (kfs[i].frame === f)
-                                        return kfs[i].interp || "linear";
-
-                                }
-                                return "linear";
-                            }
-
-                            function getGridLines() {
-                                if (!TimelineBridge || !enableSnap)
-                                    return [];
-
-                                let step = getGridInterval();
-                                if (step <= 0)
-                                    return [];
-
-                                let gs = gridSettings();
-                                let fps = (TimelineBridge.project && TimelineBridge.project.fps) ? TimelineBridge.project.fps : 60;
-                                let offsetF = (gs.mode === "BPM") ? gs.offset * fps : 0;
-                                let lines = [];
-                                let startAbs = TimelineBridge.clipStartFrame;
-                                let endAbs = startAbs + clipDur;
-                                let firstLine = Math.ceil((startAbs - offsetF) / step) * step + offsetF;
-                                if (clipDur / step > 150)
-                                    return [];
-
-                                for (let f = firstLine; f <= endAbs; f += step) {
-                                    let rel = f - startAbs;
-                                    if (rel >= 0 && rel <= clipDur)
-                                        lines.push(rel);
-
-                                }
-                                return lines;
-                            }
-
-                            function updateParam(frame, val) {
-                                if (!effectModel || !key)
-                                    return ;
-
-                                if (!hasKeyframes) {
-                                    TimelineBridge.updateClipEffectParam(targetClipId, effIdx, key, val);
-                                    return ;
-                                }
-                                let type = "linear";
-                                if (frame === startFrame)
-                                    type = getInterpAt(startFrame);
-                                else
-                                    type = getInterpAt(frame);
-                                if (type === "constant")
-                                    type = "linear";
-
-                                paramDelegate.effectModel.setKeyframe(paramDelegate.key, frame, val, {
-                                    "interp": type
-                                });
-                            }
-
-                            Layout.fillWidth: true
-                            spacing: 0
-
-                            // 数値
-                            Common.ParamControl {
-                                Layout.fillWidth: true
-                                Layout.margins: 4
-                                visible: isNumber
-                                enabled: isNumber
-                                isRangeMode: isMoving
-                                interpolationType: interpType
-                                paramName: {
-                                    var interpLabel = {
-                                        "linear": " (直線)",
-                                        "ease_in": " (加速)",
-                                        "ease_out": " (減速)",
-                                        "ease_in_out": " (加減速)",
-                                        "bezier": " (ベジェ)"
-                                    };
-                                    var name = (def.label && def.label !== "") ? def.label : key;
-                                    return name + (isMoving ? (interpLabel[interpType] || "") : "");
-                                }
-                                startValue: Number(startVal) || 0
-                                endValue: Number(endVal) || 0
-                                minValue: (def.min !== undefined) ? def.min : ((key === "scale" || key === "opacity") ? 0 : -1000)
-                                maxValue: (def.max !== undefined) ? def.max : ((key === "scale") ? 500 : (key === "opacity" ? 1 : 1000))
-                                decimals: (def.decimals !== undefined) ? def.decimals : 2
-                                onStartValueModified: function(val) {
-                                    root.inputting = true;
-                                    updateParam(startFrame, val);
-                                    root.inputting = false;
-                                }
-                                onEndValueModified: function(val) {
-                                    root.inputting = true;
-                                    updateParam(endFrame, val);
-                                    root.inputting = false;
-                                }
-                                onParamButtonClicked: {
-                                    if (!effectModel || !key)
-                                        return ;
-
-                                    // 区間キーフレームがない場合は生成
-                                    ensureRangeKeyframes();
-                                    var win = WindowManager.getWindow("easingConfig");
-                                    if (win)
-                                        win.openConfig({
-                                        "clipId": targetClipId,
-                                        "effectIndex": effIdx,
-                                        "effectModel": effectModel,
-                                        "paramName": key,
-                                        "keyframeFrame": startFrame
-                                    });
-
-                                }
-                            }
-
-                            // 非数値 (ControlLoader で型別UI)
-                            Common.ControlLoader {
-                                Layout.fillWidth: true
-                                Layout.margins: 4
-                                visible: !isNumber
-                                definition: def
-                                value: effVal
-                                effectRootRef: effectRoot
-                                onValueModified: function(val) {
-                                    root.inputting = true;
-                                    TimelineBridge.updateClipEffectParam(targetClipId, effIdx, key, val);
-                                    root.inputting = false;
-                                }
-                                onParamButtonClicked: {
-                                    if (!effectModel || !key)
-                                        return ;
-
-                                    ensureRangeKeyframes();
-                                    var win = WindowManager.getWindow("easingConfig");
-                                    if (win)
-                                        win.openConfig({
-                                        "clipId": targetClipId,
-                                        "effectIndex": effIdx,
-                                        "effectModel": effectModel,
-                                        "paramName": key,
-                                        "keyframeFrame": startFrame
-                                    });
-
-                                }
-                            }
-
-                            // ミニタイムラインバー
-                            Item {
-                                id: trackItem
-
-                                Layout.fillWidth: true
-                                Layout.preferredHeight: 12
-                                Layout.leftMargin: 4
-                                Layout.rightMargin: 4
-                                visible: isNumber
-
-                                Rectangle {
-                                    anchors.centerIn: parent
-                                    width: parent.width
-                                    height: 2
-                                    color: palette.mid
-
-                                    Rectangle {
-                                        property int vStart: (paramDelegate && paramDelegate.activeDragOriginal === startFrame) ? paramDelegate.activeDragCurrent : startFrame
-                                        property int vEnd: (paramDelegate && paramDelegate.activeDragOriginal === endFrame) ? paramDelegate.activeDragCurrent : endFrame
-
-                                        height: 4
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        color: palette.highlight
-                                        opacity: 0.7
-                                        x: (Math.min(vStart, vEnd) / clipDur) * parent.width
-                                        width: Math.max(0, (Math.abs(vEnd - vStart) / clipDur) * parent.width)
-                                        visible: clipDur > 0
-                                    }
-
-                                }
-
-                                Repeater {
-                                    model: enableSnap ? getGridLines() : []
-
-                                    Rectangle {
-                                        width: 1
-                                        height: 8
-                                        color: palette.midlight
-                                        opacity: 0.6
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        x: (modelData / clipDur) * trackItem.width
-                                    }
-
-                                }
-
-                                Repeater {
-                                    model: kfs
-
-                                    Item {
-                                        id: kfItem
-
-                                        property int originalFrame: modelData.frame
-                                        property int currentFrame: originalFrame
-                                        // Capture outer scope variables here, where visual tree resolution works perfectly
-                                        property var targetModel: effectModel
-                                        property string targetKey: key
-                                        property var rootWindow: root
-                                        property int minDragFrame: 0
-                                        property int maxDragFrame: clipDur
-
-                                        width: 16
-                                        height: 16
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        x: (currentFrame / clipDur) * trackItem.width - width / 2
-
-                                        Rectangle {
-                                            width: 8
-                                            height: 8
-                                            color: kfMa.containsMouse || pointDrag.active ? palette.highlight : palette.text
-                                            anchors.centerIn: parent
-                                            rotation: 45
-                                            antialiasing: true
-                                        }
-
-                                        MouseArea {
-                                            id: kfMa
-
-                                            anchors.fill: parent
-                                            hoverEnabled: true
-                                            acceptedButtons: Qt.LeftButton | Qt.RightButton
-                                            onClicked: function(mouse) {
-                                                if (mouse.button === Qt.RightButton)
-                                                    kfItem.targetModel.removeKeyframe(kfItem.targetKey, modelData.frame);
-
-                                            }
-                                            onDoubleClicked: function(mouse) {
-                                                mouse.accepted = true;
-                                            }
-                                        }
-
-                                        DragHandler {
-                                            id: pointDrag
-
-                                            property real startX: 0
-
-                                            target: null
-                                            acceptedButtons: Qt.LeftButton
-                                            onActiveChanged: {
-                                                if (active) {
-                                                    startX = kfItem.x;
-                                                    kfItem.rootWindow.inputting = true;
-                                                    let minF = 0;
-                                                    let maxF = clipDur;
-                                                    for (let i = 0; i < kfs.length; i++) {
-                                                        let f = kfs[i].frame;
-                                                        if (f < kfItem.originalFrame && f >= minF)
-                                                            minF = f + 1;
-
-                                                        if (f > kfItem.originalFrame && f <= maxF)
-                                                            maxF = f - 1;
-
-                                                    }
-                                                    kfItem.minDragFrame = minF;
-                                                    kfItem.maxDragFrame = maxF;
-                                                    if (typeof paramDelegate !== "undefined") {
-                                                        paramDelegate.activeDragOriginal = kfItem.originalFrame;
-                                                        paramDelegate.activeDragCurrent = kfItem.originalFrame;
-                                                    }
-                                                } else {
-                                                    if (typeof paramDelegate !== "undefined")
-                                                        paramDelegate.activeDragOriginal = -1;
-
-                                                    if (kfItem.currentFrame !== kfItem.originalFrame) {
-                                                        var val = kfItem.targetModel.evaluatedParam(kfItem.targetKey, kfItem.originalFrame);
-                                                        var track = kfItem.targetModel.keyframeTracks[kfItem.targetKey] || [];
-                                                        var interp = "linear";
-                                                        var pts = [];
-                                                        for (let i = 0; i < track.length; i++) {
-                                                            if (track[i].frame === kfItem.originalFrame) {
-                                                                val = track[i].value;
-                                                                interp = track[i].interp || "linear";
-                                                                if (track[i].points)
-                                                                    pts = track[i].points;
-
-                                                                break;
-                                                            }
-                                                        }
-                                                        kfItem.targetModel.removeKeyframe(kfItem.targetKey, kfItem.originalFrame);
-                                                        let options = {
-                                                            "interp": interp
-                                                        };
-                                                        if (pts.length > 0)
-                                                            options.points = pts;
-
-                                                        kfItem.targetModel.setKeyframe(kfItem.targetKey, kfItem.currentFrame, val, options);
-                                                    }
-                                                    kfItem.rootWindow.inputting = false;
-                                                }
-                                            }
-                                            onTranslationChanged: {
-                                                if (active) {
-                                                    let newX = startX + translation.x;
-                                                    let rawRelFrame = ((newX + kfItem.width / 2) / trackItem.width) * clipDur;
-                                                    let snappedFrame = snapRelativeFrame(rawRelFrame);
-                                                    snappedFrame = Math.max(kfItem.minDragFrame, Math.min(kfItem.maxDragFrame, snappedFrame));
-                                                    kfItem.currentFrame = snappedFrame;
-                                                    if (typeof paramDelegate !== "undefined")
-                                                        paramDelegate.activeDragCurrent = snappedFrame;
-
-                                                }
-                                            }
-                                        }
-
-                                    }
-
-                                }
-
-                                Rectangle {
-                                    width: 1
-                                    height: parent.height
-                                    color: palette.highlight
-                                    x: (curRelFrame / clipDur) * parent.width
-                                    visible: clipDur > 0
-                                }
-
-                                MouseArea {
-                                    anchors.fill: parent
-                                    acceptedButtons: Qt.LeftButton
-                                    onDoubleClicked: function(mouse) {
-                                        let rawRelFrame = (mouse.x / trackItem.width) * clipDur;
-                                        let f = snapRelativeFrame(rawRelFrame);
-                                        f = Math.max(0, Math.min(clipDur, f));
-                                        let val = effectModel.evaluatedParam(key, f);
-                                        let options = {
-                                            "interp": "linear"
-                                        };
-                                        effectModel.setKeyframe(key, f, val, options);
-                                    }
-                                }
-
-                            }
-
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: {
+                            sidebarList.currentIndex = index;
+                            root.scrollToEffect(index);
                         }
-
                     }
 
                 }
 
             }
 
-            // オーディオプラグインのパラメータ表示
+        }
+
+        // 右側: 詳細設定スクロールビュー (既存のものを移動)
+        ScrollView {
+            id: mainScrollView
+
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            contentWidth: availableWidth
+            clip: true
+
             ColumnLayout {
-                Layout.fillWidth: true
+                width: parent.width
                 spacing: 1
-                visible: TimelineBridge && TimelineBridge.isAudioClip(targetClipId)
 
                 Repeater {
-                    model: audioEffectsModel
+                    id: videoEffectsRepeater
+
+                    model: effectsModel
 
                     delegate: ColumnLayout {
-                        id: audioEffectRoot
+                        id: effectRoot
 
                         property int effectIndex: index
+                        property var effectModel: modelData
+                        property var currentParams: effectModel ? effectModel.params : ({
+                        })
 
-                        Layout.fillWidth: true
+                        width: root.width
                         spacing: 0
 
+                        // エフェクトヘッダー
                         Rectangle {
                             Layout.fillWidth: true
                             height: 24
                             color: palette.midlight
 
                             Label {
-                                text: modelData.name + " (" + modelData.format + ")"
+                                text: modelData.name
                                 color: palette.text
                                 font.bold: true
                                 anchors.verticalCenter: parent.verticalCenter
@@ -713,14 +357,15 @@ Common.RinaWindow {
                                 anchors.leftMargin: 10
                             }
 
-                            // 削除ボタン
+                            // 削除ボタン (Transform以外)
                             Button {
+                                visible: modelData.category === "filter"
                                 anchors.right: parent.right
                                 anchors.verticalCenter: parent.verticalCenter
                                 flat: true
                                 width: 24
                                 height: 24
-                                onClicked: TimelineBridge.removeAudioPlugin(targetClipId, audioEffectRoot.effectIndex)
+                                onClicked: TimelineBridge.removeEffect(targetClipId, effectRoot.effectIndex)
 
                                 contentItem: Common.RinaIcon {
                                     iconName: "close_line"
@@ -732,22 +377,515 @@ Common.RinaWindow {
 
                         }
 
+                        // 全パラメータ（統一処理）
                         Repeater {
-                            model: TimelineBridge.getEffectParameters(targetClipId, index)
+                            model: getUiModel(effectModel)
 
-                            delegate: Common.ControlLoader {
-                                Layout.fillWidth: true
-                                Layout.margins: 4
-                                definition: ({
-                                    "type": modelData.type || "slider",
-                                    "label": modelData.name,
-                                    "min": modelData.min,
-                                    "max": modelData.max
-                                })
-                                value: modelData.current
-                                onValueModified: (newValue) => {
-                                    TimelineBridge.setEffectParameter(targetClipId, audioEffectRoot.effectIndex, modelData.pIdx, newValue);
+                            delegate: ColumnLayout {
+                                id: paramDelegate
+
+                                property int activeDragOriginal: -1
+                                property int activeDragCurrent: -1
+                                property var def: modelData
+                                property string key: (def && (def.param || def.name)) || ""
+                                property var effVal: effectRoot.currentParams[key]
+                                property bool isNumber: typeof effVal === "number" && (!def.type || ["float", "number", "slider", "spinner"].indexOf(def.type) !== -1)
+                                property var effectModel: effectRoot.effectModel
+                                property int effIdx: effectRoot.effectIndex
+                                // キーフレーム
+                                property int curRelFrame: (TimelineBridge && TimelineBridge.transport) ? Math.max(0, TimelineBridge.transport.currentFrame - TimelineBridge.clipStartFrame) : 0
+                                property int clipDur: TimelineBridge ? TimelineBridge.clipDurationFrames : 100
+                                property var tracks: effectModel ? effectModel.keyframeTracks : null
+                                property var track: (tracks && key) ? tracks[key] : null
+                                property var kfs: track || []
+                                property bool hasKeyframes: kfs.length > 0
+                                property var interval: findInterval(kfs, curRelFrame, clipDur)
+                                property int startFrame: interval.start
+                                property int endFrame: interval.end
+                                property var startVal: isNumber ? (effectModel ? effectModel.evaluatedParam(key, startFrame) : effVal) : effVal
+                                property var endVal: isNumber ? (effectModel ? effectModel.evaluatedParam(key, endFrame) : effVal) : effVal
+                                property string interpType: hasKeyframes ? getInterpAt(startFrame) : "constant"
+                                property bool isMoving: isNumber && (hasKeyframes || interpType !== "constant")
+
+                                function hasKeyframeAt(f) {
+                                    if (!kfs)
+                                        return false;
+
+                                    for (var i = 0; i < kfs.length; i++) {
+                                        if (kfs[i].frame === f)
+                                            return true;
+
+                                    }
+                                    return false;
                                 }
+
+                                function ensureKeyframeAt(f) {
+                                    if (!effectModel || !key)
+                                        return ;
+
+                                    if (hasKeyframeAt(f))
+                                        return ;
+
+                                    var raw = effectModel.evaluatedParam(key, f);
+                                    var v = (raw !== undefined && raw !== null) ? raw : effVal;
+                                    var interp = (def.type === "color") ? "constant" : "linear";
+                                    paramDelegate.effectModel.setKeyframe(paramDelegate.key, f, v, {
+                                        "interp": interp
+                                    });
+                                }
+
+                                function ensureRangeKeyframes() {
+                                    ensureKeyframeAt(startFrame);
+                                    ensureKeyframeAt(endFrame);
+                                }
+
+                                function findInterval(kfs, cur, totalDur) {
+                                    let s = 0, e = totalDur;
+                                    if (!kfs || kfs.length === 0)
+                                        return {
+                                        "start": s,
+                                        "end": e
+                                    };
+
+                                    let foundStart = false;
+                                    for (let i = kfs.length - 1; i >= 0; i--) {
+                                        if (kfs[i].frame <= cur) {
+                                            s = kfs[i].frame;
+                                            foundStart = true;
+                                            if (i + 1 < kfs.length)
+                                                e = kfs[i + 1].frame;
+                                            else
+                                                e = totalDur;
+                                            break;
+                                        }
+                                    }
+                                    if (!foundStart) {
+                                        e = kfs[0].frame;
+                                        s = 0;
+                                    }
+                                    return {
+                                        "start": s,
+                                        "end": e
+                                    };
+                                }
+
+                                function getInterpAt(f) {
+                                    if (!kfs)
+                                        return "linear";
+
+                                    for (var i = 0; i < kfs.length; i++) {
+                                        if (kfs[i].frame === f)
+                                            return kfs[i].interp || "linear";
+
+                                    }
+                                    return "linear";
+                                }
+
+                                function getGridLines() {
+                                    if (!TimelineBridge || !enableSnap)
+                                        return [];
+
+                                    let step = getGridInterval();
+                                    if (step <= 0)
+                                        return [];
+
+                                    let gs = gridSettings();
+                                    let fps = (TimelineBridge.project && TimelineBridge.project.fps) ? TimelineBridge.project.fps : 60;
+                                    let offsetF = (gs.mode === "BPM") ? gs.offset * fps : 0;
+                                    let lines = [];
+                                    let startAbs = TimelineBridge.clipStartFrame;
+                                    let endAbs = startAbs + clipDur;
+                                    let firstLine = Math.ceil((startAbs - offsetF) / step) * step + offsetF;
+                                    if (clipDur / step > 150)
+                                        return [];
+
+                                    for (let f = firstLine; f <= endAbs; f += step) {
+                                        let rel = f - startAbs;
+                                        if (rel >= 0 && rel <= clipDur)
+                                            lines.push(rel);
+
+                                    }
+                                    return lines;
+                                }
+
+                                function updateParam(frame, val) {
+                                    if (!effectModel || !key)
+                                        return ;
+
+                                    if (!hasKeyframes) {
+                                        TimelineBridge.updateClipEffectParam(targetClipId, effIdx, key, val);
+                                        return ;
+                                    }
+                                    let type = "linear";
+                                    if (frame === startFrame)
+                                        type = getInterpAt(startFrame);
+                                    else
+                                        type = getInterpAt(frame);
+                                    if (type === "constant")
+                                        type = "linear";
+
+                                    paramDelegate.effectModel.setKeyframe(paramDelegate.key, frame, val, {
+                                        "interp": type
+                                    });
+                                }
+
+                                Layout.fillWidth: true
+                                spacing: 0
+
+                                // 数値
+                                Common.ParamControl {
+                                    Layout.fillWidth: true
+                                    Layout.margins: 4
+                                    visible: isNumber
+                                    enabled: isNumber
+                                    isRangeMode: isMoving
+                                    interpolationType: interpType
+                                    paramName: {
+                                        var interpLabel = {
+                                            "linear": " (直線)",
+                                            "ease_in": " (加速)",
+                                            "ease_out": " (減速)",
+                                            "ease_in_out": " (加減速)",
+                                            "bezier": " (ベジェ)"
+                                        };
+                                        var name = (def.label && def.label !== "") ? def.label : key;
+                                        return name + (isMoving ? (interpLabel[interpType] || "") : "");
+                                    }
+                                    startValue: Number(startVal) || 0
+                                    endValue: Number(endVal) || 0
+                                    minValue: (def.min !== undefined) ? def.min : ((key === "scale" || key === "opacity") ? 0 : -1000)
+                                    maxValue: (def.max !== undefined) ? def.max : ((key === "scale") ? 500 : (key === "opacity" ? 1 : 1000))
+                                    decimals: (def.decimals !== undefined) ? def.decimals : 2
+                                    onStartValueModified: function(val) {
+                                        root.inputting = true;
+                                        updateParam(startFrame, val);
+                                        root.inputting = false;
+                                    }
+                                    onEndValueModified: function(val) {
+                                        root.inputting = true;
+                                        updateParam(endFrame, val);
+                                        root.inputting = false;
+                                    }
+                                    onParamButtonClicked: {
+                                        if (!effectModel || !key)
+                                            return ;
+
+                                        // 区間キーフレームがない場合は生成
+                                        ensureRangeKeyframes();
+                                        var win = WindowManager.getWindow("easingConfig");
+                                        if (win)
+                                            win.openConfig({
+                                            "clipId": targetClipId,
+                                            "effectIndex": effIdx,
+                                            "effectModel": effectModel,
+                                            "paramName": key,
+                                            "keyframeFrame": startFrame
+                                        });
+
+                                    }
+                                }
+
+                                // 非数値 (ControlLoader で型別UI)
+                                Common.ControlLoader {
+                                    Layout.fillWidth: true
+                                    Layout.margins: 4
+                                    visible: !isNumber
+                                    definition: def
+                                    value: effVal
+                                    effectRootRef: effectRoot
+                                    onValueModified: function(val) {
+                                        root.inputting = true;
+                                        TimelineBridge.updateClipEffectParam(targetClipId, effIdx, key, val);
+                                        root.inputting = false;
+                                    }
+                                    onParamButtonClicked: {
+                                        if (!effectModel || !key)
+                                            return ;
+
+                                        ensureRangeKeyframes();
+                                        var win = WindowManager.getWindow("easingConfig");
+                                        if (win)
+                                            win.openConfig({
+                                            "clipId": targetClipId,
+                                            "effectIndex": effIdx,
+                                            "effectModel": effectModel,
+                                            "paramName": key,
+                                            "keyframeFrame": startFrame
+                                        });
+
+                                    }
+                                }
+
+                                // ミニタイムラインバー
+                                Item {
+                                    id: trackItem
+
+                                    Layout.fillWidth: true
+                                    Layout.preferredHeight: 12
+                                    Layout.leftMargin: 4
+                                    Layout.rightMargin: 4
+                                    visible: isNumber
+
+                                    Rectangle {
+                                        anchors.centerIn: parent
+                                        width: parent.width
+                                        height: 2
+                                        color: palette.mid
+
+                                        Rectangle {
+                                            property int vStart: (paramDelegate && paramDelegate.activeDragOriginal === startFrame) ? paramDelegate.activeDragCurrent : startFrame
+                                            property int vEnd: (paramDelegate && paramDelegate.activeDragOriginal === endFrame) ? paramDelegate.activeDragCurrent : endFrame
+
+                                            height: 4
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            color: palette.highlight
+                                            opacity: 0.7
+                                            x: (Math.min(vStart, vEnd) / clipDur) * parent.width
+                                            width: Math.max(0, (Math.abs(vEnd - vStart) / clipDur) * parent.width)
+                                            visible: clipDur > 0
+                                        }
+
+                                    }
+
+                                    Repeater {
+                                        model: enableSnap ? getGridLines() : []
+
+                                        Rectangle {
+                                            width: 1
+                                            height: 8
+                                            color: palette.midlight
+                                            opacity: 0.6
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            x: (modelData / clipDur) * trackItem.width
+                                        }
+
+                                    }
+
+                                    Repeater {
+                                        model: kfs
+
+                                        Item {
+                                            id: kfItem
+
+                                            property int originalFrame: modelData.frame
+                                            property int currentFrame: originalFrame
+                                            // Capture outer scope variables here, where visual tree resolution works perfectly
+                                            property var targetModel: effectModel
+                                            property string targetKey: key
+                                            property var rootWindow: root
+                                            property int minDragFrame: 0
+                                            property int maxDragFrame: clipDur
+
+                                            width: 16
+                                            height: 16
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            x: (currentFrame / clipDur) * trackItem.width - width / 2
+
+                                            Rectangle {
+                                                width: 8
+                                                height: 8
+                                                color: kfMa.containsMouse || pointDrag.active ? palette.highlight : palette.text
+                                                anchors.centerIn: parent
+                                                rotation: 45
+                                                antialiasing: true
+                                            }
+
+                                            MouseArea {
+                                                id: kfMa
+
+                                                anchors.fill: parent
+                                                hoverEnabled: true
+                                                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                                                onClicked: function(mouse) {
+                                                    if (mouse.button === Qt.RightButton)
+                                                        kfItem.targetModel.removeKeyframe(kfItem.targetKey, modelData.frame);
+
+                                                }
+                                                onDoubleClicked: function(mouse) {
+                                                    mouse.accepted = true;
+                                                }
+                                            }
+
+                                            DragHandler {
+                                                id: pointDrag
+
+                                                property real startX: 0
+
+                                                target: null
+                                                acceptedButtons: Qt.LeftButton
+                                                onActiveChanged: {
+                                                    if (active) {
+                                                        startX = kfItem.x;
+                                                        kfItem.rootWindow.inputting = true;
+                                                        let minF = 0;
+                                                        let maxF = clipDur;
+                                                        for (let i = 0; i < kfs.length; i++) {
+                                                            let f = kfs[i].frame;
+                                                            if (f < kfItem.originalFrame && f >= minF)
+                                                                minF = f + 1;
+
+                                                            if (f > kfItem.originalFrame && f <= maxF)
+                                                                maxF = f - 1;
+
+                                                        }
+                                                        kfItem.minDragFrame = minF;
+                                                        kfItem.maxDragFrame = maxF;
+                                                        if (typeof paramDelegate !== "undefined") {
+                                                            paramDelegate.activeDragOriginal = kfItem.originalFrame;
+                                                            paramDelegate.activeDragCurrent = kfItem.originalFrame;
+                                                        }
+                                                    } else {
+                                                        if (typeof paramDelegate !== "undefined")
+                                                            paramDelegate.activeDragOriginal = -1;
+
+                                                        if (kfItem.currentFrame !== kfItem.originalFrame) {
+                                                            var val = kfItem.targetModel.evaluatedParam(kfItem.targetKey, kfItem.originalFrame);
+                                                            var track = kfItem.targetModel.keyframeTracks[kfItem.targetKey] || [];
+                                                            var interp = "linear";
+                                                            var pts = [];
+                                                            for (let i = 0; i < track.length; i++) {
+                                                                if (track[i].frame === kfItem.originalFrame) {
+                                                                    val = track[i].value;
+                                                                    interp = track[i].interp || "linear";
+                                                                    if (track[i].points)
+                                                                        pts = track[i].points;
+
+                                                                    break;
+                                                                }
+                                                            }
+                                                            kfItem.targetModel.removeKeyframe(kfItem.targetKey, kfItem.originalFrame);
+                                                            let options = {
+                                                                "interp": interp
+                                                            };
+                                                            if (pts.length > 0)
+                                                                options.points = pts;
+
+                                                            kfItem.targetModel.setKeyframe(kfItem.targetKey, kfItem.currentFrame, val, options);
+                                                        }
+                                                        kfItem.rootWindow.inputting = false;
+                                                    }
+                                                }
+                                                onTranslationChanged: {
+                                                    if (active) {
+                                                        let newX = startX + translation.x;
+                                                        let rawRelFrame = ((newX + kfItem.width / 2) / trackItem.width) * clipDur;
+                                                        let snappedFrame = snapRelativeFrame(rawRelFrame);
+                                                        snappedFrame = Math.max(kfItem.minDragFrame, Math.min(kfItem.maxDragFrame, snappedFrame));
+                                                        kfItem.currentFrame = snappedFrame;
+                                                        if (typeof paramDelegate !== "undefined")
+                                                            paramDelegate.activeDragCurrent = snappedFrame;
+
+                                                    }
+                                                }
+                                            }
+
+                                        }
+
+                                    }
+
+                                    Rectangle {
+                                        width: 1
+                                        height: parent.height
+                                        color: palette.highlight
+                                        x: (curRelFrame / clipDur) * parent.width
+                                        visible: clipDur > 0
+                                    }
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        acceptedButtons: Qt.LeftButton
+                                        onDoubleClicked: function(mouse) {
+                                            let rawRelFrame = (mouse.x / trackItem.width) * clipDur;
+                                            let f = snapRelativeFrame(rawRelFrame);
+                                            f = Math.max(0, Math.min(clipDur, f));
+                                            let val = effectModel.evaluatedParam(key, f);
+                                            let options = {
+                                                "interp": "linear"
+                                            };
+                                            effectModel.setKeyframe(key, f, val, options);
+                                        }
+                                    }
+
+                                }
+
+                            }
+
+                        }
+
+                    }
+
+                }
+
+                // オーディオプラグインのパラメータ表示
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 1
+                    visible: TimelineBridge && TimelineBridge.isAudioClip(targetClipId)
+
+                    Repeater {
+                        id: audioEffectsRepeater
+
+                        model: audioEffectsModel
+
+                        delegate: ColumnLayout {
+                            id: audioEffectRoot
+
+                            property int effectIndex: index
+
+                            Layout.fillWidth: true
+                            spacing: 0
+
+                            Rectangle {
+                                Layout.fillWidth: true
+                                height: 24
+                                color: palette.midlight
+
+                                Label {
+                                    text: modelData.name + " (" + modelData.format + ")"
+                                    color: palette.text
+                                    font.bold: true
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    anchors.left: parent.left
+                                    anchors.leftMargin: 10
+                                }
+
+                                // 削除ボタン
+                                Button {
+                                    anchors.right: parent.right
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    flat: true
+                                    width: 24
+                                    height: 24
+                                    onClicked: TimelineBridge.removeAudioPlugin(targetClipId, audioEffectRoot.effectIndex)
+
+                                    contentItem: Common.RinaIcon {
+                                        iconName: "close_line"
+                                        size: 16
+                                        color: parent.hovered ? "red" : parent.palette.text
+                                    }
+
+                                }
+
+                            }
+
+                            Repeater {
+                                model: TimelineBridge.getEffectParameters(targetClipId, index)
+
+                                delegate: Common.ControlLoader {
+                                    Layout.fillWidth: true
+                                    Layout.margins: 4
+                                    definition: ({
+                                        "type": modelData.type || "slider",
+                                        "label": modelData.name,
+                                        "min": modelData.min,
+                                        "max": modelData.max
+                                    })
+                                    value: modelData.current
+                                    onValueModified: (newValue) => {
+                                        TimelineBridge.setEffectParameter(targetClipId, audioEffectRoot.effectIndex, modelData.pIdx, newValue);
+                                    }
+                                }
+
                             }
 
                         }

@@ -1375,4 +1375,26 @@ void TimelineService::removeKeyframeInternal(int clipId, int effectIndex, const 
         clip->effects[effectIndex]->removeKeyframe(paramName, frame);
 }
 
+void TimelineService::setEffectEnabled(int clipId, int effectIndex, bool enabled) {
+    auto *clip = findClipById(clipId);
+    if (clip && effectIndex >= 0 && effectIndex < clip->effects.size()) {
+        clip->effects[effectIndex]->setEnabled(enabled);
+        emit clipEffectsChanged(clipId);
+        emit clipsChanged();
+    }
+}
+
+void TimelineService::reorderEffects(int clipId, int fromIndex, int toIndex) {
+    auto *clip = findClipById(clipId);
+    if (!clip)
+        return;
+    if (fromIndex < 0 || fromIndex >= clip->effects.size() || toIndex < 0 || toIndex >= clip->effects.size() || fromIndex == toIndex) {
+        return;
+    }
+
+    clip->effects.move(fromIndex, toIndex);
+    emit clipEffectsChanged(clipId);
+    emit clipsChanged();
+}
+
 } // namespace Rina::UI

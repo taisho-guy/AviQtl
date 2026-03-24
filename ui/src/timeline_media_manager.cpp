@@ -156,9 +156,9 @@ void TimelineMediaManager::updateMediaDecoders() {
         if (clip.type == "video") {
             if (!m_videoFrameStore)
                 continue;
-            decoder = new Rina::Core::VideoDecoder(clip.id, sourceUrl, m_videoFrameStore, this);
+            decoder = new Rina::Core::VideoDecoder(clip.id, sourceUrl, m_videoFrameStore, nullptr);
         } else if (clip.type == "audio") {
-            decoder = new Rina::Core::AudioDecoder(clip.id, sourceUrl, this);
+            decoder = new Rina::Core::AudioDecoder(clip.id, sourceUrl, nullptr);
             if (auto *audioDecoder = qobject_cast<Rina::Core::AudioDecoder *>(decoder))
                 m_audioMixer->registerDecoder(clip.id, audioDecoder);
         }
