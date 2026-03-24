@@ -315,6 +315,7 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) {
             if (decodedFrameIndex != -1 && !mframeCache.contains(decodedFrameIndex)) {
                 AVFrame *srcFrame = mframe;
                 AVFrame *swFrame = nullptr;
+                AVFrame *convertedFrame = nullptr;
 
                 if (mframe->format == mhwPixFmt) {
                     swFrame = av_frame_alloc();
@@ -327,6 +328,28 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) {
                 }
 
                 if (srcFrame) {
+                    // Qtが直接扱えないフォーマット(10bit等)の場合、YUV420P(8bit)に変換する
+                    bool isSupported = (srcFrame->format == AV_PIX_FMT_YUV420P || srcFrame->format == AV_PIX_FMT_YUVJ420P || srcFrame->format == AV_PIX_FMT_NV12 || srcFrame->format == AV_PIX_FMT_RGBA);
+
+                    if (!isSupported) {
+                        mswsCtx = sws_getCachedContext(mswsCtx, srcFrame->width, srcFrame->height, static_cast<AVPixelFormat>(srcFrame->format), srcFrame->width, srcFrame->height, AV_PIX_FMT_YUV420P, SWS_BILINEAR, nullptr, nullptr, nullptr);
+                        if (mswsCtx) {
+                            convertedFrame = av_frame_alloc();
+                            convertedFrame->format = AV_PIX_FMT_YUV420P;
+                            convertedFrame->width = srcFrame->width;
+                            convertedFrame->height = srcFrame->height;
+                            if (av_frame_get_buffer(convertedFrame, 32) == 0) {
+                                sws_scale(mswsCtx, srcFrame->data, srcFrame->linesize, 0, srcFrame->height, convertedFrame->data, convertedFrame->linesize);
+                                convertedFrame->pts = srcFrame->pts;
+                                convertedFrame->best_effort_timestamp = srcFrame->best_effort_timestamp;
+                                srcFrame = convertedFrame;
+                            } else {
+                                av_frame_free(&convertedFrame);
+                                convertedFrame = nullptr;
+                            }
+                        }
+                    }
+
                     QVideoFrameFormat::PixelFormat qtFmt = QVideoFrameFormat::Format_Invalid;
                     switch (srcFrame->format) {
                     case AV_PIX_FMT_YUV420P:
@@ -348,6 +371,8 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) {
                     av_frame_ref(ownedFrame, srcFrame);
                     if (swFrame)
                         av_frame_free(&swFrame);
+                    if (convertedFrame)
+                        av_frame_free(&convertedFrame);
 
                     QVideoFrameFormat format(QSize(mdecCtx->width, mdecCtx->height), qtFmt);
                     QVideoFrame videoFrame(new FFmpegVideoBuffer(ownedFrame, format), format);
