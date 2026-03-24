@@ -6,8 +6,13 @@
 #include <QSize>
 #include <QString>
 #include <QVariantMap>
+#include <atomic>
+#include <condition_variable>
 #include <memory>
 #include <mutex>
+#include <queue>
+#include <thread>
+#include <vector>
 
 // FFmpeg forward declarations to keep header clean
 extern "C" {
@@ -68,9 +73,31 @@ class VideoEncoder : public QObject {
     SwrContext *m_swrCtx = nullptr;
     AVAudioFifo *m_audioFifo = nullptr;
     AVFrame *m_audioFrame = nullptr;
+    int64_t m_encodedFrameCount = 0;
     int64_t m_audioPts = 0;
     bool m_headerWritten = false;
     std::mutex m_mutex;
+
+    // Async Encoding Support
+    struct EncodeTask {
+        enum Type { Video, Audio } type;
+        QImage videoImg;
+        int64_t videoPts = 0;
+        std::vector<float> audioSamples;
+    };
+
+    void encodingLoop();
+    bool processVideo(const QImage &img, int64_t pts);
+    bool processAudio(const std::vector<float> &samples);
+
+    std::thread m_workerThread;
+    std::queue<EncodeTask> m_taskQueue;
+    std::mutex m_queueMutex;
+    std::condition_variable m_queueCv;
+    std::condition_variable m_queuePushCv;
+    std::atomic<bool> m_stopEncoding{false};
+    std::atomic<bool> m_errorOccurred{false};
+    static const size_t MAX_QUEUE_SIZE = 16;
 
     bool initHardware(const QString &codecName);
     bool writeHeaderIfNeeded();

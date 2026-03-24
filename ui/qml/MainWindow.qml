@@ -438,6 +438,10 @@ ApplicationWindow {
         }
     }
 
+    ExportDialog {
+        id: exportDialog
+    }
+
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
