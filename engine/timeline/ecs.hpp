@@ -74,11 +74,15 @@ template <typename T> class DenseComponentMap {
         return m_dense.begin() + denseIndex;
     }
 
-    void syncAlive(const QSet<int> &aliveIds) {
+    bool syncAlive(const QSet<int> &aliveIds) {
+        bool changed = false;
         for (int i = static_cast<int>(m_dense.size()) - 1; i >= 0; --i) {
-            if (!aliveIds.contains(m_dense[static_cast<std::size_t>(i)].first))
+            if (!aliveIds.contains(m_dense[static_cast<std::size_t>(i)].first)) {
                 erase(m_dense.begin() + i);
+                changed = true;
+            }
         }
+        return changed;
     }
 
     iterator begin() { return m_dense.begin(); }
@@ -87,6 +91,12 @@ template <typename T> class DenseComponentMap {
     const_iterator end() const { return m_dense.end(); }
     const_iterator cbegin() const { return m_dense.cbegin(); }
     const_iterator cend() const { return m_dense.cend(); }
+
+    bool contains(int clipId) const {
+        if (clipId < 0 || clipId >= static_cast<int>(m_sparse.size()))
+            return false;
+        return m_sparse[static_cast<std::size_t>(clipId)] != -1;
+    }
 
   private:
     void ensureSparseSize(int clipId) {
@@ -156,6 +166,12 @@ class ECS {
 
     // バックグラウンドスレッドが現在読み取っている(最新の確定済み)バッファのインデックス
     std::atomic<int> m_activeIndex{0};
+
+    // トリプルバッファリングの部分更新用
+    // 各バッファが次に編集対象となったとき、同期が必要なClipIDリスト
+    std::array<QSet<int>, 3> m_dirtyForBuffer;
+    // 構造変更（追加・削除）があったため、フルコピーが必要かどうか
+    std::array<bool, 3> m_fullSyncRequired;
 };
 
 } // namespace Rina::Engine::Timeline
