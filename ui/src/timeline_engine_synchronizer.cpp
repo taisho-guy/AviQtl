@@ -2,6 +2,7 @@
 #include "../../engine/timeline/ecs.hpp"
 #include "clip_model.hpp"
 #include "timeline_controller.hpp"
+#include <QtConcurrent>
 #include <algorithm>
 
 namespace Rina::UI {
@@ -20,26 +21,52 @@ void TimelineEngineSynchronizer::updateActiveClipsList() {
 }
 
 void TimelineEngineSynchronizer::updateECSState(const QList<ClipData *> &activeClips, int currentFrame) {
+    // 計算結果を保持する一時構造体
+    struct AudioParamsResult {
+        int clipId;
+        int startFrame;
+        int durationFrames;
+        float vol;
+        float pan;
+        bool mute;
+    };
+
+    QList<const ClipData *> clipsToProcess;
+
+    // 1. 座標系の更新と、並列処理対象のフィルタリング
     for (const auto *clip : activeClips) {
         Rina::Engine::Timeline::ECS::instance().updateClipState(clip->id, clip->layer, currentFrame - clip->startFrame);
 
         if (clip->type == "audio" || clip->type == "video") {
-            float vol = 1.0f;
-            float pan = 0.0f;
-            bool mute = false;
-            const QString paramSourceId = clip->type;
-            for (auto *eff : clip->effects) {
-                if (eff->id() == paramSourceId) {
-                    int relFrame = currentFrame - clip->startFrame;
-                    QVariant vVol = eff->evaluatedParam("volume", relFrame);
-                    vol = vVol.isValid() ? vVol.toFloat() : 1.0f;
-                    pan = eff->evaluatedParam("pan", relFrame).toFloat();
-                    mute = eff->evaluatedParam("mute", relFrame).toBool();
-                    break;
-                }
-            }
-            Rina::Engine::Timeline::ECS::instance().updateAudioClipState(clip->id, clip->startFrame, clip->durationFrames, vol, pan, mute);
+            clipsToProcess.append(clip);
         }
+    }
+
+    // 2. Luaスクリプト評価を含むパラメータ計算をワーカースレッドへオフロード
+    // LuaHostがスレッドローカル化されたため、ここでの並列実行はロックフリーとなる
+    auto mapper = [currentFrame](const ClipData *clip) -> AudioParamsResult {
+        float vol = 1.0f;
+        float pan = 0.0f;
+        bool mute = false;
+        const QString paramSourceId = clip->type; // "audio" or "video" acts as the base effect ID
+        for (auto *eff : clip->effects) {
+            if (eff->id() == paramSourceId) {
+                int relFrame = currentFrame - clip->startFrame;
+                QVariant vVol = eff->evaluatedParam("volume", relFrame);
+                vol = vVol.isValid() ? vVol.toFloat() : 1.0f;
+                pan = eff->evaluatedParam("pan", relFrame).toFloat();
+                mute = eff->evaluatedParam("mute", relFrame).toBool();
+                break;
+            }
+        }
+        return {clip->id, clip->startFrame, clip->durationFrames, vol, pan, mute};
+    };
+
+    QList<AudioParamsResult> results = QtConcurrent::blockingMapped(clipsToProcess, mapper);
+
+    // 3. 計算結果をECSへコミット（ここはメインスレッド）
+    for (const auto &res : results) {
+        Rina::Engine::Timeline::ECS::instance().updateAudioClipState(res.clipId, res.startFrame, res.durationFrames, res.vol, res.pan, res.mute);
     }
 }
 

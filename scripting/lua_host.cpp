@@ -12,12 +12,35 @@ LuaHost &LuaHost::instance() {
     return inst;
 }
 
-LuaHost::LuaHost() : L(nullptr) { initialize(); }
+LuaHost::LuaHost() : L(nullptr) {
+    // メインスレッド用インスタンスの初期化（後方互換性のため）
+    // 実際の評価はスレッドローカルなステートを使用する
+    initialize();
+}
 
 LuaHost::~LuaHost() {
     if (L) {
         lua_close(L);
         L = nullptr;
+    }
+    // thread_local なステートはスレッド終了時に自動的に破棄されるため、ここでの明示的な管理は不要
+}
+
+static void setupLuaState(lua_State *L) {
+    luaL_openlibs(L);
+
+    // mathライブラリへのショートカット
+    lua_getglobal(L, "math");
+    lua_setglobal(L, "m");
+
+    const char *math_shortcuts = "sin = math.sin; cos = math.cos; tan = math.tan; "
+                                 "abs = math.abs; max = math.max; min = math.min; "
+                                 "floor = math.floor; ceil = math.ceil; pi = math.pi; "
+                                 "random = math.random;";
+
+    if (luaL_dostring(L, math_shortcuts) != LUA_OK) {
+        qWarning() << "[LuaHost] スレッドローカルLuaステートの初期化に失敗:" << lua_tostring(L, -1);
+        lua_pop(L, 1);
     }
 }
 
@@ -25,73 +48,78 @@ void LuaHost::initialize() {
     if (L)
         lua_close(L);
     L = luaL_newstate();
-    luaL_openlibs(L);
-
-    // mathライブラリへのショートカット (math.sin() の代わりに m.sin() を許可)
-    lua_getglobal(L, "math");
-    lua_setglobal(L, "m");
-
-    // 利便性のため、標準的な数学関数をグローバルスコープに定義
-    const char *math_shortcuts = "sin = math.sin; cos = math.cos; tan = math.tan; "
-                                 "abs = math.abs; max = math.max; min = math.min; "
-                                 "floor = math.floor; ceil = math.ceil; pi = math.pi; "
-                                 "random = math.random;";
-
-    if (luaL_dostring(L, math_shortcuts) != LUA_OK) {
-        qWarning() << "[LuaHost] 数学ショートカットの初期化に失敗:" << lua_tostring(L, -1);
-        lua_pop(L, 1);
-    }
-
-    qDebug() << "[LuaHost] LuaJITエンジンを初期化しました";
+    setupLuaState(L);
+    qDebug() << "[LuaHost] LuaJITエンジンを初期化しました (Main Thread)";
 }
 
+// スレッドローカルなLuaステート管理ラッパー
+struct ThreadLocalLua {
+    lua_State *state = nullptr;
+
+    ThreadLocalLua() {
+        state = luaL_newstate();
+        if (state) {
+            setupLuaState(state);
+        }
+    }
+
+    ~ThreadLocalLua() {
+        if (state) {
+            lua_close(state);
+            state = nullptr;
+        }
+    }
+};
+
 double LuaHost::evaluate(const std::string &expression, double time, int index, double currentValue) {
-    if (!L)
+    // スレッドごとに独立したLuaステートを使用することでロックフリー化を実現
+    thread_local ThreadLocalLua t_lua;
+    lua_State *threadL = t_lua.state;
+
+    if (!threadL)
         return currentValue;
 
     // Reset stack
-    // スタックをリセット
-    lua_settop(L, 0);
+    lua_settop(threadL, 0);
 
     // 1. コンテキスト変数を設定
-    lua_pushnumber(L, time);
-    lua_setglobal(L, "time");
+    lua_pushnumber(threadL, time);
+    lua_setglobal(threadL, "time");
 
-    lua_pushnumber(L, time); // エイリアス 't'
-    lua_setglobal(L, "t");
+    lua_pushnumber(threadL, time); // エイリアス 't'
+    lua_setglobal(threadL, "t");
 
-    lua_pushinteger(L, index);
-    lua_setglobal(L, "index");
+    lua_pushinteger(threadL, index);
+    lua_setglobal(threadL, "index");
 
-    lua_pushnumber(L, currentValue);
-    lua_setglobal(L, "value");
+    lua_pushnumber(threadL, currentValue);
+    lua_setglobal(threadL, "value");
 
-    lua_pushnumber(L, currentValue); // エイリアス 'v'
-    lua_setglobal(L, "v");
+    lua_pushnumber(threadL, currentValue); // エイリアス 'v'
+    lua_setglobal(threadL, "v");
 
     // 2. 式を準備
-    // "return " + expression
     std::string code = "return " + expression;
 
     // 3. 実行
-    int ret = luaL_dostring(L, code.c_str());
+    int ret = luaL_dostring(threadL, code.c_str());
 
     if (ret != LUA_OK) {
-        const char *errMsg = lua_tostring(L, -1);
+        const char *errMsg = lua_tostring(threadL, -1);
+        // 頻繁なエラーログ出力を防ぐための抑制ロジックを入れる余地あり
         qWarning() << "[LuaHost] 式の評価エラー:" << QString::fromStdString(expression) << "->" << errMsg;
-        lua_pop(L, 1);       // エラーメッセージをポップ
-        return currentValue; // フォールバック
-    }
-
-    // 4. 結果を取得
-    if (!lua_isnumber(L, -1)) {
-        // 結果が数値ではない (nil, stringなど)
-        lua_pop(L, 1);
+        lua_pop(threadL, 1);
         return currentValue;
     }
 
-    double result = lua_tonumber(L, -1);
-    lua_pop(L, 1);
+    // 4. 結果を取得
+    if (!lua_isnumber(threadL, -1)) {
+        lua_pop(threadL, 1);
+        return currentValue;
+    }
+
+    double result = lua_tonumber(threadL, -1);
+    lua_pop(threadL, 1);
     return result;
 }
 
