@@ -63,7 +63,13 @@ void TimelineController::setupConnections() {
     connect(m_timeline, &TimelineService::scenesChanged, this, &TimelineController::scenesChanged);
     connect(m_timeline, &TimelineService::currentSceneIdChanged, this, &TimelineController::currentSceneIdChanged);
     connect(m_timeline, &TimelineService::clipEffectsChanged, this, &TimelineController::clipEffectsChanged);
-    connect(m_timeline, &TimelineService::effectParamChanged, this, [this]() { updateActiveClipsList(); });
+    connect(m_timeline, &TimelineService::effectParamChanged, this, [this](int clipId, int, const QString &paramName, const QVariant &) {
+        // 常にECSの状態を更新
+        updateActiveClipsList();
+        // パスが変更された場合は、メディアデコーダーの強制リロードをトリガー
+        if (paramName == "path" || paramName == "source")
+            m_mediaManager->forceReloadClip(clipId);
+    });
 
     connect(m_exportManager, &TimelineExportManager::exportStarted, this, &TimelineController::exportStarted);
     connect(m_exportManager, &TimelineExportManager::exportProgressChanged, this, &TimelineController::exportProgressChanged);
@@ -829,5 +835,12 @@ void TimelineController::requestVideoFrame(int clipId, int relFrame) {
     // MediaManagerに直接シグナルで飛ばす。
     // ここでは一番手っ取り早い「シグナル」を追加してMediaManagerに拾わせる。
     emit videoFrameRequested(clipId, relFrame);
+}
+
+void TimelineController::updateViewport(double x, double y) {
+    // ビューポート位置が更新されたことを受け取るフック
+    // 将来的にはここで可視クリップの計算を行い、ECSのsyncClipIdsを呼び出すことで
+    // 画面外クリップの計算コストを削減するカリング処理を実装可能
+    // 現在はスクロールイベントのデバウンスの受け皿として機能
 }
 } // namespace Rina::UI

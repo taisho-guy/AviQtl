@@ -98,6 +98,14 @@ template <typename T> class DenseComponentMap {
         return m_sparse[static_cast<std::size_t>(clipId)] != -1;
     }
 
+    void remove(int clipId) {
+        if (clipId < 0 || clipId >= static_cast<int>(m_sparse.size()))
+            return;
+        const int denseIndex = m_sparse[static_cast<std::size_t>(clipId)];
+        if (denseIndex >= 0)
+            erase(m_dense.begin() + denseIndex);
+    }
+
   private:
     void ensureSparseSize(int clipId) {
         if (clipId < 0)

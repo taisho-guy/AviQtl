@@ -296,4 +296,27 @@ void TimelineMediaManager::requestVideoFrame(int clipId, int relFrame) {
     updateVideoClipFrame(vid, targetClip, relFrame);
 }
 
+void TimelineMediaManager::forceReloadClip(int clipId) {
+    // 1. Invalidate video frame cache if it exists
+    if (m_videoFrameStore) {
+        const int sceneId = sceneIdForClip(clipId);
+        if (sceneId != -1) {
+            m_videoFrameStore->invalidateFrame(QString::number(sceneId) + "_" + QString::number(clipId));
+        }
+    }
+
+    // 2. Get rid of the old decoder instance
+    if (m_decoders.contains(clipId)) {
+        Rina::Core::MediaDecoder *decoder = m_decoders.value(clipId, nullptr);
+        if (decoder) {
+            if (qobject_cast<Rina::Core::AudioDecoder *>(decoder))
+                m_audioMixer->unregisterDecoder(clipId);
+            decoder->deleteLater();
+            m_decoders.remove(clipId);
+        }
+    }
+
+    // 3. Trigger a full scan which will find the clip with the new path and create a new decoder.
+    updateMediaDecoders();
+}
 } // namespace Rina::UI

@@ -191,6 +191,9 @@ class TimelineController : public QObject {
     // サンプリングレートの更新 (ProjectServiceの変更通知を受けて呼び出す)
     Q_INVOKABLE void updateAudioSampleRate() { m_mediaManager->updateAudioSampleRate(); }
 
+    // ビューポート更新 (QMLからのデバウンスされた呼び出し用)
+    Q_INVOKABLE void updateViewport(double x, double y);
+
     // 動的に計算されたタイムラインの長さ（最後のクリップの末尾フレーム）
     int timelineDuration() const { return m_engineSync->timelineDuration(); }
 

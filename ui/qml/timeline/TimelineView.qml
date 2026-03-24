@@ -200,12 +200,25 @@ ScrollView {
 
         Connections {
             function onContentXChanged() {
+                renderTimer.restart();
             }
 
             function onContentYChanged() {
+                renderTimer.restart();
             }
 
             target: timelineFlickable
+        }
+
+        Timer {
+            id: renderTimer
+
+            interval: 16
+            onTriggered: {
+                if (TimelineBridge)
+                    TimelineBridge.updateViewport(timelineFlickable.contentX, timelineFlickable.contentY);
+
+            }
         }
 
         Connections {
@@ -341,11 +354,33 @@ ScrollView {
         }
 
         MouseArea {
+            property bool inhibitBoxSelection: false
+
             anchors.fill: parent
             z: 999
             acceptedButtons: Qt.RightButton
             preventStealing: true
             onPressed: (mouse) => {
+                // 右クリック時に、対象が既に選択済みなら選択解除やボックス選択を行わない
+                var scale = TimelineBridge ? TimelineBridge.timelineScale : 1;
+                var frame = timelineViewRoot.snapFrame(mouse.x / scale);
+                var layer = Math.floor(mouse.y / layerHeight);
+                var clickedClipId = -1;
+                if (TimelineBridge && TimelineBridge.clips) {
+                    for (var i = TimelineBridge.clips.length - 1; i >= 0; i--) {
+                        var c = TimelineBridge.clips[i];
+                        if (c.layer === layer && frame >= c.startFrame && frame < c.startFrame + c.durationFrames) {
+                            clickedClipId = c.id;
+                            break;
+                        }
+                    }
+                }
+                var currentSel = effectiveSelectionIds();
+                if (clickedClipId >= 0 && currentSel.includes(clickedClipId)) {
+                    inhibitBoxSelection = true;
+                    return ;
+                }
+                inhibitBoxSelection = false;
                 selectionVisualLatchActive = false;
                 selectionVisualLatchIds = [];
                 boxSelecting = false;
@@ -355,6 +390,9 @@ ScrollView {
                 boxSelectionPreviewIds = [];
             }
             onPositionChanged: (mouse) => {
+                if (inhibitBoxSelection)
+                    return ;
+
                 boxSelectionCurrent = mapToItem(timelineFlickable.contentItem, mouse.x, mouse.y);
                 if (Math.abs(boxSelectionCurrent.x - boxSelectionStart.x) >= boxSelectionThreshold || Math.abs(boxSelectionCurrent.y - boxSelectionStart.y) >= boxSelectionThreshold) {
                     boxSelecting = true;
