@@ -127,6 +127,14 @@ struct TransformComponent {
     int durationFrames = 0;
 };
 
+struct MetadataComponent {
+    int clipId = -1;
+    QString name;
+    QString source;
+    QString type;
+    QString color;
+};
+
 struct RenderComponent {
     bool needsUpdate = true;
     QString effectChain;
@@ -137,6 +145,7 @@ struct ECSState {
     DenseComponentMap<TransformComponent> transforms;
     DenseComponentMap<RenderComponent> renderStates;
     DenseComponentMap<AudioComponent> audioStates;
+    DenseComponentMap<MetadataComponent> metadataStates;
 };
 
 class ECS {
@@ -146,6 +155,7 @@ class ECS {
     void syncClipIds(const QSet<int> &aliveIds);
     void updateClipState(int clipId, int layer, double time);
     void updateAudioClipState(int clipId, int startFrame, int durationFrames, float volume, float pan, bool mute);
+    void updateMetadata(int clipId, const QString &name, const QString &source, const QString &type, const QString &color);
 
     void commit();
 

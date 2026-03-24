@@ -21,6 +21,7 @@ void ECS::syncClipIds(const QSet<int> &aliveIds) {
     changed |= editState.transforms.syncAlive(aliveIds);
     changed |= editState.renderStates.syncAlive(aliveIds);
     changed |= editState.audioStates.syncAlive(aliveIds);
+    changed |= editState.metadataStates.syncAlive(aliveIds);
 
     if (changed) {
         m_fullSyncRequired[(m_editIndex + 1) % 3] = true;
@@ -72,6 +73,26 @@ void ECS::updateAudioClipState(int clipId, int startFrame, int durationFrames, f
     m_dirtyForBuffer[(m_editIndex + 2) % 3].insert(clipId);
 }
 
+void ECS::updateMetadata(int clipId, const QString &name, const QString &source, const QString &type, const QString &color) {
+    auto &editState = m_buffers[m_editIndex];
+
+    if (!editState.metadataStates.contains(clipId)) {
+        m_fullSyncRequired[(m_editIndex + 1) % 3] = true;
+        m_fullSyncRequired[(m_editIndex + 2) % 3] = true;
+    }
+    auto &meta = editState.metadataStates[clipId];
+
+    if (meta.clipId != clipId || meta.name != name || meta.source != source || meta.type != type || meta.color != color) {
+        meta.clipId = clipId;
+        meta.name = name;
+        meta.source = source;
+        meta.type = type;
+        meta.color = color;
+        m_dirtyForBuffer[(m_editIndex + 1) % 3].insert(clipId);
+        m_dirtyForBuffer[(m_editIndex + 2) % 3].insert(clipId);
+    }
+}
+
 void ECS::commit() {
     // 現在の edit バッファのインデックスを新しい active バッファにする
     int nextActive = m_editIndex;
@@ -103,6 +124,8 @@ void ECS::commit() {
                 dst.renderStates[id] = src.renderStates.find(id)->second;
             if (src.audioStates.contains(id))
                 dst.audioStates[id] = src.audioStates.find(id)->second;
+            if (src.metadataStates.contains(id))
+                dst.metadataStates[id] = src.metadataStates.find(id)->second;
         }
         m_dirtyForBuffer[m_editIndex].clear();
     }
