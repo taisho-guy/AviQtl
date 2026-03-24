@@ -334,17 +334,16 @@ bool VideoEncoder::processVideo(const QImage &img, int64_t pts) {
     if (!writeHeaderIfNeeded())
         return false;
 
-    // 色味修正: 入力画像を RGBA8888 (R-G-B-A) に統一
-    // ARGB32 (B-G-R-A on LE) のままだと sws_scale で赤青が反転するため
+    // ARGB32を強制して余計な変換コピーを防止する
     QImage sourceImg = img;
-    if (sourceImg.format() != QImage::Format_RGBA8888) {
-        sourceImg = sourceImg.convertToFormat(QImage::Format_RGBA8888);
+    if (sourceImg.format() != QImage::Format_ARGB32) {
+        sourceImg = sourceImg.convertToFormat(QImage::Format_ARGB32);
     }
 
     // 1. QImage (ARGB32) -> SW Frame (NV12) 変換
     if (!m_swsCtx) {
-        m_swsCtx = sws_getContext(sourceImg.width(), sourceImg.height(), AV_PIX_FMT_RGBA, // 【重要】入力はRGBA
-                                  m_config.width, m_config.height, AV_PIX_FMT_NV12, SWS_BILINEAR, nullptr, nullptr, nullptr);
+        // 入力フォーマットをAV_PIX_FMT_BGRAに指定することでARGB32と直結させる
+        m_swsCtx = sws_getContext(sourceImg.width(), sourceImg.height(), AV_PIX_FMT_BGRA, m_config.width, m_config.height, AV_PIX_FMT_NV12, SWS_BILINEAR, nullptr, nullptr, nullptr);
     }
 
     // SWフレームを書き込み可能にする

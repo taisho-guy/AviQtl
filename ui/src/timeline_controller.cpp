@@ -16,6 +16,8 @@
 #include <QUrl>
 #include <QtGlobal>
 #include <algorithm>
+#include <string>
+#include <unordered_map>
 
 namespace Rina::UI {
 
@@ -615,9 +617,18 @@ bool TimelineController::isAudioClip(int clipId) const {
     return clip && clip->type == "audio";
 }
 
+// 波形データの一時保存用キャッシュ
+static std::unordered_map<std::string, QVariantList> s_waveformCache;
+
 QVariantList TimelineController::getWaveformPeaks(int clipId, int pixelWidth, int displayDurationFrames) const {
     if (pixelWidth <= 0 || displayDurationFrames <= 0)
         return {};
+
+    // キャッシュキーの生成と検索
+    std::string cacheKey = std::to_string(clipId) + "_" + std::to_string(pixelWidth) + "_" + std::to_string(displayDurationFrames);
+    if (auto it = s_waveformCache.find(cacheKey); it != s_waveformCache.end()) {
+        return it->second;
+    }
 
     const auto *clip = m_timeline->findClipById(clipId);
     if (!clip || clip->type != "audio")
@@ -634,24 +645,24 @@ QVariantList TimelineController::getWaveformPeaks(int clipId, int pixelWidth, in
     if (sampleRate <= 0)
         sampleRate = 48000;
 
-    // 渡された displayDurationFrames で秒数を計算 (ドラフト値が来たらそれを使う)
     double displaySec = static_cast<double>(displayDurationFrames) / fps;
     int totalSamples = static_cast<int>(displaySec * sampleRate);
     int samplesPerPixel = std::max(1, totalSamples / pixelWidth);
 
+    // デコーダで高速にピーク値を一括計算する
+    auto floatPeaks = decoder->calculateWaveformPeaks(pixelWidth, samplesPerPixel);
+
     QVariantList peaks;
     peaks.reserve(pixelWidth);
-
-    for (int px = 0; px < pixelWidth; px++) {
-        double startSec = static_cast<double>(px * samplesPerPixel) / sampleRate;
-        auto samples = decoder->getSamples(startSec, samplesPerPixel * 2);
-
-        float peak = 0.0f;
-        for (float s : samples)
-            peak = std::max(peak, std::abs(s));
-
-        peaks.append(static_cast<double>(std::min(peak, 1.0f)));
+    for (float p : floatPeaks) {
+        peaks.append(static_cast<double>(p));
     }
+
+    // メモリ保護のため古いキャッシュを破棄する (簡易的なLRU代用)
+    if (s_waveformCache.size() > 100) {
+        s_waveformCache.clear();
+    }
+    s_waveformCache[cacheKey] = peaks;
 
     return peaks;
 }

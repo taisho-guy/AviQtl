@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import Rina.Widgets 1.0
 
 Item {
     id: clipDelegate
@@ -122,75 +123,15 @@ Item {
             width: Math.min(implicitWidth, parent.width - padding * 2)
         }
 
-        Canvas {
-            id: waveformCanvas
-
-            readonly property bool isAudio: modelData.type === "audio"
-            property int waveRev: 0
-            property bool _paintPending: false
-            readonly property int displayDuration: {
-                if (clipDelegate.resizeDraftDuration >= 0)
-                    return clipDelegate.resizeDraftDuration;
-
-                return modelData.durationFrames;
-            }
-
-            function _schedulePaint() {
-                if (!isAudio)
-                    return ;
-
-                if (_paintPending)
-                    return ;
-
-                _paintPending = true;
-                Qt.callLater(function() {
-                    _paintPending = false;
-                    waveformCanvas.requestPaint();
-                });
-            }
+        AudioWaveformItem {
+            id: waveformItem
 
             anchors.fill: parent
-            visible: isAudio
-            opacity: 0.7
-            onWidthChanged: _schedulePaint()
-            onDisplayDurationChanged: _schedulePaint()
-            onWaveRevChanged: _schedulePaint()
-            onPaint: {
-                var ctx = getContext("2d");
-                ctx.clearRect(0, 0, width, height);
-                if (!isAudio || width <= 0 || !TimelineBridge)
-                    return ;
-
-                var pw = Math.floor(width);
-                var dur = displayDuration;
-                if (pw <= 0 || dur <= 0)
-                    return ;
-
-                var peaks = TimelineBridge.getWaveformPeaks(modelData.id, pw, dur);
-                if (!peaks || peaks.length === 0)
-                    return ;
-
-                var cy = height / 2;
-                var maxH = cy - 2;
-                ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
-                ctx.lineWidth = 1;
-                for (var i = 0; i < peaks.length; i++) {
-                    var h = Math.max(1, peaks[i] * maxH);
-                    ctx.beginPath();
-                    ctx.moveTo(i + 0.5, cy - h);
-                    ctx.lineTo(i + 0.5, cy + h);
-                    ctx.stroke();
-                }
-            }
-
-            Connections {
-                function onClipsChanged() {
-                    waveformCanvas._schedulePaint();
-                }
-
-                target: TimelineBridge
-            }
-
+            visible: modelData.type === "audio"
+            clipId: modelData.id
+            displayDuration: (resizeDraftDuration >= 0) ? resizeDraftDuration : modelData.durationFrames
+            pixelWidth: width
+            timelineBridge: TimelineBridge
         }
 
         MouseArea {

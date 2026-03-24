@@ -1,6 +1,7 @@
 #include "../../engine/plugin/audio_plugin_manager.hpp"
 #include "../../engine/timeline/ecs.hpp"
 #include "../../scripting/mod_engine.hpp"
+#include "audio_waveform_item.hpp"
 #include "color_scheme_controller.hpp"
 #include "effect_registry.hpp"
 #include "rina_context.hpp"
@@ -77,6 +78,7 @@ int main(int argc, char *argv[]) {
     engine.rootContext()->setContextProperty("videoFrameStore", videoFrameStore);
 
     qmlRegisterType<Rina::Core::VideoEncoder>("Rina.Core", 1, 0, "VideoEncoder");
+    qmlRegisterType<AudioWaveformItem>("Rina.Widgets", 1, 0, "AudioWaveformItem");
     engine.rootContext()->setContextProperty("SettingsManager", &Rina::Core::SettingsManager::instance());
     engine.rootContext()->setContextProperty("ColorSchemeController", colorSchemeController);
 

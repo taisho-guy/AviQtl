@@ -132,8 +132,10 @@ void TimelineExportManager::runExport(const Rina::Core::VideoEncoder::Config &co
         encoder.pushFrame(img, frame - startFrame);
 
         const int samplesNeeded = static_cast<int>(48000 / fps);
-        auto audio = m_controller->mediaManager()->audioMixer()->mix(frame, fps, samplesNeeded);
-        encoder.pushAudio(audio.data(), samplesNeeded);
+        std::vector<float> audioBuffer(samplesNeeded * 2);
+        m_controller->mediaManager()->audioMixer()->mix(frame, fps, samplesNeeded, audioBuffer.data());
+
+        encoder.pushAudio(audioBuffer.data(), audioBuffer.size());
 
         const int done = frame - startFrame + 1;
         const int progInterval = Rina::Core::SettingsManager::instance().value("exportProgressInterval", 5).toInt();

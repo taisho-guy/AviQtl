@@ -1,6 +1,7 @@
 #include "audio_decoder.hpp"
 #include <QDebug>
 #include <QtConcurrent>
+#include <algorithm>
 
 namespace Rina::Core {
 
@@ -178,33 +179,31 @@ void AudioDecoder::setSampleRate(int sampleRate) {
 
 void AudioDecoder::seek(qint64 ms) { emit seekRequested(ms); }
 
-std::vector<float> AudioDecoder::getSamples(double startTime, int count) {
+void AudioDecoder::getSamples(double startTime, int count, float *outBuffer) {
     QMutexLocker locker(&m_mutex);
 
     // startTimeが負数の場合のアンダーフローを防ぐ（size_tへのキャスト前にクランプ）
     if (startTime < 0.0)
         startTime = 0.0;
 
-    // startTime (秒) × m_sampleRate (サンプル/秒) × 2 (ステレオ 2ch)
     size_t startIdx = static_cast<size_t>(startTime * m_sampleRate * 2);
 
     // 偶数アライメント（L/R がずれないように補正）
     if (startIdx % 2 != 0 && startIdx > 0)
         startIdx--;
 
-    if (startIdx >= m_fullAudioData.size())
-        return std::vector<float>(count, 0.0f);
+    // 範囲外の場合は無音で埋めて終了
+    if (startIdx >= m_fullAudioData.size()) {
+        std::fill(outBuffer, outBuffer + count, 0.0f);
+        return;
+    }
 
     size_t available = m_fullAudioData.size() - startIdx;
     size_t actualCount = std::min(static_cast<size_t>(count), available);
 
-    std::vector<float> result(m_fullAudioData.begin() + static_cast<ptrdiff_t>(startIdx), m_fullAudioData.begin() + static_cast<ptrdiff_t>(startIdx + actualCount));
-
     // 足りない分は無音で埋める
-    if (result.size() < static_cast<size_t>(count))
-        result.resize(count, 0.0f);
-
-    return result;
+    if (actualCount < static_cast<size_t>(count))
+        std::fill(outBuffer + actualCount, outBuffer + count, 0.0f);
 }
 
 double AudioDecoder::totalDurationSec() const {
@@ -218,6 +217,28 @@ double AudioDecoder::totalDurationSec() const {
 void AudioDecoder::setPlaying(bool playing) {
     // 再生状態をスレッドセーフに更新
     m_isPlaying.store(playing, std::memory_order_release);
+}
+
+std::vector<float> AudioDecoder::calculateWaveformPeaks(int pixelWidth, int samplesPerPixel) const {
+    // データ保護のため一度だけロックを取得する (constメソッド内でのmutex操作のためconst_castを使用)
+    QMutexLocker locker(const_cast<QMutex *>(&m_mutex));
+    std::vector<float> peaks;
+    peaks.reserve(pixelWidth);
+
+    for (int px = 0; px < pixelWidth; ++px) {
+        size_t startIdx = static_cast<size_t>(px * samplesPerPixel * 2);
+        // ステレオデータの左チャンネルに合わせる
+        if (startIdx % 2 != 0 && startIdx > 0)
+            startIdx--;
+        size_t endIdx = startIdx + samplesPerPixel * 2;
+
+        float peak = 0.0f;
+        for (size_t i = startIdx; i < endIdx && i < m_fullAudioData.size(); ++i) {
+            peak = std::max(peak, std::abs(m_fullAudioData[i]));
+        }
+        peaks.push_back(std::min(peak, 1.0f));
+    }
+    return peaks;
 }
 
 } // namespace Rina::Core

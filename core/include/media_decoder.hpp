@@ -20,7 +20,10 @@ class MediaDecoder : public QObject {
     virtual void setPlaybackRate(double rate) {}
 
     // Audio-specific method, with a default implementation for video.
-    virtual std::vector<float> getSamples(double startTime, int count) { return {}; }
+    virtual void getSamples(double startTime, int count, float *outBuffer) {
+        if (outBuffer)
+            std::fill_n(outBuffer, count, 0.0f);
+    }
 
     bool isReady() const { return m_isReady; }
     int clipId() const { return m_clipId; }

@@ -95,14 +95,18 @@ bool AudioMixer::isReady() const {
     return true;
 }
 
-std::vector<float> AudioMixer::mix(int currentFrame, double fps, int samplesPerFrame) {
+void AudioMixer::mix(int currentFrame, double fps, int samplesPerFrame, float *masterBuffer) {
     // 1. マスターバッファの初期化（無音）
-    std::vector<float> masterBuffer(samplesPerFrame * 2, 0.0f);
+    std::fill(masterBuffer, masterBuffer + samplesPerFrame * 2, 0.0f);
 
     // 2. ECSから現在の音声コンポーネントを取得
     auto state = Timeline::ECS::instance().getSnapshot();
     if (!state)
-        return masterBuffer;
+        return;
+
+    if (m_clipBuffer.size() < static_cast<size_t>(samplesPerFrame * 2)) {
+        m_clipBuffer.resize(samplesPerFrame * 2);
+    }
     const auto &audioStates = state->audioStates;
     for (const auto &[clipId, audio] : audioStates) {
         if (audio.mute)
@@ -124,64 +128,56 @@ std::vector<float> AudioMixer::mix(int currentFrame, double fps, int samplesPerF
         m_clipLastFrame[clipId] = currentFrame;
 
         auto decoder = m_decoders[clipId];
-        std::vector<float> clipSamples;
 
         if (std::abs(m_playbackSpeed - 1.0) > 0.01) {
             // リサンプリングが必要な場合
             // 必要ソースサンプル数を計算（補間用に2サンプル余分に要求）
             int neededSamples = static_cast<int>(std::ceil(samplesPerFrame * m_playbackSpeed)) + 2;
-            std::vector<float> rawSamples = decoder->getSamples(startTime, neededSamples * 2); // Stereo
+            if (m_rawBuffer.size() < static_cast<size_t>(neededSamples * 2)) {
+                m_rawBuffer.resize(neededSamples * 2);
+            }
+            decoder->getSamples(startTime, neededSamples * 2, m_rawBuffer.data());
 
-            if (!rawSamples.empty()) {
-                clipSamples.resize(samplesPerFrame * 2);
-                int availableSrcSamples = static_cast<int>(rawSamples.size() / 2);
+            if (!m_rawBuffer.empty()) {
+                int availableSrcSamples = static_cast<int>(m_rawBuffer.size() / 2);
 
                 for (int i = 0; i < samplesPerFrame; ++i) {
                     double srcIdx = i * m_playbackSpeed;
                     int idx0 = static_cast<int>(srcIdx);
                     int idx1 = idx0 + 1;
 
-                    // クランプして範囲外アクセス（SIGSEGV）を防止
                     if (idx0 >= availableSrcSamples)
                         idx0 = availableSrcSamples - 1;
                     if (idx1 >= availableSrcSamples)
                         idx1 = availableSrcSamples - 1;
-                    if (idx0 < 0)
-                        idx0 = 0;
-                    if (idx1 < 0)
-                        idx1 = 0;
 
                     double t = srcIdx - idx0;
 
                     // L ch
-                    clipSamples[i * 2] = rawSamples[idx0 * 2] * (1.0 - t) + rawSamples[idx1 * 2] * t;
+                    m_clipBuffer[i * 2] = m_rawBuffer[idx0 * 2] * (1.0 - t) + m_rawBuffer[idx1 * 2] * t;
                     // R ch
-                    clipSamples[i * 2 + 1] = rawSamples[idx0 * 2 + 1] * (1.0 - t) + rawSamples[idx1 * 2 + 1] * t;
+                    m_clipBuffer[i * 2 + 1] = m_rawBuffer[idx0 * 2 + 1] * (1.0 - t) + m_rawBuffer[idx1 * 2 + 1] * t;
                 }
             }
             // 次のフレームのための開始位置を進める（m_playbackSpeed 分の秒数）
             m_clipPhase[clipId] = startTime + (static_cast<double>(samplesPerFrame) / m_format.sampleRate()) * m_playbackSpeed;
         } else {
             // 1倍速の場合はそのまま取得
-            int neededSamples = samplesPerFrame;
-            clipSamples = decoder->getSamples(startTime, neededSamples * 2);
+            decoder->getSamples(startTime, samplesPerFrame * 2, m_clipBuffer.data());
             m_clipPhase[clipId] = startTime + (static_cast<double>(samplesPerFrame) / m_format.sampleRate());
         }
 
         // プラグインチェーンを適用
         if (m_chains.contains(clipId))
-            m_chains[clipId]->process(clipSamples.data(), samplesPerFrame);
+            m_chains[clipId]->process(m_clipBuffer.data(), samplesPerFrame);
 
         float leftVol = audio.volume * (audio.pan <= 0 ? 1.0f : 1.0f - audio.pan);
         float rightVol = audio.volume * (audio.pan >= 0 ? 1.0f : 1.0f + audio.pan);
-
-        for (size_t i = 0; i < clipSamples.size() && i < masterBuffer.size(); i += 2) {
-            masterBuffer[i] += clipSamples[i] * leftVol;
-            if (i + 1 < clipSamples.size())
-                masterBuffer[i + 1] += clipSamples[i + 1] * rightVol;
+        for (int i = 0; i < samplesPerFrame * 2; i += 2) {
+            masterBuffer[i] += m_clipBuffer[i] * leftVol;
+            masterBuffer[i + 1] += m_clipBuffer[i + 1] * rightVol;
         }
     }
-    return masterBuffer;
 }
 
 void AudioMixer::processFrame(int currentFrame, double fps, int samplesPerFrame) {
@@ -204,8 +200,11 @@ void AudioMixer::processFrame(int currentFrame, double fps, int samplesPerFrame)
         outputSamples = static_cast<int>(samplesPerFrame / m_playbackSpeed);
     }
 
-    std::vector<float> buffer = mix(currentFrame, fps, outputSamples);
-    m_audioOutput->write(reinterpret_cast<const char *>(buffer.data()), buffer.size() * sizeof(float));
+    if (m_masterBuffer.size() < static_cast<size_t>(outputSamples * 2)) {
+        m_masterBuffer.resize(outputSamples * 2);
+    }
+    mix(currentFrame, fps, outputSamples, m_masterBuffer.data());
+    m_audioOutput->write(reinterpret_cast<const char *>(m_masterBuffer.data()), outputSamples * 2 * sizeof(float));
 }
 
 void AudioMixer::reset() {
