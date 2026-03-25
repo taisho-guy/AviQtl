@@ -20,6 +20,7 @@
 #include <QQuickItem>
 #include <QQuickRenderControl>
 #include <QQuickWindow>
+#include <QTimer>
 #include <QVariant>
 #include <QtMath>
 #include <memory>
@@ -75,6 +76,8 @@ class TimelineController : public QObject {
 
     // 汎用プロパティ操作
     Q_INVOKABLE void setClipProperty(const QString &name, const QVariant &value);
+    Q_INVOKABLE void previewClipProperty(const QString &name, const QVariant &value);
+    Q_INVOKABLE void commitClipProperty(const QString &name, const QVariant &value);
     Q_INVOKABLE QVariant getClipProperty(const QString &name) const;
 
     int clipStartFrame() const;
@@ -226,6 +229,8 @@ class TimelineController : public QObject {
     void onPlayingChanged();
     void onCurrentFrameChanged();
 
+    void scheduleActiveClipsSync();
+
     void updateClipActiveState();
     double m_timelineScale = 1.0; // タイムラインの表示倍率 (1.0 = 1フレームあたり1ピクセル)
 
@@ -247,6 +252,7 @@ class TimelineController : public QObject {
     Q_INVOKABLE QString debugRunLua(const QString &script);
 
   private:
+    QTimer m_activeClipsSyncTimer;
     QPointer<QQuickItem> m_compositeView; // CompositeViewへの参照
 };
 } // namespace Rina::UI

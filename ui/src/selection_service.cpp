@@ -18,24 +18,20 @@ QVariantList SelectionService::idsAsVariantList() const {
 
 bool SelectionService::isSelected(int id) const { return m_selectedClipIds.contains(id); }
 
-void SelectionService::updatePrimarySelection(int id, const QVariantMap &data) {
-    if (m_selectedClipId != id) {
-        m_selectedClipId = id;
-        emit selectedClipIdChanged();
-    }
-    m_selectedClipData = data;
+void SelectionService::clearSelection() { replaceSelection({}, -1, {}); }
+void SelectionService::patchSelectedClipParam(const QString &name, const QVariant &value) {
+    if (m_selectedClipId < 0)
+        return;
+
+    auto it = m_selectedClipData.find(name);
+    if (it != m_selectedClipData.end() && it.value() == value)
+        return;
+
+    m_selectedClipData.insert(name, value);
     emit selectedClipDataChanged();
 }
 
-void SelectionService::clearSelection() {
-    const bool hadIds = !m_selectedClipIds.isEmpty();
-    m_selectedClipIds.clear();
-    if (hadIds)
-        emit selectedClipIdsChanged();
-    updatePrimarySelection(-1, QVariantMap());
-}
-
-void SelectionService::select(int id, const QVariantMap &data) { replaceSelection(QVariantList{id}, id, data); }
+void SelectionService::select(int id, const QVariantMap &data) { replaceSelection({id}, id, data); }
 
 void SelectionService::refreshSelectionData(int id, const QVariantMap &data) {
     if (id < 0)
@@ -43,7 +39,7 @@ void SelectionService::refreshSelectionData(int id, const QVariantMap &data) {
     if (!m_selectedClipIds.contains(id))
         return;
     if (m_selectedClipId == id)
-        updatePrimarySelection(id, data);
+        replaceSelection(idsAsVariantList(), id, data);
 }
 
 void SelectionService::replaceSelection(const QVariantList &ids, int primaryId, const QVariantMap &primaryData) {
@@ -57,8 +53,30 @@ void SelectionService::replaceSelection(const QVariantList &ids, int primaryId, 
         m_selectedClipIds = nextIds;
         emit selectedClipIdsChanged();
     }
-    if (!m_selectedClipIds.contains(primaryId))
-        primaryId = m_selectedClipIds.isEmpty() ? -1 : *m_selectedClipIds.constBegin();
-    updatePrimarySelection(primaryId, primaryId >= 0 ? primaryData : QVariantMap());
+    if (!nextIds.contains(primaryId))
+        primaryId = nextIds.isEmpty() ? -1 : *nextIds.constBegin();
+
+    const bool idChanged = (m_selectedClipId != primaryId);
+    const QVariantMap oldData = m_selectedClipData;
+    const QVariantMap newData = (primaryId >= 0) ? primaryData : QVariantMap();
+
+    m_selectedClipId = primaryId;
+    m_selectedClipData = newData;
+
+    if (idChanged)
+        emit selectedClipIdChanged();
+
+    if (oldData != m_selectedClipData)
+        emit selectedClipDataChanged();
+
+    if (oldData.value("startFrame") != newData.value("startFrame") || oldData.value("durationFrames") != newData.value("durationFrames")) {
+        emit selectedClipTimingChanged();
+    }
+
+    if (oldData.value("layer") != newData.value("layer"))
+        emit selectedClipLayerChanged();
+
+    if (oldData.value("type") != newData.value("type"))
+        emit selectedObjectTypeChanged();
 }
 } // namespace Rina::UI

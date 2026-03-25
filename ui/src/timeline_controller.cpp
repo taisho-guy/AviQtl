@@ -23,6 +23,8 @@ namespace Rina::UI {
 
 TimelineController::TimelineController(QObject *parent) : QObject(parent) {
     initializeServices();
+    m_activeClipsSyncTimer.setSingleShot(true);
+    m_activeClipsSyncTimer.setInterval(16); // 約1フレーム
     setupConnections();
 
     // 初期状態の設定
@@ -54,23 +56,27 @@ void TimelineController::setupConnections() {
         },
         Qt::QueuedConnection);
 
-    connect(m_selection, &SelectionService::selectedClipDataChanged, this, [this]() {
+    connect(&m_activeClipsSyncTimer, &QTimer::timeout, this, [this]() {
+        if (m_engineSync)
+            m_engineSync->updateActiveClipsList();
+    });
+
+    connect(m_selection, &SelectionService::selectedClipTimingChanged, this, [this]() {
         emit clipStartFrameChanged();
         emit clipDurationFramesChanged();
-        emit layerChanged();
-        emit activeObjectTypeChanged();
         updateClipActiveState();
     });
+    connect(m_selection, &SelectionService::selectedClipLayerChanged, this, [this]() { emit layerChanged(); });
+    connect(m_selection, &SelectionService::selectedObjectTypeChanged, this, [this]() { emit activeObjectTypeChanged(); });
 
     connect(m_timeline, &TimelineService::scenesChanged, this, &TimelineController::scenesChanged);
     connect(m_timeline, &TimelineService::currentSceneIdChanged, this, &TimelineController::currentSceneIdChanged);
     connect(m_timeline, &TimelineService::clipEffectsChanged, this, &TimelineController::clipEffectsChanged);
     connect(m_timeline, &TimelineService::effectParamChanged, this, [this](int clipId, int, const QString &paramName, const QVariant &) {
-        // 常にECSの状態を更新
-        updateActiveClipsList();
         // パスが変更された場合は、メディアデコーダーの強制リロードをトリガー
         if (paramName == "path" || paramName == "source")
             m_mediaManager->forceReloadClip(clipId);
+        scheduleActiveClipsSync();
     });
 
     connect(m_exportManager, &TimelineExportManager::exportStarted, this, &TimelineController::exportStarted);
@@ -99,6 +105,8 @@ void TimelineController::onCurrentFrameChanged() {
     updateActiveClipsList();
 }
 
+void TimelineController::scheduleActiveClipsSync() { m_activeClipsSyncTimer.start(); }
+
 void TimelineController::setVideoFrameStore(Rina::Core::VideoFrameStore *store) {
     qDebug() << "TimelineController: VideoFrameStore set. Updating decoders...";
     m_mediaManager->setVideoFrameStore(store);
@@ -121,7 +129,9 @@ void TimelineController::setTimelineScale(double scale) {
 }
 
 // プロパティアクセサ
-void TimelineController::setClipProperty(const QString &name, const QVariant &value) {
+void TimelineController::setClipProperty(const QString &name, const QVariant &value) { commitClipProperty(name, value); }
+
+void TimelineController::previewClipProperty(const QString &name, const QVariant &value) {
     int id = m_selection->selectedClipId();
     if (id == -1)
         return;
@@ -130,7 +140,6 @@ void TimelineController::setClipProperty(const QString &name, const QVariant &va
     if (!clip)
         return;
 
-    // 暫定対応：プロパティ名に応じて適切なエフェクトのパラメータを更新する
     int targetEffectIndex = -1;
 
     for (int i = 0; i < clip->effects.size(); ++i) {
@@ -142,17 +151,54 @@ void TimelineController::setClipProperty(const QString &name, const QVariant &va
 
     if (targetEffectIndex == -1 && !clip->effects.isEmpty()) {
         targetEffectIndex = 0;
-        // transform に属するキーかどうかで対象エフェクトを振り分け
-        static const QStringList transformKeys = {"x", "y", "z", "scale", "aspect", "rotationX", "rotationY", "rotationZ", "opacity"};
-        if (!transformKeys.contains(name) && clip->effects.size() > 1) {
+        static const QSet<QString> transformKeys = {"x", "y", "z", "scale", "aspect", "rotationX", "rotationY", "rotationZ", "opacity"};
+        if (!transformKeys.contains(name) && clip->effects.size() > 1)
             targetEffectIndex = 1;
+    }
+
+    if (targetEffectIndex < 0 || targetEffectIndex >= clip->effects.size())
+        return;
+
+    const QVariant currentValue = clip->effects[targetEffectIndex]->params().value(name);
+    if (currentValue.isValid() && currentValue == value)
+        return;
+
+    m_timeline->previewEffectParam(id, targetEffectIndex, name, value);
+}
+
+void TimelineController::commitClipProperty(const QString &name, const QVariant &value) {
+    int id = m_selection->selectedClipId();
+    if (id < 0)
+        return;
+
+    const ClipData *clip = m_timeline->findClipById(id);
+    if (!clip)
+        return;
+
+    int targetEffectIndex = -1;
+
+    for (int i = 0; i < clip->effects.size(); ++i) {
+        if (clip->effects[i]->params().contains(name)) {
+            targetEffectIndex = i;
+            break;
         }
     }
 
-    if (targetEffectIndex != -1 && targetEffectIndex < clip->effects.size()) {
-        updateClipEffectParam(id, targetEffectIndex, name, value);
-        updateActiveClipsList();
+    if (targetEffectIndex == -1 && !clip->effects.isEmpty()) {
+        targetEffectIndex = 0;
+        static const QSet<QString> transformKeys = {"x", "y", "z", "scale", "aspect", "rotationX", "rotationY", "rotationZ", "opacity"};
+        if (!transformKeys.contains(name) && clip->effects.size() > 1)
+            targetEffectIndex = 1;
     }
+
+    if (targetEffectIndex < 0 || targetEffectIndex >= clip->effects.size())
+        return;
+
+    const QVariant currentValue = clip->effects[targetEffectIndex]->params().value(name);
+    if (currentValue.isValid() && currentValue == value)
+        return;
+
+    updateClipEffectParam(id, targetEffectIndex, name, value);
 }
 
 QVariant TimelineController::getClipProperty(const QString &name) const { return m_selection->selectedClipData().value(name); }

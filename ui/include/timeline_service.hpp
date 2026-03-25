@@ -59,6 +59,7 @@ class TimelineService : public QObject {
     // エフェクト
     void addEffect(int clipId, const QString &effectId);
     void removeEffect(int clipId, int effectIndex);
+    void previewEffectParam(int clipId, int effectIndex, const QString &paramName, const QVariant &value);
     void updateEffectParam(int clipId, int effectIndex, const QString &paramName, const QVariant &value);
     void setKeyframe(int clipId, int effectIndex, const QString &paramName, int frame, const QVariant &value, const QVariantMap &options);
     void removeKeyframe(int clipId, int effectIndex, const QString &paramName, int frame);
@@ -74,12 +75,12 @@ class TimelineService : public QObject {
     // 内部用 (コマンドから呼び出される)
     void deleteClipInternal(int clipId);
     void createClipInternal(int clipId, const QString &type, int startFrame, int layer);
-    void updateClipInternal(int id, int layer, int startFrame, int duration);
+    void updateClipInternal(int id, int layer, int startFrame, int duration, bool notifySelection = true);
     void addEffectInternal(int clipId, const QString &effectId);
     void addClipDirectInternal(const ClipData &clip);
     void restoreEffectInternal(int clipId, const QVariantMap &data);
     void removeEffectInternal(int clipId, int effectIndex);
-    void updateEffectParamInternal(int clipId, int effectIndex, const QString &paramName, const QVariant &value);
+    void updateEffectParamInternal(int clipId, int effectIndex, const QString &paramName, const QVariant &value, bool notifySelection = true);
     void setClipboard(const ClipData &clip);
     void setClipboard(const QList<ClipData> &clips);
     void createSceneInternal(int sceneId, const QString &name);

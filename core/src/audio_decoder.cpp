@@ -201,6 +201,9 @@ void AudioDecoder::getSamples(double startTime, int count, float *outBuffer) {
     size_t available = m_fullAudioData.size() - startIdx;
     size_t actualCount = std::min(static_cast<size_t>(count), available);
 
+    // 有効な音声データをバッファへコピーする
+    std::copy(m_fullAudioData.begin() + startIdx, m_fullAudioData.begin() + startIdx + actualCount, outBuffer);
+
     // 足りない分は無音で埋める
     if (actualCount < static_cast<size_t>(count))
         std::fill(outBuffer + actualCount, outBuffer + count, 0.0f);

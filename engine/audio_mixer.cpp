@@ -139,8 +139,8 @@ void AudioMixer::mix(int currentFrame, double fps, int samplesPerFrame, float *m
             decoder->getSamples(startTime, neededSamples * 2, m_rawBuffer.data());
 
             if (!m_rawBuffer.empty()) {
-                int availableSrcSamples = static_cast<int>(m_rawBuffer.size() / 2);
-
+                // バッファの物理サイズではなく論理的な取得サンプル数を使用する
+                int availableSrcSamples = neededSamples;
                 for (int i = 0; i < samplesPerFrame; ++i) {
                     double srcIdx = i * m_playbackSpeed;
                     int idx0 = static_cast<int>(srcIdx);

@@ -27,8 +27,8 @@ UpdateEffectParamCommand::UpdateEffectParamCommand(TimelineService *service, int
     : m_service(service), m_clipId(clipId), m_effectIndex(effectIndex), m_paramName(paramName), m_newValue(newValue), m_oldValue(oldValue), m_effectName(effectName) {
     setText(QString("パラメータ変更: %1 - %2").arg(effectName).arg(paramName));
 }
-void UpdateEffectParamCommand::undo() { m_service->updateEffectParamInternal(m_clipId, m_effectIndex, m_paramName, m_oldValue); }
-void UpdateEffectParamCommand::redo() { m_service->updateEffectParamInternal(m_clipId, m_effectIndex, m_paramName, m_newValue); }
+void UpdateEffectParamCommand::undo() { m_service->updateEffectParamInternal(m_clipId, m_effectIndex, m_paramName, m_oldValue, true); }
+void UpdateEffectParamCommand::redo() { m_service->updateEffectParamInternal(m_clipId, m_effectIndex, m_paramName, m_newValue, true); }
 int UpdateEffectParamCommand::id() const { return 1001; } // パラメータ変更コマンドのID
 bool UpdateEffectParamCommand::mergeWith(const QUndoCommand *other) {
     if (other->id() != id())
@@ -568,7 +568,7 @@ QPoint TimelineService::resolveDragPosition(int clipId, int targetLayer, int pro
     return QPoint(finalFrame, targetLayer);
 }
 
-void TimelineService::updateClipInternal(int id, int layer, int startFrame, int duration) {
+void TimelineService::updateClipInternal(int id, int layer, int startFrame, int duration, bool notifySelection) {
     if (startFrame < 0)
         startFrame = 0;
     if (duration < 1)
@@ -592,12 +592,14 @@ void TimelineService::updateClipInternal(int id, int layer, int startFrame, int 
                 clip.durationFrames = duration;
                 emit clipsChanged();
                 // 選択中のクリップであればSelectionServiceのキャッシュも更新する
-                if (m_selection->selectedClipId() == id) {
+                if (notifySelection && m_selection->selectedClipId() == id) {
                     QVariantMap data = m_selection->selectedClipData();
                     data["layer"] = layer;
                     data["startFrame"] = startFrame;
                     data["durationFrames"] = duration;
-                    m_selection->refreshSelectionData(id, data);
+                    // refreshSelectionData は古い。直接 replaceSelection を呼ぶ
+                    // m_selection->refreshSelectionData(id, data);
+                    m_selection->replaceSelection(m_selection->selectedClipIds(), id, data);
                 }
             }
             break;
@@ -785,10 +787,26 @@ void TimelineService::removeEffectInternal(int clipId, int effectIndex) {
     }
 }
 
+void TimelineService::previewEffectParam(int clipId, int effectIndex, const QString &paramName, const QVariant &value) {
+    const auto *clip = findClipById(clipId);
+    if (!clip || effectIndex < 0 || effectIndex >= clip->effects.size())
+        return;
+
+    const QVariant oldValue = clip->effects[effectIndex]->params().value(paramName);
+    if (oldValue.isValid() && oldValue == value)
+        return;
+
+    updateEffectParamInternal(clipId, effectIndex, paramName, value, true);
+}
+
 void TimelineService::updateEffectParam(int clipId, int effectIndex, const QString &paramName, const QVariant &value) {
     QVariant oldValue;
     const auto *clip = findClipById(clipId);
     if (!clip || effectIndex >= clip->effects.size())
+        return;
+
+    const QVariant currentValue = clip->effects[effectIndex]->params().value(paramName);
+    if (currentValue.isValid() && currentValue == value)
         return;
 
     const auto *eff = clip->effects[effectIndex];
@@ -797,17 +815,14 @@ void TimelineService::updateEffectParam(int clipId, int effectIndex, const QStri
     m_undoStack->push(new UpdateEffectParamCommand(this, clipId, effectIndex, paramName, value, oldValue, eff->name()));
 }
 
-void TimelineService::updateEffectParamInternal(int clipId, int effectIndex, const QString &paramName, const QVariant &value) {
+void TimelineService::updateEffectParamInternal(int clipId, int effectIndex, const QString &paramName, const QVariant &value, bool notifySelection) {
     for (auto &clip : clipsMutable()) {
         if (clip.id == clipId) {
             if (effectIndex >= 0 && effectIndex < clip.effects.size()) {
                 clip.effects[effectIndex]->setParam(paramName, value);
                 emit effectParamChanged(clipId, effectIndex, paramName, value);
-                if (m_selection->selectedClipId() == clipId) {
-                    QVariantMap data = m_selection->selectedClipData();
-                    data[paramName] = value;
-                    m_selection->select(clipId, data);
-                }
+                if (notifySelection && m_selection->selectedClipId() == clipId)
+                    m_selection->patchSelectedClipParam(paramName, value);
             }
             break;
         }
