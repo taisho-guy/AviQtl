@@ -197,7 +197,7 @@ Loader {
             property int _rev: 0
             property var _kfs: {
                 var _ = colorRow._rev;
-                return _em ? (_em.keyframeTracks[_key] || []) : [];
+                return _em ? _em.keyframeListForUi(_key) : [];
             }
             property bool _hasKf: _kfs.length > 0
             property var _interval: controlLoader._findKeyframeInterval(_kfs, _curFrame, _clipDur)

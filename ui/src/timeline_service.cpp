@@ -88,6 +88,18 @@ void SplitClipCommand::redo() {
     newClip.startFrame = m_splitFrame;
     newClip.durationFrames = secondHalfDuration;
 
+    for (int i = 0; i < it->effects.size() && i < newClip.effects.size(); ++i) {
+        auto *originalEffect = it->effects[i];
+        auto *newEffect = newClip.effects[i];
+        if (!originalEffect || !newEffect)
+            continue;
+
+        QVariantMap secondHalfTracks = originalEffect->splitTracks(firstHalfDuration, m_originalDuration);
+        originalEffect->syncTrackEndpoints(firstHalfDuration);
+        newEffect->setKeyframeTracks(secondHalfTracks);
+        newEffect->syncTrackEndpoints(secondHalfDuration);
+    }
+
     m_service->updateClipInternal(m_originalClipId, it->layer, it->startFrame, firstHalfDuration);
     m_service->addClipDirectInternal(newClip);
 }
@@ -590,6 +602,9 @@ void TimelineService::updateClipInternal(int id, int layer, int startFrame, int 
                 clip.layer = layer;
                 clip.startFrame = startFrame;
                 clip.durationFrames = duration;
+                for (auto *effect : clip.effects)
+                    if (effect)
+                        effect->syncTrackEndpoints(duration);
                 emit clipsChanged();
                 // 選択中のクリップであればSelectionServiceのキャッシュも更新する
                 if (notifySelection && m_selection->selectedClipId() == id) {
@@ -714,6 +729,7 @@ void TimelineService::addEffectInternal(int clipId, const QString &effectId) {
         if (clip.id == clipId) {
             auto meta = Rina::Core::EffectRegistry::instance().getEffect(effectId);
             auto *model = new EffectModel(meta.id, meta.name, meta.category, meta.defaultParams, meta.qmlSource, meta.uiDefinition, this);
+            model->syncTrackEndpoints(clip.durationFrames);
             connect(model, &EffectModel::keyframeTracksChanged, this, &TimelineService::clipsChanged);
             clip.effects.append(model);
             emit clipsChanged();
@@ -853,6 +869,7 @@ ClipData TimelineService::deepCopyClip(const ClipData &source) {
         auto *newEffect = new EffectModel(oldEffect->id(), oldEffect->name(), oldEffect->category(), oldEffect->params(), oldEffect->qmlSource(), oldEffect->uiDefinition(), this);
         newEffect->setEnabled(oldEffect->isEnabled());
         newEffect->setKeyframeTracks(oldEffect->keyframeTracks());
+        newEffect->syncTrackEndpoints(source.durationFrames);
         connect(newEffect, &EffectModel::keyframeTracksChanged, this, &TimelineService::clipsChanged);
         newClip.effects.append(newEffect);
     }
