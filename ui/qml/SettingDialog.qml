@@ -237,6 +237,19 @@ Common.RinaWindow {
                     height: 32
                     z: dragArea.drag.active ? 100 : 1
 
+
+                    // ドロップ先を示すインジケーター（線）
+                    Rectangle {
+                        width: parent.width
+                        height: 3
+                        color: palette.highlight
+                        visible: sidebarList.dragTargetIndex === index
+                        z: 50
+
+                        // ドラッグ元が自分より上なら下側に、下なら上側に線を引く
+                        y: (sidebarList.dragSourceIndex < index) ? parent.height - height : 0
+                    }
+
                     Item {
                         id: dragContainer
 
@@ -288,19 +301,23 @@ Common.RinaWindow {
                                             // アイテムの中心Y座標を親のリスト基準で計算
                                             var absoluteY = delegateRoot.y + dragContainer.y + (dragContainer.height / 2);
                                             var hoverIndex = sidebarList.indexAt(10, absoluteY);
-                                            if (hoverIndex !== -1 && hoverIndex !== index)
+                                            if (hoverIndex !== -1 && hoverIndex !== index) {
                                                 sidebarList.dragTargetIndex = hoverIndex;
-                                            else
+                                            } else {
                                                 sidebarList.dragTargetIndex = -1;
+                                            }
                                         }
                                     }
                                     onReleased: (mouse) => {
                                         sidebarList.interactive = true;
+
                                         var targetIndex = sidebarList.dragTargetIndex;
                                         sidebarList.dragTargetIndex = -1; // reset indicator
+
                                         // Reset visual position
                                         dragContainer.x = 0;
                                         dragContainer.y = 0;
+
                                         if (targetIndex !== -1 && targetIndex !== index) {
                                             if (TimelineBridge.isAudioClip(targetClipId))
                                                 TimelineBridge.reorderAudioPlugins(targetClipId, index, targetIndex);
