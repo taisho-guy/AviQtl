@@ -319,10 +319,10 @@ Common.RinaWindow {
                                 id: effectContextMenu
 
                                 MenuItem {
+                                    // プレースホルダ（現在未実装）
+
                                     text: "切り取り"
                                     onTriggered: {
-                                        // プレースホルダ（現在未実装）
-
                                         if (TimelineBridge.isAudioClip(targetClipId)) {
                                         } else {
                                             TimelineBridge.cutEffect(targetClipId, index);
@@ -331,10 +331,10 @@ Common.RinaWindow {
                                 }
 
                                 MenuItem {
+                                    // プレースホルダ
+
                                     text: "コピー"
                                     onTriggered: {
-                                        // プレースホルダ
-
                                         if (TimelineBridge.isAudioClip(targetClipId)) {
                                         } else {
                                             TimelineBridge.copyEffect(targetClipId, index);
@@ -343,10 +343,10 @@ Common.RinaWindow {
                                 }
 
                                 MenuItem {
+                                    // プレースホルダ
+
                                     text: "貼り付け"
                                     onTriggered: {
-                                        // プレースホルダ
-
                                         if (TimelineBridge.isAudioClip(targetClipId)) {
                                         } else {
                                             TimelineBridge.pasteEffect(targetClipId, index + 1);

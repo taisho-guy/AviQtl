@@ -33,28 +33,33 @@ Rectangle {
     }
 
     function setLayerVisible(layer, visible) {
-        if (!_layerStates[layer])
-            _layerStates[layer] = {
+        var newState = Object.assign({
+        }, _layerStates);
+        var oldState = newState[layer] || {
             "visible": true,
             "locked": false
         };
-
-        _layerStates[layer].visible = visible;
+        newState[layer] = Object.assign({
+        }, oldState, {
+            "visible": visible
+        });
+        _layerStates = newState;
         layerVisibilityChanged(layer, visible);
-        // 強制的に再評価を促す
-        _layerStatesChanged();
     }
 
     function setLayerLocked(layer, locked) {
-        if (!_layerStates[layer])
-            _layerStates[layer] = {
+        var newState = Object.assign({
+        }, _layerStates);
+        var oldState = newState[layer] || {
             "visible": true,
             "locked": false
         };
-
-        _layerStates[layer].locked = locked;
+        newState[layer] = Object.assign({
+        }, oldState, {
+            "locked": locked
+        });
+        _layerStates = newState;
         layerLockChanged(layer, locked);
-        _layerStatesChanged();
     }
 
     Layout.preferredWidth: headerWidth
