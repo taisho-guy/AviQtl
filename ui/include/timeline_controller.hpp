@@ -123,6 +123,9 @@ class TimelineController : public QObject {
     Q_INVOKABLE void removeEffect(int clipId, int effectIndex);
     Q_INVOKABLE void setEffectEnabled(int clipId, int effectIndex, bool enabled);
     Q_INVOKABLE void reorderEffects(int clipId, int fromIndex, int toIndex);
+    Q_INVOKABLE void copyEffect(int clipId, int effectIndex);
+    Q_INVOKABLE void pasteEffect(int clipId, int targetIndex);
+    Q_INVOKABLE void cutEffect(int clipId, int effectIndex);
 
     // オーディオプラグイン操作
     Q_INVOKABLE QVariantList getAvailableAudioPlugins() const;

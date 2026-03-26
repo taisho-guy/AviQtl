@@ -176,6 +176,49 @@ Common.RinaWindow {
 
     }
 
+    // アクティブ時のみ動作するショートカット
+    Shortcut {
+        sequence: SettingsManager.settings.shortcuts["edit.copy"] || "Ctrl+C"
+        enabled: root.active && targetClipId >= 0 && sidebarList.currentIndex >= 0
+        onActivated: {
+            if (!TimelineBridge.isAudioClip(targetClipId))
+                TimelineBridge.copyEffect(targetClipId, sidebarList.currentIndex);
+
+        }
+    }
+
+    Shortcut {
+        sequence: SettingsManager.settings.shortcuts["edit.cut"] || "Ctrl+X"
+        enabled: root.active && targetClipId >= 0 && sidebarList.currentIndex >= 0
+        onActivated: {
+            if (!TimelineBridge.isAudioClip(targetClipId))
+                TimelineBridge.cutEffect(targetClipId, sidebarList.currentIndex);
+
+        }
+    }
+
+    Shortcut {
+        sequence: SettingsManager.settings.shortcuts["edit.paste"] || "Ctrl+V"
+        enabled: root.active && targetClipId >= 0
+        onActivated: {
+            let targetIdx = sidebarList.currentIndex >= 0 ? sidebarList.currentIndex + 1 : 0;
+            if (!TimelineBridge.isAudioClip(targetClipId))
+                TimelineBridge.pasteEffect(targetClipId, targetIdx);
+
+        }
+    }
+
+    Shortcut {
+        sequence: SettingsManager.settings.shortcuts["edit.delete"] || "Del"
+        enabled: root.active && targetClipId >= 0 && sidebarList.currentIndex >= 0
+        onActivated: {
+            if (TimelineBridge.isAudioClip(targetClipId))
+                TimelineBridge.removeAudioPlugin(targetClipId, sidebarList.currentIndex);
+            else
+                TimelineBridge.removeEffect(targetClipId, sidebarList.currentIndex);
+        }
+    }
+
     // 選択変更やデータ更新を監視してモデルをリロード
     Connections {
         function onSelectedClipIdChanged() {
@@ -237,7 +280,6 @@ Common.RinaWindow {
                     height: 32
                     z: dragArea.drag.active ? 100 : 1
 
-
                     // ドロップ先を示すインジケーター（線）
                     Rectangle {
                         width: parent.width
@@ -245,7 +287,6 @@ Common.RinaWindow {
                         color: palette.highlight
                         visible: sidebarList.dragTargetIndex === index
                         z: 50
-
                         // ドラッグ元が自分より上なら下側に、下なら上側に線を引く
                         y: (sidebarList.dragSourceIndex < index) ? parent.height - height : 0
                     }
@@ -265,10 +306,83 @@ Common.RinaWindow {
                         // 背景用クリック領域（他のコントロールの下敷きになるよう先に宣言）
                         MouseArea {
                             anchors.fill: parent
-                            onClicked: {
+                            acceptedButtons: Qt.LeftButton | Qt.RightButton
+                            onClicked: (mouse) => {
                                 sidebarList.currentIndex = index;
                                 root.scrollToEffect(index);
+                                if (mouse.button === Qt.RightButton)
+                                    effectContextMenu.popup();
+
                             }
+
+                            Menu {
+                                id: effectContextMenu
+
+                                MenuItem {
+                                    text: "切り取り"
+                                    onTriggered: {
+                                        // プレースホルダ（現在未実装）
+
+                                        if (TimelineBridge.isAudioClip(targetClipId)) {
+                                        } else {
+                                            TimelineBridge.cutEffect(targetClipId, index);
+                                        }
+                                    }
+                                }
+
+                                MenuItem {
+                                    text: "コピー"
+                                    onTriggered: {
+                                        // プレースホルダ
+
+                                        if (TimelineBridge.isAudioClip(targetClipId)) {
+                                        } else {
+                                            TimelineBridge.copyEffect(targetClipId, index);
+                                        }
+                                    }
+                                }
+
+                                MenuItem {
+                                    text: "貼り付け"
+                                    onTriggered: {
+                                        // プレースホルダ
+
+                                        if (TimelineBridge.isAudioClip(targetClipId)) {
+                                        } else {
+                                            TimelineBridge.pasteEffect(targetClipId, index + 1);
+                                        }
+                                    }
+                                }
+
+                                MenuSeparator {
+                                }
+
+                                MenuItem {
+                                    text: "削除"
+                                    onTriggered: {
+                                        if (TimelineBridge.isAudioClip(targetClipId))
+                                            TimelineBridge.removeAudioPlugin(targetClipId, index);
+                                        else
+                                            TimelineBridge.removeEffect(targetClipId, index);
+                                    }
+                                }
+
+                                MenuSeparator {
+                                }
+
+                                MenuItem {
+                                    text: (modelData.enabled !== undefined ? modelData.enabled : true) ? "無効化" : "有効化"
+                                    onTriggered: {
+                                        let newState = !(modelData.enabled !== undefined ? modelData.enabled : true);
+                                        if (TimelineBridge.isAudioClip(targetClipId))
+                                            TimelineBridge.setAudioPluginEnabled(targetClipId, index, newState);
+                                        else
+                                            TimelineBridge.setEffectEnabled(targetClipId, index, newState);
+                                    }
+                                }
+
+                            }
+
                         }
 
                         RowLayout {
@@ -301,23 +415,19 @@ Common.RinaWindow {
                                             // アイテムの中心Y座標を親のリスト基準で計算
                                             var absoluteY = delegateRoot.y + dragContainer.y + (dragContainer.height / 2);
                                             var hoverIndex = sidebarList.indexAt(10, absoluteY);
-                                            if (hoverIndex !== -1 && hoverIndex !== index) {
+                                            if (hoverIndex !== -1 && hoverIndex !== index)
                                                 sidebarList.dragTargetIndex = hoverIndex;
-                                            } else {
+                                            else
                                                 sidebarList.dragTargetIndex = -1;
-                                            }
                                         }
                                     }
                                     onReleased: (mouse) => {
                                         sidebarList.interactive = true;
-
                                         var targetIndex = sidebarList.dragTargetIndex;
                                         sidebarList.dragTargetIndex = -1; // reset indicator
-
                                         // Reset visual position
                                         dragContainer.x = 0;
                                         dragContainer.y = 0;
-
                                         if (targetIndex !== -1 && targetIndex !== index) {
                                             if (TimelineBridge.isAudioClip(targetClipId))
                                                 TimelineBridge.reorderAudioPlugins(targetClipId, index, targetIndex);

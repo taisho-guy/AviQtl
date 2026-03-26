@@ -47,6 +47,8 @@ class TimelineService : public QObject {
     void applySelectionIds(const QVariantList &ids);
     void setEffectEnabled(int clipId, int effectIndex, bool enabled);
     void reorderEffects(int clipId, int fromIndex, int toIndex);
+    void copyEffect(int clipId, int effectIndex);
+    void pasteEffect(int clipId, int targetIndex);
 
     // シーン管理
     QVariantList scenes() const;
@@ -120,6 +122,7 @@ class TimelineService : public QObject {
     int m_nextSceneId = 1;
     QUndoStack *m_undoStack;
     QList<ClipData> m_clipboard;
+    std::unique_ptr<EffectModel> m_effectClipboard;
     SelectionService *m_selection;
     QSet<int> m_batchExcludes;
 };
