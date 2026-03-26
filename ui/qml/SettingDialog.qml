@@ -219,6 +219,9 @@ Common.RinaWindow {
             ListView {
                 id: sidebarList
 
+                property int dragTargetIndex: -1
+                property int dragSourceIndex: -1
+
                 anchors.fill: parent
                 LayoutMirroring.enabled: false
                 LayoutMirroring.childrenInherit: true
@@ -278,12 +281,23 @@ Common.RinaWindow {
                                     drag.axis: Drag.YAxis
                                     onPressed: {
                                         sidebarList.interactive = false;
+                                        sidebarList.dragSourceIndex = index;
+                                    }
+                                    onPositionChanged: (mouse) => {
+                                        if (drag.active) {
+                                            // アイテムの中心Y座標を親のリスト基準で計算
+                                            var absoluteY = delegateRoot.y + dragContainer.y + (dragContainer.height / 2);
+                                            var hoverIndex = sidebarList.indexAt(10, absoluteY);
+                                            if (hoverIndex !== -1 && hoverIndex !== index)
+                                                sidebarList.dragTargetIndex = hoverIndex;
+                                            else
+                                                sidebarList.dragTargetIndex = -1;
+                                        }
                                     }
                                     onReleased: (mouse) => {
                                         sidebarList.interactive = true;
-                                        // Drop handling
-                                        var pt = mapToItem(sidebarList.contentItem, mouse.x, mouse.y);
-                                        var targetIndex = sidebarList.indexAt(10, pt.y);
+                                        var targetIndex = sidebarList.dragTargetIndex;
+                                        sidebarList.dragTargetIndex = -1; // reset indicator
                                         // Reset visual position
                                         dragContainer.x = 0;
                                         dragContainer.y = 0;
