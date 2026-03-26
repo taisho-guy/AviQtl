@@ -15,6 +15,7 @@ Common.RinaWindow {
     property bool inputting: false // 入力中フラグ（reloadループ防止用）
     property bool reloading: false
     property bool enableSnap: SettingsManager && SettingsManager.settings ? SettingsManager.settings.enableSnap : true
+    property bool sidebarOnRight: (SettingsManager && SettingsManager.settings && SettingsManager.settings.settingDialogSidebarRight !== undefined) ? SettingsManager.settings.settingDialogSidebarRight : false
 
     function currentSceneData() {
         if (!TimelineBridge || !TimelineBridge.scenes)
@@ -116,7 +117,7 @@ Common.RinaWindow {
             // スクロール可能な最大値を計算 (コンテンツ全体の高さ - ビューポートの高さ)
             var maxScroll = Math.max(0, mainScrollView.contentHeight - mainScrollView.height);
             // ターゲット位置へワープ (0 ～ maxScroll の範囲に収める)
-            mainScrollView.contentY = Math.min(Math.max(0, targetY), maxScroll);
+            mainScrollView.contentItem.contentY = Math.min(Math.max(0, targetY), maxScroll);
         }
     }
 
@@ -201,15 +202,16 @@ Common.RinaWindow {
         target: TimelineBridge
     }
 
-    RowLayout {
+    SplitView {
         anchors.fill: parent
-        spacing: 0
+        orientation: Qt.Horizontal
+        LayoutMirroring.enabled: root.sidebarOnRight
+        LayoutMirroring.childrenInherit: true
 
-        // 左側: エフェクト一覧サイドバー
+        // エフェクト一覧サイドバー
         Rectangle {
-            Layout.fillHeight: true
-            Layout.preferredWidth: 200
-            Layout.minimumWidth: 150
+            SplitView.preferredWidth: 200
+            SplitView.minimumWidth: 150
             color: palette.midlight
             border.width: 1
             border.color: palette.mid
@@ -218,93 +220,109 @@ Common.RinaWindow {
                 id: sidebarList
 
                 anchors.fill: parent
+                LayoutMirroring.enabled: false
+                LayoutMirroring.childrenInherit: true
                 clip: true
                 // 選択中のクリップタイプに応じてモデルを切り替え
                 model: (TimelineBridge && TimelineBridge.isAudioClip(targetClipId)) ? audioEffectsModel : effectsModel
                 boundsBehavior: Flickable.StopAtBounds
 
                 delegate: Item {
+                    id: delegateRoot
+
                     width: sidebarList.width
                     height: 32
+                    z: dragArea.drag.active ? 100 : 1
 
-                    Rectangle {
-                        anchors.fill: parent
-                        color: (sidebarList.currentIndex === index) ? palette.highlight : "transparent"
-                        opacity: (sidebarList.currentIndex === index) ? 0.2 : 1
-                    }
+                    Item {
+                        id: dragContainer
 
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.leftMargin: 8
-                        anchors.rightMargin: 8
-                        spacing: 8
+                        width: parent.width
+                        height: parent.height
 
-                        // ドラッグ用ハンドル
-                        Common.RinaIcon {
-                            iconName: "drag_move_line" // 適切なアイコン名に変更してください
-                            size: 16
-                            color: palette.text
-                            opacity: 0.5
+                        Rectangle {
+                            anchors.fill: parent
+                            color: (sidebarList.currentIndex === index) ? palette.highlight : (dragArea.drag.active ? palette.mid : "transparent")
+                            opacity: (sidebarList.currentIndex === index) ? 0.2 : (dragArea.drag.active ? 0.8 : 1)
+                        }
 
-                            MouseArea {
-                                id: dragArea
+                        // 背景用クリック領域（他のコントロールの下敷きになるよう先に宣言）
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: {
+                                sidebarList.currentIndex = index;
+                                root.scrollToEffect(index);
+                            }
+                        }
 
-                                property int startY: 0
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 8
+                            anchors.rightMargin: 8
+                            spacing: 8
 
-                                anchors.fill: parent
-                                preventStealing: true
-                                cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
-                                onPressed: (mouse) => {
-                                    startY = mouse.y;
-                                    sidebarList.interactive = false;
+                            // ドラッグ用ハンドル
+                            Common.RinaIcon {
+                                iconName: "drag_move_line" // 適切なアイコン名に変更してください
+                                size: 16
+                                color: palette.text
+                                opacity: 0.5
+
+                                MouseArea {
+                                    id: dragArea
+
+                                    anchors.fill: parent
+                                    preventStealing: true
+                                    cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+                                    drag.target: dragContainer
+                                    drag.axis: Drag.YAxis
+                                    onPressed: {
+                                        sidebarList.interactive = false;
+                                    }
+                                    onReleased: (mouse) => {
+                                        sidebarList.interactive = true;
+                                        // Drop handling
+                                        var pt = mapToItem(sidebarList.contentItem, mouse.x, mouse.y);
+                                        var targetIndex = sidebarList.indexAt(10, pt.y);
+                                        // Reset visual position
+                                        dragContainer.x = 0;
+                                        dragContainer.y = 0;
+                                        if (targetIndex !== -1 && targetIndex !== index) {
+                                            if (TimelineBridge.isAudioClip(targetClipId))
+                                                TimelineBridge.reorderAudioPlugins(targetClipId, index, targetIndex);
+                                            else
+                                                TimelineBridge.reorderEffects(targetClipId, index, targetIndex);
+                                        }
+                                    }
                                 }
-                                onReleased: (mouse) => {
-                                    sidebarList.interactive = true;
-                                    // コンテンツ座標系に変換してドロップ先のインデックスを取得
-                                    var pt = mapToItem(sidebarList.contentItem, mouse.x, mouse.y);
-                                    var targetIndex = sidebarList.indexAt(10, pt.y);
-                                    if (targetIndex !== -1 && targetIndex !== index) {
+
+                            }
+
+                            // 有効・無効切り替えチェックボックス
+                            CheckBox {
+                                checked: modelData.enabled !== undefined ? modelData.enabled : true
+                                Layout.preferredHeight: 20
+                                Layout.preferredWidth: 20
+                                onToggled: {
+                                    if (TimelineBridge) {
                                         if (TimelineBridge.isAudioClip(targetClipId))
-                                            TimelineBridge.reorderAudioPlugins(targetClipId, index, targetIndex);
+                                            TimelineBridge.setAudioPluginEnabled(targetClipId, index, checked);
                                         else
-                                            TimelineBridge.reorderEffects(targetClipId, index, targetIndex);
+                                            TimelineBridge.setEffectEnabled(targetClipId, index, checked);
                                     }
                                 }
                             }
 
-                        }
-
-                        // 有効・無効切り替えチェックボックス
-                        CheckBox {
-                            checked: modelData.enabled !== undefined ? modelData.enabled : true
-                            Layout.preferredHeight: 20
-                            Layout.preferredWidth: 20
-                            onToggled: {
-                                if (TimelineBridge) {
-                                    if (TimelineBridge.isAudioClip(targetClipId))
-                                        TimelineBridge.setAudioPluginEnabled(targetClipId, index, checked);
-                                    else
-                                        TimelineBridge.setEffectEnabled(targetClipId, index, checked);
-                                }
+                            // エフェクト名 (クリックでワープ)
+                            Label {
+                                text: modelData.name
+                                Layout.fillWidth: true
+                                elide: Text.ElideRight
+                                color: palette.text
                             }
+
                         }
 
-                        // エフェクト名 (クリックでワープ)
-                        Label {
-                            text: modelData.name
-                            Layout.fillWidth: true
-                            elide: Text.ElideRight
-                            color: palette.text
-                        }
-
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: {
-                            sidebarList.currentIndex = index;
-                            root.scrollToEffect(index);
-                        }
                     }
 
                 }
@@ -313,18 +331,18 @@ Common.RinaWindow {
 
         }
 
-        // 右側: 詳細設定スクロールビュー (既存のものを移動)
+        // 詳細設定スクロールビュー
         ScrollView {
             id: mainScrollView
 
-            Layout.fillWidth: true
-            Layout.fillHeight: true
+            SplitView.fillWidth: true
             contentWidth: availableWidth
             clip: true
 
             ColumnLayout {
                 width: parent.width
                 spacing: 1
+                layoutDirection: Qt.LeftToRight
 
                 Repeater {
                     id: videoEffectsRepeater
