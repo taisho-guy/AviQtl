@@ -26,13 +26,14 @@ ScrollView {
     property bool selectionVisualLatchActive: false
     property var selectionVisualLatchIds: []
     property int activeDragDeltaFrame: 0
+    property bool autoScrollSuspended: false
     property int activeDragDeltaLayer: 0
     property bool isDraggingMulti: false
     property int selectionMinFrame: 0
     property int selectionMinLayer: 0
     property int selectionMaxLayer: 0
     property bool dragAutoScrollActive: false
-    property point dragViewportPos: Qt.point(-100, -100)
+    property point dragViewportPos: Qt.point(-1, -1)
     property real dragScrollEdge: 48
     property real dragScrollStep: 24
     property var dragAutoScrollCallback: null
@@ -83,7 +84,6 @@ ScrollView {
 
     function beginDragAutoScroll(callback) {
         dragAutoScrollCallback = callback;
-        dragViewportPos = Qt.point(-100, -100);
         dragAutoScrollActive = true;
     }
 
@@ -219,6 +219,7 @@ ScrollView {
         contentWidth: Math.max(width, timelineLengthFrames * (TimelineBridge ? TimelineBridge.timelineScale : 1))
         contentHeight: layerCount * layerHeight
         interactive: true
+        onMovementStarted: timelineViewRoot.autoScrollSuspended = true
 
         Timer {
             id: renderTimer
@@ -232,8 +233,14 @@ ScrollView {
 
                 // 1. Viewport sync
                 TimelineBridge.updateViewport(timelineFlickable.contentX, timelineFlickable.contentY);
+                if (timelineViewRoot.ScrollBar.horizontal && timelineViewRoot.ScrollBar.horizontal.pressed)
+                    timelineViewRoot.autoScrollSuspended = true;
+
+                if (timelineViewRoot.ScrollBar.vertical && timelineViewRoot.ScrollBar.vertical.pressed)
+                    timelineViewRoot.autoScrollSuspended = true;
+
                 // 2. Playhead auto-scroll (Page turn)
-                if (TimelineBridge.transport && TimelineBridge.transport.isPlaying) {
+                if (TimelineBridge.transport && TimelineBridge.transport.isPlaying && !timelineViewRoot.autoScrollSuspended) {
                     let viewportWidth = timelineFlickable.width;
                     let playheadX = TimelineBridge.transport.currentFrame * TimelineBridge.timelineScale;
                     let left = timelineFlickable.contentX;
@@ -246,7 +253,7 @@ ScrollView {
                     }
                 }
                 // 3. Drag auto-scroll
-                if (timelineViewRoot.dragAutoScrollActive && timelineViewRoot.dragViewportPos.x >= 0) {
+                if (timelineViewRoot.dragAutoScrollActive) {
                     let dx = 0;
                     let dy = 0;
                     let edge = timelineViewRoot.dragScrollEdge;
@@ -255,7 +262,7 @@ ScrollView {
                         dx = -step;
                     else if (timelineViewRoot.dragViewportPos.x > timelineFlickable.width - edge)
                         dx = step;
-                    if (timelineViewRoot.dragViewportPos.y >= 0 && timelineViewRoot.dragViewportPos.y < edge)
+                    if (timelineViewRoot.dragViewportPos.y < edge)
                         dy = -step;
                     else if (timelineViewRoot.dragViewportPos.y > timelineFlickable.height - edge)
                         dy = step;
@@ -277,6 +284,16 @@ ScrollView {
             }
 
             target: TimelineBridge ?? null
+        }
+
+        Connections {
+            function onIsPlayingChanged() {
+                if (TimelineBridge.transport.isPlaying)
+                    timelineViewRoot.autoScrollSuspended = false;
+
+            }
+
+            target: TimelineBridge && TimelineBridge.transport ? TimelineBridge.transport : null
         }
 
         Item {
@@ -502,6 +519,7 @@ ScrollView {
             anchors.fill: parent
             acceptedButtons: Qt.NoButton
             onWheel: (wheel) => {
+                timelineViewRoot.autoScrollSuspended = true;
                 var dy = (wheel.pixelDelta && wheel.pixelDelta.y !== 0) ? wheel.pixelDelta.y * 10 : wheel.angleDelta.y;
                 var dx = (wheel.pixelDelta && wheel.pixelDelta.x !== 0) ? wheel.pixelDelta.x * 10 : wheel.angleDelta.x;
                 if (wheel.modifiers & Qt.AltModifier || wheel.modifiers & Qt.ControlModifier) {
