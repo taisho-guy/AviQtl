@@ -262,8 +262,7 @@ Common.RinaWindow {
                             property int curRelFrame: (TimelineBridge && TimelineBridge.transport) ? Math.max(0, TimelineBridge.transport.currentFrame - TimelineBridge.clipStartFrame) : 0
                             property int clipDur: TimelineBridge ? TimelineBridge.clipDurationFrames : 100
                             property var tracks: effectModel ? effectModel.keyframeTracks : null
-                            property var track: (tracks && key) ? tracks[key] : null
-                            property var kfs: track || []
+                            property var kfs: effectModel ? effectModel.keyframeListForUi(key) : []
                             property bool hasKeyframes: kfs.length > 0
                             property var interval: findInterval(kfs, curRelFrame, clipDur)
                             property int startFrame: interval.start
@@ -541,6 +540,7 @@ Common.RinaWindow {
                                         property var rootWindow: root
                                         property int minDragFrame: 0
                                         property int maxDragFrame: clipDur
+                                        property bool isEndpoint: targetModel ? targetModel.isEndpointFrame(targetKey, originalFrame) : false
 
                                         width: 16
                                         height: 16
@@ -561,9 +561,10 @@ Common.RinaWindow {
 
                                             anchors.fill: parent
                                             hoverEnabled: true
+                                            cursorShape: kfItem.isEndpoint ? Qt.ArrowCursor : Qt.OpenHandCursor
                                             acceptedButtons: Qt.LeftButton | Qt.RightButton
                                             onClicked: function(mouse) {
-                                                if (mouse.button === Qt.RightButton)
+                                                if (mouse.button === Qt.RightButton && !kfItem.isEndpoint)
                                                     kfItem.targetModel.removeKeyframe(kfItem.targetKey, modelData.frame);
 
                                             }
@@ -578,6 +579,7 @@ Common.RinaWindow {
                                             property real startX: 0
 
                                             target: null
+                                            enabled: !kfItem.isEndpoint
                                             acceptedButtons: Qt.LeftButton
                                             onActiveChanged: {
                                                 if (active) {
@@ -606,7 +608,7 @@ Common.RinaWindow {
 
                                                     if (kfItem.currentFrame !== kfItem.originalFrame) {
                                                         var val = kfItem.targetModel.evaluatedParam(kfItem.targetKey, kfItem.originalFrame);
-                                                        var track = kfItem.targetModel.keyframeTracks[kfItem.targetKey] || [];
+                                                        var track = kfItem.targetModel.keyframeListForUi(kfItem.targetKey) || [];
                                                         var interp = "linear";
                                                         var pts = [];
                                                         for (let i = 0; i < track.length; i++) {
