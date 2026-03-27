@@ -1,6 +1,7 @@
 #pragma once
 #include "effect_model.hpp"
 #include <QList>
+#include <QSet>
 #include <QString>
 #include <QVariant>
 
@@ -40,6 +41,10 @@ struct SceneData {
     int id;
     QString name;
     QList<ClipData> clips;
+
+    // レイヤー状態
+    QSet<int> lockedLayers;
+    QSet<int> hiddenLayers;
 
     // シーンのコンテキスト（自己完結化）
     int width = 1920;

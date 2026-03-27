@@ -7,10 +7,8 @@ import "common/Logger.js" as Logger
 Item {
     id: root
 
-    // レイヤーの表示状態を取得する関数（外部から注入される）
-    property var getLayerVisible: function(layer) {
-        return true;
-    }
+    property var layerStates: ({
+    })
     // 外部から注入可能なプロパティ (デフォルトはTimelineBridgeから取得)
     property var clipModel: TimelineBridge ? TimelineBridge.clipModel : null
     property int projectWidth: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.width : 1920
@@ -27,6 +25,14 @@ Item {
     property var groupControls: []
     // カメラ制御管理
     property var activeCameraControl: null
+
+    function getLayerVisible(layer) {
+        if (!layerStates)
+            return true;
+
+        var state = layerStates[layer];
+        return state !== undefined ? state.visible : true;
+    }
 
     function registerCameraControl(cc) {
         activeCameraControl = cc;
@@ -267,13 +273,16 @@ Item {
 
                 // レイヤーが非表示の場合は描画しない
                 visible: {
-                    return root.getLayerVisible(_clipData.layer);
+                    // QMLエンジンのバインディングシステムに検知させるため、layerStatesを直接参照する
+                    var states = root.layerStates;
+                    var layerInfo = states ? states[_clipData.layer] : null;
+                    return (layerInfo !== null && layerInfo !== undefined) ? layerInfo.visible : true;
                 }
                 // 座標変換: 中心(0,0)、Y軸下プラス(AviUtl互換)
                 // Qt3DはY上がプラスなので、入力を反転させる
                 x: effectiveTransform.x
                 y: -effectiveTransform.y
-                z: effectiveTransform.z + (_clipData.layer * 5)
+                z: effectiveTransform.z
                 // 中心座標 (Pivot)
                 pivot: Qt.vector3d(p.anchorX || 0, -(p.anchorY || 0), p.anchorZ || 0)
                 // 3軸回転

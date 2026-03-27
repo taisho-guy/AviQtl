@@ -34,6 +34,8 @@ Item {
     height: sceneHeight
 
     CompositeView {
+        id: compositeView
+
         anchors.fill: parent
         // 外部から注入されたデータを使用
         clipModel: (root.timelineBridge && root.sceneId >= 0) ? root.timelineBridge.getSceneClips(root.sceneId) : []
@@ -41,6 +43,20 @@ Item {
         projectWidth: root.sceneWidth
         projectHeight: root.sceneHeight
         currentFrame: root.currentFrame
+        layerStates: {
+            var tlWin = WindowManager.getWindow("timeline");
+            return tlWin ? tlWin.globalLayerStates : ({
+            });
+        }
+
+        Connections {
+            function onGlobalLayerStatesChanged() {
+                compositeView.layerStates = WindowManager.getWindow("timeline").globalLayerStates;
+            }
+
+            target: WindowManager.getWindow("timeline")
+        }
+
     }
 
 }

@@ -125,6 +125,11 @@ class TimelineController : public QObject {
     Q_INVOKABLE void setEffectEnabled(int clipId, int effectIndex, bool enabled);
     Q_INVOKABLE void reorderEffects(int clipId, int oldIndex, int newIndex);
 
+    // レイヤー操作
+    Q_INVOKABLE bool isLayerLocked(int layer) const { return m_timeline->isLayerLocked(layer); }
+    Q_INVOKABLE bool isLayerHidden(int layer) const { return m_timeline->isLayerHidden(layer); }
+    Q_INVOKABLE void setLayerState(int layer, bool value, int type) { m_timeline->setLayerState(layer, value, type); }
+
     // オーディオプラグイン操作
     Q_INVOKABLE QVariantList getAvailableAudioPlugins() const;
     Q_INVOKABLE void addAudioPlugin(int clipId, const QString &pluginId);
@@ -215,6 +220,7 @@ class TimelineController : public QObject {
     void currentSceneIdChanged();
     void currentProjectUrlChanged();
     void clipEffectsChanged(int clipId);
+    void layerStateChanged(int layer);
     void selectedLayerChanged();
     void errorOccurred(const QString &message);
     void exportStarted(int totalFrames);

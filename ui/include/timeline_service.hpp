@@ -54,6 +54,11 @@ class TimelineService : public QObject {
     void switchScene(int sceneId);
     void updateSceneSettings(int sceneId, const QString &name, int width, int height, double fps, int totalFrames, const QString &gridMode, double gridBpm, double gridOffset, int gridInterval, int gridSubdivision, bool enableSnap, int magneticSnapRange);
 
+    // レイヤー状態操作
+    Q_INVOKABLE bool isLayerLocked(int layer) const;
+    Q_INVOKABLE bool isLayerHidden(int layer) const;
+    void setLayerState(int layer, bool value, int type); // 0: Lock, 1: Hidden
+
     // エフェクト
     void addEffect(int clipId, const QString &effectId);
     void removeEffect(int clipId, int effectIndex);
@@ -97,6 +102,7 @@ class TimelineService : public QObject {
     void applySceneSettingsInternal(int sceneId, const SceneData &data);
     void setKeyframeInternal(int clipId, int effectIndex, const QString &paramName, int frame, const QVariant &value, const QVariantMap &options);
     void removeKeyframeInternal(int clipId, int effectIndex, const QString &paramName, int frame);
+    void setLayerStateInternal(int sceneId, int layer, bool value, int type);
     ClipData *findClipById(int clipId);
     const ClipData *findClipById(int clipId) const;
 
@@ -114,6 +120,7 @@ class TimelineService : public QObject {
     void scenesChanged();
     void currentSceneIdChanged();
     void clipEffectsChanged(int clipId);
+    void layerStateChanged(int layer);
     void effectParamChanged(int clipId, int effectIndex, const QString &paramName, const QVariant &value);
     void clipCreated(int id, int layer, int startFrame, int duration, const QString &type);
 

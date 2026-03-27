@@ -72,6 +72,20 @@ SetAudioPluginEnabledCommand::SetAudioPluginEnabledCommand(TimelineService *serv
 void SetAudioPluginEnabledCommand::undo() { m_service->setAudioPluginEnabledInternal(m_clipId, m_index, !m_enabled); }
 void SetAudioPluginEnabledCommand::redo() { m_service->setAudioPluginEnabledInternal(m_clipId, m_index, m_enabled); }
 
+PasteEffectCommand::PasteEffectCommand(TimelineService *service, int clipId, int targetIndex, EffectModel *templateEffect) : m_service(service), m_clipId(clipId), m_targetIndex(targetIndex) {
+    m_effect = templateEffect->clone();
+    setText(QString("エフェクト貼り付け"));
+}
+void PasteEffectCommand::undo() { m_service->removeEffectInternal(m_clipId, m_targetIndex); }
+void PasteEffectCommand::redo() { m_service->pasteEffectInternal(m_clipId, m_targetIndex, m_effect); }
+
+UpdateLayerStateCommand::UpdateLayerStateCommand(TimelineService *service, int sceneId, int layer, bool value, StateType type) : m_service(service), m_sceneId(sceneId), m_layer(layer), m_value(value), m_type(type) {
+    QString actionName = (type == Lock) ? (value ? "レイヤーロック" : "ロック解除") : (value ? "レイヤー非表示" : "レイヤー表示");
+    setText(QString("%1: レイヤー %2").arg(actionName).arg(m_layer));
+}
+void UpdateLayerStateCommand::undo() { m_service->setLayerStateInternal(m_sceneId, m_layer, !m_value, m_type); }
+void UpdateLayerStateCommand::redo() { m_service->setLayerStateInternal(m_sceneId, m_layer, m_value, m_type); }
+
 SplitClipCommand::SplitClipCommand(TimelineService *service, int clipId, int frame, const QString &clipName) : m_service(service), m_originalClipId(clipId), m_newClipId(-1), m_splitFrame(frame), m_originalDuration(0), m_clipName(clipName) {
     setText(QString("クリップ分割: %1").arg(clipName));
 }
@@ -242,6 +256,11 @@ void TimelineService::createClipInternal(int clipId, const QString &type, int st
         startFrame = 0;
     if (layer < 0)
         layer = 0;
+
+    if (isLayerLocked(layer)) {
+        qWarning() << "createClipInternal: レイヤー" << layer << "はロックされています。";
+        return;
+    }
 
     const int defaultDuration = Rina::Core::SettingsManager::instance().settings().value("defaultClipDuration", 100).toInt();
     auto overlaps = [](int s1, int d1, int s2, int d2) { return (s1 < (s2 + d2)) && (s2 < (s1 + d1)); };
@@ -573,6 +592,11 @@ QPoint TimelineService::resolveDragPosition(int clipId, int targetLayer, int pro
             if (tLayer > 127)
                 tLayer = 127;
 
+            // ターゲットレイヤーがロックされている場合は、そのクリップの移動を制限
+            if (isLayerLocked(tLayer) || isLayerLocked(c->layer)) {
+                tLayer = c->layer;
+            }
+
             int testStart = c->startFrame + deltaFrame + maxPush;
             if (testStart < 0)
                 testStart = 0;
@@ -601,6 +625,16 @@ QPoint TimelineService::resolveDragPosition(int clipId, int targetLayer, int pro
 }
 
 void TimelineService::updateClipInternal(int id, int layer, int startFrame, int duration) {
+    const auto *existingClip = findClipById(id);
+    if (!existingClip)
+        return;
+
+    // 移動元または移動先がロックされている場合は拒否
+    if (isLayerLocked(layer) || isLayerLocked(existingClip->layer)) {
+        qWarning() << "updateClipInternal: ロックされたレイヤーへの/からの操作を拒否しました。";
+        return;
+    }
+
     if (startFrame < 0)
         startFrame = 0;
     if (duration < 1)
@@ -883,18 +917,21 @@ void TimelineService::reorderAudioPluginsInternal(int clipId, int oldIndex, int 
 
 void TimelineService::copyEffect(int clipId, int effectIndex) {
     auto *clip = findClipById(clipId);
-    if (clip && effectIndex >= 0 && effectIndex < clip->effects.size()) {
+    if (clip && effectIndex >= 0 && effectIndex < clip->effects.size())
         m_effectClipboard.reset(clip->effects[effectIndex]->clone());
-    }
 }
 
 void TimelineService::pasteEffect(int clipId, int targetIndex) {
     if (!m_effectClipboard)
         return;
+    m_undoStack->push(new PasteEffectCommand(this, clipId, targetIndex, m_effectClipboard.get()));
+}
+
+void TimelineService::pasteEffectInternal(int clipId, int targetIndex, EffectModel *effect) {
     auto *clip = findClipById(clipId);
     if (clip) {
         int idx = std::clamp(targetIndex, 0, static_cast<int>(clip->effects.size()));
-        clip->effects.insert(idx, m_effectClipboard->clone());
+        clip->effects.insert(idx, effect->clone());
         emit clipEffectsChanged(clipId);
         emit clipsChanged();
     }
@@ -1252,6 +1289,31 @@ void TimelineService::updateSceneSettings(int sceneId, const QString &name, int 
     m_undoStack->push(new UpdateSceneSettingsCommand(this, sceneId, oldData, newData));
 }
 
+bool TimelineService::isLayerLocked(int layer) const { return currentScene()->lockedLayers.contains(layer); }
+
+bool TimelineService::isLayerHidden(int layer) const { return currentScene()->hiddenLayers.contains(layer); }
+
+void TimelineService::setLayerState(int layer, bool value, int type) { m_undoStack->push(new UpdateLayerStateCommand(this, m_currentSceneId, layer, value, static_cast<UpdateLayerStateCommand::StateType>(type))); }
+
+void TimelineService::setLayerStateInternal(int sceneId, int layer, bool value, int type) {
+    auto it = std::find_if(m_scenes.begin(), m_scenes.end(), [sceneId](const SceneData &s) { return s.id == sceneId; });
+    if (it == m_scenes.end())
+        return;
+    if (type == UpdateLayerStateCommand::Lock) {
+        if (value)
+            it->lockedLayers.insert(layer);
+        else
+            it->lockedLayers.remove(layer);
+    } else {
+        if (value)
+            it->hiddenLayers.insert(layer);
+        else
+            it->hiddenLayers.remove(layer);
+    }
+    emit clipsChanged();
+    emit layerStateChanged(layer);
+}
+
 QList<ClipData *> TimelineService::resolvedActiveClipsAt(int frame) const {
     QList<ClipData *> result;
 
@@ -1268,6 +1330,10 @@ QList<ClipData *> TimelineService::resolvedActiveClipsAt(int frame) const {
 
     // 現在シーン内のクリップを走査
     for (auto &clip : currentScenePtr->clips) {
+        // 非表示レイヤーのクリップを除外
+        if (currentScenePtr->hiddenLayers.contains(clip.layer))
+            continue;
+
         // 通常クリップ
         if (clip.type != "scene") {
             if (frame >= clip.startFrame && frame < clip.startFrame + clip.durationFrames) {
@@ -1317,6 +1383,8 @@ QList<ClipData *> TimelineService::resolvedActiveClipsAt(int frame) const {
         // 対象シーン内のクリップを、親シーンの座標系に射影して追加
         for (auto &child : targetScene->clips) {
             if (childLocal >= child.startFrame && childLocal < child.startFrame + child.durationFrames) {
+                if (targetScene->hiddenLayers.contains(child.layer))
+                    continue;
                 // グローバル時間で見た start は「親のstart + 子のstart」
                 // （ここではClipData自体は書き換えず、判定だけに使う）
                 result.append(const_cast<ClipData *>(&child));

@@ -257,4 +257,18 @@ class UpdateSceneSettingsCommand : public QUndoCommand {
     SceneData m_oldData, m_newData;
 };
 
+class UpdateLayerStateCommand : public QUndoCommand {
+  public:
+    enum StateType { Lock, Hidden };
+    UpdateLayerStateCommand(TimelineService *service, int sceneId, int layer, bool value, StateType type);
+    void undo() override;
+    void redo() override;
+
+  private:
+    TimelineService *m_service;
+    int m_sceneId, m_layer;
+    bool m_value;
+    StateType m_type;
+};
+
 } // namespace Rina::UI
