@@ -179,6 +179,7 @@ class TimelineController : public QObject {
 
     Q_INVOKABLE void selectClip(int id);
     Q_INVOKABLE void selectClipsInRange(int frameA, int frameB, int layerA, int layerB, bool additive = false);
+    Q_INVOKABLE void toggleSelection(int id, const QVariantMap &data);
     Q_INVOKABLE void applySelectionIds(const QVariantList &ids);
 
     Q_INVOKABLE void togglePlay();
@@ -188,6 +189,7 @@ class TimelineController : public QObject {
     // コンテキストメニュー用のクリップ操作コマンド
     Q_INVOKABLE void deleteClip(int clipId);
     Q_INVOKABLE void splitClip(int clipId, int frame);
+    Q_INVOKABLE void splitSelectedClips(int frame);
     Q_INVOKABLE void copyClip(int clipId);
     Q_INVOKABLE void cutClip(int clipId);
     Q_INVOKABLE void pasteClip(int frame, int layer);

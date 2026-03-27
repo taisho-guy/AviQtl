@@ -37,6 +37,34 @@ void SelectionService::clearSelection() {
 
 void SelectionService::select(int id, const QVariantMap &data) { replaceSelection(QVariantList{id}, id, data); }
 
+void SelectionService::toggleSelection(int id, const QVariantMap &data) {
+    if (id < 0) {
+        clearSelection();
+        return;
+    }
+
+    bool changed = false;
+    if (m_selectedClipIds.contains(id)) {
+        m_selectedClipIds.remove(id);
+        changed = true;
+        if (m_selectedClipId == id) {
+            if (m_selectedClipIds.isEmpty()) {
+                updatePrimarySelection(-1, QVariantMap());
+            } else {
+                const int nextPrimary = *m_selectedClipIds.constBegin();
+                updatePrimarySelection(nextPrimary, QVariantMap());
+            }
+        }
+    } else {
+        m_selectedClipIds.insert(id);
+        changed = true;
+        updatePrimarySelection(id, data);
+    }
+
+    if (changed)
+        emit selectedClipIdsChanged();
+}
+
 void SelectionService::refreshSelectionData(int id, const QVariantMap &data) {
     if (id < 0)
         return;

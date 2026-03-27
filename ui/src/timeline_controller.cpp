@@ -496,6 +496,11 @@ void TimelineController::selectClipsInRange(int frameA, int frameB, int layerA, 
         m_timeline->selectClipsInRange(frameA, frameB, layerA, layerB, additive);
 }
 
+void TimelineController::toggleSelection(int id, const QVariantMap &data) {
+    if (m_timeline)
+        m_timeline->toggleSelection(id, data);
+}
+
 void TimelineController::applySelectionIds(const QVariantList &ids) {
     if (m_timeline)
         m_timeline->applySelectionIds(ids);
@@ -734,6 +739,11 @@ void TimelineController::deleteClip(int clipId) {
 void TimelineController::splitClip(int clipId, int frame) {
     if (m_timeline)
         m_timeline->splitClip(clipId, frame);
+}
+
+void TimelineController::splitSelectedClips(int frame) {
+    if (m_timeline)
+        m_timeline->splitSelectedClips(frame);
 }
 
 void TimelineController::copyClip(int clipId) { m_timeline->copyClip(clipId); }

@@ -40,10 +40,12 @@ class TimelineService : public QObject {
     void applyClipBatchMove(const QVariantList &moves);
     void resizeSelectedClips(int deltaStartFrame, int deltaDuration);
     void splitClip(int clipId, int frame);
+    void splitSelectedClips(int frame);
     Q_INVOKABLE int computeMagneticSnapPosition(int clipId, int targetLayer, int proposedStartFrame); // Note: This is for a different snap feature
     Q_INVOKABLE QPoint resolveDragPosition(int clipId, int targetLayer, int proposedStartFrame, const QVariantList &batchIds = QVariantList());
     void selectClip(int id);
     void selectClipsInRange(int frameA, int frameB, int layerA, int layerB, bool additive = false);
+    void toggleSelection(int id, const QVariantMap &data);
     void applySelectionIds(const QVariantList &ids);
 
     // シーン管理
@@ -85,6 +87,7 @@ class TimelineService : public QObject {
     void createClipInternal(int clipId, const QString &type, int startFrame, int layer);
     void updateClipInternal(int id, int layer, int startFrame, int duration);
     void addEffectInternal(int clipId, const QString &effectId);
+    void addClipsDirectInternal(const QList<ClipData> &clips); // 複数クリップの直接追加
     void addClipDirectInternal(const ClipData &clip);
     void restoreEffectInternal(int clipId, const QVariantMap &data);
     void removeEffectInternal(int clipId, int effectIndex);

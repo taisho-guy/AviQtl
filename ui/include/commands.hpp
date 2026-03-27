@@ -166,6 +166,18 @@ class DeleteClipCommand : public QUndoCommand {
     ClipData m_snapshot;
 };
 
+class DeleteClipsCommand : public QUndoCommand {
+  public:
+    DeleteClipsCommand(TimelineService *service, const QList<int> &clipIds, const QString &macroText);
+    void undo() override;
+    void redo() override;
+
+  private:
+    TimelineService *m_service;
+    QList<int> m_clipIds;
+    QList<ClipData> m_snapshots; // 削除されたクリップの復元用スナップショット
+};
+
 class PasteClipCommand : public QUndoCommand {
   public:
     PasteClipCommand(TimelineService *service, int newClipId, const ClipData &clipData);
