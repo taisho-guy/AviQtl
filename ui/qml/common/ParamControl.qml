@@ -13,7 +13,6 @@ RowLayout {
     property real endValue: 0
     property int decimals: 0
     property string interpolationType: "constant"
-    property bool enabled: true
     property bool isRangeMode: Math.abs(startValue - endValue) > 0.001
     property bool interpolationSelected: interpolationType !== "" && interpolationType !== "constant"
     property bool rightLinked: !interpolationSelected
@@ -83,12 +82,6 @@ RowLayout {
                 rightValueField.text = text;
 
         }
-    }
-
-    SystemPalette {
-        id: palette
-
-        colorGroup: SystemPalette.Active
     }
 
     // 左側スライダー（ボックスに追従）

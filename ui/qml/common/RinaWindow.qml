@@ -6,7 +6,7 @@ ApplicationWindow {
     id: root
 
     // 子要素で使えるようにエイリアスを提供
-    property alias palette: systemPalette
+    property alias themePalette: systemPalette
 
     // 背景色をシステムに合わせる
     color: systemPalette.window
