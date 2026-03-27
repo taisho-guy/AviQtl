@@ -273,10 +273,16 @@ Item {
 
                 // レイヤーが非表示の場合は描画しない
                 visible: {
+                    // 1. レイヤー自体の表示設定
                     // QMLエンジンのバインディングシステムに検知させるため、layerStatesを直接参照する
                     var states = root.layerStates;
                     var layerInfo = states ? states[_clipData.layer] : null;
-                    return (layerInfo !== null && layerInfo !== undefined) ? layerInfo.visible : true;
+                    var layerVisible = (layerInfo !== null && layerInfo !== undefined) ? layerInfo.visible : true;
+                    if (!layerVisible)
+                        return false;
+
+                    // 2. 再生ヘッドがクリップの範囲内にあるか（プリロードされたオブジェクトを隠す）
+                    return root.currentFrame >= _clipData.startFrame && root.currentFrame < (_clipData.startFrame + _clipData.durationFrames);
                 }
                 // 座標変換: 中心(0,0)、Y軸下プラス(AviUtl互換)
                 // Qt3DはY上がプラスなので、入力を反転させる

@@ -75,7 +75,18 @@ QVariant ClipModel::data(const QModelIndex &index, int role) const {
 }
 
 void ClipModel::updateClips(const QList<ClipData *> &newClips) {
-    if (m_activeClips != newClips) {
+    // クリップのポインタリストを比較し、顔ぶれが変わっていないかチェック
+    bool identical = (m_activeClips.size() == newClips.size());
+    if (identical) {
+        for (int i = 0; i < m_activeClips.size(); ++i) {
+            if (m_activeClips[i] != newClips[i]) {
+                identical = false;
+                break;
+            }
+        }
+    }
+
+    if (!identical) {
         beginResetModel();
         m_activeClips = newClips;
         endResetModel();

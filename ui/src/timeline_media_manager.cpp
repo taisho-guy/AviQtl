@@ -107,103 +107,98 @@ QUrl TimelineMediaManager::getClipSourceUrl(const ClipData &clip) const {
 }
 
 void TimelineMediaManager::updateMediaDecoders() {
-    // 変更: 現在のシーンだけでなく、プロジェクト内のすべてのクリップを対象にする
-    QList<ClipData> allClips;
-    // getAllScenes() を使用して実際の SceneData を取得
+    // 巨大な QList<ClipData> のコピー作成を避け、元のデータ構造を直接走査する
     const auto &scenes = m_controller->timeline()->getAllScenes();
+    QSet<int> currentClipIds;
     QHash<int, int> clipToScene;
+
     for (const auto &scene : scenes) {
         for (const auto &clip : scene.clips) {
-            allClips.append(clip);
+            if (clip.type != "video" && clip.type != "audio")
+                continue;
+
+            currentClipIds.insert(clip.id);
             clipToScene.insert(clip.id, scene.id);
-        }
-    }
-    const auto &clips = allClips;
-    QSet<int> currentClipIds;
 
-    for (const auto &clip : clips) {
-        if (clip.type != "video" && clip.type != "audio")
-            continue;
+            QUrl sourceUrl = getClipSourceUrl(clip);
+            if (!sourceUrl.isValid() || sourceUrl.isEmpty()) {
+                if (m_decoders.contains(clip.id)) {
+                    if (qobject_cast<Rina::Core::AudioDecoder *>(m_decoders[clip.id]))
+                        m_audioMixer->unregisterDecoder(clip.id);
+                    if (m_decoders[clip.id])
+                        m_decoders[clip.id]->deleteLater();
+                    m_decoders.remove(clip.id);
+                }
+                continue;
+            }
 
-        currentClipIds.insert(clip.id);
-        QUrl sourceUrl = getClipSourceUrl(clip);
-        if (!sourceUrl.isValid() || sourceUrl.isEmpty()) {
             if (m_decoders.contains(clip.id)) {
-                if (qobject_cast<Rina::Core::AudioDecoder *>(m_decoders[clip.id]))
-                    m_audioMixer->unregisterDecoder(clip.id);
-                if (m_decoders[clip.id])
-                    m_decoders[clip.id]->deleteLater();
-                m_decoders.remove(clip.id);
+                Rina::Core::MediaDecoder *existingDecoder = m_decoders[clip.id];
+                // If the source has changed, we must recreate the decoder
+                if (existingDecoder->property("sourceUrl").toUrl() != sourceUrl) {
+                    if (qobject_cast<Rina::Core::AudioDecoder *>(existingDecoder))
+                        m_audioMixer->unregisterDecoder(clip.id);
+                    if (existingDecoder)
+                        existingDecoder->deleteLater();
+                    m_decoders.remove(clip.id);
+                } else {
+                    continue;
+                }
             }
-            continue;
-        }
 
-        if (m_decoders.contains(clip.id)) {
-            Rina::Core::MediaDecoder *existingDecoder = m_decoders[clip.id];
-            // If the source has changed, we must recreate the decoder
-            if (existingDecoder->property("sourceUrl").toUrl() != sourceUrl) {
-                if (qobject_cast<Rina::Core::AudioDecoder *>(existingDecoder))
-                    m_audioMixer->unregisterDecoder(clip.id);
-                if (existingDecoder)
-                    existingDecoder->deleteLater();
-                m_decoders.remove(clip.id);
-            } else {
-                continue;
+            Rina::Core::MediaDecoder *decoder = nullptr;
+            if (clip.type == "video") {
+                if (!m_videoFrameStore)
+                    continue;
+                decoder = new Rina::Core::VideoDecoder(clip.id, sourceUrl, m_videoFrameStore, this);
+            } else if (clip.type == "audio") {
+                decoder = new Rina::Core::AudioDecoder(clip.id, sourceUrl, this);
+                if (auto *audioDecoder = qobject_cast<Rina::Core::AudioDecoder *>(decoder))
+                    m_audioMixer->registerDecoder(clip.id, audioDecoder);
             }
-        }
 
-        Rina::Core::MediaDecoder *decoder = nullptr;
-        if (clip.type == "video") {
-            if (!m_videoFrameStore)
-                continue;
-            decoder = new Rina::Core::VideoDecoder(clip.id, sourceUrl, m_videoFrameStore, this);
-        } else if (clip.type == "audio") {
-            decoder = new Rina::Core::AudioDecoder(clip.id, sourceUrl, this);
-            if (auto *audioDecoder = qobject_cast<Rina::Core::AudioDecoder *>(decoder))
-                m_audioMixer->registerDecoder(clip.id, audioDecoder);
-        }
-
-        if (decoder) {
-            decoder->setProperty("sourceUrl", sourceUrl);
-            m_decoders.insert(clip.id, decoder);
-            if (auto *vid = qobject_cast<Rina::Core::VideoDecoder *>(decoder)) {
-                int cid = clip.id;
-                connect(decoder, &Rina::Core::MediaDecoder::frameReady, this, [this, cid](int) { emit frameUpdated(cid); });
-                // 動画メタ情報が揃った時点でクリップの最大長をクランプする
-                connect(vid, &Rina::Core::VideoDecoder::videoMetaReady, this, [this, cid](int totalFrameCount, double sourceFps) {
-                    const auto *clip = m_controller->timeline()->findClipById(cid);
-                    if (!clip || clip->type != "video")
-                        return;
-
-                    int startVideoFrame = 0;
-                    double speed = 100.0;
-                    for (const auto *eff : clip->effects) {
-                        if (eff->id() != "video")
-                            continue;
-                        const QString playMode = eff->params().value("playMode", "開始フレーム＋再生速度").toString();
-                        if (playMode == "フレーム直接指定")
+            if (decoder) {
+                decoder->setProperty("sourceUrl", sourceUrl);
+                m_decoders.insert(clip.id, decoder);
+                if (auto *vid = qobject_cast<Rina::Core::VideoDecoder *>(decoder)) {
+                    int cid = clip.id;
+                    connect(decoder, &Rina::Core::MediaDecoder::frameReady, this, [this, cid](int) { emit frameUpdated(cid); });
+                    // 動画メタ情報が揃った時点でクリップの最大長をクランプする
+                    connect(vid, &Rina::Core::VideoDecoder::videoMetaReady, this, [this, cid](int totalFrameCount, double sourceFps) {
+                        const auto *clip = m_controller->timeline()->findClipById(cid);
+                        if (!clip || clip->type != "video")
                             return;
-                        startVideoFrame = eff->params().value("startFrame", 0).toInt();
-                        speed = eff->params().value("speed", 100.0).toDouble();
-                        break;
-                    }
 
-                    if (speed <= 0.0 || sourceFps <= 0.0)
-                        return;
+                        int startVideoFrame = 0;
+                        double speed = 100.0;
+                        for (const auto *eff : clip->effects) {
+                            if (eff->id() != "video")
+                                continue;
+                            const QString playMode = eff->params().value("playMode", "開始フレーム＋再生速度").toString();
+                            if (playMode == "フレーム直接指定")
+                                return;
+                            startVideoFrame = eff->params().value("startFrame", 0).toInt();
+                            speed = eff->params().value("speed", 100.0).toDouble();
+                            break;
+                        }
 
-                    const int projectFps = m_controller->project()->fps();
-                    const double startSec = static_cast<double>(startVideoFrame) / sourceFps;
-                    const double remainingSec = static_cast<double>(totalFrameCount) / sourceFps - startSec;
-                    if (remainingSec <= 0.0)
-                        return;
+                        if (speed <= 0.0 || sourceFps <= 0.0)
+                            return;
 
-                    const int maxDuration = static_cast<int>(remainingSec / (speed / 100.0) * projectFps);
-                    if (maxDuration > 0 && clip->durationFrames > maxDuration) {
-                        m_controller->updateClip(clip->id, clip->layer, clip->startFrame, maxDuration);
-                    }
-                });
+                        const int projectFps = m_controller->project()->fps();
+                        const double startSec = static_cast<double>(startVideoFrame) / sourceFps;
+                        const double remainingSec = static_cast<double>(totalFrameCount) / sourceFps - startSec;
+                        if (remainingSec <= 0.0)
+                            return;
+
+                        const int maxDuration = static_cast<int>(remainingSec / (speed / 100.0) * projectFps);
+                        if (maxDuration > 0 && clip->durationFrames > maxDuration) {
+                            m_controller->updateClip(clip->id, clip->layer, clip->startFrame, maxDuration);
+                        }
+                    });
+                }
+                decoder->scheduleStart(); // 非同期起動
             }
-            decoder->scheduleStart(); // 非同期起動
         }
     }
 

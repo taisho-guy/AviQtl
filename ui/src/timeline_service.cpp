@@ -1314,11 +1314,12 @@ void TimelineService::setLayerStateInternal(int sceneId, int layer, bool value, 
     emit layerStateChanged(layer);
 }
 
-QList<ClipData *> TimelineService::resolvedActiveClipsAt(int frame) const {
-    QList<ClipData *> result;
+QList<ClipData *> TimelineService::resolvedActiveClipsAt(int frame, int lookahead) const {
     const SceneData *currentScenePtr = currentScene();
     if (!currentScenePtr || currentScenePtr->id != m_currentSceneId)
-        return result;
+        return {};
+
+    const int endSearchFrame = frame + lookahead;
 
     // 最適化: QSet::contains を回避するためビットセット（128レイヤー分）を作成
     std::bitset<128> hiddenMask;
@@ -1327,6 +1328,7 @@ QList<ClipData *> TimelineService::resolvedActiveClipsAt(int frame) const {
             hiddenMask.set(layer);
     }
 
+    QList<ClipData *> result;
     result.reserve(currentScenePtr->clips.size());
 
     for (auto &clip : currentScenePtr->clips) {
@@ -1343,7 +1345,8 @@ QList<ClipData *> TimelineService::resolvedActiveClipsAt(int frame) const {
         // 通常クリップ
         if (!clip.isSceneObject) {
             // 符号なし整数へのキャストによる境界チェックの最適化
-            if (static_cast<unsigned int>(frame - clip.startFrame) < static_cast<unsigned int>(clip.durationFrames)) {
+            // 修正: 現在のフレームから lookahead 範囲内にあるものをすべて含める
+            if (frame < clip.startFrame + clip.durationFrames && endSearchFrame >= clip.startFrame) {
                 result.append(const_cast<ClipData *>(&clip));
             }
             continue;
@@ -1389,7 +1392,7 @@ QList<ClipData *> TimelineService::resolvedActiveClipsAt(int frame) const {
 
         // 対象シーン内のクリップを、親シーンの座標系に射影して追加
         for (auto &child : targetScene->clips) {
-            if (childLocal >= child.startFrame && childLocal < child.startFrame + child.durationFrames) {
+            if (childLocal < child.startFrame + child.durationFrames && (childLocal + lookahead) >= child.startFrame) {
                 if (targetScene->hiddenLayers.contains(child.layer))
                     continue;
                 // グローバル時間で見た start は「親のstart + 子のstart」

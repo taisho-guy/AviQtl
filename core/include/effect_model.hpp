@@ -1,6 +1,7 @@
 #pragma once
 #include "../../scripting/lua_host.hpp"
 #include <QColor>
+#include <QHash>
 #include <QObject>
 #include <QQmlEngine>
 #include <QVariant>
@@ -84,7 +85,7 @@ class EffectModel : public QObject {
         return std::clamp(t, 0.0, 1.0);
     }
 
-    static const std::map<QString, EasingFunction> &easingFunctions() {
+    static const QHash<QString, EasingFunction> &easingFunctions() {
         static auto easeOutBounce = [](double x) -> double {
             constexpr double n1 = 7.5625, d1 = 2.75;
             if (x < 1.0 / d1)
@@ -101,7 +102,7 @@ class EffectModel : public QObject {
             return n1 * x * x + 0.984375;
         };
 
-        static const std::map<QString, EasingFunction> funcs = {
+        static const QHash<QString, EasingFunction> funcs = {
             {"linear", [](double t, const auto &) { return t; }},
             {"ease_in_sine", [](double t, const auto &) { return 1.0 - std::cos(t * M_PI / 2.0); }},
             {"ease_out_sine", [](double t, const auto &) { return std::sin(t * M_PI / 2.0); }},
@@ -125,53 +126,90 @@ class EffectModel : public QObject {
             {"ease_out_in_quint", [](double t, const auto &) { return t < 0.5 ? (1.0 - std::pow(1.0 - 2.0 * t, 5.0)) / 2.0 : std::pow(2.0 * t - 1.0, 5.0) / 2.0 + 0.5; }},
             {"ease_in_expo", [](double t, const auto &) { return t == 0.0 ? 0.0 : std::pow(2.0, 10.0 * t - 10.0); }},
             {"ease_out_expo", [](double t, const auto &) { return t == 1.0 ? 1.0 : 1.0 - std::pow(2.0, -10.0 * t); }},
-            {"ease_in_out_expo", [](double t, const auto &) {
-                 if (t == 0.0) return 0.0;
-                 if (t == 1.0) return 1.0;
+            {"ease_in_out_expo",
+             [](double t, const auto &) {
+                 if (t == 0.0)
+                     return 0.0;
+                 if (t == 1.0)
+                     return 1.0;
                  return t < 0.5 ? std::pow(2.0, 20.0 * t - 10.0) / 2.0 : (2.0 - std::pow(2.0, -20.0 * t + 10.0)) / 2.0;
              }},
-            {"ease_out_in_expo", [](double t, const auto &) {
-                 if (t == 0.0) return 0.0;
-                 if (t == 1.0) return 1.0;
+            {"ease_out_in_expo",
+             [](double t, const auto &) {
+                 if (t == 0.0)
+                     return 0.0;
+                 if (t == 1.0)
+                     return 1.0;
                  return t < 0.5 ? (1.0 - std::pow(2.0, -20.0 * t)) / 2.0 : std::pow(2.0, 20.0 * t - 20.0) / 2.0 + 0.5;
              }},
             {"ease_in_circ", [](double t, const auto &) { return 1.0 - std::sqrt(1.0 - t * t); }},
             {"ease_out_circ", [](double t, const auto &) { return std::sqrt(1.0 - (t - 1.0) * (t - 1.0)); }},
             {"ease_in_out_circ", [](double t, const auto &) { return t < 0.5 ? (1.0 - std::sqrt(1.0 - 4.0 * t * t)) / 2.0 : (std::sqrt(1.0 - (-2.0 * t + 2.0) * (-2.0 * t + 2.0)) + 1.0) / 2.0; }},
             {"ease_out_in_circ", [](double t, const auto &) { return t < 0.5 ? std::sqrt(1.0 - (2.0 * t - 1.0) * (2.0 * t - 1.0)) / 2.0 : (1.0 - std::sqrt(1.0 - (2.0 * t - 1.0) * (2.0 * t - 1.0))) / 2.0 + 0.5; }},
-            {"ease_in_back", [](double t, const auto &) { constexpr double c1 = 1.70158, c3 = 1.70158 + 1.0; return c3 * t * t * t - c1 * t * t; }},
-            {"ease_out_back", [](double t, const auto &) { constexpr double c1 = 1.70158, c3 = 1.70158 + 1.0; return 1.0 + c3 * (t - 1.0) * (t - 1.0) * (t - 1.0) + c1 * (t - 1.0) * (t - 1.0); }},
-            {"ease_in_out_back", [](double t, const auto &) { constexpr double c2 = 1.70158 * 1.525; return t < 0.5 ? ((2.0 * t) * (2.0 * t) * ((c2 + 1.0) * 2.0 * t - c2)) / 2.0 : ((2.0 * t - 2.0) * (2.0 * t - 2.0) * ((c2 + 1.0) * (2.0 * t - 2.0) + c2) + 2.0) / 2.0; }},
-            {"ease_out_in_back", [](double t, const auto &) {
+            {"ease_in_back",
+             [](double t, const auto &) {
+                 constexpr double c1 = 1.70158, c3 = 1.70158 + 1.0;
+                 return c3 * t * t * t - c1 * t * t;
+             }},
+            {"ease_out_back",
+             [](double t, const auto &) {
+                 constexpr double c1 = 1.70158, c3 = 1.70158 + 1.0;
+                 return 1.0 + c3 * (t - 1.0) * (t - 1.0) * (t - 1.0) + c1 * (t - 1.0) * (t - 1.0);
+             }},
+            {"ease_in_out_back",
+             [](double t, const auto &) {
+                 constexpr double c2 = 1.70158 * 1.525;
+                 return t < 0.5 ? ((2.0 * t) * (2.0 * t) * ((c2 + 1.0) * 2.0 * t - c2)) / 2.0 : ((2.0 * t - 2.0) * (2.0 * t - 2.0) * ((c2 + 1.0) * (2.0 * t - 2.0) + c2) + 2.0) / 2.0;
+             }},
+            {"ease_out_in_back",
+             [](double t, const auto &) {
                  constexpr double c1 = 1.70158, c3 = c1 + 1.0;
                  auto eout = [&](double u) { return 1.0 + c3 * (u - 1.0) * (u - 1.0) * (u - 1.0) + c1 * (u - 1.0) * (u - 1.0); };
                  auto ein = [&](double u) { return c3 * u * u * u - c1 * u * u; };
                  return t < 0.5 ? eout(2.0 * t) / 2.0 : ein(2.0 * t - 1.0) / 2.0 + 0.5;
              }},
-            {"ease_in_elastic", [](double t, const auto &) {
+            {"ease_in_elastic",
+             [](double t, const auto &) {
                  constexpr double c4 = (2.0 * M_PI) / 3.0;
-                 if (t == 0.0) return 0.0;
-                 if (t == 1.0) return 1.0;
+                 if (t == 0.0)
+                     return 0.0;
+                 if (t == 1.0)
+                     return 1.0;
                  return -std::pow(2.0, 10.0 * t - 10.0) * std::sin((t * 10.0 - 10.75) * c4);
              }},
-            {"ease_out_elastic", [](double t, const auto &) {
+            {"ease_out_elastic",
+             [](double t, const auto &) {
                  constexpr double c4 = (2.0 * M_PI) / 3.0;
-                 if (t == 0.0) return 0.0;
-                 if (t == 1.0) return 1.0;
+                 if (t == 0.0)
+                     return 0.0;
+                 if (t == 1.0)
+                     return 1.0;
                  return std::pow(2.0, -10.0 * t) * std::sin((t * 10.0 - 0.75) * c4) + 1.0;
              }},
-            {"ease_in_out_elastic", [](double t, const auto &) {
+            {"ease_in_out_elastic",
+             [](double t, const auto &) {
                  constexpr double c5 = (2.0 * M_PI) / 4.5;
-                 if (t == 0.0) return 0.0;
-                 if (t == 1.0) return 1.0;
+                 if (t == 0.0)
+                     return 0.0;
+                 if (t == 1.0)
+                     return 1.0;
                  return t < 0.5 ? -(std::pow(2.0, 20.0 * t - 10.0) * std::sin((20.0 * t - 11.125) * c5)) / 2.0 : (std::pow(2.0, -20.0 * t + 10.0) * std::sin((20.0 * t - 11.125) * c5)) / 2.0 + 1.0;
              }},
-            {"ease_out_in_elastic", [](double t, const auto &) {
+            {"ease_out_in_elastic",
+             [](double t, const auto &) {
                  constexpr double c4 = (2.0 * M_PI) / 3.0;
-                 if (t == 0.0) return 0.0;
-                 if (t == 1.0) return 1.0;
+                 if (t == 0.0)
+                     return 0.0;
+                 if (t == 1.0)
+                     return 1.0;
                  auto eout = [&](double u) { return std::pow(2.0, -10.0 * u) * std::sin((u * 10.0 - 0.75) * c4) + 1.0; };
-                 auto ein = [&](double u) { if (u == 0.0) return 0.0; if (u == 1.0) return 1.0; return -std::pow(2.0, 10.0 * u - 10.0) * std::sin((u * 10.0 - 10.75) * c4); };
+                 auto ein = [&](double u) {
+                     if (u == 0.0)
+                         return 0.0;
+                     if (u == 1.0)
+                         return 1.0;
+                     return -std::pow(2.0, 10.0 * u - 10.0) * std::sin((u * 10.0 - 10.75) * c4);
+                 };
                  return t < 0.5 ? eout(2.0 * t) / 2.0 : ein(2.0 * t - 1.0) / 2.0 + 0.5;
              }},
             {"ease_out_bounce", [](double t, const auto &) { return easeOutBounce(t); }},
@@ -184,16 +222,17 @@ class EffectModel : public QObject {
                      double cp1x = p[i], cp1y = p[i + 1], cp2x = p[i + 2], cp2y = p[i + 3], endX = p[i + 4], endY = p[i + 5];
                      if (x <= endX || i + 6 >= p.size()) {
                          double range = endX - prevX;
-                         if (range < 1e-6) return endY;
+                         if (range < 1e-6)
+                             return endY;
                          double n_cp1x = (cp1x - prevX) / range, n_cp2x = (cp2x - prevX) / range, n_x = (x - prevX) / range;
                          double t = solveBezierT(n_x, n_cp1x, n_cp2x);
                          return (1 - t) * (1 - t) * (1 - t) * prevY + 3 * (1 - t) * (1 - t) * t * cp1y + 3 * (1 - t) * t * t * cp2y + t * t * t * endY;
                      }
-                     prevX = endX; prevY = endY;
+                     prevX = endX;
+                     prevY = endY;
                  }
                  return x;
-             }}
-        };
+             }}};
         return funcs;
     }
 
@@ -234,14 +273,14 @@ class EffectModel : public QObject {
             if (type == "none")
                 return v0;
             if (v0.typeId() == QMetaType::QString && v1.typeId() == QMetaType::QString) {
-                QColor c0(v0.toString()), c1(v1.toString());
+                QColor c0(v0.toString()), c1(v1.typeId() == QMetaType::QString ? v1.toString() : v0.toString());
                 if (c0.isValid() && c1.isValid()) {
                     std::vector<double> params;
                     if (type == "custom")
                         params = getBezierParams(track[i]);
-                    if (!easingFunctions().count(type))
+                    if (!easingFunctions().contains(type))
                         type = "linear";
-                    const double t = easingFunctions().at(type)(tRaw, params);
+                    const double t = easingFunctions().value(type)(tRaw, params);
                     return QColor(static_cast<int>(c0.red() + (c1.red() - c0.red()) * t), static_cast<int>(c0.green() + (c1.green() - c0.green()) * t), static_cast<int>(c0.blue() + (c1.blue() - c0.blue()) * t),
                                   static_cast<int>(c0.alpha() + (c1.alpha() - c0.alpha()) * t))
                         .name(QColor::HexArgb);
@@ -252,7 +291,7 @@ class EffectModel : public QObject {
             const double a = v0.toDouble(), b = v1.toDouble();
             if (type == "random") {
                 const int stepFrames = std::max(1, modeParams.value("stepFrames", 1).toInt()), stepIndex = (frame - f0) / stepFrames;
-                const quint32 seed = qHash(QString("%1:%2:%3:%4:%5").arg(f0).arg(f1).arg(stepIndex).arg(a, 0, 'g', 16).arg(b, 0, 'g', 16));
+                const quint32 seed = qHash(f0) ^ qHash(f1) ^ qHash(stepIndex) ^ qHash(static_cast<qint64>(a * 1000)) ^ qHash(static_cast<qint64>(b * 1000));
                 return std::min(a, b) + (std::max(a, b) - std::min(a, b)) * (double(seed % 1000000u) / 999999.0);
             }
             if (type == "alternate") {
@@ -262,9 +301,9 @@ class EffectModel : public QObject {
             std::vector<double> params;
             if (type == "custom")
                 params = getBezierParams(track[i]);
-            if (!easingFunctions().count(type))
+            if (!easingFunctions().contains(type))
                 type = "linear";
-            return a + (b - a) * easingFunctions().at(type)(tRaw, params);
+            return a + (b - a) * easingFunctions().value(type)(tRaw, params);
         }
         return getValue(track.back());
     }
@@ -306,14 +345,6 @@ class EffectModel : public QObject {
         out["end"] = end;
         out["points"] = sortPoints(points);
         return out;
-    }
-
-    static QVariant evaluateTrackWrapper(const QVariant &trackValue, int frame, const QVariant &fallback) {
-        if (isStructuredTrack(trackValue)) {
-            const QVariantMap normalized = normalizeTrackForDuration(trackValue, fallback, inferredDurationForTrack(trackValue));
-            return evaluateTrack(flattenStructuredTrack(normalized), frame, fallback);
-        }
-        return evaluateTrack(trackValue.toList(), frame, fallback);
     }
 
   public:
@@ -358,10 +389,12 @@ class EffectModel : public QObject {
         auto *copy = new EffectModel(m_id, m_name, m_category, m_params, m_qmlSource, m_uiDefinition);
         copy->m_enabled = m_enabled;
         copy->m_keyframeTracks = m_keyframeTracks;
+        copy->m_lastDuration = m_lastDuration;
         return copy;
     }
 
     Q_INVOKABLE QVariantList keyframeListForUi(const QString &paramName) const {
+        invalidateCache();
         const QVariant raw = m_keyframeTracks.value(paramName);
         if (isStructuredTrack(raw))
             return flattenStructuredTrack(raw.toMap());
@@ -379,6 +412,8 @@ class EffectModel : public QObject {
     }
 
     Q_INVOKABLE void syncTrackEndpoints(int durationFrames) {
+        invalidateCache();
+        m_lastDuration = durationFrames;
         QVariantMap next = m_keyframeTracks;
         for (auto it = m_params.begin(); it != m_params.end(); ++it)
             next[it.key()] = normalizeTrackForDuration(next.value(it.key()), it.value(), durationFrames);
@@ -389,6 +424,7 @@ class EffectModel : public QObject {
     }
 
     Q_INVOKABLE QVariantMap splitTracks(int firstHalfDuration, int originalDuration) {
+        invalidateCache();
         QVariantMap secondHalfTracks;
         if (originalDuration < 1)
             return secondHalfTracks;
@@ -412,7 +448,7 @@ class EffectModel : public QObject {
             QVariantMap firstTrack;
             QVariantMap firstEnd;
             firstEnd["frame"] = firstEndFrame;
-            firstEnd["value"] = evaluateTrackWrapper(flat, firstEndFrame, fallback);
+            firstEnd["value"] = evaluateTrack(flat, firstEndFrame, fallback);
             firstEnd["interp"] = track.value("end").toMap().value("interp", "none"); // 既存の補間を維持
 
             QVariantList firstPoints;
@@ -432,10 +468,10 @@ class EffectModel : public QObject {
             QVariantMap secondStart;
             QVariantMap secondEnd;
             secondStart["frame"] = 0;
-            secondStart["value"] = evaluateTrackWrapper(flat, firstHalfDuration, fallback);
+            secondStart["value"] = evaluateTrack(flat, firstHalfDuration, fallback);
             secondStart["interp"] = track.value("start").toMap().value("interp", "none"); // 既存の補間を維持
             secondEnd["frame"] = secondEndFrame;
-            secondEnd["value"] = evaluateTrackWrapper(flat, std::max(0, originalDuration - 1), fallback);
+            secondEnd["value"] = evaluateTrack(flat, std::max(0, originalDuration - 1), fallback);
             secondEnd["interp"] = track.value("end").toMap().value("interp", "none"); // 既存の補間を維持
 
             QVariantList secondPoints;
@@ -465,13 +501,15 @@ class EffectModel : public QObject {
     Q_INVOKABLE QStringList availableEasings() const {
         QStringList keys;
         keys << "none";
-        for (const auto &[k, v] : easingFunctions())
-            keys << k;
+        auto funcs = easingFunctions();
+        for (auto it = funcs.begin(); it != funcs.end(); ++it)
+            keys << it.key();
         keys << "random" << "alternate";
         return keys;
     }
 
     void setEnabled(bool e) {
+        invalidateCache();
         if (m_enabled != e) {
             m_enabled = e;
             emit enabledChanged();
@@ -479,6 +517,7 @@ class EffectModel : public QObject {
     }
 
     Q_INVOKABLE void setParam(const QString &key, const QVariant &val) {
+        invalidateCache();
         if (m_params[key] != val) {
             m_params[key] = val;
             emit paramsChanged();
@@ -487,6 +526,7 @@ class EffectModel : public QObject {
     }
 
     Q_INVOKABLE void setKeyframe(const QString &paramName, int frame, const QVariant &value, const QVariantMap &options) {
+        invalidateCache();
         const QVariant fallback = m_params.value(paramName);
         // トラックを取得して正規化（古い形式が含まれていてもここでマップ形式に統一される）
         QVariantMap track = normalizeTrackForDuration(m_keyframeTracks.value(paramName), fallback, inferredDurationForTrack(m_keyframeTracks.value(paramName)));
@@ -546,6 +586,7 @@ class EffectModel : public QObject {
     }
 
     Q_INVOKABLE void removeKeyframe(const QString &paramName, int frame) {
+        invalidateCache();
         const QVariant fallback = m_params.value(paramName);
         QVariantMap track = normalizeTrackForDuration(m_keyframeTracks.value(paramName), fallback, inferredDurationForTrack(m_keyframeTracks.value(paramName)));
 
@@ -581,8 +622,18 @@ class EffectModel : public QObject {
         if (!m_keyframeTracks.contains(paramName))
             return fallback;
 
-        // 1. キーフレームからベース値を計算
-        QVariant baseValue = evaluateTrackWrapper(m_keyframeTracks.value(paramName), frame, fallback);
+        // 1. キャッシュされた解決済みトラックを使用して評価（ヒープ割り当てを回避）
+        if (!m_resolvedCache.contains(paramName)) {
+            const QVariant raw = m_keyframeTracks.value(paramName);
+            if (isStructuredTrack(raw)) {
+                int d = (m_lastDuration > 0) ? m_lastDuration : inferredDurationForTrack(raw);
+                QVariantMap normalized = normalizeTrackForDuration(raw, fallback, d);
+                m_resolvedCache.insert(paramName, flattenStructuredTrack(normalized));
+            } else {
+                m_resolvedCache.insert(paramName, sortPoints(raw.toList()));
+            }
+        }
+        QVariant baseValue = evaluateTrack(m_resolvedCache.value(paramName), frame, fallback);
 
         // 2. パラメータ自体がエクスプレッション定義かチェック（簡易実装）
         QString strVal = m_params.value(paramName).toString();
@@ -603,6 +654,8 @@ class EffectModel : public QObject {
         emit keyframeTracksChanged();
     }
 
+    void invalidateCache() const { m_resolvedCache.clear(); }
+
   signals:
     void enabledChanged();
     void paramsChanged();
@@ -618,5 +671,8 @@ class EffectModel : public QObject {
     QString m_qmlSource;
     QVariantMap m_uiDefinition;
     QVariantMap m_keyframeTracks; // パラメータ名 -> QVariantList[{frame,value,interp}]
+
+    mutable int m_lastDuration = -1;
+    mutable QHash<QString, QVariantList> m_resolvedCache;
 };
 } // namespace Rina::UI

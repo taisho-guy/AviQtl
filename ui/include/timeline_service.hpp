@@ -21,7 +21,7 @@ class TimelineService : public QObject {
     const QList<ClipData> &clips(int sceneId) const; // 特定シーンのクリップ取得
 
     // 追加: ネストを解決した「フレーム時点のアクティブクリップ」を返す
-    QList<ClipData *> resolvedActiveClipsAt(int frame) const;
+    QList<ClipData *> resolvedActiveClipsAt(int frame, int lookahead = 0) const;
 
     // 指定された条件で配置可能な最短の開始フレームを計算する（衝突回避）
     int findVacantFrame(int layer, int startFrame, int duration, int excludeClipId) const;
