@@ -1316,23 +1316,38 @@ void TimelineService::setLayerStateInternal(int sceneId, int layer, bool value, 
 
 QList<ClipData *> TimelineService::resolvedActiveClipsAt(int frame) const {
     QList<ClipData *> result;
-
-    // 1. 現在シーンを取得
-    const SceneData *currentScenePtr = nullptr;
-    for (const auto &s : m_scenes) {
-        if (s.id == m_currentSceneId) {
-            currentScenePtr = &s;
-            break;
-        }
-    }
-    if (!currentScenePtr)
+    const SceneData *currentScenePtr = currentScene();
+    if (!currentScenePtr || currentScenePtr->id != m_currentSceneId)
         return result;
 
-    // 現在シーン内のクリップを走査
+    // 最適化: QSet::contains を回避するためビットセット（128レイヤー分）を作成
+    std::bitset<128> hiddenMask;
+    for (int layer : currentScenePtr->hiddenLayers) {
+        if (static_cast<size_t>(layer) < hiddenMask.size())
+            hiddenMask.set(layer);
+    }
+
+    result.reserve(currentScenePtr->clips.size());
+
     for (auto &clip : currentScenePtr->clips) {
-        // 非表示レイヤーのクリップを除外
-        if (currentScenePtr->hiddenLayers.contains(clip.layer))
+        // 高速ビットチェック
+        if (clip.layer < 128 && hiddenMask.test(clip.layer))
             continue;
+
+        // クリップ種別のキャッシュ更新
+        if (!clip.isSceneIdCached) {
+            clip.isSceneObject = (clip.type == "scene");
+            clip.isSceneIdCached = true;
+        }
+
+        // 通常クリップ
+        if (!clip.isSceneObject) {
+            // 符号なし整数へのキャストによる境界チェックの最適化
+            if (static_cast<unsigned int>(frame - clip.startFrame) < static_cast<unsigned int>(clip.durationFrames)) {
+                result.append(const_cast<ClipData *>(&clip));
+            }
+            continue;
+        }
 
         // 通常クリップ
         if (clip.type != "scene") {

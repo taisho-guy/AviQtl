@@ -118,14 +118,14 @@ void ECS::commit() {
         dst.renderGraphDirty = src.renderGraphDirty;
 
         for (int id : m_dirtyForBuffer[m_editIndex]) {
-            if (src.transforms.contains(id))
-                dst.transforms[id] = src.transforms.find(id)->second;
-            if (src.renderStates.contains(id))
-                dst.renderStates[id] = src.renderStates.find(id)->second;
-            if (src.audioStates.contains(id))
-                dst.audioStates[id] = src.audioStates.find(id)->second;
-            if (src.metadataStates.contains(id))
-                dst.metadataStates[id] = src.metadataStates.find(id)->second;
+            if (const auto *s = src.transforms.find(id))
+                dst.transforms[id] = *s;
+            if (const auto *s = src.renderStates.find(id))
+                dst.renderStates[id] = *s;
+            if (const auto *s = src.audioStates.find(id))
+                dst.audioStates[id] = *s;
+            if (const auto *s = src.metadataStates.find(id))
+                dst.metadataStates[id] = *s;
         }
         m_dirtyForBuffer[m_editIndex].clear();
     }
@@ -149,8 +149,8 @@ float rina_lua_get_audio_volume(int clipId) {
         return 1.0f;
 
     auto it = state->audioStates.find(clipId);
-    if (it != state->audioStates.end()) {
-        return it->second.volume;
+    if (it) {
+        return it->volume;
     }
     return 1.0f;
 }

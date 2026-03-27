@@ -28,9 +28,9 @@ AudioMixer::AudioMixer(QObject *parent) : QObject(parent) {
     auto state = Timeline::ECS::instance().getSnapshot();
     if (state) {
         const auto &audioStates = state->audioStates;
-        for (const auto &[clipId, audio] : audioStates) {
-            if (!m_chains.contains(clipId)) {
-                m_chains[clipId] = std::make_shared<Plugin::AudioPluginChain>();
+        for (const auto &audio : audioStates) {
+            if (!m_chains.contains(audio.clipId)) {
+                m_chains[audio.clipId] = std::make_shared<Plugin::AudioPluginChain>();
             }
         }
     }
@@ -104,7 +104,8 @@ std::vector<float> AudioMixer::mix(int currentFrame, double fps, int samplesPerF
     if (!state)
         return masterBuffer;
     const auto &audioStates = state->audioStates;
-    for (const auto &[clipId, audio] : audioStates) {
+    for (const auto &audio : audioStates) {
+        int clipId = audio.clipId;
         if (audio.mute)
             continue;
         if (m_decoders.find(clipId) == m_decoders.end())

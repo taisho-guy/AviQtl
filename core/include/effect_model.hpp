@@ -274,16 +274,14 @@ class EffectModel : public QObject {
         if (isStructuredTrack(rawTrack)) {
             QVariantMap raw = rawTrack.toMap(), start = raw.value("start").toMap(), end = raw.value("end").toMap();
             QVariantList points = raw.value("points").toList(), nextPoints;
-            start["frame"] = 0;
+            start["frame"] = 0; // フレームは常に0
             if (!start.contains("value"))
                 start["value"] = fallback;
-            if (!start.contains("interp"))
-                start["interp"] = "none";
-            end["frame"] = endFrame;
+            // start["interp"] は既存の値を保持するか、デフォルト値を使用する
+            end["frame"] = endFrame; // フレームは常にendFrame
             if (!end.contains("value"))
                 end["value"] = fallback;
-            if (!end.contains("interp"))
-                end["interp"] = "none";
+            // end["interp"] は既存の値を保持するか、デフォルト値を使用する
             for (const auto &v : points) {
                 const int f = v.toMap().value("frame").toInt();
                 if (f > 0 && f < endFrame)
@@ -296,8 +294,8 @@ class EffectModel : public QObject {
             return out;
         }
         QVariantList legacy = sortPoints(rawTrack.toList()), points;
-        QVariantMap start = makePoint(0, legacy.isEmpty() ? fallback : evaluateTrack(legacy, 0, fallback), "none");
-        QVariantMap end = makePoint(endFrame, legacy.isEmpty() ? fallback : evaluateTrack(legacy, endFrame, fallback), "none");
+        QVariantMap start = makePoint(0, legacy.isEmpty() ? fallback : evaluateTrack(legacy, 0, fallback), "linear");             // デフォルトをlinearに
+        QVariantMap end = makePoint(endFrame, legacy.isEmpty() ? fallback : evaluateTrack(legacy, endFrame, fallback), "linear"); // デフォルトをlinearに
         for (const auto &v : legacy) {
             const int f = v.toMap().value("frame").toInt();
             if (f > 0 && f < endFrame)
@@ -415,7 +413,7 @@ class EffectModel : public QObject {
             QVariantMap firstEnd;
             firstEnd["frame"] = firstEndFrame;
             firstEnd["value"] = evaluateTrackWrapper(flat, firstEndFrame, fallback);
-            firstEnd["interp"] = "none";
+            firstEnd["interp"] = track.value("end").toMap().value("interp", "none"); // 既存の補間を維持
 
             QVariantList firstPoints;
             for (const auto &v : points) {
@@ -435,10 +433,10 @@ class EffectModel : public QObject {
             QVariantMap secondEnd;
             secondStart["frame"] = 0;
             secondStart["value"] = evaluateTrackWrapper(flat, firstHalfDuration, fallback);
-            secondStart["interp"] = "none";
+            secondStart["interp"] = track.value("start").toMap().value("interp", "none"); // 既存の補間を維持
             secondEnd["frame"] = secondEndFrame;
             secondEnd["value"] = evaluateTrackWrapper(flat, std::max(0, originalDuration - 1), fallback);
-            secondEnd["interp"] = "none";
+            secondEnd["interp"] = track.value("end").toMap().value("interp", "none"); // 既存の補間を維持
 
             QVariantList secondPoints;
             for (const auto &v : points) {
@@ -503,7 +501,7 @@ class EffectModel : public QObject {
 
         if (frame <= startFrame) {
             start["value"] = value;
-            start["interp"] = options.value("interp", start.value("interp", "none"));
+            start["interp"] = options.value("interp", start.value("interp", "none")); // 既存の補間を維持、またはデフォルトをnoneに
             track["start"] = start;
             m_keyframeTracks[paramName] = track;
             emit keyframeTracksChanged();
@@ -512,7 +510,7 @@ class EffectModel : public QObject {
 
         if (frame >= endFrame) {
             end["value"] = value;
-            end["interp"] = options.value("interp", end.value("interp", "none"));
+            end["interp"] = options.value("interp", end.value("interp", "none")); // 既存の補間を維持、またはデフォルトをnoneに
             track["end"] = end;
             m_keyframeTracks[paramName] = track;
             emit keyframeTracksChanged();

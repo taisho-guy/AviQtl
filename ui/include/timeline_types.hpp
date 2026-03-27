@@ -4,6 +4,7 @@
 #include <QSet>
 #include <QString>
 #include <QVariant>
+#include <bitset>
 
 namespace Rina::UI {
 
@@ -31,6 +32,10 @@ struct ClipData {
     int startFrame;
     int durationFrames;
     int layer;
+
+    // 最適化: レンダリングパスでの文字列比較を避けるためのキャッシュ
+    mutable bool isSceneObject = false;
+    mutable bool isSceneIdCached = false;
 
     // ハイブリッド設計: EffectModelは振る舞いを持つためポインタで保持する
     QList<EffectModel *> effects;

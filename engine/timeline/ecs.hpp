@@ -13,84 +13,69 @@ namespace Rina::Engine::Timeline {
 // Sparse Set (疎集合) パターンによるデータ指向コンテナ
 template <typename T> class DenseComponentMap {
   public:
-    struct Entry {
-        int first = -1;
-        T second{};
-    };
-
-    using Storage = std::vector<Entry>;
-    using iterator = typename Storage::iterator;
-    using const_iterator = typename Storage::const_iterator;
-
     T &operator[](int clipId) {
         ensureSparseSize(clipId);
         int &denseIndex = m_sparse[static_cast<std::size_t>(clipId)];
         if (denseIndex >= 0)
-            return m_dense[static_cast<std::size_t>(denseIndex)].second;
+            return m_data[static_cast<std::size_t>(denseIndex)];
 
-        denseIndex = static_cast<int>(m_dense.size());
-        m_dense.push_back(Entry{clipId, T{}});
-        return m_dense.back().second;
+        denseIndex = static_cast<int>(m_data.size());
+        m_entities.push_back(clipId);
+        m_data.push_back(T{});
+        return m_data.back();
     }
 
-    iterator find(int clipId) {
+    T *find(int clipId) {
         if (clipId < 0 || clipId >= static_cast<int>(m_sparse.size()))
-            return m_dense.end();
+            return nullptr;
         const int denseIndex = m_sparse[static_cast<std::size_t>(clipId)];
         if (denseIndex < 0)
-            return m_dense.end();
-        return m_dense.begin() + denseIndex;
+            return nullptr;
+        return &m_data[static_cast<std::size_t>(denseIndex)];
     }
 
-    const_iterator find(int clipId) const {
+    const T *find(int clipId) const { return const_cast<DenseComponentMap *>(this)->find(clipId); }
+
+    void erase(int clipId) {
         if (clipId < 0 || clipId >= static_cast<int>(m_sparse.size()))
-            return m_dense.end();
-        const int denseIndex = m_sparse[static_cast<std::size_t>(clipId)];
+            return;
+        int denseIndex = m_sparse[static_cast<std::size_t>(clipId)];
         if (denseIndex < 0)
-            return m_dense.end();
-        return m_dense.begin() + denseIndex;
-    }
+            return;
 
-    iterator erase(iterator it) {
-        if (it == m_dense.end())
-            return it;
-
-        const int denseIndex = static_cast<int>(std::distance(m_dense.begin(), it));
-        const int removedClipId = m_dense[static_cast<std::size_t>(denseIndex)].first;
-        const int lastIndex = static_cast<int>(m_dense.size()) - 1;
-
+        int lastIndex = static_cast<int>(m_data.size()) - 1;
         if (denseIndex != lastIndex) {
-            m_dense[static_cast<std::size_t>(denseIndex)] = std::move(m_dense[static_cast<std::size_t>(lastIndex)]);
-            const int movedClipId = m_dense[static_cast<std::size_t>(denseIndex)].first;
+            m_data[static_cast<std::size_t>(denseIndex)] = std::move(m_data[static_cast<std::size_t>(lastIndex)]);
+            int movedClipId = m_entities[static_cast<std::size_t>(lastIndex)];
+            m_entities[static_cast<std::size_t>(denseIndex)] = movedClipId;
             m_sparse[static_cast<std::size_t>(movedClipId)] = denseIndex;
         }
 
-        m_dense.pop_back();
-        if (removedClipId >= 0 && removedClipId < static_cast<int>(m_sparse.size()))
-            m_sparse[static_cast<std::size_t>(removedClipId)] = -1;
-
-        if (denseIndex >= static_cast<int>(m_dense.size()))
-            return m_dense.end();
-        return m_dense.begin() + denseIndex;
+        m_data.pop_back();
+        m_entities.pop_back();
+        m_sparse[static_cast<std::size_t>(clipId)] = -1;
     }
 
     bool syncAlive(const QSet<int> &aliveIds) {
         bool changed = false;
-        for (int i = static_cast<int>(m_dense.size()) - 1; i >= 0; --i) {
-            if (!aliveIds.contains(m_dense[static_cast<std::size_t>(i)].first)) {
-                erase(m_dense.begin() + i);
+        for (int i = static_cast<int>(m_entities.size()) - 1; i >= 0; --i) {
+            int id = m_entities[static_cast<std::size_t>(i)];
+            if (!aliveIds.contains(id)) {
+                erase(id);
                 changed = true;
             }
         }
         return changed;
     }
 
-    iterator begin() { return m_dense.begin(); }
-    iterator end() { return m_dense.end(); }
-    const_iterator begin() const { return m_dense.begin(); }
-    const_iterator end() const { return m_dense.end(); }
-    const_iterator cbegin() const { return m_dense.cbegin(); }
-    const_iterator cend() const { return m_dense.cend(); }
+    // データ指向アクセス用のイテレータ（ポインタ）
+    using iterator = T *;
+    using const_iterator = const T *;
+
+    iterator begin() { return m_data.empty() ? nullptr : &m_data[0]; }
+    iterator end() { return m_data.empty() ? nullptr : &m_data[0] + m_data.size(); }
+    const_iterator begin() const { return m_data.empty() ? nullptr : &m_data[0]; }
+    const_iterator end() const { return m_data.empty() ? nullptr : &m_data[0] + m_data.size(); }
 
     bool contains(int clipId) const {
         if (clipId < 0 || clipId >= static_cast<int>(m_sparse.size()))
@@ -107,7 +92,8 @@ template <typename T> class DenseComponentMap {
             m_sparse.resize(needed, -1);
     }
 
-    Storage m_dense;
+    std::vector<int> m_entities; // Dense IDs
+    std::vector<T> m_data;       // Dense Components
     std::vector<int> m_sparse;
 };
 
