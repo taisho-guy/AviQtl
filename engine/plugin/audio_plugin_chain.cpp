@@ -12,16 +12,6 @@ void AudioPluginChain::remove(int index) {
         m_plugins.erase(m_plugins.begin() + index);
 }
 
-void AudioPluginChain::move(int from, int to) {
-    if (from < 0 || from >= (int)m_plugins.size() || to < 0 || to >= (int)m_plugins.size() || from == to) {
-        return;
-    }
-
-    auto ptr = std::move(m_plugins[from]);
-    m_plugins.erase(m_plugins.begin() + from);
-    m_plugins.insert(m_plugins.begin() + to, std::move(ptr));
-}
-
 void AudioPluginChain::clear() { m_plugins.clear(); }
 
 void AudioPluginChain::prepare(double sr, int bs) {

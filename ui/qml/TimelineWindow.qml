@@ -160,30 +160,24 @@ Common.RinaWindow {
                 layerCount: timelineWindow.layerCount
                 syncFlickable: timelineView.flickable
                 onLayerVisibilityChanged: (layer, visible) => {
-                    var newState = Object.assign({
-                    }, globalLayerStates);
-                    var oldState = newState[layer] || {
+                    if (!globalLayerStates[layer])
+                        globalLayerStates[layer] = {
                         "visible": true,
                         "locked": false
                     };
-                    newState[layer] = Object.assign({
-                    }, oldState, {
-                        "visible": visible
-                    });
-                    globalLayerStates = newState;
+
+                    globalLayerStates[layer].visible = visible;
+                    globalLayerStates = globalLayerStates; // 強制再評価
                 }
                 onLayerLockChanged: (layer, locked) => {
-                    var newState = Object.assign({
-                    }, globalLayerStates);
-                    var oldState = newState[layer] || {
+                    if (!globalLayerStates[layer])
+                        globalLayerStates[layer] = {
                         "visible": true,
                         "locked": false
                     };
-                    newState[layer] = Object.assign({
-                    }, oldState, {
-                        "locked": locked
-                    });
-                    globalLayerStates = newState;
+
+                    globalLayerStates[layer].locked = locked;
+                    globalLayerStates = globalLayerStates;
                 }
             }
 

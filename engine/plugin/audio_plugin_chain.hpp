@@ -16,7 +16,6 @@ class AudioPluginChain {
 
     void add(std::unique_ptr<IAudioPlugin> plugin);
     void remove(int index);
-    void move(int from, int to);
     void clear();
 
     void prepare(double sampleRate, int maxBlockSize);

@@ -16,15 +16,11 @@
 #include <QUrl>
 #include <QtGlobal>
 #include <algorithm>
-#include <string>
-#include <unordered_map>
 
 namespace Rina::UI {
 
 TimelineController::TimelineController(QObject *parent) : QObject(parent) {
     initializeServices();
-    m_activeClipsSyncTimer.setSingleShot(true);
-    m_activeClipsSyncTimer.setInterval(16); // 約1フレーム
     setupConnections();
 
     // 初期状態の設定
@@ -56,28 +52,18 @@ void TimelineController::setupConnections() {
         },
         Qt::QueuedConnection);
 
-    connect(&m_activeClipsSyncTimer, &QTimer::timeout, this, [this]() {
-        if (m_engineSync)
-            m_engineSync->updateActiveClipsList();
-    });
-
-    connect(m_selection, &SelectionService::selectedClipTimingChanged, this, [this]() {
+    connect(m_selection, &SelectionService::selectedClipDataChanged, this, [this]() {
         emit clipStartFrameChanged();
         emit clipDurationFramesChanged();
+        emit layerChanged();
+        emit activeObjectTypeChanged();
         updateClipActiveState();
     });
-    connect(m_selection, &SelectionService::selectedClipLayerChanged, this, [this]() { emit layerChanged(); });
-    connect(m_selection, &SelectionService::selectedObjectTypeChanged, this, [this]() { emit activeObjectTypeChanged(); });
 
     connect(m_timeline, &TimelineService::scenesChanged, this, &TimelineController::scenesChanged);
     connect(m_timeline, &TimelineService::currentSceneIdChanged, this, &TimelineController::currentSceneIdChanged);
     connect(m_timeline, &TimelineService::clipEffectsChanged, this, &TimelineController::clipEffectsChanged);
-    connect(m_timeline, &TimelineService::effectParamChanged, this, [this](int clipId, int, const QString &paramName, const QVariant &) {
-        // パスが変更された場合は、メディアデコーダーの強制リロードをトリガー
-        if (paramName == "path" || paramName == "source")
-            m_mediaManager->forceReloadClip(clipId);
-        scheduleActiveClipsSync();
-    });
+    connect(m_timeline, &TimelineService::effectParamChanged, this, [this]() { updateActiveClipsList(); });
 
     connect(m_exportManager, &TimelineExportManager::exportStarted, this, &TimelineController::exportStarted);
     connect(m_exportManager, &TimelineExportManager::exportProgressChanged, this, &TimelineController::exportProgressChanged);
@@ -105,8 +91,6 @@ void TimelineController::onCurrentFrameChanged() {
     updateActiveClipsList();
 }
 
-void TimelineController::scheduleActiveClipsSync() { m_activeClipsSyncTimer.start(); }
-
 void TimelineController::setVideoFrameStore(Rina::Core::VideoFrameStore *store) {
     qDebug() << "TimelineController: VideoFrameStore set. Updating decoders...";
     m_mediaManager->setVideoFrameStore(store);
@@ -129,9 +113,7 @@ void TimelineController::setTimelineScale(double scale) {
 }
 
 // プロパティアクセサ
-void TimelineController::setClipProperty(const QString &name, const QVariant &value) { commitClipProperty(name, value); }
-
-void TimelineController::previewClipProperty(const QString &name, const QVariant &value) {
+void TimelineController::setClipProperty(const QString &name, const QVariant &value) {
     int id = m_selection->selectedClipId();
     if (id == -1)
         return;
@@ -140,6 +122,7 @@ void TimelineController::previewClipProperty(const QString &name, const QVariant
     if (!clip)
         return;
 
+    // 暫定対応：プロパティ名に応じて適切なエフェクトのパラメータを更新する
     int targetEffectIndex = -1;
 
     for (int i = 0; i < clip->effects.size(); ++i) {
@@ -151,54 +134,17 @@ void TimelineController::previewClipProperty(const QString &name, const QVariant
 
     if (targetEffectIndex == -1 && !clip->effects.isEmpty()) {
         targetEffectIndex = 0;
-        static const QSet<QString> transformKeys = {"x", "y", "z", "scale", "aspect", "rotationX", "rotationY", "rotationZ", "opacity"};
-        if (!transformKeys.contains(name) && clip->effects.size() > 1)
+        // transform に属するキーかどうかで対象エフェクトを振り分け
+        static const QStringList transformKeys = {"x", "y", "z", "scale", "aspect", "rotationX", "rotationY", "rotationZ", "opacity"};
+        if (!transformKeys.contains(name) && clip->effects.size() > 1) {
             targetEffectIndex = 1;
-    }
-
-    if (targetEffectIndex < 0 || targetEffectIndex >= clip->effects.size())
-        return;
-
-    const QVariant currentValue = clip->effects[targetEffectIndex]->params().value(name);
-    if (currentValue.isValid() && currentValue == value)
-        return;
-
-    m_timeline->previewEffectParam(id, targetEffectIndex, name, value);
-}
-
-void TimelineController::commitClipProperty(const QString &name, const QVariant &value) {
-    int id = m_selection->selectedClipId();
-    if (id < 0)
-        return;
-
-    const ClipData *clip = m_timeline->findClipById(id);
-    if (!clip)
-        return;
-
-    int targetEffectIndex = -1;
-
-    for (int i = 0; i < clip->effects.size(); ++i) {
-        if (clip->effects[i]->params().contains(name)) {
-            targetEffectIndex = i;
-            break;
         }
     }
 
-    if (targetEffectIndex == -1 && !clip->effects.isEmpty()) {
-        targetEffectIndex = 0;
-        static const QSet<QString> transformKeys = {"x", "y", "z", "scale", "aspect", "rotationX", "rotationY", "rotationZ", "opacity"};
-        if (!transformKeys.contains(name) && clip->effects.size() > 1)
-            targetEffectIndex = 1;
+    if (targetEffectIndex != -1 && targetEffectIndex < clip->effects.size()) {
+        updateClipEffectParam(id, targetEffectIndex, name, value);
+        updateActiveClipsList();
     }
-
-    if (targetEffectIndex < 0 || targetEffectIndex >= clip->effects.size())
-        return;
-
-    const QVariant currentValue = clip->effects[targetEffectIndex]->params().value(name);
-    if (currentValue.isValid() && currentValue == value)
-        return;
-
-    updateClipEffectParam(id, targetEffectIndex, name, value);
 }
 
 QVariant TimelineController::getClipProperty(const QString &name) const { return m_selection->selectedClipData().value(name); }
@@ -612,16 +558,6 @@ void TimelineController::removeEffect(int clipId, int effectIndex) {
     updateActiveClipsList();
 }
 
-void TimelineController::setEffectEnabled(int clipId, int effectIndex, bool enabled) { m_timeline->setEffectEnabled(clipId, effectIndex, enabled); }
-
-void TimelineController::reorderEffects(int clipId, int fromIndex, int toIndex) { m_timeline->reorderEffects(clipId, fromIndex, toIndex); }
-void TimelineController::copyEffect(int clipId, int effectIndex) { m_timeline->copyEffect(clipId, effectIndex); }
-void TimelineController::pasteEffect(int clipId, int targetIndex) { m_timeline->pasteEffect(clipId, targetIndex); }
-void TimelineController::cutEffect(int clipId, int effectIndex) {
-    m_timeline->copyEffect(clipId, effectIndex);
-    m_timeline->removeEffect(clipId, effectIndex);
-}
-
 QVariantList TimelineController::getAvailableAudioPlugins() const { return Rina::Engine::Plugin::AudioPluginManager::instance().getPluginList(); }
 
 void TimelineController::addAudioPlugin(int clipId, const QString &pluginId) {
@@ -640,20 +576,6 @@ void TimelineController::removeAudioPlugin(int clipId, int index) {
     emit clipEffectsChanged(clipId);
 }
 
-void TimelineController::setAudioPluginEnabled(int clipId, int pluginIndex, bool enabled) {
-    auto &chain = m_mediaManager->audioMixer()->getChain(clipId);
-    auto *plugin = chain.get(pluginIndex);
-    if (plugin) {
-        plugin->setEnabled(enabled);
-        emit clipEffectsChanged(clipId);
-    }
-}
-
-void TimelineController::reorderAudioPlugins(int clipId, int fromIndex, int toIndex) {
-    m_mediaManager->audioMixer()->getChain(clipId).move(fromIndex, toIndex);
-    emit clipEffectsChanged(clipId);
-}
-
 QVariantList TimelineController::getPluginCategories() const {
     // AudioPluginManagerから重複のないカテゴリ名リストを抽出
     return Rina::Engine::Plugin::AudioPluginManager::instance().getCategories();
@@ -669,18 +591,9 @@ bool TimelineController::isAudioClip(int clipId) const {
     return clip && clip->type == "audio";
 }
 
-// 波形データの一時保存用キャッシュ
-static std::unordered_map<std::string, QVariantList> s_waveformCache;
-
 QVariantList TimelineController::getWaveformPeaks(int clipId, int pixelWidth, int displayDurationFrames) const {
     if (pixelWidth <= 0 || displayDurationFrames <= 0)
         return {};
-
-    // キャッシュキーの生成と検索
-    std::string cacheKey = std::to_string(clipId) + "_" + std::to_string(pixelWidth) + "_" + std::to_string(displayDurationFrames);
-    if (auto it = s_waveformCache.find(cacheKey); it != s_waveformCache.end()) {
-        return it->second;
-    }
 
     const auto *clip = m_timeline->findClipById(clipId);
     if (!clip || clip->type != "audio")
@@ -697,24 +610,24 @@ QVariantList TimelineController::getWaveformPeaks(int clipId, int pixelWidth, in
     if (sampleRate <= 0)
         sampleRate = 48000;
 
+    // 渡された displayDurationFrames で秒数を計算 (ドラフト値が来たらそれを使う)
     double displaySec = static_cast<double>(displayDurationFrames) / fps;
     int totalSamples = static_cast<int>(displaySec * sampleRate);
     int samplesPerPixel = std::max(1, totalSamples / pixelWidth);
 
-    // デコーダで高速にピーク値を一括計算する
-    auto floatPeaks = decoder->calculateWaveformPeaks(pixelWidth, samplesPerPixel);
-
     QVariantList peaks;
     peaks.reserve(pixelWidth);
-    for (float p : floatPeaks) {
-        peaks.append(static_cast<double>(p));
-    }
 
-    // メモリ保護のため古いキャッシュを破棄する (簡易的なLRU代用)
-    if (s_waveformCache.size() > 100) {
-        s_waveformCache.clear();
+    for (int px = 0; px < pixelWidth; px++) {
+        double startSec = static_cast<double>(px * samplesPerPixel) / sampleRate;
+        auto samples = decoder->getSamples(startSec, samplesPerPixel * 2);
+
+        float peak = 0.0f;
+        for (float s : samples)
+            peak = std::max(peak, std::abs(s));
+
+        peaks.append(static_cast<double>(std::min(peak, 1.0f)));
     }
-    s_waveformCache[cacheKey] = peaks;
 
     return peaks;
 }
@@ -898,12 +811,5 @@ void TimelineController::requestVideoFrame(int clipId, int relFrame) {
     // MediaManagerに直接シグナルで飛ばす。
     // ここでは一番手っ取り早い「シグナル」を追加してMediaManagerに拾わせる。
     emit videoFrameRequested(clipId, relFrame);
-}
-
-void TimelineController::updateViewport(double x, double y) {
-    // ビューポート位置が更新されたことを受け取るフック
-    // 将来的にはここで可視クリップの計算を行い、ECSのsyncClipIdsを呼び出すことで
-    // 画面外クリップの計算コストを削減するカリング処理を実装可能
-    // 現在はスクロールイベントのデバウンスの受け皿として機能
 }
 } // namespace Rina::UI

@@ -21,7 +21,6 @@ class SelectionService : public QObject {
     Q_INVOKABLE bool isSelected(int id) const;
     Q_INVOKABLE void clearSelection();
     void select(int id, const QVariantMap &data);
-    void patchSelectedClipParam(const QString &name, const QVariant &value);
     void replaceSelection(const QVariantList &ids, int primaryId, const QVariantMap &primaryData);
     void refreshSelectionData(int id, const QVariantMap &data);
 
@@ -29,12 +28,10 @@ class SelectionService : public QObject {
     void selectedClipIdChanged();
     void selectedClipDataChanged();
     void selectedClipIdsChanged();
-    void selectedClipTimingChanged();
-    void selectedClipLayerChanged();
-    void selectedObjectTypeChanged();
 
   private:
     QVariantList idsAsVariantList() const;
+    void updatePrimarySelection(int id, const QVariantMap &data);
 
     int m_selectedClipId = -1;
     QVariantMap m_selectedClipData;

@@ -35,15 +35,45 @@ void SelectionService::clearSelection() {
     updatePrimarySelection(-1, QVariantMap());
 }
 
-void SelectionService::select(int id, const QVariantMap &data) { replaceSelection(QVariantList{id}, id, data); }
+void SelectionService::select(int id, const QVariantMap &data) { selectSingle(id, data); }
 
-void SelectionService::refreshSelectionData(int id, const QVariantMap &data) {
-    if (id < 0)
+void SelectionService::selectSingle(int id, const QVariantMap &data) {
+    QSet<int> nextIds;
+    if (id >= 0)
+        nextIds.insert(id);
+    if (m_selectedClipIds != nextIds) {
+        m_selectedClipIds = nextIds;
+        emit selectedClipIdsChanged();
+    }
+    updatePrimarySelection(id, data);
+}
+
+void SelectionService::toggleSelection(int id, const QVariantMap &data) {
+    if (id < 0) {
+        clearSelection();
         return;
-    if (!m_selectedClipIds.contains(id))
-        return;
-    if (m_selectedClipId == id)
+    }
+
+    bool changed = false;
+    if (m_selectedClipIds.contains(id)) {
+        m_selectedClipIds.remove(id);
+        changed = true;
+        if (m_selectedClipId == id) {
+            if (m_selectedClipIds.isEmpty()) {
+                updatePrimarySelection(-1, QVariantMap());
+            } else {
+                const int nextPrimary = *m_selectedClipIds.constBegin();
+                updatePrimarySelection(nextPrimary, nextPrimary == id ? data : QVariantMap());
+            }
+        }
+    } else {
+        m_selectedClipIds.insert(id);
+        changed = true;
         updatePrimarySelection(id, data);
+    }
+
+    if (changed)
+        emit selectedClipIdsChanged();
 }
 
 void SelectionService::replaceSelection(const QVariantList &ids, int primaryId, const QVariantMap &primaryData) {

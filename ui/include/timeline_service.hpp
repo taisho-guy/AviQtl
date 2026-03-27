@@ -45,10 +45,6 @@ class TimelineService : public QObject {
     void selectClip(int id);
     void selectClipsInRange(int frameA, int frameB, int layerA, int layerB, bool additive = false);
     void applySelectionIds(const QVariantList &ids);
-    void setEffectEnabled(int clipId, int effectIndex, bool enabled);
-    void reorderEffects(int clipId, int fromIndex, int toIndex);
-    void copyEffect(int clipId, int effectIndex);
-    void pasteEffect(int clipId, int targetIndex);
 
     // シーン管理
     QVariantList scenes() const;
@@ -61,7 +57,6 @@ class TimelineService : public QObject {
     // エフェクト
     void addEffect(int clipId, const QString &effectId);
     void removeEffect(int clipId, int effectIndex);
-    void previewEffectParam(int clipId, int effectIndex, const QString &paramName, const QVariant &value);
     void updateEffectParam(int clipId, int effectIndex, const QString &paramName, const QVariant &value);
     void setKeyframe(int clipId, int effectIndex, const QString &paramName, int frame, const QVariant &value, const QVariantMap &options);
     void removeKeyframe(int clipId, int effectIndex, const QString &paramName, int frame);
@@ -77,12 +72,12 @@ class TimelineService : public QObject {
     // 内部用 (コマンドから呼び出される)
     void deleteClipInternal(int clipId);
     void createClipInternal(int clipId, const QString &type, int startFrame, int layer);
-    void updateClipInternal(int id, int layer, int startFrame, int duration, bool notifySelection = true);
+    void updateClipInternal(int id, int layer, int startFrame, int duration);
     void addEffectInternal(int clipId, const QString &effectId);
     void addClipDirectInternal(const ClipData &clip);
     void restoreEffectInternal(int clipId, const QVariantMap &data);
     void removeEffectInternal(int clipId, int effectIndex);
-    void updateEffectParamInternal(int clipId, int effectIndex, const QString &paramName, const QVariant &value, bool notifySelection = true);
+    void updateEffectParamInternal(int clipId, int effectIndex, const QString &paramName, const QVariant &value);
     void setClipboard(const ClipData &clip);
     void setClipboard(const QList<ClipData> &clips);
     void createSceneInternal(int sceneId, const QString &name);
@@ -122,7 +117,6 @@ class TimelineService : public QObject {
     int m_nextSceneId = 1;
     QUndoStack *m_undoStack;
     QList<ClipData> m_clipboard;
-    std::unique_ptr<EffectModel> m_effectClipboard;
     SelectionService *m_selection;
     QSet<int> m_batchExcludes;
 };

@@ -20,7 +20,6 @@
 #include <QQuickItem>
 #include <QQuickRenderControl>
 #include <QQuickWindow>
-#include <QTimer>
 #include <QVariant>
 #include <QtMath>
 #include <memory>
@@ -76,8 +75,6 @@ class TimelineController : public QObject {
 
     // 汎用プロパティ操作
     Q_INVOKABLE void setClipProperty(const QString &name, const QVariant &value);
-    Q_INVOKABLE void previewClipProperty(const QString &name, const QVariant &value);
-    Q_INVOKABLE void commitClipProperty(const QString &name, const QVariant &value);
     Q_INVOKABLE QVariant getClipProperty(const QString &name) const;
 
     int clipStartFrame() const;
@@ -121,11 +118,6 @@ class TimelineController : public QObject {
     Q_INVOKABLE QVariantList getAvailableObjects(const QString &category) const;
     Q_INVOKABLE void addEffect(int clipId, const QString &effectId);
     Q_INVOKABLE void removeEffect(int clipId, int effectIndex);
-    Q_INVOKABLE void setEffectEnabled(int clipId, int effectIndex, bool enabled);
-    Q_INVOKABLE void reorderEffects(int clipId, int fromIndex, int toIndex);
-    Q_INVOKABLE void copyEffect(int clipId, int effectIndex);
-    Q_INVOKABLE void pasteEffect(int clipId, int targetIndex);
-    Q_INVOKABLE void cutEffect(int clipId, int effectIndex);
 
     // オーディオプラグイン操作
     Q_INVOKABLE QVariantList getAvailableAudioPlugins() const;
@@ -133,8 +125,6 @@ class TimelineController : public QObject {
     Q_INVOKABLE void removeAudioPlugin(int clipId, int index);
     Q_INVOKABLE QVariantList getPluginCategories() const;
     Q_INVOKABLE QVariantList getPluginsByCategory(const QString &category) const;
-    Q_INVOKABLE void setAudioPluginEnabled(int clipId, int pluginIndex, bool enabled);
-    Q_INVOKABLE void reorderAudioPlugins(int clipId, int fromIndex, int toIndex);
     Q_INVOKABLE bool isAudioClip(int clipId) const;
     Q_INVOKABLE QVariantList getWaveformPeaks(int clipId, int pixelWidth, int displayDurationFrames) const;
 
@@ -197,9 +187,6 @@ class TimelineController : public QObject {
     // サンプリングレートの更新 (ProjectServiceの変更通知を受けて呼び出す)
     Q_INVOKABLE void updateAudioSampleRate() { m_mediaManager->updateAudioSampleRate(); }
 
-    // ビューポート更新 (QMLからのデバウンスされた呼び出し用)
-    Q_INVOKABLE void updateViewport(double x, double y);
-
     // 動的に計算されたタイムラインの長さ（最後のクリップの末尾フレーム）
     int timelineDuration() const { return m_engineSync->timelineDuration(); }
 
@@ -232,8 +219,6 @@ class TimelineController : public QObject {
     void onPlayingChanged();
     void onCurrentFrameChanged();
 
-    void scheduleActiveClipsSync();
-
     void updateClipActiveState();
     double m_timelineScale = 1.0; // タイムラインの表示倍率 (1.0 = 1フレームあたり1ピクセル)
 
@@ -255,7 +240,6 @@ class TimelineController : public QObject {
     Q_INVOKABLE QString debugRunLua(const QString &script);
 
   private:
-    QTimer m_activeClipsSyncTimer;
     QPointer<QQuickItem> m_compositeView; // CompositeViewへの参照
 };
 } // namespace Rina::UI

@@ -279,7 +279,7 @@ ApplicationWindow {
 
         typeCombo.model = effectModel.availableEasings();
         const tracks = effectModel.keyframeTracks;
-        const track = effectModel ? effectModel.keyframeListForUi(paramName) : undefined;
+        const track = tracks ? tracks[paramName] : undefined;
         if (!track)
             return ;
 
@@ -314,7 +314,7 @@ ApplicationWindow {
         if (!effectModel)
             return ;
 
-        const kf = effectModel.keyframeListForUi(paramName).find((k) => {
+        const kf = effectModel.keyframeTracks[paramName].find((k) => {
             return k.frame === keyframeFrame;
         });
         if (!kf)

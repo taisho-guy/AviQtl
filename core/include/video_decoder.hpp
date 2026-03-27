@@ -39,6 +39,7 @@ class VideoDecoder : public Rina::Core::MediaDecoder {
 
   protected:
     void startDecoding() override;
+    std::vector<float> getSamples(double startTime, int count) override { return {}; }
 
   private:
     bool buildIndex();

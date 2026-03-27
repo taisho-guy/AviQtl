@@ -18,23 +18,14 @@ ECS &ECS::instance() {
 void ECS::syncClipIds(const QSet<int> &aliveIds) {
     auto &editState = m_buffers[m_editIndex];
     bool changed = false;
-
-    // 削除されるIDを特定
-    QSet<int> deletedIds;
-    for (const auto &entry : editState.transforms) {
-        if (!aliveIds.contains(entry.first))
-            deletedIds.insert(entry.first);
-    }
-
     changed |= editState.transforms.syncAlive(aliveIds);
     changed |= editState.renderStates.syncAlive(aliveIds);
     changed |= editState.audioStates.syncAlive(aliveIds);
     changed |= editState.metadataStates.syncAlive(aliveIds);
 
-    if (changed && !deletedIds.isEmpty()) {
-        for (int i = 0; i < 3; ++i)
-            if (i != m_editIndex)
-                m_dirtyForBuffer[i].unite(deletedIds);
+    if (changed) {
+        m_fullSyncRequired[(m_editIndex + 1) % 3] = true;
+        m_fullSyncRequired[(m_editIndex + 2) % 3] = true;
     }
 }
 
@@ -57,7 +48,8 @@ void ECS::updateClipState(int clipId, int layer, double time) {
         render.needsUpdate = true;
         editState.renderGraphDirty = true;
 
-        m_dirtyForBuffer[m_editIndex].insert(clipId);
+        m_dirtyForBuffer[(m_editIndex + 1) % 3].insert(clipId);
+        m_dirtyForBuffer[(m_editIndex + 2) % 3].insert(clipId);
     }
 }
 
@@ -77,7 +69,8 @@ void ECS::updateAudioClipState(int clipId, int startFrame, int durationFrames, f
     audio.mute = mute;
 
     // 音声パラメータは頻繁に変わる可能性があるためダーティフラグ処理
-    m_dirtyForBuffer[m_editIndex].insert(clipId);
+    m_dirtyForBuffer[(m_editIndex + 1) % 3].insert(clipId);
+    m_dirtyForBuffer[(m_editIndex + 2) % 3].insert(clipId);
 }
 
 void ECS::updateMetadata(int clipId, const QString &name, const QString &source, const QString &type, const QString &color) {
@@ -95,13 +88,14 @@ void ECS::updateMetadata(int clipId, const QString &name, const QString &source,
         meta.source = source;
         meta.type = type;
         meta.color = color;
-        m_dirtyForBuffer[m_editIndex].insert(clipId);
+        m_dirtyForBuffer[(m_editIndex + 1) % 3].insert(clipId);
+        m_dirtyForBuffer[(m_editIndex + 2) % 3].insert(clipId);
     }
 }
 
 void ECS::commit() {
     // 現在の edit バッファのインデックスを新しい active バッファにする
-    int lastEditIndex = m_editIndex;
+    int nextActive = m_editIndex;
 
     // 次の edit バッファを選ぶ (0, 1, 2 を循環)
     m_editIndex = (m_editIndex + 1) % 3;
@@ -111,61 +105,33 @@ void ECS::commit() {
         m_editIndex = (m_editIndex + 1) % 3;
     }
 
-    auto &src = m_buffers[lastEditIndex];
-    auto &dst = m_buffers[m_editIndex];
-
-    // 重要：受取側（次の編集バッファ）のDirtyリストをリセット
-    // これにより、以前のサイクルで残った古いDirtyフラグがゾンビ化するのを防ぐ
-    m_dirtyForBuffer[m_editIndex].clear();
-
     if (m_fullSyncRequired[m_editIndex]) {
         // 構造変更があった、または初期状態の場合はフルコピー
-        dst = src;
+        m_buffers[m_editIndex] = m_buffers[nextActive];
         m_fullSyncRequired[m_editIndex] = false;
-
-        // フルコピーした場合でも、lastEditIndexで発生した変更（Dirty）は
-        // このバッファ（m_editIndex）を経由してさらに次のバッファへ伝播させる必要があるため
-        // Dirtyフラグを引き継ぐ
-        for (int id : m_dirtyForBuffer[lastEditIndex]) {
-            m_dirtyForBuffer[m_editIndex].insert(id);
-        }
+        m_dirtyForBuffer[m_editIndex].clear();
     } else {
         // 部分更新: 変更があったコンポーネントのみコピー
+        const auto &src = m_buffers[nextActive];
+        auto &dst = m_buffers[m_editIndex];
+
         dst.renderGraphDirty = src.renderGraphDirty;
 
-        // 直前の編集（lastEditIndex）で変更された内容を、
-        // 次の編集用バッファ（m_editIndex）に同期する
-        for (int id : m_dirtyForBuffer[lastEditIndex]) {
+        for (int id : m_dirtyForBuffer[m_editIndex]) {
             if (src.transforms.contains(id))
-                dst.transforms[id] = src.transforms[id];
-            else
-                dst.transforms.remove(id);
-
+                dst.transforms[id] = src.transforms.find(id)->second;
             if (src.renderStates.contains(id))
-                dst.renderStates[id] = src.renderStates[id];
-            else
-                dst.renderStates.remove(id);
-
+                dst.renderStates[id] = src.renderStates.find(id)->second;
             if (src.audioStates.contains(id))
-                dst.audioStates[id] = src.audioStates[id];
-            else
-                dst.audioStates.remove(id);
-
+                dst.audioStates[id] = src.audioStates.find(id)->second;
             if (src.metadataStates.contains(id))
-                dst.metadataStates[id] = src.metadataStates[id];
-            else
-                dst.metadataStates.remove(id);
-
-            // 3つ目のバッファへの伝播のため、Dirtyフラグを累積させる
-            m_dirtyForBuffer[m_editIndex].insert(id);
+                dst.metadataStates[id] = src.metadataStates.find(id)->second;
         }
+        m_dirtyForBuffer[m_editIndex].clear();
     }
 
-    // 役割を終えたバッファのDirtyをクリア
-    m_dirtyForBuffer[lastEditIndex].clear();
-
     // 最新の active インデックスを公開
-    m_activeIndex.store(lastEditIndex, std::memory_order_release);
+    m_activeIndex.store(nextActive, std::memory_order_release);
 }
 
 const ECSState *ECS::getSnapshot() const { return &m_buffers[m_activeIndex.load(std::memory_order_acquire)]; }

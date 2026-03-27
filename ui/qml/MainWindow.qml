@@ -451,23 +451,14 @@ ApplicationWindow {
 
             Layout.fillWidth: true
             Layout.fillHeight: true
-            layerStates: {
-                // WindowManager.timelineVisible を依存関係に含めることでタイムライン生成後に再評価させる
-                var dummy = WindowManager.timelineVisible;
+            // タイムラインウィンドウからレイヤー状態を取得
+            getLayerVisible: function(layer) {
                 var tlWin = WindowManager.getWindow("timeline");
-                return tlWin ? tlWin.globalLayerStates : ({
-                });
+                if (tlWin && tlWin.getLayerVisible)
+                    return tlWin.getLayerVisible(layer);
+
+                return true;
             }
-
-            Connections {
-                function onGlobalLayerStatesChanged() {
-                    compositeView.layerStates = WindowManager.getWindow("timeline").globalLayerStates;
-                }
-
-                // 同様に初期化タイミングのズレを回避
-                target: WindowManager.timelineVisible || true ? WindowManager.getWindow("timeline") : null
-            }
-
         }
 
         // 再生コントロールバー

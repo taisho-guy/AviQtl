@@ -29,23 +29,7 @@ class EffectModel : public QObject {
 
   public:
     explicit EffectModel(const QString &id, const QString &name, const QString &category = "filter", const QVariantMap &params = {}, const QString &qmlSource = "", const QVariantMap &uiDef = {}, QObject *parent = nullptr)
-        : QObject(parent), m_id(id), m_name(name), m_category(category), m_enabled(true), m_params(params), m_qmlSource(qmlSource), m_uiDefinition(uiDef) {
-        for (auto it = m_params.begin(); it != m_params.end(); ++it) {
-            QVariantMap track;
-            QVariantMap start;
-            QVariantMap end;
-            start["frame"] = 0;
-            start["value"] = it.value();
-            start["interp"] = "none";
-            end["frame"] = 0;
-            end["value"] = it.value();
-            end["interp"] = "none";
-            track["start"] = start;
-            track["end"] = end;
-            track["points"] = QVariantList();
-            m_keyframeTracks[it.key()] = track;
-        }
-    }
+        : QObject(parent), m_id(id), m_name(name), m_category(category), m_enabled(true), m_params(params), m_qmlSource(qmlSource), m_uiDefinition(uiDef) {}
 
     QString id() const { return m_id; }
     QString name() const { return m_name; }
@@ -55,113 +39,6 @@ class EffectModel : public QObject {
     QString qmlSource() const { return m_qmlSource; }
     QVariantMap keyframeTracks() const { return m_keyframeTracks; }
     QVariantMap uiDefinition() const { return m_uiDefinition; }
-
-    EffectModel *clone() const {
-        auto *copy = new EffectModel(m_id, m_name, m_category, m_params, m_qmlSource, m_uiDefinition);
-        copy->m_enabled = m_enabled;
-        copy->m_keyframeTracks = m_keyframeTracks;
-        return copy;
-    }
-
-    Q_INVOKABLE QVariantList keyframeListForUi(const QString &paramName) const {
-        const QVariant raw = m_keyframeTracks.value(paramName);
-        if (isStructuredTrack(raw))
-            return flattenStructuredTrack(raw.toMap());
-        QVariantList list = raw.toList();
-        std::sort(list.begin(), list.end(), [](const QVariant &a, const QVariant &b) { return a.toMap().value("frame").toInt() < b.toMap().value("frame").toInt(); });
-        return list;
-    }
-
-    Q_INVOKABLE bool isEndpointFrame(const QString &paramName, int frame) const {
-        const QVariant raw = m_keyframeTracks.value(paramName);
-        QVariantMap track = normalizeTrackForDuration(raw, m_params.value(paramName), inferredDurationForTrack(raw));
-        const int startFrame = track.value("start").toMap().value("frame").toInt();
-        const int endFrame = track.value("end").toMap().value("frame").toInt();
-        return frame == startFrame || frame == endFrame;
-    }
-
-    Q_INVOKABLE void syncTrackEndpoints(int durationFrames) {
-        QVariantMap next = m_keyframeTracks;
-        for (auto it = m_params.begin(); it != m_params.end(); ++it)
-            next[it.key()] = normalizeTrackForDuration(next.value(it.key()), it.value(), durationFrames);
-        for (auto it = next.begin(); it != next.end(); ++it)
-            next[it.key()] = normalizeTrackForDuration(it.value(), m_params.value(it.key()), durationFrames);
-        m_keyframeTracks = next;
-        emit keyframeTracksChanged();
-    }
-
-    Q_INVOKABLE QVariantMap splitTracks(int firstHalfDuration, int originalDuration) {
-        QVariantMap secondHalfTracks;
-        if (originalDuration < 1)
-            return secondHalfTracks;
-
-        const int firstEndFrame = std::max(0, firstHalfDuration - 1);
-        const int secondHalfDurationFrames = std::max(1, originalDuration - firstHalfDuration);
-        const int secondEndFrame = std::max(0, secondHalfDurationFrames - 1);
-
-        QVariantMap currentTracks = m_keyframeTracks;
-
-        for (auto it = m_params.begin(); it != m_params.end(); ++it) {
-            const QString key = it.key();
-            const QVariant fallback = it.value();
-            QVariantMap track = normalizeTrackForDuration(currentTracks.value(key), fallback, originalDuration);
-            QVariantList flat = flattenStructuredTrack(track);
-
-            QVariantMap start = track.value("start").toMap();
-            QVariantMap end = track.value("end").toMap();
-            QVariantList points = track.value("points").toList();
-
-            QVariantMap firstTrack;
-            QVariantMap firstEnd;
-            firstEnd["frame"] = firstEndFrame;
-            firstEnd["value"] = evaluateTrackWrapper(flat, firstEndFrame, fallback);
-            firstEnd["interp"] = "none";
-
-            QVariantList firstPoints;
-            for (const auto &v : points) {
-                const auto m = v.toMap();
-                const int f = m.value("frame").toInt();
-                if (f > 0 && f < firstEndFrame)
-                    firstPoints.append(m);
-            }
-
-            firstTrack["start"] = start;
-            firstTrack["end"] = firstEnd;
-            firstTrack["points"] = firstPoints;
-            currentTracks[key] = firstTrack;
-
-            QVariantMap secondTrack;
-            QVariantMap secondStart;
-            QVariantMap secondEnd;
-            secondStart["frame"] = 0;
-            secondStart["value"] = evaluateTrackWrapper(flat, firstHalfDuration, fallback);
-            secondStart["interp"] = "none";
-            secondEnd["frame"] = secondEndFrame;
-            secondEnd["value"] = evaluateTrackWrapper(flat, std::max(0, originalDuration - 1), fallback);
-            secondEnd["interp"] = "none";
-
-            QVariantList secondPoints;
-            for (const auto &v : points) {
-                auto m = v.toMap();
-                const int f = m.value("frame").toInt();
-                if (f > firstHalfDuration && f < std::max(0, originalDuration - 1)) {
-                    m["frame"] = f - firstHalfDuration;
-                    const int nf = m.value("frame").toInt();
-                    if (nf > 0 && nf < secondEndFrame)
-                        secondPoints.append(m);
-                }
-            }
-
-            secondTrack["start"] = secondStart;
-            secondTrack["end"] = secondEnd;
-            secondTrack["points"] = secondPoints;
-            secondHalfTracks[key] = secondTrack;
-        }
-
-        m_keyframeTracks = currentTracks;
-        emit keyframeTracksChanged();
-        return secondHalfTracks;
-    }
 
     // Must be public to be invokable from QML
     Q_INVOKABLE QStringList availableEasings() const {
@@ -189,81 +66,48 @@ class EffectModel : public QObject {
     }
 
     Q_INVOKABLE void setKeyframe(const QString &paramName, int frame, const QVariant &value, const QVariantMap &options) {
-        const QVariant fallback = m_params.value(paramName);
-        QVariantMap track = normalizeTrackForDuration(m_keyframeTracks.value(paramName), fallback, inferredDurationForTrack(m_keyframeTracks.value(paramName)));
-
-        QVariantMap start = track.value("start").toMap();
-        QVariantMap end = track.value("end").toMap();
-        QVariantList points = track.value("points").toList();
-
-        const int startFrame = start.value("frame").toInt();
-        const int endFrame = end.value("frame").toInt();
-
-        if (frame <= startFrame) {
-            start["value"] = value;
-            start["interp"] = options.value("interp", start["interp"]);
-            track["start"] = start;
-            m_keyframeTracks[paramName] = track;
-            emit keyframeTracksChanged();
-            return;
-        }
-
-        if (frame >= endFrame) {
-            end["value"] = value;
-            end["interp"] = options.value("interp", end["interp"]);
-            track["end"] = end;
-            m_keyframeTracks[paramName] = track;
-            emit keyframeTracksChanged();
-            return;
-        }
-
+        QVariantList track = m_keyframeTracks.value(paramName).toList();
         QVariantMap kf;
         kf["frame"] = frame;
         kf["value"] = value;
         kf["interp"] = options.value("interp", "none");
+
         if (options.contains("points"))
             kf["points"] = options.value("points");
         if (options.contains("modeParams"))
             kf["modeParams"] = options.value("modeParams");
-
         bool updated = false;
-        for (int i = 0; i < points.size(); ++i) {
-            const auto m = points[i].toMap();
+        for (int i = 0; i < track.size(); ++i) {
+            const auto m = track[i].toMap();
             if (m.value("frame").toInt() == frame) {
-                points[i] = kf;
+                track[i] = kf;
                 updated = true;
                 break;
             }
         }
         if (!updated)
-            points.append(kf);
+            track.append(kf);
 
-        std::sort(points.begin(), points.end(), [](const QVariant &a, const QVariant &b) { return a.toMap().value("frame").toInt() < b.toMap().value("frame").toInt(); });
+        std::sort(track.begin(), track.end(), [](const QVariant &a, const QVariant &b) { return a.toMap().value("frame").toInt() < b.toMap().value("frame").toInt(); });
 
-        track["points"] = points;
         m_keyframeTracks[paramName] = track;
         emit keyframeTracksChanged();
     }
 
     Q_INVOKABLE void removeKeyframe(const QString &paramName, int frame) {
-        const QVariant fallback = m_params.value(paramName);
-        QVariantMap track = normalizeTrackForDuration(m_keyframeTracks.value(paramName), fallback, inferredDurationForTrack(m_keyframeTracks.value(paramName)));
-
-        const int startFrame = track.value("start").toMap().value("frame").toInt();
-        const int endFrame = track.value("end").toMap().value("frame").toInt();
-        if (frame <= startFrame || frame >= endFrame)
-            return;
-
-        QVariantList points = track.value("points").toList();
+        QVariantList track = m_keyframeTracks.value(paramName).toList();
         QVariantList next;
-        next.reserve(points.size());
-        for (const auto &v : points) {
+        next.reserve(track.size());
+        for (const auto &v : track) {
             const auto m = v.toMap();
             if (m.value("frame").toInt() != frame)
                 next.append(v);
         }
-        track["points"] = next;
-        m_keyframeTracks[paramName] = track;
+        if (next.isEmpty()) {
+            m_keyframeTracks.remove(paramName);
+        } else {
+            m_keyframeTracks[paramName] = next;
+        }
         emit keyframeTracksChanged();
     }
 
@@ -281,11 +125,16 @@ class EffectModel : public QObject {
         if (!m_keyframeTracks.contains(paramName))
             return fallback;
 
-        QVariant baseValue = evaluateTrackWrapper(m_keyframeTracks.value(paramName), frame, fallback);
+        // 1. キーフレームからベース値を計算
+        QVariant baseValue = evaluateTrack(m_keyframeTracks.value(paramName).toList(), frame, fallback);
 
+        // 2. パラメータ自体がエクスプレッション定義かチェック（簡易実装）
         QString strVal = m_params.value(paramName).toString();
         if (strVal.startsWith("=")) {
+            // "=time*100" -> "time*100"
             std::string expr = strVal.mid(1).toStdString();
+            // time: current frame / fps (needs context, passing frame/60.0 for now)
+            // TODO: 正確なFPSを取得するにはContextが必要
             double time = frame / 60.0;
             return Rina::Scripting::LuaHost::instance().evaluate(expr, time, 0, baseValue.toDouble());
         }
@@ -298,116 +147,6 @@ class EffectModel : public QObject {
         emit keyframeTracksChanged();
     }
 
-  private:
-    static bool isStructuredTrack(const QVariant &raw) {
-        const QVariantMap m = raw.toMap();
-        return m.contains("start") && m.contains("end") && m.contains("points");
-    }
-
-    static QVariantMap makePoint(int frame, const QVariant &value, const QString &interp = "none") {
-        QVariantMap p;
-        p["frame"] = frame;
-        p["value"] = value;
-        p["interp"] = interp;
-        return p;
-    }
-
-    static int inferredDurationForTrack(const QVariant &raw) {
-        if (isStructuredTrack(raw)) {
-            const int endFrame = raw.toMap().value("end").toMap().value("frame").toInt();
-            return std::max(1, endFrame + 1);
-        }
-        const QVariantList list = raw.toList();
-        if (list.isEmpty())
-            return 1;
-        int maxFrame = 0;
-        for (const auto &v : list)
-            maxFrame = std::max(maxFrame, v.toMap().value("frame").toInt());
-        return std::max(1, maxFrame + 1);
-    }
-
-    static QVariantList sortPoints(QVariantList points) {
-        std::sort(points.begin(), points.end(), [](const QVariant &a, const QVariant &b) { return a.toMap().value("frame").toInt() < b.toMap().value("frame").toInt(); });
-        return points;
-    }
-
-    static QVariantList flattenStructuredTrack(const QVariantMap &track) {
-        QVariantList out;
-        out.append(track.value("start"));
-        QVariantList points = track.value("points").toList();
-        points = sortPoints(points);
-        for (const auto &v : points)
-            out.append(v);
-        out.append(track.value("end"));
-        return out;
-    }
-
-    static QVariantMap normalizeTrackForDuration(const QVariant &rawTrack, const QVariant &fallback, int durationFrames) {
-        const int endFrame = std::max(0, durationFrames - 1);
-
-        if (isStructuredTrack(rawTrack)) {
-            QVariantMap raw = rawTrack.toMap();
-            QVariantMap start = raw.value("start").toMap();
-            QVariantMap end = raw.value("end").toMap();
-            QVariantList points = raw.value("points").toList();
-
-            start["frame"] = 0;
-            if (!start.contains("value"))
-                start["value"] = fallback;
-            if (!start.contains("interp"))
-                start["interp"] = "none";
-
-            end["frame"] = endFrame;
-            if (!end.contains("value"))
-                end["value"] = fallback;
-            if (!end.contains("interp"))
-                end["interp"] = "none";
-
-            QVariantList nextPoints;
-            for (const auto &v : points) {
-                const auto m = v.toMap();
-                const int f = m.value("frame").toInt();
-                if (f > 0 && f < endFrame)
-                    nextPoints.append(m);
-            }
-            nextPoints = sortPoints(nextPoints);
-
-            QVariantMap out;
-            out["start"] = start;
-            out["end"] = end;
-            out["points"] = nextPoints;
-            return out;
-        }
-
-        QVariantList legacy = rawTrack.toList();
-        legacy = sortPoints(legacy);
-
-        QVariantMap start = makePoint(0, legacy.isEmpty() ? fallback : evaluateTrack(legacy, 0, fallback), "none");
-        QVariantMap end = makePoint(endFrame, legacy.isEmpty() ? fallback : evaluateTrack(legacy, endFrame, fallback), "none");
-
-        QVariantList points;
-        for (const auto &v : legacy) {
-            const auto m = v.toMap();
-            const int f = m.value("frame").toInt();
-            if (f > 0 && f < endFrame)
-                points.append(m);
-        }
-        points = sortPoints(points);
-
-        QVariantMap out;
-        out["start"] = start;
-        out["end"] = end;
-        out["points"] = points;
-        return out;
-    }
-
-    static QVariant evaluateTrackWrapper(const QVariant &trackValue, int frame, const QVariant &fallback) {
-        if (isStructuredTrack(trackValue)) {
-            const QVariantMap normalized = normalizeTrackForDuration(trackValue, fallback, inferredDurationForTrack(trackValue));
-            return evaluateTrack(flattenStructuredTrack(normalized), frame, fallback);
-        }
-        return evaluateTrack(trackValue.toList(), frame, fallback);
-    }
   signals:
     void enabledChanged();
     void paramsChanged();

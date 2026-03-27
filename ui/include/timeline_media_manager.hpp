@@ -29,7 +29,6 @@ class TimelineMediaManager : public QObject {
     void onCurrentFrameChanged();
     void syncPlaybackSpeed();
     void updateAudioSampleRate();
-    void forceReloadClip(int clipId);
     void requestVideoFrame(int clipId, int relFrame);
 
     Rina::Engine::AudioMixer *audioMixer() const { return m_audioMixer; }

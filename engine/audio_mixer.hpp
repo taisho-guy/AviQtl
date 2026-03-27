@@ -34,7 +34,7 @@ class AudioMixer : public QObject {
     void mix(float *output, const float *input, float volume, int samples);
 
     // エクスポート用に生データを取得するメソッド
-    void mix(int currentFrame, double fps, int samplesPerFrame, float *masterBuffer);
+    std::vector<float> mix(int currentFrame, double fps, int samplesPerFrame);
 
     // クリップID → プラグインチェーン
     Plugin::AudioPluginChain &getChain(int clipId);
@@ -53,10 +53,6 @@ class AudioMixer : public QObject {
     double m_playbackSpeed = 1.0;
     QHash<int, double> m_clipPhase;
     QHash<int, int> m_clipLastFrame;
-    // クラスのprivateメンバに追加
-    std::vector<float> m_clipBuffer;
-    std::vector<float> m_rawBuffer;
-    std::vector<float> m_masterBuffer;
 };
 
 } // namespace Rina::Engine

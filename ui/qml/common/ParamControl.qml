@@ -105,17 +105,12 @@ RowLayout {
             return isNaN(val) ? root.startValue : val;
         }
         onMoved: {
-            var val = root.decimals === 0 ? Math.round(value) : value;
-            leftValueField.text = root.formatValue(val);
-            TimelineBridge.previewClipProperty(root.paramName, val);
-        }
-        onPressedChanged: {
-            if (!pressed)
-                TimelineBridge.commitClipProperty(root.paramName, value);
-
+            var val = decimals === 0 ? Math.round(value) : value;
+            root.pushLeftValue(val);
         }
     }
 
+    // 左側数値ボックス（親）
     TextField {
         id: leftValueField
 
@@ -127,7 +122,7 @@ RowLayout {
         onEditingFinished: {
             var newVal = parseFloat(text);
             if (!isNaN(newVal))
-                TimelineBridge.commitClipProperty(root.paramName, newVal);
+                root.pushLeftValue(newVal);
 
         }
 
@@ -138,8 +133,8 @@ RowLayout {
         }
 
     }
-    // 中央ボタン
 
+    // 中央ボタン
     Button {
         id: paramButton
 
@@ -149,6 +144,7 @@ RowLayout {
         onClicked: root.paramButtonClicked()
     }
 
+    // 右側数値ボックス
     TextField {
         id: rightValueField
 
@@ -161,7 +157,7 @@ RowLayout {
         onEditingFinished: {
             var newVal = parseFloat(text);
             if (!isNaN(newVal))
-                TimelineBridge.commitClipProperty(root.paramName, newVal);
+                root.endValueModified(newVal);
 
         }
 
@@ -173,6 +169,7 @@ RowLayout {
 
     }
 
+    // 右側スライダー（ボックスに追従）
     Slider {
         id: rightSlider
 
@@ -182,19 +179,16 @@ RowLayout {
         to: root.maxValue
         enabled: root.rightInteractive
         opacity: root.rightInteractive ? 1 : 0.45
+        // ボックスの値をバインディング
         value: {
             var val = parseFloat(rightValueField.text);
             return isNaN(val) ? (root.rightLinked ? root.startValue : root.endValue) : val;
         }
         onMoved: {
-            var val = root.decimals === 0 ? Math.round(value) : value;
+            // スライダー操作時はボックスを更新
+            var val = decimals === 0 ? Math.round(value) : value;
             rightValueField.text = root.formatValue(val);
-            TimelineBridge.previewClipProperty(root.paramName, val);
-        }
-        onPressedChanged: {
-            if (!pressed)
-                TimelineBridge.commitClipProperty(root.paramName, value);
-
+            root.endValueModified(val);
         }
     }
 

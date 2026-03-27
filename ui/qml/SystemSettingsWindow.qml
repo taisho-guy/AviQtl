@@ -573,15 +573,6 @@ Common.RinaWindow {
                             }
 
                             Label {
-                                text: "設定サイドバーを右に配置"
-                            }
-
-                            CheckBox {
-                                checked: root.valueOr("settingDialogSidebarRight", false)
-                                onToggled: root.setValue("settingDialogSidebarRight", checked)
-                            }
-
-                            Label {
                                 text: "ルーラーの高さ"
                             }
 
