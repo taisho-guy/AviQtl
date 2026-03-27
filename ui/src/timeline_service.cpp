@@ -881,6 +881,25 @@ void TimelineService::reorderAudioPluginsInternal(int clipId, int oldIndex, int 
     emit clipsChanged();
 }
 
+void TimelineService::copyEffect(int clipId, int effectIndex) {
+    auto *clip = findClipById(clipId);
+    if (clip && effectIndex >= 0 && effectIndex < clip->effects.size()) {
+        m_effectClipboard.reset(clip->effects[effectIndex]->clone());
+    }
+}
+
+void TimelineService::pasteEffect(int clipId, int targetIndex) {
+    if (!m_effectClipboard)
+        return;
+    auto *clip = findClipById(clipId);
+    if (clip) {
+        int idx = std::clamp(targetIndex, 0, static_cast<int>(clip->effects.size()));
+        clip->effects.insert(idx, m_effectClipboard->clone());
+        emit clipEffectsChanged(clipId);
+        emit clipsChanged();
+    }
+}
+
 void TimelineService::updateEffectParam(int clipId, int effectIndex, const QString &paramName, const QVariant &value) {
     QVariant oldValue;
     const auto *clip = findClipById(clipId);

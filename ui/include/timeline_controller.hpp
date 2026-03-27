@@ -119,6 +119,9 @@ class TimelineController : public QObject {
     Q_INVOKABLE QVariantList getAvailableObjects(const QString &category) const;
     Q_INVOKABLE void addEffect(int clipId, const QString &effectId);
     Q_INVOKABLE void removeEffect(int clipId, int effectIndex);
+    Q_INVOKABLE void copyEffect(int clipId, int effectIndex);
+    Q_INVOKABLE void pasteEffect(int clipId, int targetIndex);
+    Q_INVOKABLE void cutEffect(int clipId, int effectIndex);
     Q_INVOKABLE void setEffectEnabled(int clipId, int effectIndex, bool enabled);
     Q_INVOKABLE void reorderEffects(int clipId, int oldIndex, int newIndex);
 

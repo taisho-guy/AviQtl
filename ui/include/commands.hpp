@@ -115,6 +115,18 @@ class SetEffectEnabledCommand : public QUndoCommand {
     bool m_enabled;
 };
 
+class PasteEffectCommand : public QUndoCommand {
+  public:
+    PasteEffectCommand(TimelineService *service, int clipId, int targetIndex, EffectModel *templateEffect);
+    void undo() override;
+    void redo() override;
+
+  private:
+    TimelineService *m_service;
+    int m_clipId, m_targetIndex;
+    EffectModel *m_effect;
+};
+
 class SetAudioPluginEnabledCommand : public QUndoCommand {
   public:
     SetAudioPluginEnabledCommand(TimelineService *service, int clipId, int index, bool enabled);

@@ -61,6 +61,8 @@ class TimelineService : public QObject {
     void setAudioPluginEnabled(int clipId, int index, bool enabled);
     void reorderEffects(int clipId, int oldIndex, int newIndex);
     void reorderAudioPlugins(int clipId, int oldIndex, int newIndex);
+    void copyEffect(int clipId, int effectIndex);
+    void pasteEffect(int clipId, int targetIndex);
     void updateEffectParam(int clipId, int effectIndex, const QString &paramName, const QVariant &value);
     void setKeyframe(int clipId, int effectIndex, const QString &paramName, int frame, const QVariant &value, const QVariantMap &options);
     void removeKeyframe(int clipId, int effectIndex, const QString &paramName, int frame);
@@ -82,6 +84,7 @@ class TimelineService : public QObject {
     void restoreEffectInternal(int clipId, const QVariantMap &data);
     void removeEffectInternal(int clipId, int effectIndex);
     void setEffectEnabledInternal(int clipId, int effectIndex, bool enabled);
+    void pasteEffectInternal(int clipId, int targetIndex, EffectModel *effect);
     void setAudioPluginEnabledInternal(int clipId, int index, bool enabled);
     void reorderEffectsInternal(int clipId, int oldIndex, int newIndex);
     void reorderAudioPluginsInternal(int clipId, int oldIndex, int newIndex);
@@ -125,6 +128,7 @@ class TimelineService : public QObject {
     int m_nextSceneId = 1;
     QUndoStack *m_undoStack;
     QList<ClipData> m_clipboard;
+    std::unique_ptr<EffectModel> m_effectClipboard;
     SelectionService *m_selection;
     QSet<int> m_batchExcludes;
 };

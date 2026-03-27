@@ -568,6 +568,15 @@ void TimelineController::reorderEffects(int clipId, int oldIndex, int newIndex) 
         m_timeline->reorderEffects(clipId, oldIndex, newIndex);
 }
 
+void TimelineController::copyEffect(int clipId, int effectIndex) { m_timeline->copyEffect(clipId, effectIndex); }
+
+void TimelineController::pasteEffect(int clipId, int targetIndex) { m_timeline->pasteEffect(clipId, targetIndex); }
+
+void TimelineController::cutEffect(int clipId, int effectIndex) {
+    m_timeline->copyEffect(clipId, effectIndex);
+    m_timeline->removeEffect(clipId, effectIndex);
+}
+
 QVariantList TimelineController::getAvailableAudioPlugins() const { return Rina::Engine::Plugin::AudioPluginManager::instance().getPluginList(); }
 
 void TimelineController::addAudioPlugin(int clipId, const QString &pluginId) {

@@ -356,6 +356,13 @@ class EffectModel : public QObject {
     QVariantMap keyframeTracks() const { return m_keyframeTracks; }
     QVariantMap uiDefinition() const { return m_uiDefinition; }
 
+    EffectModel *clone() const {
+        auto *copy = new EffectModel(m_id, m_name, m_category, m_params, m_qmlSource, m_uiDefinition);
+        copy->m_enabled = m_enabled;
+        copy->m_keyframeTracks = m_keyframeTracks;
+        return copy;
+    }
+
     Q_INVOKABLE QVariantList keyframeListForUi(const QString &paramName) const {
         const QVariant raw = m_keyframeTracks.value(paramName);
         if (isStructuredTrack(raw))
