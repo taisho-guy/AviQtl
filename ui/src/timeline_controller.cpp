@@ -558,6 +558,16 @@ void TimelineController::removeEffect(int clipId, int effectIndex) {
     updateActiveClipsList();
 }
 
+void TimelineController::setEffectEnabled(int clipId, int effectIndex, bool enabled) {
+    if (m_timeline)
+        m_timeline->setEffectEnabled(clipId, effectIndex, enabled);
+}
+
+void TimelineController::reorderEffects(int clipId, int oldIndex, int newIndex) {
+    if (m_timeline)
+        m_timeline->reorderEffects(clipId, oldIndex, newIndex);
+}
+
 QVariantList TimelineController::getAvailableAudioPlugins() const { return Rina::Engine::Plugin::AudioPluginManager::instance().getPluginList(); }
 
 void TimelineController::addAudioPlugin(int clipId, const QString &pluginId) {
@@ -574,6 +584,16 @@ void TimelineController::addAudioPlugin(int clipId, const QString &pluginId) {
 void TimelineController::removeAudioPlugin(int clipId, int index) {
     m_mediaManager->audioMixer()->getChain(clipId).remove(index);
     emit clipEffectsChanged(clipId);
+}
+
+void TimelineController::setAudioPluginEnabled(int clipId, int index, bool enabled) {
+    if (m_timeline)
+        m_timeline->setAudioPluginEnabled(clipId, index, enabled);
+}
+
+void TimelineController::reorderAudioPlugins(int clipId, int oldIndex, int newIndex) {
+    if (m_timeline)
+        m_timeline->reorderAudioPlugins(clipId, oldIndex, newIndex);
 }
 
 QVariantList TimelineController::getPluginCategories() const {

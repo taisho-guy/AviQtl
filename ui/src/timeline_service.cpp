@@ -52,6 +52,26 @@ RemoveEffectCommand::RemoveEffectCommand(TimelineService *service, int clipId, i
 void RemoveEffectCommand::redo() { m_service->removeEffectInternal(m_clipId, m_effectIndex); }
 void RemoveEffectCommand::undo() { m_service->restoreEffectInternal(m_clipId, m_removedEffectData); }
 
+ReorderEffectCommand::ReorderEffectCommand(TimelineService *service, int clipId, int oldIndex, int newIndex) : m_service(service), m_clipId(clipId), m_oldIndex(oldIndex), m_newIndex(newIndex) { setText(QString("エフェクト順序変更")); }
+void ReorderEffectCommand::undo() { m_service->reorderEffectsInternal(m_clipId, m_newIndex, m_oldIndex); }
+void ReorderEffectCommand::redo() { m_service->reorderEffectsInternal(m_clipId, m_oldIndex, m_newIndex); }
+
+ReorderAudioPluginCommand::ReorderAudioPluginCommand(TimelineService *service, int clipId, int oldIndex, int newIndex) : m_service(service), m_clipId(clipId), m_oldIndex(oldIndex), m_newIndex(newIndex) { setText(QString("オーディオプラグイン順序変更")); }
+void ReorderAudioPluginCommand::undo() { m_service->reorderAudioPluginsInternal(m_clipId, m_newIndex, m_oldIndex); }
+void ReorderAudioPluginCommand::redo() { m_service->reorderAudioPluginsInternal(m_clipId, m_oldIndex, m_newIndex); }
+
+SetEffectEnabledCommand::SetEffectEnabledCommand(TimelineService *service, int clipId, int effectIndex, bool enabled) : m_service(service), m_clipId(clipId), m_effectIndex(effectIndex), m_enabled(enabled) {
+    setText(QString("エフェクト有効/無効切り替え"));
+}
+void SetEffectEnabledCommand::undo() { m_service->setEffectEnabledInternal(m_clipId, m_effectIndex, !m_enabled); }
+void SetEffectEnabledCommand::redo() { m_service->setEffectEnabledInternal(m_clipId, m_effectIndex, m_enabled); }
+
+SetAudioPluginEnabledCommand::SetAudioPluginEnabledCommand(TimelineService *service, int clipId, int index, bool enabled) : m_service(service), m_clipId(clipId), m_index(index), m_enabled(enabled) {
+    setText(QString("オーディオプラグイン有効/無効切り替え"));
+}
+void SetAudioPluginEnabledCommand::undo() { m_service->setAudioPluginEnabledInternal(m_clipId, m_index, !m_enabled); }
+void SetAudioPluginEnabledCommand::redo() { m_service->setAudioPluginEnabledInternal(m_clipId, m_index, m_enabled); }
+
 SplitClipCommand::SplitClipCommand(TimelineService *service, int clipId, int frame, const QString &clipName) : m_service(service), m_originalClipId(clipId), m_newClipId(-1), m_splitFrame(frame), m_originalDuration(0), m_clipName(clipName) {
     setText(QString("クリップ分割: %1").arg(clipName));
 }
@@ -799,6 +819,66 @@ void TimelineService::removeEffectInternal(int clipId, int effectIndex) {
             break;
         }
     }
+}
+
+void TimelineService::setEffectEnabled(int clipId, int effectIndex, bool enabled) { m_undoStack->push(new SetEffectEnabledCommand(this, clipId, effectIndex, enabled)); }
+
+void TimelineService::setAudioPluginEnabled(int clipId, int index, bool enabled) { m_undoStack->push(new SetAudioPluginEnabledCommand(this, clipId, index, enabled)); }
+
+void TimelineService::reorderEffects(int clipId, int oldIndex, int newIndex) {
+    if (oldIndex == newIndex)
+        return;
+    m_undoStack->push(new ReorderEffectCommand(this, clipId, oldIndex, newIndex));
+}
+
+void TimelineService::reorderAudioPlugins(int clipId, int oldIndex, int newIndex) {
+    if (oldIndex == newIndex)
+        return;
+    m_undoStack->push(new ReorderAudioPluginCommand(this, clipId, oldIndex, newIndex));
+}
+
+void TimelineService::reorderEffectsInternal(int clipId, int oldIndex, int newIndex) {
+    auto *clip = findClipById(clipId);
+    if (!clip || oldIndex < 0 || oldIndex >= clip->effects.size() || newIndex < 0 || newIndex >= clip->effects.size())
+        return;
+
+    clip->effects.move(oldIndex, newIndex);
+
+    // UI更新通知
+    emit clipEffectsChanged(clipId);
+    emit clipsChanged();
+}
+
+void TimelineService::setEffectEnabledInternal(int clipId, int effectIndex, bool enabled) {
+    auto *clip = findClipById(clipId);
+    if (!clip || effectIndex < 0 || effectIndex >= clip->effects.size())
+        return;
+
+    clip->effects[effectIndex]->setEnabled(enabled);
+    emit clipEffectsChanged(clipId);
+}
+
+void TimelineService::setAudioPluginEnabledInternal(int clipId, int index, bool enabled) {
+    auto *clip = findClipById(clipId);
+    if (!clip || index < 0 || index >= clip->audioPlugins.size())
+        return;
+
+    clip->audioPlugins[index].enabled = enabled;
+
+    emit clipEffectsChanged(clipId);
+    emit clipsChanged(); // エンジン側の同期を促す
+}
+
+void TimelineService::reorderAudioPluginsInternal(int clipId, int oldIndex, int newIndex) {
+    auto *clip = findClipById(clipId);
+    if (!clip || oldIndex < 0 || oldIndex >= clip->audioPlugins.size() || newIndex < 0 || newIndex >= clip->audioPlugins.size())
+        return;
+
+    clip->audioPlugins.move(oldIndex, newIndex);
+
+    // UI更新通知
+    emit clipEffectsChanged(clipId);
+    emit clipsChanged();
 }
 
 void TimelineService::updateEffectParam(int clipId, int effectIndex, const QString &paramName, const QVariant &value) {

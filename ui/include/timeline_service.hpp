@@ -57,6 +57,10 @@ class TimelineService : public QObject {
     // エフェクト
     void addEffect(int clipId, const QString &effectId);
     void removeEffect(int clipId, int effectIndex);
+    void setEffectEnabled(int clipId, int effectIndex, bool enabled);
+    void setAudioPluginEnabled(int clipId, int index, bool enabled);
+    void reorderEffects(int clipId, int oldIndex, int newIndex);
+    void reorderAudioPlugins(int clipId, int oldIndex, int newIndex);
     void updateEffectParam(int clipId, int effectIndex, const QString &paramName, const QVariant &value);
     void setKeyframe(int clipId, int effectIndex, const QString &paramName, int frame, const QVariant &value, const QVariantMap &options);
     void removeKeyframe(int clipId, int effectIndex, const QString &paramName, int frame);
@@ -77,6 +81,10 @@ class TimelineService : public QObject {
     void addClipDirectInternal(const ClipData &clip);
     void restoreEffectInternal(int clipId, const QVariantMap &data);
     void removeEffectInternal(int clipId, int effectIndex);
+    void setEffectEnabledInternal(int clipId, int effectIndex, bool enabled);
+    void setAudioPluginEnabledInternal(int clipId, int index, bool enabled);
+    void reorderEffectsInternal(int clipId, int oldIndex, int newIndex);
+    void reorderAudioPluginsInternal(int clipId, int oldIndex, int newIndex);
     void updateEffectParamInternal(int clipId, int effectIndex, const QString &paramName, const QVariant &value);
     void setClipboard(const ClipData &clip);
     void setClipboard(const QList<ClipData> &clips);

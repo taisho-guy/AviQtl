@@ -79,6 +79,54 @@ class RemoveEffectCommand : public QUndoCommand {
     QString m_effectName;
 };
 
+class ReorderEffectCommand : public QUndoCommand {
+  public:
+    ReorderEffectCommand(TimelineService *service, int clipId, int oldIndex, int newIndex);
+    void undo() override;
+    void redo() override;
+
+  private:
+    TimelineService *m_service;
+    int m_clipId;
+    int m_oldIndex, m_newIndex;
+};
+
+class ReorderAudioPluginCommand : public QUndoCommand {
+  public:
+    ReorderAudioPluginCommand(TimelineService *service, int clipId, int oldIndex, int newIndex);
+    void undo() override;
+    void redo() override;
+
+  private:
+    TimelineService *m_service;
+    int m_clipId;
+    int m_oldIndex, m_newIndex;
+};
+
+class SetEffectEnabledCommand : public QUndoCommand {
+  public:
+    SetEffectEnabledCommand(TimelineService *service, int clipId, int effectIndex, bool enabled);
+    void undo() override;
+    void redo() override;
+
+  private:
+    TimelineService *m_service;
+    int m_clipId, m_effectIndex;
+    bool m_enabled;
+};
+
+class SetAudioPluginEnabledCommand : public QUndoCommand {
+  public:
+    SetAudioPluginEnabledCommand(TimelineService *service, int clipId, int index, bool enabled);
+    void undo() override;
+    void redo() override;
+
+  private:
+    TimelineService *m_service;
+    int m_clipId, m_index;
+    bool m_enabled;
+};
+
 class SplitClipCommand : public QUndoCommand {
   public:
     SplitClipCommand(TimelineService *service, int clipId, int frame, const QString &clipName);

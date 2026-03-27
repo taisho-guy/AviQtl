@@ -105,14 +105,20 @@ Common.RinaWindow {
     }
 
     function scrollToEffect(index) {
-        if (index < 0 || !mainScrollView)
+        var isAudio = TimelineBridge && TimelineBridge.isAudioClip(targetClipId);
+        var repeater = isAudio ? audioEffectsRepeater : videoEffectsRepeater;
+        if (!repeater)
             return ;
 
-        // ターゲット位置へワープ (0 ～ maxScroll の範囲に収める)
-        var targetY = 0;
-        // 実際の実装ではデリゲートのy座標を計算します
-        var maxScroll = Math.max(0, mainScrollView.contentHeight - mainScrollView.height);
-        mainScrollView.contentItem.contentY = Math.min(Math.max(0, targetY), maxScroll);
+        var item = repeater.itemAt(index);
+        if (item) {
+            // ターゲットのY座標を取得
+            var targetY = item.y;
+            // スクロール可能な最大値を計算 (コンテンツ全体の高さ - ビューポートの高さ)
+            var maxScroll = Math.max(0, mainScrollView.contentHeight - mainScrollView.height);
+            // ターゲット位置へワープ (0 ～ maxScroll の範囲に収める)
+            mainScrollView.contentItem.contentY = Math.min(Math.max(0, targetY), maxScroll);
+        }
     }
 
     // UI定義を正規化してリストとして取得するヘルパー
@@ -160,7 +166,7 @@ Common.RinaWindow {
     width: 350
     height: 500
     title: "設定ダイアログ"
-    color: themePalette.window
+    color: palette.window
     visible: true
     x: 500
     y: 200
@@ -206,17 +212,21 @@ Common.RinaWindow {
         Rectangle {
             SplitView.preferredWidth: 200
             SplitView.minimumWidth: 150
-            color: themePalette.midlight
+            color: palette.midlight
             border.width: 1
-            border.color: themePalette.mid
+            border.color: palette.mid
 
             ListView {
                 id: sidebarList
+
+                property int dragTargetIndex: -1
+                property int dragSourceIndex: -1
 
                 anchors.fill: parent
                 LayoutMirroring.enabled: false
                 LayoutMirroring.childrenInherit: true
                 clip: true
+                // 選択中のクリップタイプに応じてモデルを切り替え
                 model: (TimelineBridge && TimelineBridge.isAudioClip(targetClipId)) ? audioEffectsModel : effectsModel
                 boundsBehavior: Flickable.StopAtBounds
 
@@ -227,24 +237,37 @@ Common.RinaWindow {
                     height: 32
                     z: dragArea.drag.active ? 100 : 1
 
+                    // ドロップ先を示すインジケーター（線）
                     Rectangle {
-                        anchors.fill: parent
-                        color: (sidebarList.currentIndex === index) ? themePalette.highlight : (dragArea.drag.active ? themePalette.mid : "transparent")
-                        opacity: (sidebarList.currentIndex === index) ? 0.2 : (dragArea.drag.active ? 0.8 : 1)
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: {
-                            sidebarList.currentIndex = index;
-                            root.scrollToEffect(index);
-                        }
+                        width: parent.width
+                        height: 3
+                        color: palette.highlight
+                        visible: sidebarList.dragTargetIndex === index
+                        z: 50
+                        // ドラッグ元が自分より上なら下側に、下なら上側に線を引く
+                        y: (sidebarList.dragSourceIndex < index) ? parent.height - height : 0
                     }
 
                     Item {
                         id: dragContainer
 
-                        anchors.fill: parent
+                        width: parent.width
+                        height: parent.height
+
+                        Rectangle {
+                            anchors.fill: parent
+                            color: (sidebarList.currentIndex === index) ? palette.highlight : (dragArea.drag.active ? palette.mid : "transparent")
+                            opacity: (sidebarList.currentIndex === index) ? 0.2 : (dragArea.drag.active ? 0.8 : 1)
+                        }
+
+                        // 背景用クリック領域（他のコントロールの下敷きになるよう先に宣言）
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: {
+                                sidebarList.currentIndex = index;
+                                root.scrollToEffect(index);
+                            }
+                        }
 
                         RowLayout {
                             anchors.fill: parent
@@ -252,10 +275,11 @@ Common.RinaWindow {
                             anchors.rightMargin: 8
                             spacing: 8
 
+                            // ドラッグ用ハンドル
                             Common.RinaIcon {
-                                iconName: "drag_move_line"
+                                iconName: "drag_move_line" // 適切なアイコン名に変更してください
                                 size: 16
-                                color: themePalette.text
+                                color: palette.text
                                 opacity: 0.5
 
                                 MouseArea {
@@ -268,11 +292,24 @@ Common.RinaWindow {
                                     drag.axis: Drag.YAxis
                                     onPressed: {
                                         sidebarList.interactive = false;
+                                        sidebarList.dragSourceIndex = index;
+                                    }
+                                    onPositionChanged: (mouse) => {
+                                        if (drag.active) {
+                                            // アイテムの中心Y座標を親のリスト基準で計算
+                                            var absoluteY = delegateRoot.y + dragContainer.y + (dragContainer.height / 2);
+                                            var hoverIndex = sidebarList.indexAt(10, absoluteY);
+                                            if (hoverIndex !== -1 && hoverIndex !== index)
+                                                sidebarList.dragTargetIndex = hoverIndex;
+                                            else
+                                                sidebarList.dragTargetIndex = -1;
+                                        }
                                     }
                                     onReleased: (mouse) => {
                                         sidebarList.interactive = true;
-                                        var pt = mapToItem(sidebarList.contentItem, mouse.x, mouse.y);
-                                        var targetIndex = sidebarList.indexAt(10, pt.y);
+                                        var targetIndex = sidebarList.dragTargetIndex;
+                                        sidebarList.dragTargetIndex = -1; // reset indicator
+                                        // Reset visual position
                                         dragContainer.x = 0;
                                         dragContainer.y = 0;
                                         if (targetIndex !== -1 && targetIndex !== index) {
@@ -286,6 +323,7 @@ Common.RinaWindow {
 
                             }
 
+                            // 有効・無効切り替えチェックボックス
                             CheckBox {
                                 checked: modelData.enabled !== undefined ? modelData.enabled : true
                                 Layout.preferredHeight: 20
@@ -300,11 +338,12 @@ Common.RinaWindow {
                                 }
                             }
 
+                            // エフェクト名 (クリックでワープ)
                             Label {
                                 text: modelData.name
                                 Layout.fillWidth: true
                                 elide: Text.ElideRight
-                                color: themePalette.text
+                                color: palette.text
                             }
 
                         }
@@ -322,14 +361,13 @@ Common.RinaWindow {
             id: mainScrollView
 
             SplitView.fillWidth: true
-            Layout.fillWidth: true
-            Layout.fillHeight: true
             contentWidth: availableWidth
             clip: true
 
             ColumnLayout {
                 width: parent.width
                 spacing: 1
+                layoutDirection: Qt.LeftToRight
 
                 Repeater {
                     id: videoEffectsRepeater
@@ -339,7 +377,6 @@ Common.RinaWindow {
                     delegate: ColumnLayout {
                         id: effectRoot
 
-                        // 親デリゲートでデータとインデックスを公開
                         property int effectIndex: index
                         property var effectModel: modelData
                         property var currentParams: effectModel ? effectModel.params : ({
@@ -352,11 +389,11 @@ Common.RinaWindow {
                         Rectangle {
                             Layout.fillWidth: true
                             height: 24
-                            color: themePalette.midlight
+                            color: palette.midlight
 
                             Label {
                                 text: modelData.name
-                                color: themePalette.text
+                                color: palette.text
                                 font.bold: true
                                 anchors.verticalCenter: parent.verticalCenter
                                 anchors.left: parent.left
@@ -635,7 +672,7 @@ Common.RinaWindow {
                                         anchors.centerIn: parent
                                         width: parent.width
                                         height: 2
-                                        color: themePalette.mid
+                                        color: palette.mid
 
                                         Rectangle {
                                             property int vStart: (paramDelegate && paramDelegate.activeDragOriginal === startFrame) ? paramDelegate.activeDragCurrent : startFrame
@@ -643,7 +680,7 @@ Common.RinaWindow {
 
                                             height: 4
                                             anchors.verticalCenter: parent.verticalCenter
-                                            color: themePalette.highlight
+                                            color: palette.highlight
                                             opacity: 0.7
                                             x: (Math.min(vStart, vEnd) / clipDur) * parent.width
                                             width: Math.max(0, (Math.abs(vEnd - vStart) / clipDur) * parent.width)
@@ -658,7 +695,7 @@ Common.RinaWindow {
                                         Rectangle {
                                             width: 1
                                             height: 8
-                                            color: themePalette.midlight
+                                            color: palette.midlight
                                             opacity: 0.6
                                             anchors.verticalCenter: parent.verticalCenter
                                             x: (modelData / clipDur) * trackItem.width
@@ -690,7 +727,7 @@ Common.RinaWindow {
                                             Rectangle {
                                                 width: 8
                                                 height: 8
-                                                color: kfMa.containsMouse || pointDrag.active ? themePalette.highlight : themePalette.text
+                                                color: kfMa.containsMouse || pointDrag.active ? palette.highlight : palette.text
                                                 anchors.centerIn: parent
                                                 rotation: 45
                                                 antialiasing: true
@@ -794,7 +831,7 @@ Common.RinaWindow {
                                     Rectangle {
                                         width: 1
                                         height: parent.height
-                                        color: themePalette.highlight
+                                        color: palette.highlight
                                         x: (curRelFrame / clipDur) * parent.width
                                         visible: clipDur > 0
                                     }
@@ -824,74 +861,76 @@ Common.RinaWindow {
 
                 }
 
-            }
+                // オーディオプラグインのパラメータ表示
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 1
+                    visible: TimelineBridge && TimelineBridge.isAudioClip(targetClipId)
 
-            // オーディオプラグインのパラメータ表示
-            ColumnLayout {
-                Layout.fillWidth: true
-                spacing: 1
-                visible: TimelineBridge && TimelineBridge.isAudioClip(targetClipId)
+                    Repeater {
+                        id: audioEffectsRepeater
 
-                Repeater {
-                    model: audioEffectsModel
+                        model: audioEffectsModel
 
-                    delegate: ColumnLayout {
-                        id: audioEffectRoot
+                        delegate: ColumnLayout {
+                            id: audioEffectRoot
 
-                        property int effectIndex: index
+                            property int effectIndex: index
 
-                        Layout.fillWidth: true
-                        spacing: 0
-
-                        Rectangle {
                             Layout.fillWidth: true
-                            height: 24
-                            color: themePalette.midlight
+                            spacing: 0
 
-                            Label {
-                                text: modelData.name + " (" + modelData.format + ")"
-                                color: themePalette.text
-                                font.bold: true
-                                anchors.verticalCenter: parent.verticalCenter
-                                anchors.left: parent.left
-                                anchors.leftMargin: 10
-                            }
-
-                            // 削除ボタン
-                            Button {
-                                anchors.right: parent.right
-                                anchors.verticalCenter: parent.verticalCenter
-                                flat: true
-                                width: 24
-                                height: 24
-                                onClicked: TimelineBridge.removeAudioPlugin(targetClipId, audioEffectRoot.effectIndex)
-
-                                contentItem: Common.RinaIcon {
-                                    iconName: "close_line"
-                                    size: 16
-                                    color: parent.hovered ? "red" : parent.palette.text
-                                }
-
-                            }
-
-                        }
-
-                        Repeater {
-                            model: TimelineBridge.getEffectParameters(targetClipId, index)
-
-                            delegate: Common.ControlLoader {
+                            Rectangle {
                                 Layout.fillWidth: true
-                                Layout.margins: 4
-                                definition: ({
-                                    "type": modelData.type || "slider",
-                                    "label": modelData.name,
-                                    "min": modelData.min,
-                                    "max": modelData.max
-                                })
-                                value: modelData.current
-                                onValueModified: (newValue) => {
-                                    TimelineBridge.setEffectParameter(targetClipId, audioEffectRoot.effectIndex, modelData.pIdx, newValue);
+                                height: 24
+                                color: palette.midlight
+
+                                Label {
+                                    text: modelData.name + " (" + modelData.format + ")"
+                                    color: palette.text
+                                    font.bold: true
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    anchors.left: parent.left
+                                    anchors.leftMargin: 10
                                 }
+
+                                // 削除ボタン
+                                Button {
+                                    anchors.right: parent.right
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    flat: true
+                                    width: 24
+                                    height: 24
+                                    onClicked: TimelineBridge.removeAudioPlugin(targetClipId, audioEffectRoot.effectIndex)
+
+                                    contentItem: Common.RinaIcon {
+                                        iconName: "close_line"
+                                        size: 16
+                                        color: parent.hovered ? "red" : parent.palette.text
+                                    }
+
+                                }
+
+                            }
+
+                            Repeater {
+                                model: TimelineBridge.getEffectParameters(targetClipId, index)
+
+                                delegate: Common.ControlLoader {
+                                    Layout.fillWidth: true
+                                    Layout.margins: 4
+                                    definition: ({
+                                        "type": modelData.type || "slider",
+                                        "label": modelData.name,
+                                        "min": modelData.min,
+                                        "max": modelData.max
+                                    })
+                                    value: modelData.current
+                                    onValueModified: (newValue) => {
+                                        TimelineBridge.setEffectParameter(targetClipId, audioEffectRoot.effectIndex, modelData.pIdx, newValue);
+                                    }
+                                }
+
                             }
 
                         }
