@@ -13,7 +13,8 @@ void TimelineEngineSynchronizer::updateActiveClipsList() {
     int current = m_controller->transport()->currentFrame();
     QList<ClipData *> active = m_controller->timeline()->resolvedActiveClipsAt(current);
 
-    std::sort(active.begin(), active.end(), [](const ClipData *a, const ClipData *b) { return a->layer < b->layer; });
+    // レイヤー番号が小さいほど背面、大きいほど前面になるようソート
+    std::sort(active.begin(), active.end(), [](const ClipData *a, const ClipData *b) { return a->layer > b->layer; });
 
     m_clipModel->updateClips(active);
     updateECSState(active, current);

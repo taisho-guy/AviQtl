@@ -1349,14 +1349,6 @@ QList<ClipData *> TimelineService::resolvedActiveClipsAt(int frame) const {
             continue;
         }
 
-        // 通常クリップ
-        if (clip.type != "scene") {
-            if (frame >= clip.startFrame && frame < clip.startFrame + clip.durationFrames) {
-                result.append(const_cast<ClipData *>(&clip));
-            }
-            continue;
-        }
-
         // シーンオブジェクトの場合
         int parentLocal = frame - clip.startFrame;
         if (parentLocal < 0 || parentLocal >= clip.durationFrames)
