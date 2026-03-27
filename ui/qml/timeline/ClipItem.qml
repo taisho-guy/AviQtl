@@ -208,6 +208,43 @@ Item {
             property int lastProposedLayer: -1
             property bool dragActive: false
             property real dragThreshold: 3
+            property point lastScenePos: Qt.point(0, 0)
+            property int lastModifiers: 0
+
+            function updateDragFromScenePos(sp, modifiers) {
+                var dX = sp.x - dragStartScenePos.x;
+                var dY = sp.y - dragStartScenePos.y;
+                var rawF = initialFrame + dX / clipDelegate.scale;
+                var ignoreSnap = (modifiers & Qt.ShiftModifier);
+                var propF = snapFrameFunc(rawF, ignoreSnap);
+                var propL = initialLayer + Math.round(dY / layerHeight);
+                var finalF = propF, finalL = propL;
+                if (TimelineBridge && typeof TimelineBridge.resolveDragPosition === "function") {
+                    var activeIds = timelineViewRoot.selectionVisualLatchIds;
+                    if (activeIds.length === 0 && TimelineBridge.selection)
+                        activeIds = TimelineBridge.selection.selectedClipIds;
+
+                    var pos = TimelineBridge.resolveDragPosition(modelData.id, propL, propF, activeIds);
+                    finalF = pos.x;
+                    finalL = pos.y;
+                }
+                var deltaF = finalF - initialFrame;
+                var deltaL = finalL - initialLayer;
+                if (timelineViewRoot.selectionMinFrame + deltaF < 0)
+                    deltaF = -timelineViewRoot.selectionMinFrame;
+
+                if (timelineViewRoot.selectionMinLayer + deltaL < 0)
+                    deltaL = -timelineViewRoot.selectionMinLayer;
+
+                if (timelineViewRoot.selectionMaxLayer + deltaL >= timelineViewRoot.layerCount)
+                    deltaL = timelineViewRoot.layerCount - 1 - timelineViewRoot.selectionMaxLayer;
+
+                if (deltaF === timelineViewRoot.activeDragDeltaFrame && deltaL === timelineViewRoot.activeDragDeltaLayer)
+                    return ;
+
+                timelineViewRoot.activeDragDeltaFrame = deltaF;
+                timelineViewRoot.activeDragDeltaLayer = deltaL;
+            }
 
             anchors.fill: parent
             anchors.leftMargin: clipResizeHandleWidth
@@ -216,6 +253,11 @@ Item {
             cursorShape: clipDelegate.isLayerLocked ? Qt.ForbiddenCursor : Qt.OpenHandCursor
             preventStealing: true
             onPressed: (mouse) => {
+                timelineViewRoot.beginDragAutoScroll(function() {
+                    if (dragActive)
+                        updateDragFromScenePos(lastScenePos, lastModifiers);
+
+                });
                 if (clipDelegate.isLayerLocked)
                     return ;
 
@@ -286,40 +328,14 @@ Item {
                     timelineViewRoot.activeDragDeltaFrame = 0;
                     timelineViewRoot.activeDragDeltaLayer = 0;
                 }
-                var dX = sp.x - dragStartScenePos.x;
-                var dY = sp.y - dragStartScenePos.y;
-                var rawF = initialFrame + dX / clipDelegate.scale;
-                var ignoreSnap = (mouse.modifiers & Qt.ShiftModifier);
-                var propF = snapFrameFunc(rawF, ignoreSnap);
-                var propL = initialLayer + Math.round(dY / layerHeight);
-                var finalF = propF, finalL = propL;
-                if (TimelineBridge && typeof TimelineBridge.resolveDragPosition === "function") {
-                    var activeIds = timelineViewRoot.selectionVisualLatchIds;
-                    if (activeIds.length === 0 && TimelineBridge.selection)
-                        activeIds = TimelineBridge.selection.selectedClipIds;
-
-                    var pos = TimelineBridge.resolveDragPosition(modelData.id, propL, propF, activeIds);
-                    finalF = pos.x;
-                    finalL = pos.y;
-                }
-                var deltaF = finalF - initialFrame;
-                var deltaL = finalL - initialLayer;
-                if (timelineViewRoot.selectionMinFrame + deltaF < 0)
-                    deltaF = -timelineViewRoot.selectionMinFrame;
-
-                if (timelineViewRoot.selectionMinLayer + deltaL < 0)
-                    deltaL = -timelineViewRoot.selectionMinLayer;
-
-                if (timelineViewRoot.selectionMaxLayer + deltaL >= timelineViewRoot.layerCount)
-                    deltaL = timelineViewRoot.layerCount - 1 - timelineViewRoot.selectionMaxLayer;
-
-                if (deltaF === timelineViewRoot.activeDragDeltaFrame && deltaL === timelineViewRoot.activeDragDeltaLayer)
-                    return ;
-
-                timelineViewRoot.activeDragDeltaFrame = deltaF;
-                timelineViewRoot.activeDragDeltaLayer = deltaL;
+                lastScenePos = sp;
+                lastModifiers = mouse.modifiers;
+                var vp = mapToItem(timelineViewRoot, mouse.x, mouse.y);
+                timelineViewRoot.updateDragAutoScroll(vp);
+                updateDragFromScenePos(sp, mouse.modifiers);
             }
             onReleased: (mouse) => {
+                timelineViewRoot.endDragAutoScroll();
                 if (!TimelineBridge)
                     return ;
 

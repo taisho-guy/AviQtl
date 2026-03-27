@@ -16,6 +16,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QObject>
+#include <QPoint>
 #include <QPointer>
 #include <QQuickItem>
 #include <QQuickRenderControl>
@@ -148,6 +149,9 @@ class TimelineController : public QObject {
     Q_INVOKABLE QVariantMap getSceneInfo(int sceneId) const;
     Q_INVOKABLE int getSceneDuration(int sceneId) const;
     Q_INVOKABLE void requestVideoFrame(int clipId, int relFrame);
+
+    Q_INVOKABLE void updateViewport(double x, double y);
+    Q_INVOKABLE QPoint resolveDragPosition(int clipId, int targetLayer, int proposedStartFrame, const QVariantList &batchIds = QVariantList());
 
     // プロジェクトI/O
     Q_INVOKABLE bool saveProject(const QString &fileUrl);
