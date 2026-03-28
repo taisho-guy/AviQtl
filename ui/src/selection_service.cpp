@@ -45,7 +45,7 @@ void SelectionService::toggleSelection(int id, const QVariantMap &data) {
 
     bool changed = false;
     if (m_selectedClipIds.contains(id)) {
-        m_selectedClipIds.remove(id);
+        m_selectedClipIds.removeOne(id);
         changed = true;
         if (m_selectedClipId == id) {
             if (m_selectedClipIds.isEmpty()) {
@@ -53,12 +53,13 @@ void SelectionService::toggleSelection(int id, const QVariantMap &data) {
             } else {
                 // 他に選択がある場合は、データの完全性を保つために単純なクリアは行わない
                 // (TimelineService側での再同期を待機)
-                m_selectedClipId = *m_selectedClipIds.constBegin();
+                m_selectedClipId = m_selectedClipIds.first();
                 emit selectedClipIdChanged();
             }
         }
     } else {
-        m_selectedClipIds.insert(id);
+        if (!m_selectedClipIds.contains(id))
+            m_selectedClipIds.append(id);
         changed = true;
         updatePrimarySelection(id, data);
     }
@@ -77,18 +78,18 @@ void SelectionService::refreshSelectionData(int id, const QVariantMap &data) {
 }
 
 void SelectionService::replaceSelection(const QVariantList &ids, int primaryId, const QVariantMap &primaryData) {
-    QSet<int> nextIds;
+    QList<int> nextIds;
     for (const QVariant &value : ids) {
         const int id = value.toInt();
-        if (id >= 0)
-            nextIds.insert(id);
+        if (id >= 0 && !nextIds.contains(id))
+            nextIds.append(id);
     }
     if (m_selectedClipIds != nextIds) {
         m_selectedClipIds = nextIds;
         emit selectedClipIdsChanged();
     }
     if (!m_selectedClipIds.contains(primaryId))
-        primaryId = m_selectedClipIds.isEmpty() ? -1 : *m_selectedClipIds.constBegin();
+        primaryId = m_selectedClipIds.isEmpty() ? -1 : m_selectedClipIds.first();
     updatePrimarySelection(primaryId, primaryId >= 0 ? primaryData : QVariantMap());
 }
 } // namespace Rina::UI

@@ -729,15 +729,28 @@ void TimelineController::setKeyframe(int clipId, int effectIndex, const QString 
 
 void TimelineController::removeKeyframe(int clipId, int effectIndex, const QString &paramName, int frame) { m_timeline->removeKeyframe(clipId, effectIndex, paramName, frame); }
 
-void TimelineController::deleteClip(int clipId) {
-    if (!m_timeline)
+void TimelineController::deleteClip(int clipId) { requestDelete(clipId); }
+
+void TimelineController::requestDelete(int targetClipId) {
+    if (!m_timeline || !m_selection)
         return;
 
-    // IDが無効、あるいは削除対象が選択範囲に含まれている場合は、一括削除を実行する
-    if (clipId < 0 || (m_selection && m_selection->isSelected(clipId))) {
-        m_timeline->deleteSelectedClips();
-    } else {
-        m_timeline->deleteClip(clipId);
+    QVariantList selected = m_selection->selectedClipIds();
+
+    // 選択が1件以上ある場合
+    if (!selected.isEmpty()) {
+        // 全体削除（Delキーなど）または、選択対象を右クリックして削除する場合
+        if (targetClipId < 0 || selected.contains(targetClipId)) {
+            m_timeline->deleteClipsByIds(selected);
+            return;
+        }
+    }
+
+    // 選択されていない対象を直接削除しようとする場合
+    if (targetClipId >= 0) {
+        QVariantList ids{targetClipId};
+        m_timeline->applySelectionIds(ids); // 内部的に選択状態を同期
+        m_timeline->deleteClipsByIds(ids);
     }
 }
 
@@ -773,10 +786,7 @@ void TimelineController::cutSelectedClips() {
         m_timeline->cutSelectedClips();
 }
 
-void TimelineController::deleteSelectedClips() {
-    if (m_timeline)
-        m_timeline->deleteSelectedClips();
-}
+void TimelineController::deleteSelectedClips() { requestDelete(-1); }
 
 QVariantList TimelineController::scenes() const { return m_timeline->scenes(); }
 

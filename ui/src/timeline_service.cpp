@@ -166,13 +166,7 @@ void DeleteClipsCommand::redo() {
         m_service->deleteClipInternal(id, false);
     emit m_service->clipsChanged();
 }
-void DeleteClipsCommand::undo() {
-    m_service->addClipsDirectInternal(m_snapshots);
-    QVariantList ids;
-    for (int id : m_clipIds)
-        ids.append(id);
-    m_service->applySelectionIds(ids); // Undo時に選択状態も復元
-}
+void DeleteClipsCommand::undo() { m_service->addClipsDirectInternal(m_snapshots); }
 
 CutClipCommand::CutClipCommand(TimelineService *service, int clipId, const QString &clipName) : m_service(service), m_clipId(clipId) {
     const auto *clip = service->findClipById(clipId);
@@ -714,25 +708,21 @@ void TimelineService::toggleSelection(int id, const QVariantMap &data) {
     if (!m_selection)
         return;
 
-    QVariantMap fullData = data;
-    // データが空（QMLからの簡易呼び出し）の場合はC++側で情報を補完してInspectorの破損を防ぐ
-    if (id >= 0 && (fullData.isEmpty() || !fullData.contains("type"))) {
-        const auto *clip = findClipById(id);
-        if (clip) {
-            fullData["id"] = clip->id;
-            fullData["type"] = clip->type;
-            fullData["layer"] = clip->layer;
-            fullData["startFrame"] = clip->startFrame;
-            fullData["durationFrames"] = clip->durationFrames;
-            for (auto *eff : clip->effects) {
-                QVariantMap p = eff->params();
-                for (auto it = p.begin(); it != p.end(); ++it)
-                    fullData.insert(it.key(), it.value());
-            }
+    QVariantList ids = m_selection->selectedClipIds();
+    int idx = -1;
+    for (int i = 0; i < ids.size(); ++i) {
+        if (ids[i].toInt() == id) {
+            idx = i;
+            break;
         }
     }
 
-    m_selection->toggleSelection(id, fullData);
+    if (idx >= 0)
+        ids.removeAt(idx);
+    else
+        ids.prepend(id);
+
+    applySelectionIds(ids);
 }
 
 void TimelineService::applySelectionIds(const QVariantList &ids) {
@@ -740,12 +730,15 @@ void TimelineService::applySelectionIds(const QVariantList &ids) {
     QVariantMap primaryData;
 
     // 選択されたクリップのリストを更新
-    QSet<int> newSelectedIds;
-    for (const QVariant &v : ids)
-        newSelectedIds.insert(v.toInt());
+    QVariantList newSelectedIds;
+    for (const QVariant &v : ids) {
+        if (!newSelectedIds.contains(v)) {
+            newSelectedIds.append(v);
+        }
+    }
 
     if (!newSelectedIds.isEmpty()) {
-        int id = *newSelectedIds.constBegin(); // 最初のクリップをプライマリとする
+        int id = newSelectedIds.first().toInt(); // 最初のクリップをプライマリとする
         const auto *clip = findClipById(id);
         if (clip) { // findClipById は nullptr を返す可能性があるのでチェック
             primaryId = clip->id;
@@ -762,7 +755,7 @@ void TimelineService::applySelectionIds(const QVariantList &ids) {
     }
 
     // SelectionService の replaceSelection を呼び出す
-    m_selection->replaceSelection(QVariantList(newSelectedIds.begin(), newSelectedIds.end()), primaryId, primaryData);
+    m_selection->replaceSelection(newSelectedIds, primaryId, primaryData);
 }
 
 void TimelineService::selectClipsInRange(int frameA, int frameB, int layerA, int layerB, bool additive) {
@@ -816,13 +809,37 @@ void TimelineService::selectClipsInRange(int frameA, int frameB, int layerA, int
     m_selection->replaceSelection(ids, primaryId, primaryData);
 }
 
-void TimelineService::deleteClip(int clipId) {
-    const auto *clip = findClipById(clipId);
-    if (!clip)
+void TimelineService::deleteSelectedClips() {
+    if (!m_selection)
         return;
-    QString name = clip->effects.isEmpty() ? clip->type : clip->effects.first()->name();
-    m_undoStack->push(new DeleteClipCommand(this, clipId, name));
+    deleteClipsByIds(m_selection->selectedClipIds());
 }
+
+void TimelineService::deleteClipsByIds(const QVariantList &ids) {
+    if (ids.isEmpty())
+        return;
+
+    QList<int> intIds;
+    for (const QVariant &v : ids) {
+        int id = v.toInt();
+        if (id >= 0) {
+            intIds.append(id);
+        }
+    }
+
+    if (intIds.isEmpty())
+        return;
+
+    QString macroText = intIds.size() == 1 ? QString("クリップ削除") : QString("複数クリップ削除: %1").arg(intIds.size());
+
+    // 既存の複数削除コマンドを再利用してUndo/Redoスタックに積む
+    m_undoStack->push(new DeleteClipsCommand(this, intIds, macroText));
+
+    // 削除後は選択状態をクリアする
+    m_selection->clearSelection();
+}
+
+void TimelineService::deleteClip(int clipId) { deleteClipsByIds({clipId}); }
 
 void TimelineService::deleteClipInternal(int clipId, bool emitSignal) {
     auto &currentClips = clipsMutable();
@@ -1118,21 +1135,6 @@ void TimelineService::cutSelectedClips() {
     for (const QVariant &v : ids)
         intIds.append(v.toInt());
     m_undoStack->push(new DeleteClipsCommand(this, intIds, QString("複数クリップ切り取り: %1").arg(ids.size())));
-    m_selection->clearSelection();
-}
-
-void TimelineService::deleteSelectedClips() {
-    if (!m_selection)
-        return;
-
-    const QVariantList ids = m_selection->selectedClipIds();
-    if (ids.isEmpty())
-        return;
-
-    QList<int> intIds;
-    for (const QVariant &v : ids)
-        intIds.append(v.toInt());
-    m_undoStack->push(new DeleteClipsCommand(this, intIds, QString("複数クリップ削除: %1").arg(ids.size())));
     m_selection->clearSelection();
 }
 

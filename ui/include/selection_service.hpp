@@ -1,6 +1,6 @@
 #pragma once
+#include <QList>
 #include <QObject>
-#include <QSet>
 #include <QVariantList>
 #include <QVariantMap>
 
@@ -36,6 +36,6 @@ class SelectionService : public QObject {
 
     int m_selectedClipId = -1;
     QVariantMap m_selectedClipData;
-    QSet<int> m_selectedClipIds;
+    QList<int> m_selectedClipIds;
 };
 } // namespace Rina::UI

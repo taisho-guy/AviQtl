@@ -23,8 +23,6 @@ ScrollView {
     property real boxSelectionThreshold: 6
     property bool boxSelectionAdditive: false
     property var boxSelectionPreviewIds: []
-    property bool selectionVisualLatchActive: false
-    property var selectionVisualLatchIds: []
     property int activeDragDeltaFrame: 0
     property bool autoScrollSuspended: false
     property int activeDragDeltaLayer: 0
@@ -96,37 +94,22 @@ ScrollView {
         dragAutoScrollCallback = null;
     }
 
-    function committedSelectionIds() {
+    function effectiveSelectionIds() {
         if (TimelineBridge && TimelineBridge.selection)
             return TimelineBridge.selection.selectedClipIds.slice(0);
 
         return [];
     }
 
-    function effectiveSelectionIds() {
-        return selectionVisualLatchActive ? selectionVisualLatchIds.slice(0) : committedSelectionIds();
-    }
-
     function handleClipSelection(clipId, modifiers, isSelected) {
         if (!TimelineBridge || !TimelineBridge.selection)
             return ;
 
-        var newIds = [];
-        if (modifiers & Qt.ControlModifier) {
-            // Box selection と同じロジックで選択状態の配列を作成し、一括適用する
-            var currentIds = effectiveSelectionIds();
-            var idx = currentIds.indexOf(clipId);
-            if (idx >= 0)
-                currentIds.splice(idx, 1);
-            else
-                currentIds.push(clipId);
-            newIds = currentIds;
-        } else {
-            newIds = [clipId];
-        }
-        timelineViewRoot.selectionVisualLatchIds = newIds.slice(0);
-        timelineViewRoot.selectionVisualLatchActive = true;
-        TimelineBridge.applySelectionIds(newIds);
+        if (modifiers & Qt.ControlModifier)
+            TimelineBridge.toggleSelection(clipId, {
+            });
+        else
+            TimelineBridge.applySelectionIds([clipId]);
     }
 
     function clipHitsBox(clip, frameA, frameB, layerA, layerB) {
@@ -329,8 +312,8 @@ ScrollView {
                 clipResizeHandleWidth: timelineViewRoot.clipResizeHandleWidth
                 isBoxSelecting: timelineViewRoot.boxSelecting
                 boxSelectionPreviewIds: timelineViewRoot.boxSelectionPreviewIds
-                forceVisualSelection: timelineViewRoot.selectionVisualLatchActive
-                forcedSelectedIds: timelineViewRoot.selectionVisualLatchIds
+                forceVisualSelection: false
+                forcedSelectedIds: []
                 flickableContentItem: timelineFlickable.contentItem
                 snapFrameFunc: timelineViewRoot.snapFrame
                 onClipSelected: (clipId, modifiers, isSelected) => {
@@ -377,7 +360,7 @@ ScrollView {
                 }
                 onClipResized: (clipId, deltaStart, deltaDuration, unused) => {
                     if (TimelineBridge) {
-                        if (timelineViewRoot.selectionVisualLatchIds.includes(clipId) || (TimelineBridge.selection && TimelineBridge.selection.selectedClipIds.includes(clipId))) {
+                        if (TimelineBridge && TimelineBridge.selection && TimelineBridge.selection.selectedClipIds.includes(clipId)) {
                             TimelineBridge.resizeSelectedClips(deltaStart, deltaDuration);
                         } else {
                             var c = TimelineBridge.clips.find((c) => {
@@ -428,8 +411,6 @@ ScrollView {
             acceptedButtons: Qt.RightButton
             preventStealing: true
             onPressed: (mouse) => {
-                selectionVisualLatchActive = false;
-                selectionVisualLatchIds = [];
                 boxSelecting = false;
                 boxSelectionStart = mapToItem(timelineFlickable.contentItem, mouse.x, mouse.y);
                 boxSelectionCurrent = boxSelectionStart;
@@ -459,11 +440,9 @@ ScrollView {
                         }
                     }
                     var currentSel = effectiveSelectionIds();
-                    if (clickedClipId >= 0 && !currentSel.includes(clickedClipId)) {
-                        timelineViewRoot.selectionVisualLatchIds = [clickedClipId];
-                        timelineViewRoot.selectionVisualLatchActive = true;
+                    if (clickedClipId >= 0 && !currentSel.includes(clickedClipId))
                         TimelineBridge.applySelectionIds([clickedClipId]);
-                    }
+
                     contextMenu.openAt(mouse.x, mouse.y, clickedClipId >= 0 ? "clip" : "timeline", frame, layer, clickedClipId);
                     return ;
                 }
@@ -471,8 +450,6 @@ ScrollView {
                 boxSelectionCurrent = mapToItem(timelineFlickable.contentItem, mouse.x, mouse.y);
                 timelineViewRoot.updateBoxSelectionPreview();
                 var finalIds = boxSelectionPreviewIds.slice(0);
-                timelineViewRoot.selectionVisualLatchIds = finalIds.slice(0);
-                timelineViewRoot.selectionVisualLatchActive = true;
                 TimelineBridge.applySelectionIds(finalIds);
                 boxSelecting = false;
                 boxSelectionPreviewIds = [];

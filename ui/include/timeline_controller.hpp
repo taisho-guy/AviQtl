@@ -190,6 +190,7 @@ class TimelineController : public QObject {
     Q_INVOKABLE void undo();
     Q_INVOKABLE void redo();
 
+    Q_INVOKABLE void requestDelete(int targetClipId);
     // コンテキストメニュー用のクリップ操作コマンド
     Q_INVOKABLE void deleteClip(int clipId);
     Q_INVOKABLE void splitClip(int clipId, int frame);
