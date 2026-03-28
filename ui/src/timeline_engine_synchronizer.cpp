@@ -7,7 +7,10 @@
 
 namespace Rina::UI {
 
-TimelineEngineSynchronizer::TimelineEngineSynchronizer(TimelineController *controller, QObject *parent) : QObject(parent), m_controller(controller) { m_clipModel = new ClipModel(controller->transport(), this); }
+TimelineEngineSynchronizer::TimelineEngineSynchronizer(TimelineController *controller, QObject *parent) : QObject(parent), m_controller(controller) {
+    m_clipModel = new ClipModel(controller->transport(), this);
+    connect(&m_futureWatcher, &QFutureWatcher<ClipEngineResult>::finished, this, &TimelineEngineSynchronizer::handleResultsReady);
+}
 
 void TimelineEngineSynchronizer::updateActiveClipsList() {
     int current = m_controller->transport()->currentFrame();
@@ -20,57 +23,49 @@ void TimelineEngineSynchronizer::updateActiveClipsList() {
 
     m_clipModel->updateClips(active);
     updateECSState(active, current);
-    Rina::Engine::Timeline::ECS::instance().commit();
 }
 
 void TimelineEngineSynchronizer::updateECSState(const QList<ClipData *> &activeClips, int currentFrame) {
-    // 計算結果を保持する一時構造体
-    struct AudioParamsResult {
-        int clipId;
-        int startFrame;
-        int durationFrames;
-        float vol;
-        float pan;
-        bool mute;
-    };
-
-    QList<const ClipData *> clipsToProcess;
-
-    // 1. 座標系の更新と、並列処理対象のフィルタリング
-    for (const auto *clip : activeClips) {
-        Rina::Engine::Timeline::ECS::instance().updateClipState(clip->id, clip->layer, currentFrame - clip->startFrame);
+    // 1. すべての計算をワーカースレッドへオフロード
+    // LuaHostがスレッドローカル化されたため、ここでの並列実行はロックフリーとなる
+    auto mapper = [currentFrame](const ClipData *clip) -> ClipEngineResult {
+        ClipEngineResult res;
+        res.clipId = clip->id;
+        res.layer = clip->layer;
+        res.relFrame = currentFrame - clip->startFrame;
 
         if (clip->type == "audio" || clip->type == "video") {
-            clipsToProcess.append(clip);
-        }
-    }
+            res.hasAudio = true;
+            res.startFrame = clip->startFrame;
+            res.durationFrames = clip->durationFrames;
 
-    // 2. Luaスクリプト評価を含むパラメータ計算をワーカースレッドへオフロード
-    // LuaHostがスレッドローカル化されたため、ここでの並列実行はロックフリーとなる
-    auto mapper = [currentFrame](const ClipData *clip) -> AudioParamsResult {
-        float vol = 1.0f;
-        float pan = 0.0f;
-        bool mute = false;
-        const QString paramSourceId = clip->type; // "audio" or "video" acts as the base effect ID
-        for (auto *eff : clip->effects) {
-            if (eff->id() == paramSourceId) {
-                int relFrame = currentFrame - clip->startFrame;
-                QVariant vVol = eff->evaluatedParam("volume", relFrame);
-                vol = vVol.isValid() ? vVol.toFloat() : 1.0f;
-                pan = eff->evaluatedParam("pan", relFrame).toFloat();
-                mute = eff->evaluatedParam("mute", relFrame).toBool();
-                break;
+            const QString paramSourceId = clip->type; // "audio" or "video" acts as the base effect ID
+            for (auto *eff : clip->effects) {
+                if (eff->id() == paramSourceId) {
+                    QVariant vVol = eff->evaluatedParam("volume", res.relFrame);
+                    res.vol = vVol.isValid() ? vVol.toFloat() : 1.0f;
+                    res.pan = eff->evaluatedParam("pan", res.relFrame).toFloat();
+                    res.mute = eff->evaluatedParam("mute", res.relFrame).toBool();
+                    break;
+                }
             }
         }
-        return {clip->id, clip->startFrame, clip->durationFrames, vol, pan, mute};
+        return res;
     };
 
-    QList<AudioParamsResult> results = QtConcurrent::blockingMapped(clipsToProcess, mapper);
+    m_futureWatcher.setFuture(QtConcurrent::mapped(activeClips, mapper));
+}
 
-    // 3. 計算結果をECSへコミット（ここはメインスレッド）
+void TimelineEngineSynchronizer::handleResultsReady() {
+    // 2. 計算結果をECSへコミット（ここはメインスレッド）
+    const auto results = m_futureWatcher.future().results();
     for (const auto &res : results) {
-        Rina::Engine::Timeline::ECS::instance().updateAudioClipState(res.clipId, res.startFrame, res.durationFrames, res.vol, res.pan, res.mute);
+        Rina::Engine::Timeline::ECS::instance().updateClipState(res.clipId, res.layer, res.relFrame);
+        if (res.hasAudio) {
+            Rina::Engine::Timeline::ECS::instance().updateAudioClipState(res.clipId, res.startFrame, res.durationFrames, res.vol, res.pan, res.mute);
+        }
     }
+    Rina::Engine::Timeline::ECS::instance().commit();
 }
 
 void TimelineEngineSynchronizer::rebuildClipIndex() {
