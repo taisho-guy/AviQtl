@@ -4,6 +4,9 @@
     <p>AviUtlのまま、AviUtlを超える。安全・高速・自由な動画編集ソフト。</p>
 </div>
 
+> [!IMPORTANT]
+> ### 私は2026年度受験生になりますから、開発速度が低下します。ご了承下さい。
+
 ## ダウンロード
 
 - [Linux(x86_64)](https://codeberg.org/taisho-guy/Rina/releases)
