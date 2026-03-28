@@ -1,0 +1,201 @@
+/* --- Material Design 3 Color Tokens (Dark Theme) --- */
+:root {
+    /* Primary: 高貴な深紫 (#D0BCFF はダークテーマ用の明るい紫) */
+    --m3-primary: #D0BCFF;
+    --m3-on-primary: #381E72;
+    --m3-primary-container: #4F378B;
+    --m3-on-primary-container: #EADDFF;
+
+    /* Secondary: 落ち着いた補色 */
+    --m3-secondary: #CCC2DC;
+    --m3-on-secondary: #332D41;
+
+    /* Surface & Background: CachyOSに合う深いグレー/黒 */
+    --m3-background: #1C1B1F;
+    --m3-on-background: #E6E1E5;
+    --m3-surface: #1C1B1F;
+    --m3-surface-variant: #49454F;
+    --m3-on-surface-variant: #CAC4D0;
+
+    /* Error: 警告用 */
+    --m3-error: #F2B8B5;
+    --m3-on-error: #601410;
+    --m3-error-container: #8C1D18;
+    --m3-on-error-container: #F9DEDC;
+
+    /* Elevation & Shape */
+    --m3-radius-xl: 28px;
+    --m3-radius-m: 12px;
+    --transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* --- Base Styles --- */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--m3-background);
+    color: var(--m3-on-background);
+    font-family: 'Roboto', 'Noto Sans JP', sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+/* --- App Bar --- */
+.app-bar {
+    height: 64px;
+    display: flex;
+    align-items: center;
+    background-color: var(--m3-surface);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    border-bottom: 1px solid var(--m3-surface-variant);
+}
+
+.logo-text {
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--m3-primary);
+}
+
+/* --- Hero Section --- */
+.hero-section {
+    text-align: center;
+    padding: 64px 0;
+}
+
+.hero-icon {
+    width: 160px;
+    height: 160px;
+    margin-bottom: 24px;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+}
+
+h1 {
+    font-size: 3rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+    letter-spacing: -0.5px;
+}
+
+.subtitle {
+    font-size: 1.2rem;
+    color: var(--m3-on-surface-variant);
+    margin-bottom: 32px;
+}
+
+/* --- M3 Components --- */
+
+/* Buttons */
+.m3-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 24px;
+    height: 40px;
+    border-radius: 20px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: var(--transition);
+}
+
+.m3-button.primary {
+    background-color: var(--m3-primary);
+    color: var(--m3-on-primary);
+}
+
+.m3-button:hover {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    opacity: 0.9;
+}
+
+/* Cards */
+.m3-card {
+    background-color: var(--m3-surface-variant);
+    color: var(--m3-on-surface-variant);
+    border-radius: var(--m3-radius-m);
+    padding: 20px;
+    margin-bottom: 16px;
+}
+
+.m3-card.outline {
+    background-color: transparent;
+    border: 1px solid var(--m3-surface-variant);
+}
+
+.error-container {
+    background-color: var(--m3-error-container);
+    color: var(--m3-on-error-container);
+}
+
+/* Status Badge */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background-color: var(--m3-primary-container);
+    color: var(--m3-on-primary-container);
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
+
+/* Accordion (Details/Summary) */
+.m3-accordion {
+    background-color: var(--m3-surface-variant);
+    margin-bottom: 8px;
+    border-radius: var(--m3-radius-m);
+    overflow: hidden;
+}
+
+.m3-accordion summary {
+    padding: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+}
+
+.m3-accordion summary::after {
+    content: 'expand_more';
+    font-family: 'Material Icons Sharp';
+}
+
+.m3-accordion[open] summary::after {
+    content: 'expand_less';
+}
+
+.details-content {
+    padding: 0 16px 16px 16px;
+    color: var(--m3-on-background);
+}
+
+/* Code block */
+code {
+    display: block;
+    background: #000;
+    color: #0f0; /* Terminal feel */
+    padding: 12px;
+    border-radius: 8px;
+    font-family: monospace;
+    margin: 12px 0;
+}
+
+/* --- Footer --- */
+.footer {
+    text-align: center;
+    padding: 48px 0;
+    color: var(--m3-on-surface-variant);
+    font-size: 0.8rem;
+}

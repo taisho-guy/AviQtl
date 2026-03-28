@@ -3,64 +3,85 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rina - Official Site</title>
-    <style>
-        body {
-            font-family: system-ui, sans-serif;
-            margin: 0;
-            padding: 0;
-            background: #f7f7f7;
-            color: #333;
-        }
-        header {
-            background: #4a6cf7;
-            color: white;
-            padding: 2rem 1rem;
-            text-align: center;
-        }
-        main {
-            max-width: 800px;
-            margin: 2rem auto;
-            padding: 1rem;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-        }
-        h1 {
-            margin-top: 0;
-        }
-        footer {
-            text-align: center;
-            padding: 1rem;
-            color: #777;
-            font-size: 0.9rem;
-        }
-    </style>
+    <title>Rina is not AviUtl | 次世代動画編集ソフト</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Sharp" rel="stylesheet">
+    
+    <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="m3-dark-theme">
 
-<header>
-    <h1>Rina</h1>
-    <p>Welcome to the official site</p>
-</header>
+    <header class="app-bar">
+        <div class="container">
+            <span class="logo-text">Rina is not AviUtl</span>
+        </div>
+    </header>
 
-<main>
-    <h2>About Rina</h2>
-    <p>
-        Rina is a project created by Bamtain Maoka.  
-        This site is hosted on Codeberg Pages and served through the domain <strong>rina.taisho-guy.org</strong>.
-    </p>
+    <main class="container">
+        <section class="hero-section">
+            <img src="./assets/icon.svg" alt="Rina Icon" class="hero-icon">
+            <h1>Rina is not AviUtl</h1>
+            <p class="subtitle">AviUtlのまま、AviUtlを超える。<br>安全・高速・自由な動画編集ソフト。</p>
+            
+            <div class="status-badge">
+                <span class="material-icons-sharp">school</span>
+                2026年度受験生につき開発速度低下中
+            </div>
+        </section>
 
-    <h2>Links</h2>
-    <ul>
-        <li><a href="https://codeberg.org/あなたのユーザー名/リポジトリ名">Codeberg Repository</a></li>
-        <li><a href="https://taisho-guy.org">Main Domain</a></li>
-    </ul>
-</main>
+        <section id="download" class="card-section">
+            <h2>ダウンロード</h2>
+            <div class="m3-card filled">
+                <div class="card-content">
+                    <p>最新リリースのバイナリを取得します。</p>
+                    <a href="https://codeberg.org/taisho-guy/Rina/releases" class="m3-button primary">
+                        <span class="material-icons-sharp">download</span>
+                        Linux (x86_64)
+                    </a>
+                </div>
+            </div>
 
-<footer>
-    © 2026 Rina Project
-</footer>
+            <div class="m3-card error-container">
+                <h3>⚠️ ダウンロード前にご確認下さい</h3>
+                <ul>
+                    <li>Windows/macOS非対応（Linux専用）</li>
+                    <li><strong>CachyOS</strong> での利用を強く推奨</li>
+                </ul>
+            </div>
+        </section>
 
+        <section id="faq" class="card-section">
+            <h2>Q & A</h2>
+            <div class="faq-list">
+                <details class="m3-accordion">
+                    <summary>なぜAviUtlのクローンを開発しているのですか？</summary>
+                    <div class="details-content">
+                        <p>ECS（データ指向設計）による並列処理、Vulkan描画、C++23/Qt6採用など、構造的弱点を根本から覆すためです。</p>
+                    </div>
+                </details>
+                <details class="m3-accordion">
+                    <summary>名称の由来は？</summary>
+                    <div class="details-content">
+                        <p>「Rina is not AviUtl」の再帰的頭字語です。</p>
+                    </div>
+                </details>
+            </div>
+        </section>
+
+        <section id="build" class="card-section">
+            <h2>ビルド手順</h2>
+            <div class="m3-card outline">
+                <code>python BUILD.py</code>
+                <p>Linux環境であれば、上記コマンド1つでビルドが完了します。</p>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2026 taisho-guy | AGPLv3 Licensed</p>
+    </footer>
+
+    <script src="main.js"></script>
 </body>
 </html>
