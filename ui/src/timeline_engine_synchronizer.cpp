@@ -34,6 +34,16 @@ void TimelineEngineSynchronizer::updateECSState(const QList<ClipData *> &activeC
         res.layer = clip->layer;
         res.relFrame = currentFrame - clip->startFrame;
 
+        // 1. 全てのエフェクトパラメータ（Lua/イージング込）を計算
+        for (auto *eff : clip->effects) {
+            if (!eff->isEnabled())
+                continue;
+            const QVariantMap p = eff->evaluatedParams(res.relFrame);
+            for (auto it = p.begin(); it != p.end(); ++it) {
+                res.evaluatedParams.insert(it.key(), it.value());
+            }
+        }
+
         if (clip->type == "audio" || clip->type == "video") {
             res.hasAudio = true;
             res.startFrame = clip->startFrame;
@@ -59,7 +69,10 @@ void TimelineEngineSynchronizer::updateECSState(const QList<ClipData *> &activeC
 void TimelineEngineSynchronizer::handleResultsReady() {
     // 2. 計算結果をECSへコミット（ここはメインスレッド）
     const auto results = m_futureWatcher.future().results();
+    m_paramCache.clear();
+
     for (const auto &res : results) {
+        m_paramCache.insert(res.clipId, res.evaluatedParams);
         Rina::Engine::Timeline::ECS::instance().updateClipState(res.clipId, res.layer, res.relFrame);
         if (res.hasAudio) {
             Rina::Engine::Timeline::ECS::instance().updateAudioClipState(res.clipId, res.startFrame, res.durationFrames, res.vol, res.pan, res.mute);

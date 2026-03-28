@@ -51,6 +51,7 @@ class TimelineController : public QObject {
     Q_PROPERTY(QString activeObjectType READ activeObjectType NOTIFY activeObjectTypeChanged)
     Q_PROPERTY(QVariantList clips READ clips NOTIFY clipsChanged)
     Q_PROPERTY(Rina::UI::ClipModel *clipModel READ clipModel CONSTANT)
+    Q_PROPERTY(Rina::UI::ClipModel *renderModel READ renderModel CONSTANT)
     Q_PROPERTY(int selectedLayer READ selectedLayer WRITE setSelectedLayer NOTIFY selectedLayerChanged)
     Q_PROPERTY(QVariantList scenes READ scenes NOTIFY scenesChanged)
     Q_PROPERTY(int currentSceneId READ currentSceneId NOTIFY currentSceneIdChanged)
@@ -98,6 +99,7 @@ class TimelineController : public QObject {
     Q_INVOKABLE void log(const QString &msg);
     QVariantList clips() const;
     ClipModel *clipModel() const { return m_engineSync->clipModel(); }
+    ClipModel *renderModel() const { return m_engineSync->renderModel(); }
 
     // クリップの配置・長さを更新 (ID指定)
     Q_INVOKABLE void updateClip(int id, int layer, int startFrame, int duration);
@@ -107,6 +109,8 @@ class TimelineController : public QObject {
 
     // 衝突回避ロジック付きでクリップを移動する（QMLのドラッグ操作から呼ぶ）
     Q_INVOKABLE void moveClipWithCollisionCheck(int clipId, int layer, int startFrame);
+
+    Q_INVOKABLE QVariantMap evaluateClipParams(int clipId, int relFrame) const;
 
     // エフェクト操作
     Q_INVOKABLE QList<QObject *> getClipEffectsModel(int clipId) const;
