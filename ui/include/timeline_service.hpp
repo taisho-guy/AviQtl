@@ -83,12 +83,12 @@ class TimelineService : public QObject {
     void deleteSelectedClips();
 
     // 内部用 (コマンドから呼び出される)
-    void deleteClipInternal(int clipId);
-    void createClipInternal(int clipId, const QString &type, int startFrame, int layer);
-    void updateClipInternal(int id, int layer, int startFrame, int duration);
+    void deleteClipInternal(int clipId, bool emitSignal = true);
+    void createClipInternal(int clipId, const QString &type, int startFrame, int layer, bool emitSignal = true);
+    void updateClipInternal(int id, int layer, int startFrame, int duration, bool emitSignal = true);
     void addEffectInternal(int clipId, const QString &effectId);
-    void addClipsDirectInternal(const QList<ClipData> &clips); // 複数クリップの直接追加
-    void addClipDirectInternal(const ClipData &clip);
+    void addClipsDirectInternal(const QList<ClipData> &clips);
+    void addClipDirectInternal(const ClipData &clip, bool emitSignal = true);
     void restoreEffectInternal(int clipId, const QVariantMap &data);
     void removeEffectInternal(int clipId, int effectIndex);
     void setEffectEnabledInternal(int clipId, int effectIndex, bool enabled);

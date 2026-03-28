@@ -730,10 +730,15 @@ void TimelineController::setKeyframe(int clipId, int effectIndex, const QString 
 void TimelineController::removeKeyframe(int clipId, int effectIndex, const QString &paramName, int frame) { m_timeline->removeKeyframe(clipId, effectIndex, paramName, frame); }
 
 void TimelineController::deleteClip(int clipId) {
-    if (m_timeline)
+    if (!m_timeline)
+        return;
+
+    // IDが無効、あるいは削除対象が選択範囲に含まれている場合は、一括削除を実行する
+    if (clipId < 0 || (m_selection && m_selection->isSelected(clipId))) {
+        m_timeline->deleteSelectedClips();
+    } else {
         m_timeline->deleteClip(clipId);
-    if (m_selection->selectedClipId() == clipId)
-        selectClip(-1);
+    }
 }
 
 void TimelineController::splitClip(int clipId, int frame) {

@@ -13,7 +13,7 @@ AddClipCommand::AddClipCommand(TimelineService *service, int clipId, const QStri
     : m_service(service), m_clipId(clipId), m_type(type), m_startFrame(startFrame), m_layer(layer), m_clipName(clipName) {
     setText(QString("クリップ追加: %1").arg(clipName));
 }
-void AddClipCommand::undo() { m_service->deleteClip(m_clipId); }
+void AddClipCommand::undo() { m_service->deleteClipInternal(m_clipId); }
 void AddClipCommand::redo() { m_service->createClipInternal(m_clipId, m_type, m_startFrame, m_layer); }
 
 MoveClipCommand::MoveClipCommand(TimelineService *service, int clipId, int oldLayer, int oldStart, int oldDuration, int newLayer, int newStart, int newDuration, const QString &clipName)
@@ -91,7 +91,7 @@ SplitClipCommand::SplitClipCommand(TimelineService *service, int clipId, int fra
 }
 
 void SplitClipCommand::undo() {
-    m_service->deleteClip(m_newClipId);
+    m_service->deleteClipInternal(m_newClipId);
     // 元のクリップの長さを復元
     const auto &clips = m_service->clips();
     auto it = std::find_if(clips.begin(), clips.end(), [this](const ClipData &c) { return c.id == m_originalClipId; });
@@ -163,9 +163,16 @@ DeleteClipsCommand::DeleteClipsCommand(TimelineService *service, const QList<int
 }
 void DeleteClipsCommand::redo() {
     for (int id : m_clipIds)
-        m_service->deleteClipInternal(id);
+        m_service->deleteClipInternal(id, false);
+    emit m_service->clipsChanged();
 }
-void DeleteClipsCommand::undo() { m_service->addClipsDirectInternal(m_snapshots); }
+void DeleteClipsCommand::undo() {
+    m_service->addClipsDirectInternal(m_snapshots);
+    QVariantList ids;
+    for (int id : m_clipIds)
+        ids.append(id);
+    m_service->applySelectionIds(ids); // Undo時に選択状態も復元
+}
 
 CutClipCommand::CutClipCommand(TimelineService *service, int clipId, const QString &clipName) : m_service(service), m_clipId(clipId) {
     const auto *clip = service->findClipById(clipId);
@@ -268,7 +275,7 @@ void TimelineService::createClip(const QString &type, int startFrame, int layer)
     m_undoStack->push(new AddClipCommand(this, id, type, startFrame, layer, clipName));
 }
 
-void TimelineService::createClipInternal(int clipId, const QString &type, int startFrame, int layer) {
+void TimelineService::createClipInternal(int clipId, const QString &type, int startFrame, int layer, bool emitSignal) {
     if (startFrame < 0)
         startFrame = 0;
     if (layer < 0)
@@ -303,12 +310,16 @@ void TimelineService::createClipInternal(int clipId, const QString &type, int st
     addEffectInternal(clipId, "transform");
     addEffectInternal(clipId, type);
 
-    emit clipCreated(newClip.id, newClip.layer, newClip.startFrame, newClip.durationFrames, newClip.type);
+    if (emitSignal) {
+        emit clipsChanged();
+        emit clipCreated(newClip.id, newClip.layer, newClip.startFrame, newClip.durationFrames, newClip.type);
+    }
 }
 
 void TimelineService::addClipsDirectInternal(const QList<ClipData> &clips) {
     for (const auto &clip : clips)
-        addClipDirectInternal(clip);
+        addClipDirectInternal(clip, false);
+    emit clipsChanged();
 }
 
 void TimelineService::updateClip(int id, int layer, int startFrame, int duration) {
@@ -646,7 +657,7 @@ QPoint TimelineService::resolveDragPosition(int clipId, int targetLayer, int pro
     return QPoint(finalFrame, targetLayer);
 }
 
-void TimelineService::updateClipInternal(int id, int layer, int startFrame, int duration) {
+void TimelineService::updateClipInternal(int id, int layer, int startFrame, int duration, bool emitSignal) {
     const auto *existingClip = findClipById(id);
     if (!existingClip)
         return;
@@ -681,7 +692,8 @@ void TimelineService::updateClipInternal(int id, int layer, int startFrame, int 
                 for (auto *effect : clip.effects)
                     if (effect)
                         effect->syncTrackEndpoints(duration);
-                emit clipsChanged();
+                if (emitSignal)
+                    emit clipsChanged();
                 // 選択中のクリップであればSelectionServiceのキャッシュも更新する
                 if (m_selection->selectedClipId() == id) {
                     QVariantMap data = m_selection->selectedClipData();
@@ -699,8 +711,28 @@ void TimelineService::updateClipInternal(int id, int layer, int startFrame, int 
 void TimelineService::selectClip(int id) { applySelectionIds(QVariantList{id}); }
 
 void TimelineService::toggleSelection(int id, const QVariantMap &data) {
-    if (m_selection)
-        m_selection->toggleSelection(id, data);
+    if (!m_selection)
+        return;
+
+    QVariantMap fullData = data;
+    // データが空（QMLからの簡易呼び出し）の場合はC++側で情報を補完してInspectorの破損を防ぐ
+    if (id >= 0 && (fullData.isEmpty() || !fullData.contains("type"))) {
+        const auto *clip = findClipById(id);
+        if (clip) {
+            fullData["id"] = clip->id;
+            fullData["type"] = clip->type;
+            fullData["layer"] = clip->layer;
+            fullData["startFrame"] = clip->startFrame;
+            fullData["durationFrames"] = clip->durationFrames;
+            for (auto *eff : clip->effects) {
+                QVariantMap p = eff->params();
+                for (auto it = p.begin(); it != p.end(); ++it)
+                    fullData.insert(it.key(), it.value());
+            }
+        }
+    }
+
+    m_selection->toggleSelection(id, fullData);
 }
 
 void TimelineService::applySelectionIds(const QVariantList &ids) {
@@ -792,14 +824,15 @@ void TimelineService::deleteClip(int clipId) {
     m_undoStack->push(new DeleteClipCommand(this, clipId, name));
 }
 
-void TimelineService::deleteClipInternal(int clipId) {
+void TimelineService::deleteClipInternal(int clipId, bool emitSignal) {
     auto &currentClips = clipsMutable();
     auto it = std::find_if(currentClips.begin(), currentClips.end(), [clipId](const ClipData &c) { return c.id == clipId; });
     if (it != currentClips.end()) {
         for (auto *eff : it->effects)
             eff->deleteLater();
         currentClips.erase(it);
-        emit clipsChanged();
+        if (emitSignal)
+            emit clipsChanged();
     }
 }
 
@@ -826,10 +859,12 @@ void TimelineService::addEffectInternal(int clipId, const QString &effectId) {
     }
 }
 
-void TimelineService::addClipDirectInternal(const ClipData &clip) {
+void TimelineService::addClipDirectInternal(const ClipData &clip, bool emitSignal) {
     clipsMutable().append(clip);
-    emit clipsChanged();
-    emit clipCreated(clip.id, clip.layer, clip.startFrame, clip.durationFrames, clip.type);
+    if (emitSignal) {
+        emit clipsChanged();
+        emit clipCreated(clip.id, clip.layer, clip.startFrame, clip.durationFrames, clip.type);
+    }
 }
 
 void TimelineService::restoreEffectInternal(int clipId, const QVariantMap &data) {
