@@ -14,9 +14,7 @@ TimelineEngineSynchronizer::TimelineEngineSynchronizer(TimelineController *contr
 
 void TimelineEngineSynchronizer::updateActiveClipsList() {
     int current = m_controller->transport()->currentFrame();
-    // 60フレーム(約1秒)先までを「アクティブ」として扱い、QML側でプリロードさせる
-    const int lookahead = 60;
-    QList<ClipData *> active = m_controller->timeline()->resolvedActiveClipsAt(current, lookahead);
+    QList<ClipData *> active = m_controller->timeline()->resolvedActiveClipsAt(current);
 
     // レイヤー番号が小さいほど背面、大きいほど前面になるようソート
     std::sort(active.begin(), active.end(), [](const ClipData *a, const ClipData *b) { return a->layer > b->layer; });
