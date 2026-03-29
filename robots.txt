@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# サイトマップの場所を指定
+Sitemap: https://rina.taisho-guy.org/sitemap.xml
