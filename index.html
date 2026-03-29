@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rinaのお部屋</title>
+    <link rel="icon" href="./assets/icon.svg" type="image/svg+xml">
     <style>
         body {
             background-color: #efffef;
@@ -121,13 +122,17 @@
             color: #2f4fdf;
         }
         details[open] summary { margin-bottom: 2px; }
-        /* details内のコンテンツ（pタグ等）を白いセルとして描画 */
-        details > p {
+        /* details内の各要素（見出し、段落、リスト）を白いセルとして描画 */
+        details > p, details > h3, details > h4, details > ul, details > ol {
             background-color: #fdffff;
             border: 1px solid #1f5f1f;
             padding: 10px;
-            margin: 0;
+            margin: 0 0 2px 0;
         }
+        details > *:last-child, .alert > *:last-child { margin-bottom: 0; }
+        details h3, details h4 { font-size: 1.1em; }
+        details ul, details ol { padding-left: 40px; }
+
         /* details内に連続する要素がある場合の隙間調整 */
         details[open] summary + table, details[open] summary + p { margin-top: 0; }
         details table { 
@@ -224,19 +229,20 @@
     <div class="section-header"><span>★</span> 貢献 <span>★</span></div>
     <div class="alert alert-note">
         <div class="alert-title">貢献に関する同意事項</div>
-        <ul style="list-style-type: none; padding-left: 15px; padding-right: 15px; margin-bottom: 2px;">
+        <ul style="list-style-type: none; padding-left: 15px; padding-right: 15px; margin-bottom: 0;">
             <li>本プロジェクトへプルリクエストやその他の貢献を送信した場合、あなたは自分の貢献物を<a href="https://www.gnu.org/licenses/agpl-3.0.txt" target="_blank">GNU Affero General Public License Version 3</a>の下で本プロジェクトに提供することに同意したものとみなします。あなたの貢献物の著作権はあなたに残りますが、受理されたコードは同ライセンスの条件に従って利用・改変・再配布されます。</li>
-        </ul></div>
-        <ol>
-            <li>Rinaをフォークし、フォーク済みのリポジトリを<code>clone</code>します。</li>
-            <li><code>cd Rina</code></li>
-            <li><code>git checkout -b fix/some-change</code></li>
-            <li>変更を行います。</li>
-            <li><code>git add .</code></li>
-            <li><code>git commit -m "変更内容"</code></li>
-            <li><code>git push -u origin fix/some-change</code></li>
-            <li><a href="https://codeberg.org/taisho-guy/Rina/pulls" target="_blank">Codeberg</a>でプルリクエストを作成します。</li>
-        </ol>
+        </ul>
+    </div>
+    <ol>
+        <li>Rinaをフォークし、フォーク済みのリポジトリを<code>clone</code>します。</li>
+        <li><code>cd Rina</code></li>
+        <li><code>git checkout -b fix/some-change</code></li>
+        <li>変更を行います。</li>
+        <li><code>git add .</code></li>
+        <li><code>git commit -m "変更内容"</code></li>
+        <li><code>git push -u origin fix/some-change</code></li>
+        <li><a href="https://codeberg.org/taisho-guy/Rina/pulls" target="_blank">Codeberg</a>でプルリクエストを作成します。</li>
+    </ol>
     <div class="section-header"><span>★</span> Q & A <span>★</span></div>
 
     <details>
@@ -246,7 +252,7 @@
         <h3>肥大化したエコシステム</h3>
         <p>理由は違えど、AviUtlを「仕方なく」使い続けている方は少なくないはずです。長年の拡張によって肥大化した「ハウルの動く城」のようなエコシステムは、不満を抱えながらも手放すことができない存在となっています。</p>
         <h3>プロジェクトの目標とミッション</h3>
-        <p>私は、<a href="https://edunet002.synapse-blog.jp/konan" target="_blank">鹿児島県立甲南高等学校</a>の課題研究において、この現状を打破すべくRinaの独自開発を決意しました。</p>
+        <p>私は、<a href="https://edunet002.synapse-blog.jp/konan/" target="_blank">鹿児島県立甲南高等学校</a>の課題研究において、この現状を打破すべくRinaの独自開発を決意しました。</p>
         <p><b>個人的な目標:</b> Domino、VocalShifter、REAPER、AviUtlをはしごすることなく、Linux上のRinaのみで音MADを制作すること。</p>
         <p><b>Rinaのミッション:</b> AviUtlを「仕方なく」使っている方々の最適解になること。</p>
     </details>
