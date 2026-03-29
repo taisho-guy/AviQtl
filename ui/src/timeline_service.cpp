@@ -1041,6 +1041,13 @@ void TimelineService::updateEffectParamInternal(int clipId, int effectIndex, con
         if (clip.id == clipId) {
             if (effectIndex >= 0 && effectIndex < clip.effects.size()) {
                 clip.effects[effectIndex]->setParam(paramName, value);
+
+                // メディアの再読み込みが必要なパラメータ（ファイルパスや参照シーン）が変更された場合、
+                // clipsChanged シグナルを発火させて MediaManager 等に通知する
+                if (paramName == "path" || paramName == "source" || paramName == "targetSceneId") {
+                    emit clipsChanged();
+                }
+
                 emit effectParamChanged(clipId, effectIndex, paramName, value);
                 if (m_selection->selectedClipId() == clipId) {
                     QVariantMap data = m_selection->selectedClipData();

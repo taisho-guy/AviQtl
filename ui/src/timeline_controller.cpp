@@ -47,6 +47,7 @@ void TimelineController::setupConnections() {
             m_engineSync->rebuildClipIndex();
             emit clipsChanged();
             m_mediaManager->updateMediaDecoders();
+            m_mediaManager->onCurrentFrameChanged();
             updateActiveClipsList();
             m_transport->setTotalFrames(timelineDuration());
         },
@@ -60,10 +61,22 @@ void TimelineController::setupConnections() {
         updateClipActiveState();
     });
 
-    connect(m_timeline, &TimelineService::scenesChanged, this, &TimelineController::scenesChanged);
+    connect(m_timeline, &TimelineService::scenesChanged, this, [this]() {
+        m_mediaManager->updateMediaDecoders();
+        m_mediaManager->onCurrentFrameChanged();
+        updateActiveClipsList();
+        emit scenesChanged();
+    });
     connect(m_timeline, &TimelineService::currentSceneIdChanged, this, &TimelineController::currentSceneIdChanged);
-    connect(m_timeline, &TimelineService::clipEffectsChanged, this, &TimelineController::clipEffectsChanged);
-    connect(m_timeline, &TimelineService::effectParamChanged, this, [this]() { updateActiveClipsList(); });
+    connect(m_timeline, &TimelineService::clipEffectsChanged, this, [this](int id) {
+        m_mediaManager->onCurrentFrameChanged();
+        updateActiveClipsList();
+        emit clipEffectsChanged(id);
+    });
+    connect(m_timeline, &TimelineService::effectParamChanged, this, [this]() {
+        m_mediaManager->onCurrentFrameChanged();
+        updateActiveClipsList();
+    });
 
     connect(m_exportManager, &TimelineExportManager::exportStarted, this, &TimelineController::exportStarted);
     connect(m_exportManager, &TimelineExportManager::exportProgressChanged, this, &TimelineController::exportProgressChanged);
@@ -143,7 +156,6 @@ void TimelineController::setClipProperty(const QString &name, const QVariant &va
 
     if (targetEffectIndex != -1 && targetEffectIndex < clip->effects.size()) {
         updateClipEffectParam(id, targetEffectIndex, name, value);
-        updateActiveClipsList();
     }
 }
 
