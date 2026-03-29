@@ -7,9 +7,20 @@
 
 namespace Rina::UI {
 
+// Archetypeごとの計算ワークロードを定義
+struct ArchetypeBatch {
+    struct EffectDesc {
+        int index;
+        QStringList keys;
+    };
+    QList<ClipData *> clips;
+    QList<EffectDesc> activeEffects;
+    QStringList allKeys; // 結果のマッピング用
+};
+
 TimelineEngineSynchronizer::TimelineEngineSynchronizer(TimelineController *controller, QObject *parent) : QObject(parent), m_controller(controller) {
     m_clipModel = new ClipModel(controller->transport(), this);
-    connect(&m_futureWatcher, &QFutureWatcher<ClipEngineResult>::finished, this, &TimelineEngineSynchronizer::handleResultsReady);
+    connect(&m_futureWatcher, &QFutureWatcher<QList<ClipEngineResult>>::finished, this, &TimelineEngineSynchronizer::handleResultsReady);
 }
 
 void TimelineEngineSynchronizer::updateActiveClipsList() {
@@ -20,62 +31,98 @@ void TimelineEngineSynchronizer::updateActiveClipsList() {
     std::sort(active.begin(), active.end(), [](const ClipData *a, const ClipData *b) { return a->layer > b->layer; });
 
     m_clipModel->updateClips(active);
-    updateECSState(active, current);
-}
 
-void TimelineEngineSynchronizer::updateECSState(const QList<ClipData *> &activeClips, int currentFrame) {
-    // 1. すべての計算をワーカースレッドへオフロード
-    // LuaHostがスレッドローカル化されたため、ここでの並列実行はロックフリーとなる
-    auto mapper = [currentFrame](const ClipData *clip) -> ClipEngineResult {
-        ClipEngineResult res;
-        res.clipId = clip->id;
-        res.layer = clip->layer;
-        res.relFrame = currentFrame - clip->startFrame;
-
-        // 1. 全てのエフェクトパラメータ（Lua/イージング込）を計算
+    // Archetype (エフェクト構成の指紋) ごとにグループ化
+    QMap<QString, ArchetypeBatch> archetypeBatches;
+    for (ClipData *clip : active) {
+        QString sig = clip->type;
         for (auto *eff : clip->effects) {
-            if (!eff->isEnabled())
-                continue;
-            const QVariantMap p = eff->evaluatedParams(res.relFrame);
-            for (auto it = p.begin(); it != p.end(); ++it) {
-                res.evaluatedParams.insert(it.key(), it.value());
-            }
+            if (eff->isEnabled())
+                sig += ":" + eff->id();
         }
 
-        if (clip->type == "audio" || clip->type == "video") {
-            res.hasAudio = true;
-            res.startFrame = clip->startFrame;
-            res.durationFrames = clip->durationFrames;
-
-            const QString paramSourceId = clip->type; // "audio" or "video" acts as the base effect ID
-            for (auto *eff : clip->effects) {
-                if (eff->id() == paramSourceId) {
-                    QVariant vVol = eff->evaluatedParam("volume", res.relFrame);
-                    res.vol = vVol.isValid() ? vVol.toFloat() : 1.0f;
-                    res.pan = eff->evaluatedParam("pan", res.relFrame).toFloat();
-                    res.mute = eff->evaluatedParam("mute", res.relFrame).toBool();
-                    break;
+        auto &batch = archetypeBatches[sig];
+        if (batch.clips.isEmpty()) {
+            for (int i = 0; i < clip->effects.size(); ++i) {
+                if (clip->effects[i]->isEnabled()) {
+                    QStringList keys = clip->effects[i]->params().keys();
+                    batch.activeEffects.append({i, keys});
+                    batch.allKeys << keys;
                 }
             }
         }
-        return res;
+        batch.clips.append(clip);
+    }
+
+    updateECSState(archetypeBatches.values(), current);
+}
+
+void TimelineEngineSynchronizer::updateECSState(const QList<ArchetypeBatch> &batches, int currentFrame) {
+    auto batchMapper = [currentFrame](const ArchetypeBatch &batch) -> QList<ClipEngineResult> {
+        QList<ClipEngineResult> results;
+        results.reserve(batch.clips.size());
+
+        for (const ClipData *clip : batch.clips) {
+            ClipEngineResult res;
+            res.clipId = clip->id;
+            res.layer = clip->layer;
+            res.relFrame = currentFrame - clip->startFrame;
+            res.propertyNames = batch.allKeys;
+            res.propertyValues.reserve(batch.allKeys.size());
+
+            // 1. エフェクト計算 (QVariantMapを介さず、名前ベースで直接値を抽出)
+            for (const auto &ed : batch.activeEffects) {
+                auto *eff = clip->effects[ed.index];
+                for (const auto &key : ed.keys) {
+                    res.propertyValues.push_back(eff->evaluatedParam(key, res.relFrame).toFloat());
+                }
+            }
+
+            // 2. オーディオ/ビデオ共通属性
+            if (clip->type == "audio" || clip->type == "video") {
+                res.hasAudio = true;
+                res.startFrame = clip->startFrame;
+                res.durationFrames = clip->durationFrames;
+                for (const auto &ed : batch.activeEffects) {
+                    auto *eff = clip->effects[ed.index];
+                    if (eff->id() == clip->type) {
+                        QVariant vVol = eff->evaluatedParam("volume", res.relFrame);
+                        res.vol = vVol.isValid() ? vVol.toFloat() : 1.0f;
+                        res.pan = eff->evaluatedParam("pan", res.relFrame).toFloat();
+                        res.mute = eff->evaluatedParam("mute", res.relFrame).toBool();
+                        break;
+                    }
+                }
+            }
+            results.append(res);
+        }
+        return results;
     };
 
-    m_futureWatcher.setFuture(QtConcurrent::mapped(activeClips, mapper));
+    m_futureWatcher.setFuture(QtConcurrent::mapped(batches, batchMapper));
 }
 
 void TimelineEngineSynchronizer::handleResultsReady() {
-    // 2. 計算結果をECSへコミット（ここはメインスレッド）
-    const auto results = m_futureWatcher.future().results();
+    // バッチ結果を ECS へコミット
+    const auto batchResults = m_futureWatcher.future().results();
     m_paramCache.clear();
 
-    for (const auto &res : results) {
-        m_paramCache.insert(res.clipId, res.evaluatedParams);
-        Rina::Engine::Timeline::ECS::instance().updateClipState(res.clipId, res.layer, res.relFrame);
-        if (res.hasAudio) {
-            Rina::Engine::Timeline::ECS::instance().updateAudioClipState(res.clipId, res.startFrame, res.durationFrames, res.vol, res.pan, res.mute);
+    for (const auto &results : batchResults) {
+        for (const auto &res : results) {
+            // UIスレッド用に QVariantMap を復元
+            QVariantMap resMap;
+            for (int i = 0; i < res.propertyNames.size(); ++i) {
+                resMap.insert(res.propertyNames[i], res.propertyValues[i]);
+            }
+            m_paramCache.insert(res.clipId, resMap);
+
+            Rina::Engine::Timeline::ECS::instance().updateClipState(res.clipId, res.layer, res.relFrame);
+            if (res.hasAudio) {
+                Rina::Engine::Timeline::ECS::instance().updateAudioClipState(res.clipId, res.startFrame, res.durationFrames, res.vol, res.pan, res.mute);
+            }
         }
     }
+
     Rina::Engine::Timeline::ECS::instance().commit();
 }
 

@@ -19,7 +19,8 @@ struct ClipEngineResult {
     float vol = 1.0f;
     float pan = 0.0f;
     bool mute = false;
-    QVariantMap evaluatedParams; // 追加: 計算済みの全パラメータ
+    std::vector<float> propertyValues; // 数値化されたパラメータ配列
+    QStringList propertyNames;         // 対応するパラメータ名リスト
 };
 
 class TimelineEngineSynchronizer : public QObject {
@@ -37,7 +38,7 @@ class TimelineEngineSynchronizer : public QObject {
     QVariantMap getCachedParams(int clipId) const { return m_paramCache.value(clipId); }
 
   private:
-    void updateECSState(const QList<ClipData *> &activeClips, int currentFrame);
+    void updateECSState(const QList<struct ArchetypeBatch> &batches, int currentFrame);
 
     void handleResultsReady();
 
@@ -49,7 +50,7 @@ class TimelineEngineSynchronizer : public QObject {
     int m_maxDuration = 0;
     int m_timelineDuration = 0;
 
-    QFutureWatcher<ClipEngineResult> m_futureWatcher;
+    QFutureWatcher<QList<ClipEngineResult>> m_futureWatcher;
     QHash<int, QVariantMap> m_paramCache; // クリップID -> パラメータマップ
 };
 } // namespace Rina::UI

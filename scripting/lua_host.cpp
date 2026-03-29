@@ -3,6 +3,7 @@
 #include <cmath>
 #include <iostream>
 #include <lua.hpp> // Standard Lua/LuaJIT header
+#include <unordered_map>
 #include <vector>
 
 namespace Rina::Scripting {
@@ -55,6 +56,7 @@ void LuaHost::initialize() {
 // スレッドローカルなLuaステート管理ラッパー
 struct ThreadLocalLua {
     lua_State *state = nullptr;
+    std::unordered_map<std::string, int> compiledRegistry; // スクリプト文字列 -> Registry Index
 
     ThreadLocalLua() {
         state = luaL_newstate();
@@ -64,6 +66,11 @@ struct ThreadLocalLua {
     }
 
     ~ThreadLocalLua() {
+        if (state) {
+            for (auto const &[expr, ref] : compiledRegistry) {
+                luaL_unref(state, LUA_REGISTRYINDEX, ref);
+            }
+        }
         if (state) {
             lua_close(state);
             state = nullptr;
@@ -98,15 +105,28 @@ double LuaHost::evaluate(const std::string &expression, double time, int index, 
     lua_pushnumber(threadL, currentValue); // エイリアス 'v'
     lua_setglobal(threadL, "v");
 
-    // 2. 式を準備
-    std::string code = "return " + expression;
+    // 2. コンパイル済みチャンクの取得または作成
+    int ref = LUA_REFNIL;
+    auto it = t_lua.compiledRegistry.find(expression);
+    if (it == t_lua.compiledRegistry.end()) {
+        std::string code = "return " + expression;
+        if (luaL_loadstring(threadL, code.c_str()) != LUA_OK) {
+            qWarning() << "[LuaHost] パースエラー:" << QString::fromStdString(expression) << "->" << lua_tostring(threadL, -1);
+            lua_pop(threadL, 1);
+            return currentValue;
+        }
+        ref = luaL_ref(threadL, LUA_REGISTRYINDEX);
+        t_lua.compiledRegistry[expression] = ref;
+    } else {
+        ref = it->second;
+    }
 
-    // 3. 実行
-    int ret = luaL_dostring(threadL, code.c_str());
+    // 3. Registryから関数を呼び出して実行
+    lua_rawgeti(threadL, LUA_REGISTRYINDEX, ref);
+    int ret = lua_pcall(threadL, 0, 1, 0);
 
     if (ret != LUA_OK) {
         const char *errMsg = lua_tostring(threadL, -1);
-        // 頻繁なエラーログ出力を防ぐための抑制ロジックを入れる余地あり
         qWarning() << "[LuaHost] 式の評価エラー:" << QString::fromStdString(expression) << "->" << errMsg;
         lua_pop(threadL, 1);
         return currentValue;
