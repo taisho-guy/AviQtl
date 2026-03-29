@@ -31,8 +31,8 @@ Item {
     property int dragDeltaLayer: (isSelected && timelineViewRoot.isDraggingMulti) ? timelineViewRoot.activeDragDeltaLayer : 0
 
     signal clipSelected(int clipId, int modifiers, bool isSelected)
-    signal clipMoved(int clipId, int newLayer, int newStartFrame, int duration)
-    signal clipResized(int clipId, int newLayer, int newStartFrame, int newDuration)
+    signal clipMoved(int clipId, int deltaLayer, int deltaStartFrame, int duration)
+    signal clipResized(int clipId, int deltaStartFrame, int deltaDuration, int unused)
     signal clipDoubleClicked(int clipId)
 
     function updateGroupInfo() {
@@ -111,7 +111,7 @@ Item {
 
         Text {
             readonly property int padding: 4
-            property real stickyX: Math.max(0, timelineFlickable.contentX - clipDelegate.x)
+            property real stickyX: Math.max(0, (timelineViewRoot ? timelineViewRoot.contentX : 0) - clipDelegate.x)
 
             anchors.verticalCenter: parent.verticalCenter
             text: clipDelegate.clipDisplayName
@@ -220,7 +220,7 @@ Item {
                 var propL = initialLayer + Math.round(dY / layerHeight);
                 var finalF = propF, finalL = propL;
                 if (TimelineBridge && typeof TimelineBridge.resolveDragPosition === "function") {
-                    var activeIds = timelineViewRoot.selectionVisualLatchIds;
+                    var activeIds = (timelineViewRoot && timelineViewRoot.selectionVisualLatchIds) || [];
                     if (activeIds.length === 0 && TimelineBridge.selection)
                         activeIds = TimelineBridge.selection.selectedClipIds;
 
@@ -297,7 +297,7 @@ Item {
                     var minL = modelData.layer;
                     var maxL = modelData.layer;
                     if (TimelineBridge && TimelineBridge.selection) {
-                        var ids = timelineViewRoot.selectionVisualLatchIds;
+                        var ids = (timelineViewRoot && timelineViewRoot.selectionVisualLatchIds) || [];
                         if (ids.length === 0)
                             ids = TimelineBridge.selection.selectedClipIds;
 

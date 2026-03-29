@@ -28,6 +28,7 @@ ScrollView {
     property int activeDragDeltaLayer: 0
     property bool isDraggingMulti: false
     property int selectionMinFrame: 0
+    property var selectionVisualLatchIds: []
     property int selectionMinLayer: 0
     property int selectionMaxLayer: 0
     property bool dragAutoScrollActive: false
@@ -47,7 +48,7 @@ ScrollView {
         return null;
     }
     property bool enableSnap: currentSceneData && currentSceneData.enableSnap !== undefined ? currentSceneData.enableSnap : (SettingsManager.settings ? SettingsManager.settings.enableSnap : true)
-    property int magneticSnapRange: currentSceneData && currentSceneData.magneticSnapRange !== undefined ? currentSceneData.magneticSnapRange : (SettingsManager.settings ? timelineViewRoot.magneticSnapRange : 10)
+    property int magneticSnapRange: currentSceneData && currentSceneData.magneticSnapRange !== undefined ? currentSceneData.magneticSnapRange : (SettingsManager.settings ? SettingsManager.value("magneticSnapRange", 10) : 10)
     property int tailPaddingFrames: 120
     property var gridSettings: {
         if (currentSceneData)
@@ -107,7 +108,7 @@ ScrollView {
 
         if (modifiers & Qt.ControlModifier)
             TimelineBridge.toggleSelection(clipId, {
-            });
+        });
         else
             TimelineBridge.applySelectionIds([clipId]);
     }
