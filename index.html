@@ -44,12 +44,12 @@
             border: 2px solid #000;
             border-collapse: separate;
             border-spacing: 2px;
-            background-color: #ffffff;
+            background-color: #fdffff;
             margin: 15px 0;
             text-align: left;
         }
         th {
-            background-color: #efffcf;
+            background-color: #efffcf; /* 本家風の薄黄緑 */
             color: #2f4fdf;
             padding: 8px;
             border: 1px solid #000;
@@ -57,7 +57,7 @@
         td {
             padding: 8px;
             border: 1px solid #000;
-            background-color: #ffffff;
+            background-color: #fdffff;
             vertical-align: top;
         }
 
@@ -65,7 +65,7 @@
             margin: 20px 0;
             padding: 2px;
             border: 2px solid #000;
-            background-color: #ffffff;
+            background-color: #fdffff;
             text-align: left;
         }
         .alert-title {
@@ -80,7 +80,7 @@
             padding: 10px 15px 15px 40px; 
             margin: 0; 
             border: 1px solid #000;
-            background-color: #ffffff;
+            background-color: #fdffff;
         }
 
         .alert-important { border-color: #009fff; }
@@ -89,7 +89,7 @@
 
         .alert-warning { border-color: #8C1D18; }
         .alert-warning .alert-title { background-color: #8C1D18; color: #ffffbf; border-color: #8C1D18; }
-        .alert-warning ul, .alert-warning ol { border-color: #8C1D18; background-color: #ffffff; }
+        .alert-warning ul, .alert-warning ol { border-color: #8C1D18; background-color: #fdffff; }
         .alert-warning a { font-weight: bold; }
 
         .alert-note { border-color: #1f5f1f; }
@@ -98,18 +98,18 @@
 
         .alert-tip { border-color: #2f4fdf; }
         .alert-tip .alert-title { border-color: #2f4fdf; }
-        .alert-tip ul, .alert-tip ol { border-color: #2f4fdf; background-color: #ffffff; }
+        .alert-tip ul, .alert-tip ol { border-color: #2f4fdf; background-color: #fdffff; }
 
         details {
-            background-color: #ffffff;
-            border: 2px solid #000;
+            background-color: #fdffff;
+            border: 2px solid #1f5f1f;
             margin: 10px 0;
             padding: 2px;
             text-align: left;
         }
         summary {
-            background-color: #ffffff;
-            border: 1px solid #000;
+            background-color: #fdffff;
+            border: 1px solid #1f5f1f;
             padding: 10px;
             cursor: pointer;
             font-weight: bold;
@@ -118,18 +118,23 @@
         details[open] summary { margin-bottom: 2px; }
         /* details内のコンテンツ（pタグ等）を白いセルとして描画 */
         details > p {
-            background-color: #ffffff;
-            border: 1px solid #000;
+            background-color: #fdffff;
+            border: 1px solid #1f5f1f;
             padding: 10px;
             margin: 0;
         }
         /* details内に連続する要素がある場合の隙間調整 */
         details[open] summary + table, details[open] summary + p { margin-top: 0; }
-        details table { margin: 0 0 2px 0; }
+        details table { 
+            margin: 0 0 2px 0; 
+            border: 1px solid #1f5f1f;
+            border-spacing: 2px;
+        }
+        details th, details td { border: 1px solid #1f5f1f; }
 
         .footer-info { font-size: 0.8em; margin-top: 20px; }
         
-        code { background: #fff; border: 1px inset #ccc; padding: 2px 4px; font-family: monospace; }
+        code { background: #efffcf; border: 1px solid #1f5f1f; padding: 2px 4px; font-family: monospace; color: #1f5f1f; }
         .hero img { margin-bottom: 10px; }
     </style>
 </head>
