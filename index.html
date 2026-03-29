@@ -41,10 +41,10 @@
 
         table {
             width: 100%;
-            border: 1px solid #000;
+            border: 2px solid #000;
             border-collapse: separate;
             border-spacing: 2px;
-            background-color: #efffef;
+            background-color: #ffffff;
             margin: 15px 0;
             text-align: left;
         }
@@ -57,15 +57,15 @@
         td {
             padding: 8px;
             border: 1px solid #000;
-            background-color: #fdffff;
+            background-color: #ffffff;
             vertical-align: top;
         }
 
         .alert {
             margin: 20px 0;
             padding: 2px;
-            border: 1px solid #000;
-            background-color: #efffef;
+            border: 2px solid #000;
+            background-color: #ffffff;
             text-align: left;
         }
         .alert-title {
@@ -80,16 +80,16 @@
             padding: 10px 15px 15px 40px; 
             margin: 0; 
             border: 1px solid #000;
-            background-color: #fdffff;
+            background-color: #ffffff;
         }
 
         .alert-important { border-color: #009fff; }
         .alert-important .alert-title { background-color: #009fff; color: #ffffbf; border-color: #009fff; }
         .alert-important ul, .alert-important ol { border-color: #009fff; }
 
-        .alert-warning { border-color: #8C1D18; color: #1f5f1f; }
+        .alert-warning { border-color: #8C1D18; }
         .alert-warning .alert-title { background-color: #8C1D18; color: #ffffbf; border-color: #8C1D18; }
-        .alert-warning ul, .alert-warning ol { border-color: #8C1D18; background-color: #fff0f0; }
+        .alert-warning ul, .alert-warning ol { border-color: #8C1D18; background-color: #ffffff; }
         .alert-warning a { font-weight: bold; }
 
         .alert-note { border-color: #1f5f1f; }
@@ -98,17 +98,17 @@
 
         .alert-tip { border-color: #2f4fdf; }
         .alert-tip .alert-title { border-color: #2f4fdf; }
-        .alert-tip ul, .alert-tip ol { border-color: #2f4fdf; background-color: #f0fff0; }
+        .alert-tip ul, .alert-tip ol { border-color: #2f4fdf; background-color: #ffffff; }
 
         details {
-            background-color: #efffef;
-            border: 1px solid #000;
+            background-color: #ffffff;
+            border: 2px solid #000;
             margin: 10px 0;
             padding: 2px;
             text-align: left;
         }
         summary {
-            background-color: #fdffff;
+            background-color: #ffffff;
             border: 1px solid #000;
             padding: 10px;
             cursor: pointer;
@@ -116,6 +116,16 @@
             color: #1f5f1f;
         }
         details[open] summary { margin-bottom: 2px; }
+        /* details内のコンテンツ（pタグ等）を白いセルとして描画 */
+        details > p {
+            background-color: #ffffff;
+            border: 1px solid #000;
+            padding: 10px;
+            margin: 0;
+        }
+        /* details内に連続する要素がある場合の隙間調整 */
+        details[open] summary + table, details[open] summary + p { margin-top: 0; }
+        details table { margin: 0 0 2px 0; }
 
         .footer-info { font-size: 0.8em; margin-top: 20px; }
         
@@ -144,7 +154,7 @@
     </table>
 
     <div class="alert alert-warning">
-        <div class="alert-title">【 警告 】 ダウンロード前にご確認下さい</div>
+        <div class="alert-title">ダウンロード前にご確認下さい</div>
         <ul>
             <li>現在RinaはLinux(x86_64)のみに対応しております。<b>Windows/macOSではご利用になれません</b>。</li>
             <li>最新のパッケージが使えないディストリビューション（Ubuntu等）では正しく動作しない可能性がございます。</li>
@@ -153,7 +163,7 @@
     </div>
 
     <div class="alert alert-note">
-        <div class="alert-title">【 メモ 】 ダウンロード・インストール方法</div>
+        <div class="alert-title">ダウンロード・インストール方法</div>
         <ol>
             <li>Qt6全般、LuaJIT、Vulkan実装（Mesa等）、FFmpeg、Carlaをインストールします。</li>
             <li><code>Rina-Linux-x86_64-v3.7z</code>をダウンロードします。</li>
@@ -207,12 +217,8 @@
     <hr>
     <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background: none; border: none;">
         <tr>
-            <td align="left" style="border: none;"><font size="2">リンクはフリーです</font></td>
-            <td align="center" style="border: none;">
-                <a href="https://www.instagram.com/taisho_guy/">ＫＥＮくん(taisho-guy)</a>
-            </td>
-            <td align="right" style="border: none;" class="footer-info">
-                今日 <b>1</b> 昨日 <b>2026</b>
+            <td align="center" style="border: none; background: none;">
+                <p>by <a href="https://www.instagram.com/taisho_guy/">taisho-guy</a></p>
             </td>
         </tr>
     </table>
