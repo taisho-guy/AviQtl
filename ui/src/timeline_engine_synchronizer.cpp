@@ -2,6 +2,7 @@
 #include "../../engine/timeline/ecs.hpp"
 #include "clip_model.hpp"
 #include "timeline_controller.hpp"
+#include <QThreadPool>
 #include <QtConcurrent>
 #include <algorithm>
 
@@ -24,6 +25,10 @@ TimelineEngineSynchronizer::TimelineEngineSynchronizer(TimelineController *contr
 }
 
 void TimelineEngineSynchronizer::updateActiveClipsList() {
+    // 前回のバックグラウンド・コミットが継続中の場合はスキップして最新に追従させる
+    if (m_isCommitting.load(std::memory_order_acquire))
+        return;
+
     int current = m_controller->transport()->currentFrame();
     QList<ClipData *> active = m_controller->timeline()->resolvedActiveClipsAt(current);
 
@@ -103,27 +108,39 @@ void TimelineEngineSynchronizer::updateECSState(const QList<ArchetypeBatch> &bat
 }
 
 void TimelineEngineSynchronizer::handleResultsReady() {
-    // バッチ結果を ECS へコミット
+    // 重い「QVariantMapの復元」と「ECSの裏側バッファ（Back Buffer）への書き込み」をバックグラウンドへ逃がす
     const auto batchResults = m_futureWatcher.future().results();
-    m_paramCache.clear();
+    m_isCommitting.store(true, std::memory_order_release);
 
-    for (const auto &results : batchResults) {
-        for (const auto &res : results) {
-            // UIスレッド用に QVariantMap を復元
-            QVariantMap resMap;
-            for (int i = 0; i < res.propertyNames.size(); ++i) {
-                resMap.insert(res.propertyNames[i], res.propertyValues[i]);
-            }
-            m_paramCache.insert(res.clipId, resMap);
+    QThreadPool::globalInstance()->start([this, batchResults]() {
+        QHash<int, QVariantMap> nextCache;
 
-            Rina::Engine::Timeline::ECS::instance().updateClipState(res.clipId, res.layer, res.relFrame);
-            if (res.hasAudio) {
-                Rina::Engine::Timeline::ECS::instance().updateAudioClipState(res.clipId, res.startFrame, res.durationFrames, res.vol, res.pan, res.mute);
+        for (const auto &results : batchResults) {
+            for (const auto &res : results) {
+                // UIスレッド用に QVariantMap を復元
+                QVariantMap resMap;
+                for (int i = 0; i < (int)res.propertyNames.size(); ++i) {
+                    resMap.insert(res.propertyNames[i], res.propertyValues[i]);
+                }
+                nextCache.insert(res.clipId, resMap);
+
+                // ECSの「裏側」のバッファを更新。ECS内部でダブルバッファリングが実装されている前提
+                Rina::Engine::Timeline::ECS::instance().updateClipState(res.clipId, res.layer, res.relFrame);
+                if (res.hasAudio) {
+                    Rina::Engine::Timeline::ECS::instance().updateAudioClipState(res.clipId, res.startFrame, res.durationFrames, res.vol, res.pan, res.mute);
+                }
             }
         }
-    }
 
-    Rina::Engine::Timeline::ECS::instance().commit();
+        // 全ての書き込みが完了したらメインスレッドでスワップ（O(1)）のみ行う
+        QMetaObject::invokeMethod(this, [this, nextCache]() { finalizeCommit(nextCache); }, Qt::QueuedConnection);
+    });
+}
+
+void TimelineEngineSynchronizer::finalizeCommit(const QHash<int, QVariantMap> &newCache) {
+    m_frontParamCache = newCache;
+    Rina::Engine::Timeline::ECS::instance().commit(); // ここで Front と Back をポインタスワップ
+    m_isCommitting.store(false, std::memory_order_release);
 }
 
 void TimelineEngineSynchronizer::rebuildClipIndex() {

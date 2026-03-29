@@ -1,5 +1,6 @@
 #include "clip_model.hpp"
 #include "effect_registry.hpp"
+#include "timeline_engine_synchronizer.hpp"
 #include "transport_service.hpp"
 
 namespace Rina::UI {
@@ -57,17 +58,8 @@ QVariant ClipModel::data(const QModelIndex &index, int role) const {
         return list;
     }
     case ParamsRole: {
-        const int currentFrame = m_transport ? m_transport->currentFrame() : 0;
-        const int relFrame = currentFrame - clip->startFrame;
-        QVariantMap map;
-        for (auto *eff : clip->effects) {
-            if (!eff->isEnabled())
-                continue;
-            const QVariantMap p = eff->evaluatedParams(relFrame);
-            for (auto it = p.begin(); it != p.end(); ++it)
-                map.insert(it.key(), it.value());
-        }
-        return map;
+        auto *sync = qobject_cast<TimelineEngineSynchronizer *>(parent());
+        return sync ? sync->getCachedParams(clip->id) : QVariantMap();
     }
     default:
         return QVariant();

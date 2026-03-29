@@ -35,12 +35,13 @@ class TimelineEngineSynchronizer : public QObject {
     void updateActiveClipsList();
     void rebuildClipIndex();
 
-    QVariantMap getCachedParams(int clipId) const { return m_paramCache.value(clipId); }
+    QVariantMap getCachedParams(int clipId) const { return m_frontParamCache.value(clipId); }
 
   private:
     void updateECSState(const QList<struct ArchetypeBatch> &batches, int currentFrame);
 
     void handleResultsReady();
+    void finalizeCommit(const QHash<int, QVariantMap> &newCache);
 
     TimelineController *m_controller;
     ClipModel *m_clipModel;
@@ -51,6 +52,7 @@ class TimelineEngineSynchronizer : public QObject {
     int m_timelineDuration = 0;
 
     QFutureWatcher<QList<ClipEngineResult>> m_futureWatcher;
-    QHash<int, QVariantMap> m_paramCache; // クリップID -> パラメータマップ
+    QHash<int, QVariantMap> m_frontParamCache; // UIスレッドが参照するフロントバッファ
+    std::atomic<bool> m_isCommitting{false};   // 二重書き込み防止
 };
 } // namespace Rina::UI
