@@ -145,7 +145,60 @@
         .footer-info { font-size: 0.8em; margin-top: 20px; }
         
         code { background: linear-gradient(transparent 70%, #efffcf 70%); font-family: monospace; color: #1f5f1f; padding: 0 2px; font-weight: bold; }
-        .hero img { margin-bottom: 10px; }
+
+        /* ヒーローセクション（タイトルアニメーション） */
+        .hero {
+            margin: 20px 0;
+        }
+        .hero-title {
+            font-size: 2.5em;
+            margin: 10px 0;
+            display: inline-flex; /* 展開に合わせて子要素が並ぶ */
+            font-weight: bold;
+            align-items: baseline;
+            cursor: pointer;
+            color: #1f5f1f;
+            user-select: none;
+            white-space: nowrap;
+        }
+        .hero-title .letter {
+            display: inline-block;
+            position: relative;
+            background-color: #efffef; /* カードの役割（背後の文字を隠すマスク） */
+        }
+        .hero-title .expand {
+            display: inline-block;
+            max-width: 0;
+            overflow: hidden;
+            vertical-align: baseline;
+            transition: max-width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .hero-title .expand-inner {
+            display: inline-block;
+            white-space: nowrap;
+            transform: translateX(-100%);
+            transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        /* a -> A の切り替え */
+        .hero-title .a-letter {
+            text-transform: lowercase;
+        }
+
+        /* ホバー時のアニメーション：右側のカードが動いて中身が露出する */
+        .hero-title:hover .expand {
+            max-width: 6rem; /* 必要十分な幅に絞ることで、イージングの終わりを視覚化する */
+        }
+        .hero-title:hover .expand-inner {
+            transform: translateX(0);
+        }
+        .hero-title:hover .a-letter {
+            text-transform: uppercase;
+        }
+        .hero-title a { display: contents; color: inherit; text-decoration: none; }
+        .hero-title:hover a .letter, .hero-title:hover a .expand {
+            color: #2f4fdf;
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -153,7 +206,19 @@
 <div class="container">
     <hr>
     <div class="hero">
-        <h1 style="font-size: 2.5em; margin: 10px 0;">Rinaのお部屋</h1>
+        <h1 class="hero-title">
+            <span class="letter" style="z-index:1">R</span>
+            <span class="expand" style="z-index:1"><span class="expand-inner">ina&nbsp;</span></span>
+            <span class="letter" style="z-index:2">i</span>
+            <span class="expand" style="z-index:2"><span class="expand-inner">s&nbsp;</span></span>
+            <span class="letter" style="z-index:3">n</span>
+            <span class="expand" style="z-index:3"><span class="expand-inner">ot&nbsp;</span></span>
+            <a href="http://spring-fragrance.mints.ne.jp/aviutl/" target="_blank">
+                <span class="letter a-letter" style="z-index:4">a</span>
+                <span class="expand" style="z-index:4"><span class="expand-inner">viUtl</span></span>
+            </a>
+            <span class="letter" style="z-index:5">のお部屋</span>
+        </h1>
     </div>
     <hr>
 
