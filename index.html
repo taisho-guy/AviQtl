@@ -3,85 +3,221 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rina is not AviUtl | 次世代動画編集ソフト</title>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Sharp" rel="stylesheet">
-    
-    <link rel="stylesheet" href="style.css">
+    <title>Rinaのお部屋</title>
+    <style>
+        body {
+            background-color: #efffef;
+            color: #1f5f1f;
+            font-family: "MS PGothic", "Hiragino Kaku Gothic ProN", sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+        }
+        a { color: #2f4fdf; text-decoration: underline; }
+        a:visited { color: #00009f; }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        hr {
+            border: 0;
+            border-top: 1px solid #1f5f1f;
+            margin: 20px 0;
+        }
+
+        .section-header {
+            width: 100%;
+            background-color: #009fff;
+            color: #ffffbf;
+            padding: 5px 0;
+            margin: 30px 0 15px 0;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        .section-header span { color: #dfffaf; }
+
+        table {
+            width: 100%;
+            border: 1px solid #000;
+            border-collapse: separate;
+            border-spacing: 2px;
+            background-color: #efffef;
+            margin: 15px 0;
+            text-align: left;
+        }
+        th {
+            background-color: #efffcf;
+            color: #2f4fdf;
+            padding: 8px;
+            border: 1px solid #000;
+        }
+        td {
+            padding: 8px;
+            border: 1px solid #000;
+            background-color: #fdffff;
+            vertical-align: top;
+        }
+
+        .alert {
+            margin: 20px 0;
+            padding: 2px;
+            border: 1px solid #000;
+            background-color: #efffef;
+            text-align: left;
+        }
+        .alert-title {
+            font-weight: bold;
+            padding: 8px 15px;
+            background-color: #efffcf;
+            color: #2f4fdf;
+            border: 1px solid #000;
+            margin-bottom: 2px;
+        }
+        .alert ul, .alert ol { 
+            padding: 10px 15px 15px 40px; 
+            margin: 0; 
+            border: 1px solid #000;
+            background-color: #fdffff;
+        }
+
+        .alert-important { border-color: #009fff; }
+        .alert-important .alert-title { background-color: #009fff; color: #ffffbf; border-color: #009fff; }
+        .alert-important ul, .alert-important ol { border-color: #009fff; }
+
+        .alert-warning { border-color: #8C1D18; color: #1f5f1f; }
+        .alert-warning .alert-title { background-color: #8C1D18; color: #ffffbf; border-color: #8C1D18; }
+        .alert-warning ul, .alert-warning ol { border-color: #8C1D18; background-color: #fff0f0; }
+        .alert-warning a { font-weight: bold; }
+
+        .alert-note { border-color: #1f5f1f; }
+        .alert-note .alert-title { border-color: #1f5f1f; }
+        .alert-note ul, .alert-note ol { border-color: #1f5f1f; }
+
+        .alert-tip { border-color: #2f4fdf; }
+        .alert-tip .alert-title { border-color: #2f4fdf; }
+        .alert-tip ul, .alert-tip ol { border-color: #2f4fdf; background-color: #f0fff0; }
+
+        details {
+            background-color: #efffef;
+            border: 1px solid #000;
+            margin: 10px 0;
+            padding: 2px;
+            text-align: left;
+        }
+        summary {
+            background-color: #fdffff;
+            border: 1px solid #000;
+            padding: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #1f5f1f;
+        }
+        details[open] summary { margin-bottom: 2px; }
+
+        .footer-info { font-size: 0.8em; margin-top: 20px; }
+        
+        code { background: #fff; border: 1px inset #ccc; padding: 2px 4px; font-family: monospace; }
+        .hero img { margin-bottom: 10px; }
+    </style>
 </head>
-<body class="m3-dark-theme">
+<body>
 
-    <header class="app-bar">
-        <div class="container">
-            <span class="logo-text">Rina is not AviUtl</span>
-        </div>
-    </header>
+<div class="container">
+    <hr>
+    <div class="hero">
+        <h1 style="font-size: 2.5em; margin: 10px 0;">Rinaのお部屋</h1>
+    </div>
+    <hr>
 
-    <main class="container">
-        <section class="hero-section">
-            <img src="./assets/icon.svg" alt="Rina Icon" class="hero-icon">
-            <h1>Rina is not AviUtl</h1>
-            <p class="subtitle">AviUtlのまま、AviUtlを超える。<br>安全・高速・自由な動画編集ソフト。</p>
-            
-            <div class="status-badge">
-                <span class="material-icons-sharp">school</span>
-                2026年度受験生につき開発速度低下中
-            </div>
-        </section>
+    <div class="section-header"><span>★</span> インフォメーション <span>★</span></div>
+        <p>私は2026年度受験生になりますから、開発速度が低下します。ご了承下さい。</p>
 
-        <section id="download" class="card-section">
-            <h2>ダウンロード</h2>
-            <div class="m3-card filled">
-                <div class="card-content">
-                    <p>最新リリースのバイナリを取得します。</p>
-                    <a href="https://codeberg.org/taisho-guy/Rina/releases" class="m3-button primary">
-                        <span class="material-icons-sharp">download</span>
-                        Linux (x86_64)
-                    </a>
-                </div>
-            </div>
+    <div class="section-header"><span>★</span> ダウンロード <span>★</span></div>
+    <table style="width: auto; margin: 0 auto;">
+        <tr>
+            <td><a href="https://codeberg.org/taisho-guy/Rina/releases">Linux(x86_64)</a></td>
+            <td>Codeberg Releases</td>
+        </tr>
+    </table>
 
-            <div class="m3-card error-container">
-                <h3>⚠️ ダウンロード前にご確認下さい</h3>
-                <ul>
-                    <li>Windows/macOS非対応（Linux専用）</li>
-                    <li><strong>CachyOS</strong> での利用を強く推奨</li>
-                </ul>
-            </div>
-        </section>
+    <div class="alert alert-warning">
+        <div class="alert-title">【 警告 】 ダウンロード前にご確認下さい</div>
+        <ul>
+            <li>現在RinaはLinux(x86_64)のみに対応しております。<b>Windows/macOSではご利用になれません</b>。</li>
+            <li>最新のパッケージが使えないディストリビューション（Ubuntu等）では正しく動作しない可能性がございます。</li>
+            <li><a href="https://cachyos.org/">CachyOS</a>でのご利用を推奨しております。</li>
+        </ul>
+    </div>
 
-        <section id="faq" class="card-section">
-            <h2>Q & A</h2>
-            <div class="faq-list">
-                <details class="m3-accordion">
-                    <summary>なぜAviUtlのクローンを開発しているのですか？</summary>
-                    <div class="details-content">
-                        <p>ECS（データ指向設計）による並列処理、Vulkan描画、C++23/Qt6採用など、構造的弱点を根本から覆すためです。</p>
-                    </div>
-                </details>
-                <details class="m3-accordion">
-                    <summary>名称の由来は？</summary>
-                    <div class="details-content">
-                        <p>「Rina is not AviUtl」の再帰的頭字語です。</p>
-                    </div>
-                </details>
-            </div>
-        </section>
+    <div class="alert alert-note">
+        <div class="alert-title">【 メモ 】 ダウンロード・インストール方法</div>
+        <ol>
+            <li>Qt6全般、LuaJIT、Vulkan実装（Mesa等）、FFmpeg、Carlaをインストールします。</li>
+            <li><code>Rina-Linux-x86_64-v3.7z</code>をダウンロードします。</li>
+            <li>ダウンロードしたファイルを展開します。</li>
+            <li><code>Rina</code>に実行権限を付与します。</li>
+            <li><code>Rina</code>を実行します。</li>
+        </ol>
+    </div>
 
-        <section id="build" class="card-section">
-            <h2>ビルド手順</h2>
-            <div class="m3-card outline">
-                <code>python BUILD.py</code>
-                <p>Linux環境であれば、上記コマンド1つでビルドが完了します。</p>
-            </div>
-        </section>
-    </main>
+    <div class="section-header"><span>★</span> Q & A <span>★</span></div>
+    
+    <details>
+        <summary>開発のきっかけは？</summary>
+        <p>愛用するCachyOS上でAviUtlを運用しようとして失敗したことがきっかけです。AviUtlのためだけにWindowsを維持することは受け入れがたいものでした。</p>
+    </details>
 
-    <footer class="footer">
-        <p>&copy; 2026 taisho-guy | AGPLv3 Licensed</p>
-    </footer>
+    <details>
+        <summary>なぜAviUtlのクローンを開発しているのですか？</summary>
+        <table>
+            <tr style="background-color: #efffcf;">
+                <th>鳥瞰図</th><th>Rina</th><th>AviUtl1</th>
+            </tr>
+            <tr>
+                <td>基盤技術</td><td>Qt Quick/Vulkan</td><td>Win32 API</td>
+            </tr>
+            <tr>
+                <td>並列処理</td><td>ECS (データ指向)</td><td>シングル</td>
+            </tr>
+            <tr>
+                <td>OS</td><td>Linux優先</td><td>Windows</td>
+            </tr>
+        </table>
+        <p>Rinaは「再発明」ではなく、ECS（エンティティ・コンポーネント・システム）によるデータ指向の革命を目指しています。</p>
+    </details>
 
-    <script src="main.js"></script>
+    <div class="section-header"><span>★</span> ビルド手順 <span>★</span></div>
+    <div style="text-align: left; display: inline-block; width: 100%;">
+        <p>Linuxユーザーであれば<code>BUILD.py</code>1つでビルド可能です。</p>
+        <ul>
+            <li>Pacman: <code>sudo pacman -S --needed distrobox podman python pyside6 git</code></li>
+            <li>ビルド: <code>python BUILD.py</code></li>
+        </ul>
+    </div>
+
+    <div class="section-header"><span>★</span> ライセンス <span>★</span></div>
+    <div style="text-align: left;">
+        <p>Rinaは <b>GNU Affero General Public License Version 3</b> に基づいて公開されています。</p>
+        <p>ソースコードの自由な使用・複製・改変が可能ですが、バイナリ配布時のソース公開義務等があります。</p>
+    </div>
+
+    <hr>
+    <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background: none; border: none;">
+        <tr>
+            <td align="left" style="border: none;"><font size="2">リンクはフリーです</font></td>
+            <td align="center" style="border: none;">
+                <a href="https://www.instagram.com/taisho_guy/">ＫＥＮくん(taisho-guy)</a>
+            </td>
+            <td align="right" style="border: none;" class="footer-info">
+                今日 <b>1</b> 昨日 <b>2026</b>
+            </td>
+        </tr>
+    </table>
+    <hr>
+</div>
+
 </body>
 </html>
