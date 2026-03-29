@@ -165,23 +165,35 @@
             display: inline-block;
             position: relative;
             background-color: #efffef; /* カードの役割（背後の文字を隠すマスク） */
+            transition: color 0.6s cubic-bezier(0.22, 1, 0.36, 1);
         }
         .hero-title .expand {
             display: inline-block;
             max-width: 0;
             overflow: hidden;
             vertical-align: baseline;
-            transition: max-width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+            transition: max-width 0.6s cubic-bezier(0.33, 1, 0.68, 1);
         }
         .hero-title .expand-inner {
             display: inline-block;
             white-space: nowrap;
             transform: translateX(-100%);
-            transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+            transition: transform 0.6s cubic-bezier(0.33, 1, 0.68, 1), color 0.6s cubic-bezier(0.33, 1, 0.68, 1);
         }
-        /* a -> A の切り替え */
-        .hero-title .a-letter {
-            text-transform: lowercase;
+        /* a -> A のフェード切り替え */
+        .hero-title .a-letter-wrapper {
+            position: relative;
+        }
+        .hero-title .a-lower, .hero-title .a-upper {
+            transition: opacity 0.6s cubic-bezier(0.33, 1, 0.68, 1);
+        }
+        .hero-title .a-lower { color: #1f5f1f; }
+        .hero-title .a-upper { color: #2f4fdf; }
+        .hero-title .a-upper {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
         }
 
         /* ホバー時のアニメーション：右側のカードが動いて中身が露出する */
@@ -191,13 +203,12 @@
         .hero-title:hover .expand-inner {
             transform: translateX(0);
         }
-        .hero-title:hover .a-letter {
-            text-transform: uppercase;
-        }
+        .hero-title:hover .a-lower { opacity: 0; }
+        .hero-title:hover .a-upper { opacity: 1; }
+
         .hero-title a { display: contents; color: inherit; text-decoration: none; }
-        .hero-title:hover a .letter, .hero-title:hover a .expand {
+        .hero-title:hover a .letter, .hero-title:hover a .expand-inner {
             color: #2f4fdf;
-            text-decoration: underline;
         }
     </style>
 </head>
@@ -214,7 +225,9 @@
             <span class="letter" style="z-index:3">n</span>
             <span class="expand" style="z-index:3"><span class="expand-inner">ot&nbsp;</span></span>
             <a href="http://spring-fragrance.mints.ne.jp/aviutl/" target="_blank">
-                <span class="letter a-letter" style="z-index:4">a</span>
+                <span class="letter a-letter-wrapper" style="z-index:4">
+                    <span class="a-lower">a</span><span class="a-upper">A</span>
+                </span>
                 <span class="expand" style="z-index:4"><span class="expand-inner">viUtl</span></span>
             </a>
             <span class="letter" style="z-index:5">のお部屋</span>
