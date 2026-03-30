@@ -26,6 +26,9 @@ Item {
     // カメラ制御管理
     property var activeCameraControl: null
 
+    // 各クリップのレンダラー出力が確定・変更されたことを通知する集中シグナル
+    signal childRendererOutputsChanged()
+
     function getLayerVisible(layer) {
         if (!layerStates)
             return true;
@@ -387,6 +390,8 @@ Item {
                             // 変換パラメータを注入 (初期値)
                             _syncTransformToItem();
                         }
+                        // アイテムのロード・アンロードが発生したことを FBO 等に通知
+                        root.childRendererOutputsChanged();
                     }
                 }
 

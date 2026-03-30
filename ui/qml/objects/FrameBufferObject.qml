@@ -21,8 +21,6 @@ Common.BaseObject {
     property real fbHeight: flattenHost.height
     // ─── 内部: 上位レイヤー収集 ───────────────────────────────────
     property var _capturedOutputs: []
-    // sceneRootRef が設定されたら、全 clipNode の fbRendererOutput を Connections で監視する
-    property var _watchConnections: []
 
     function _rebuildCapture() {
         if (!sceneRootRef || clipLayer < 0) {
@@ -53,31 +51,24 @@ Common.BaseObject {
         _capturedOutputs = sorted;
     }
 
-    function _startRebuildWatch() {
-        // 既存の監視を全解除
-        for (var i = 0; i < _watchConnections.length; i++) _watchConnections[i].destroy()
-        _watchConnections = [];
-        if (!sceneRootRef)
-            return ;
-
-        var ch = sceneRootRef.children;
-        for (var j = 0; j < ch.length; j++) {
-            var node = ch[j];
-            // 各 clipNode の fbRendererOutput 変化を監視
-            var conn = Qt.createQmlObject('import QtQml; Connections { function onFbRendererOutputChanged() { Qt.callLater(root._rebuildCapture); } }', root, "fbWatch");
-            conn.target = node;
-            _watchConnections.push(conn);
-        }
-        Qt.callLater(_rebuildCapture);
-    }
-
-    onSceneRootRefChanged: _startRebuildWatch()
-    onClipLayerChanged: _startRebuildWatch()
+    onSceneRootRefChanged: Qt.callLater(root._rebuildCapture)
+    onClipLayerChanged: Qt.callLater(root._rebuildCapture)
     Component.onCompleted: {
         adopt2D(flattenHost);
         adopt2D(fbSourceWrapper);
         fbSourceWrapper.visible = true; // BaseObject.onSourceItemChanged が false にするため上書き
         Qt.callLater(_rebuildCapture);
+    }
+
+    // CompositeView 側からの集中通知を一括で受け取る
+    Connections {
+        function onChildRendererOutputsChanged() {
+            Qt.callLater(root._rebuildCapture);
+        }
+
+        // root.renderHost (offscreenRenderHost) の親は常に CompositeView
+        target: (root.renderHost && root.renderHost.parent) ? root.renderHost.parent : null
+        ignoreUnknownSignals: true
     }
 
     Connections {

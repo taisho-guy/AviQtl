@@ -654,7 +654,7 @@ class EffectModel : public QObject {
         emit keyframeTracksChanged();
     }
 
-    void invalidateCache(const QString &paramName) const { 
+    void invalidateCache(const QString &paramName) const {
         if (!paramName.isEmpty()) {
             m_resolvedCache.remove(paramName);
         }
