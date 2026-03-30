@@ -315,15 +315,16 @@
 
     <h2 class="section-header"><span>★</span> ビルド手順 <span>★</span></h2>
     <div>
-        <p>Linuxユーザーであれば<code>BUILD.py</code>1つでビルド可能です。</p>
-        <p>以下のパッケージマネージャーに対応しています：</p>
+        <p>Linuxユーザーであれば<code>BUILD.py</code>を利用してビルド可能です。</p>
+        <p>1. 依存関係のインストール（環境に合わせて以下のいずれかを実行してください）：</p>
         <ul>
             <li><b>Pacman:</b> <code>sudo pacman -S --needed distrobox podman python pyside6 git</code></li>
             <li><b>APT:</b> <code>sudo apt install distrobox podman python3 python3-pyside6 git</code></li>
             <li><b>DNF:</b> <code>sudo dnf install distrobox podman python3 python3-pyside6 git</code></li>
             <li><b>MSYS2:</b> <code>pacman -S git mingw-w64-ucrt-x86_64-pyside6</code></li>
-            <li>ビルド: <code>python BUILD.py</code></li>
         </ul>
+        <p>2. ビルドの実行：</p>
+        <p><code>python BUILD.py</code></p>
         <div class="alert alert-warning">
             <ul>
                 <li>Windows、macOS上でのビルド検証は行っておりません。</li>
@@ -333,7 +334,7 @@
     </div>
 
     <h2 class="section-header"><span>★</span> フィードバック・バグの報告 <span>★</span></h2>
-        <p><a href="https://codeberg.org/taisho-guy/Rina/issues/new" target="_blank">新しいイシューを作成</a>して下さい。些細なことでも、開発に大きく役立ちます。<a href="https://codeberg.org/taisho-guy/Rina/issues/new" target="_blank">既にあるイシューを確認</a>していただくことで、解決する場合もございます。</p>
+        <p><a href="https://codeberg.org/taisho-guy/Rina/issues/new" target="_blank">新しいイシューを作成</a>して下さい。些細なことでも、開発に大きく役立ちます。<a href="https://codeberg.org/taisho-guy/Rina/issues/" target="_blank">既にあるイシューを確認</a>していただくことで、解決する場合もございます。</p>
 
     <h2 class="section-header"><span>★</span> 貢献 <span>★</span></h2>
     <div class="alert alert-note">
@@ -458,9 +459,9 @@
             <td>VST3やLV2等の音声エフェクトをホストするためのバックエンドとして利用しています。</td>
         </tr>
         <tr>
-            <td><a href="https://codeberg.org/taisho-guy/Rina" target="_blank">Codeberg</a></td>
+            <td><a href="https://codeberg.org/taisho-guy/Rina" target="_blank">Rina</a></td>
             <td>AGPLv3+</td>
-            <td>Rinaのメインリポジトリです。開発の最前線であり、ソースコードや最新リリースが公開されています。</td>
+            <td>Codeberg上のメインリポジトリです。開発の最前線であり、ソースコードや最新リリースが公開されています。</td>
         </tr>
         <tr>
             <td><a href="https://ffmpeg.org/" target="_blank">FFmpeg</a></td>
@@ -515,7 +516,6 @@
             <td align="right" valign="top" style="border: none; background: none; width: 10%; text-align: right;">
                 <font size="2">
                     今日 <b id="count-today">-</b><br>
-                    昨日 <b id="count-yesterday">-</b><br>
                     合計 <b id="count-total">0</b>
                 </font>
             </td>
@@ -633,10 +633,6 @@
             };
             
             const todayStr = getJSTDateString(now);
-            const yesterdayDate = new Date(now);
-            yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-            const yesterdayStr = getJSTDateString(yesterdayDate);
-
             const fetchJson = async (url) => {
                 try {
                     const r = await fetch(url);
@@ -648,18 +644,14 @@
                 // ページ読み込みのたびに 'up' (カウントアップ) を実行
                 const totalUrl = `https://api.counterapi.dev/v1/${namespace}/total/up`;
                 const todayUrl = `https://api.counterapi.dev/v1/${namespace}/day-${todayStr}/up`;
-                const yesterdayUrl = `https://api.counterapi.dev/v1/${namespace}/day-${yesterdayStr}`;
 
-                const [totalData, todayData, yesterdayData] = await Promise.all([
+                const [totalData, todayData] = await Promise.all([
                     fetchJson(totalUrl),
-                    fetchJson(todayUrl),
-                    fetchJson(yesterdayUrl)
+                    fetchJson(todayUrl)
                 ]);
 
                 if (totalData && typeof totalData.count === 'number') document.getElementById('count-total').textContent = totalData.count.toLocaleString();
                 if (todayData && typeof todayData.count === 'number') document.getElementById('count-today').textContent = todayData.count.toLocaleString();
-                if (yesterdayData && typeof yesterdayData.count === 'number') document.getElementById('count-yesterday').textContent = yesterdayData.count.toLocaleString();
-                else if (yesterdayData === null) document.getElementById('count-yesterday').textContent = "0";
 
             } catch (e) {
                 console.log("Counter update failed:", e);
