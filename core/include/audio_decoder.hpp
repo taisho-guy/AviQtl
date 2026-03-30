@@ -27,6 +27,7 @@ class AudioDecoder : public MediaDecoder {
     void setPlaying(bool playing) override;
 
     std::vector<float> getSamples(double startTime, int count) override;
+    std::vector<float> getPeaks(double startSec, double durationSec, int pixelWidth);
     double totalDurationSec() const;
 
   protected:
@@ -34,6 +35,16 @@ class AudioDecoder : public MediaDecoder {
 
   private:
     void closeFFmpeg();
+    void buildPeakCache();
+
+    struct PeakEntry {
+        float min;
+        float max;
+    };
+    struct PeakLevel {
+        int samplesPerEntry;
+        std::vector<PeakEntry> peaks;
+    };
 
     // FFmpeg コンテキスト
     AVFormatContext *m_fmtCtx = nullptr;
@@ -45,6 +56,7 @@ class AudioDecoder : public MediaDecoder {
     AVPacket *m_pkt = nullptr;
 
     std::vector<float> m_fullAudioData;
+    std::vector<PeakLevel> m_peakPyramid;
     QFuture<void> m_decodeFuture;
     std::atomic<bool> m_closing{false};
     std::atomic<bool> m_isPlaying{false}; // インターリーブされたPCMデータ (L, R, L, R...)

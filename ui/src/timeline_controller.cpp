@@ -658,24 +658,14 @@ QVariantList TimelineController::getWaveformPeaks(int clipId, int pixelWidth, in
 
     // 渡された displayDurationFrames で秒数を計算 (ドラフト値が来たらそれを使う)
     double displaySec = static_cast<double>(displayDurationFrames) / fps;
-    int totalSamples = static_cast<int>(displaySec * sampleRate);
-    int samplesPerPixel = std::max(1, totalSamples / pixelWidth);
 
-    QVariantList peaks;
-    peaks.reserve(pixelWidth);
+    std::vector<float> rawPeaks = decoder->getPeaks(0.0, displaySec, pixelWidth);
+    QVariantList result;
+    result.reserve(rawPeaks.size());
+    for (float p : rawPeaks)
+        result.append(static_cast<double>(p));
 
-    for (int px = 0; px < pixelWidth; px++) {
-        double startSec = static_cast<double>(px * samplesPerPixel) / sampleRate;
-        auto samples = decoder->getSamples(startSec, samplesPerPixel * 2);
-
-        float peak = 0.0f;
-        for (float s : samples)
-            peak = std::max(peak, std::abs(s));
-
-        peaks.append(static_cast<double>(std::min(peak, 1.0f)));
-    }
-
-    return peaks;
+    return result;
 }
 
 QVariantList TimelineController::getClipEffectStack(int clipId) const {

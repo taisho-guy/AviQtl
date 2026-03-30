@@ -174,11 +174,18 @@ Item {
                 var maxH = cy - 2;
                 ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
                 ctx.lineWidth = 1;
-                for (var i = 0; i < peaks.length; i++) {
-                    var h = Math.max(1, peaks[i] * maxH);
+                for (var i = 0; i < peaks.length / 2; i++) {
+                    var pMin = peaks[i * 2];
+                    var pMax = peaks[i * 2 + 1];
+                    var yTop = cy - (pMax * maxH);
+                    var yBottom = cy - (pMin * maxH);
+                    // 振幅が極めて小さい場合でも1pxの線を表示する
+                    if (yBottom - yTop < 1)
+                        yBottom = yTop + 1;
+
                     ctx.beginPath();
-                    ctx.moveTo(i + 0.5, cy - h);
-                    ctx.lineTo(i + 0.5, cy + h);
+                    ctx.moveTo(i + 0.5, yTop);
+                    ctx.lineTo(i + 0.5, yBottom);
                     ctx.stroke();
                 }
             }
