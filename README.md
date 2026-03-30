@@ -8,23 +8,26 @@
 
 Rinaは、AviUtl 1.10 & ExEdit 0.92の操作感を踏襲しつつ、AviUtl以上の性能を持つ動画編集ソフトを実装するプロジェクトです。
 
-**Rinaの詳細は[Rinaのお部屋](https://rina.taisho-guy.org)でご確認いただけます。**
+**Rinaの詳細は[Rinaのお部屋](https://rina.taisho-guy.org)でご確認ください。**
 
 ## フィードバック・バグの報告
-- [イシューを作成](https://codeberg.org/taisho-guy/Rina/issues/new)して下さい。
-- 些細なことでも、開発に大きく役立ちます。
+
+[イシューを作成](https://codeberg.org/taisho-guy/Rina/issues/new)して下さい。
+
+些細なことでも、開発に大きく役立ちます。
  
 ## 貢献
-- 本プロジェクトへプルリクエストやその他の貢献を送信した場合、あなたは自分の貢献物を[GNU Affero General Public License Version 3](https://www.gnu.org/licenses/agpl-3.0.txt)の下で本プロジェクトに提供することに同意したものとみなします。あなたの貢献物の著作権はあなたに残りますが、受理されたコードは[GNU Affero General Public License Version 3](https://www.gnu.org/licenses/agpl-3.0.txt)の条件に従って利用・改変・再配布されます。
+
+本プロジェクトへプルリクエストやその他の貢献を送信した場合、あなたは自分の貢献物を[GNU Affero General Public License Version 3](https://www.gnu.org/licenses/agpl-3.0.txt)の下で本プロジェクトに提供することに同意したものとみなします。あなたの貢献物の著作権はあなたに残りますが、受理されたコードは[GNU Affero General Public License Version 3](https://www.gnu.org/licenses/agpl-3.0.txt)の条件に従って利用・改変・再配布されます。
  
-  - Rinaをフォークし、フォーク済みのリポジトリを`clone`します。
-  - `cd Rina`
-  - `git checkout -b fix/some-change`
-  - 変更を行います。
-  - `git add .`
-  - `git commit -m "変更内容"`
-  - `git push -u origin fix/some-change`
-  - [Codeberg](https://codeberg.org/taisho-guy/Rina/pulls)でプルリクエストを作成します。
+- Rinaをフォークし、フォーク済みのリポジトリを`clone`します。
+- `cd Rina`
+- `git checkout -b fix/some-change`
+- 変更を行います。
+- `git add .`
+- `git commit -m "変更内容"`
+- `git push -u origin fix/some-change`
+- [Codeberg](https://codeberg.org/taisho-guy/Rina/pulls)でプルリクエストを作成します。
 
 ## ビルド手順
 
