@@ -8,7 +8,7 @@
 
 Rinaは、AviUtl 1.10 & ExEdit 0.92の操作感を踏襲しつつ、AviUtl以上の性能を持つ動画編集ソフトを実装するプロジェクトです。
 
-**Rinaの詳細は[Rinaのお部屋](https://rina.taisho-guy.org)でご確認ください。**
+**詳細は[Rinaのお部屋](https://rina.taisho-guy.org)をご確認ください。**
 
 ## フィードバック・バグの報告
 
