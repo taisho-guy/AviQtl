@@ -394,7 +394,7 @@ class EffectModel : public QObject {
     }
 
     Q_INVOKABLE QVariantList keyframeListForUi(const QString &paramName) const {
-        invalidateCache();
+        invalidateCache(paramName);
         const QVariant raw = m_keyframeTracks.value(paramName);
         if (isStructuredTrack(raw))
             return flattenStructuredTrack(raw.toMap());
@@ -412,7 +412,7 @@ class EffectModel : public QObject {
     }
 
     Q_INVOKABLE void syncTrackEndpoints(int durationFrames) {
-        invalidateCache();
+        m_resolvedCache.clear(); // 全体更新時はクリア
         m_lastDuration = durationFrames;
         QVariantMap next = m_keyframeTracks;
         for (auto it = m_params.begin(); it != m_params.end(); ++it)
@@ -424,7 +424,7 @@ class EffectModel : public QObject {
     }
 
     Q_INVOKABLE QVariantMap splitTracks(int firstHalfDuration, int originalDuration) {
-        invalidateCache();
+        m_resolvedCache.clear();
         QVariantMap secondHalfTracks;
         if (originalDuration < 1)
             return secondHalfTracks;
@@ -509,7 +509,7 @@ class EffectModel : public QObject {
     }
 
     void setEnabled(bool e) {
-        invalidateCache();
+        m_resolvedCache.clear();
         if (m_enabled != e) {
             m_enabled = e;
             emit enabledChanged();
@@ -517,7 +517,7 @@ class EffectModel : public QObject {
     }
 
     Q_INVOKABLE void setParam(const QString &key, const QVariant &val) {
-        invalidateCache();
+        invalidateCache(key);
         if (m_params[key] != val) {
             m_params[key] = val;
             emit paramsChanged();
@@ -526,7 +526,7 @@ class EffectModel : public QObject {
     }
 
     Q_INVOKABLE void setKeyframe(const QString &paramName, int frame, const QVariant &value, const QVariantMap &options) {
-        invalidateCache();
+        invalidateCache(paramName);
         const QVariant fallback = m_params.value(paramName);
         // トラックを取得して正規化（古い形式が含まれていてもここでマップ形式に統一される）
         QVariantMap track = normalizeTrackForDuration(m_keyframeTracks.value(paramName), fallback, inferredDurationForTrack(m_keyframeTracks.value(paramName)));
@@ -586,7 +586,7 @@ class EffectModel : public QObject {
     }
 
     Q_INVOKABLE void removeKeyframe(const QString &paramName, int frame) {
-        invalidateCache();
+        invalidateCache(paramName);
         const QVariant fallback = m_params.value(paramName);
         QVariantMap track = normalizeTrackForDuration(m_keyframeTracks.value(paramName), fallback, inferredDurationForTrack(m_keyframeTracks.value(paramName)));
 
@@ -654,7 +654,11 @@ class EffectModel : public QObject {
         emit keyframeTracksChanged();
     }
 
-    void invalidateCache() const { m_resolvedCache.clear(); }
+    void invalidateCache(const QString &paramName) const { 
+        if (!paramName.isEmpty()) {
+            m_resolvedCache.remove(paramName);
+        }
+    }
 
   signals:
     void enabledChanged();

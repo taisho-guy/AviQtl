@@ -21,6 +21,8 @@ struct ClipEngineResult {
     bool mute = false;
     std::vector<float> propertyValues; // 数値化されたパラメータ配列
     QStringList propertyNames;         // 対応するパラメータ名リスト
+    QVariantList variantValues;        // 文字列等の非数値パラメータ
+    QStringList variantNames;          // 対応する名前リスト
 };
 
 class TimelineEngineSynchronizer : public QObject {

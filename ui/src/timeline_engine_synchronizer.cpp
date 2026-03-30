@@ -12,11 +12,13 @@ namespace Rina::UI {
 struct ArchetypeBatch {
     struct EffectDesc {
         int index;
-        QStringList keys;
+        QStringList floatKeys;
+        QStringList variantKeys;
     };
     QList<ClipData *> clips;
     QList<EffectDesc> activeEffects;
-    QStringList allKeys; // 結果のマッピング用
+    QStringList allFloatKeys;
+    QStringList allVariantKeys;
 };
 
 TimelineEngineSynchronizer::TimelineEngineSynchronizer(TimelineController *controller, QObject *parent) : QObject(parent), m_controller(controller) {
@@ -50,9 +52,20 @@ void TimelineEngineSynchronizer::updateActiveClipsList() {
         if (batch.clips.isEmpty()) {
             for (int i = 0; i < clip->effects.size(); ++i) {
                 if (clip->effects[i]->isEnabled()) {
-                    QStringList keys = clip->effects[i]->params().keys();
-                    batch.activeEffects.append({i, keys});
-                    batch.allKeys << keys;
+                    QStringList fKeys, vKeys;
+                    QVariantMap params = clip->effects[i]->params();
+                    for (auto it = params.begin(); it != params.end(); ++it) {
+                        // 数値として扱えるか判定（文字列や色はVariantとして残す）
+                        auto type = it.value().typeId();
+                        if (type == QMetaType::Double || type == QMetaType::Float || type == QMetaType::Int || type == QMetaType::LongLong) {
+                            fKeys << it.key();
+                        } else {
+                            vKeys << it.key();
+                        }
+                    }
+                    batch.activeEffects.append({i, fKeys, vKeys});
+                    batch.allFloatKeys << fKeys;
+                    batch.allVariantKeys << vKeys;
                 }
             }
         }
@@ -72,14 +85,21 @@ void TimelineEngineSynchronizer::updateECSState(const QList<ArchetypeBatch> &bat
             res.clipId = clip->id;
             res.layer = clip->layer;
             res.relFrame = currentFrame - clip->startFrame;
-            res.propertyNames = batch.allKeys;
-            res.propertyValues.reserve(batch.allKeys.size());
+            res.propertyNames = batch.allFloatKeys;
+            res.propertyValues.reserve(batch.allFloatKeys.size());
+            res.variantNames = batch.allVariantKeys;
+            res.variantValues.reserve(batch.allVariantKeys.size());
 
-            // 1. エフェクト計算 (QVariantMapを介さず、名前ベースで直接値を抽出)
+            // 1. エフェクト計算
             for (const auto &ed : batch.activeEffects) {
                 auto *eff = clip->effects[ed.index];
-                for (const auto &key : ed.keys) {
+                // 数値パラメータ (DOD path)
+                for (const auto &key : ed.floatKeys) {
                     res.propertyValues.push_back(eff->evaluatedParam(key, res.relFrame).toFloat());
+                }
+                // 非数値パラメータ (Variant path)
+                for (const auto &key : ed.variantKeys) {
+                    res.variantValues.append(eff->evaluatedParam(key, res.relFrame));
                 }
             }
 
@@ -121,6 +141,10 @@ void TimelineEngineSynchronizer::handleResultsReady() {
                 QVariantMap resMap;
                 for (int i = 0; i < (int)res.propertyNames.size(); ++i) {
                     resMap.insert(res.propertyNames[i], res.propertyValues[i]);
+                }
+                // 非数値（テキスト等）を復元
+                for (int i = 0; i < res.variantNames.size(); ++i) {
+                    resMap.insert(res.variantNames[i], res.variantValues[i]);
                 }
                 nextCache.insert(res.clipId, resMap);
 
