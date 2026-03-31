@@ -5,6 +5,9 @@ import QtQuick.Dialogs
 import QtQuick.Layouts
 
 Loader {
+    // 数値
+    // 整数
+
     id: controlLoader
 
     property var definition: ({
@@ -18,9 +21,9 @@ Loader {
     function _label() {
         var d = controlLoader.definition;
         if (!d)
-            return "Param";
+            return qsTr("パラメータ");
 
-        return (d.label && d.label !== "") ? d.label : (d.param || d.name || "Param");
+        return (d.label && d.label !== "") ? d.label : (d.param || d.name || qsTr("パラメータ"));
     }
 
     function _resolveSwatchColor(val) {
@@ -84,15 +87,18 @@ Loader {
         case "scene_id":
             return intComponent;
         case "color":
+            // 色
             return colorComponent;
         case "bool":
         case "boolean":
             return boolComponent;
         case "path":
         case "file":
+            // パス・ファイル
             return pathComponent;
         case "string":
         case "text":
+            // 文字列
             return stringComponent;
         case "enum":
             return enumComponent;
@@ -288,7 +294,7 @@ Loader {
                 border.color: startSwatchMa.containsMouse ? sysPalette.highlight : sysPalette.mid
                 border.width: 1
                 ToolTip.visible: startSwatchMa.containsMouse
-                ToolTip.text: colorRow._hasKf ? "開始色 (f" + colorRow._startFrame + ")" : "色を選択"
+                ToolTip.text: colorRow._hasKf ? qsTr("開始色 (f%1)").arg(colorRow._startFrame) : qsTr("色を選択")
 
                 MouseArea {
                     id: startSwatchMa
@@ -364,7 +370,7 @@ Loader {
                 border.color: colorRow._rightInteractive ? (endSwatchMa.containsMouse ? sysPalette.highlight : sysPalette.mid) : sysPalette.dark
                 border.width: 1
                 ToolTip.visible: colorRow._rightInteractive && endSwatchMa.containsMouse
-                ToolTip.text: "終了色 (f" + colorRow._endFrame + ")"
+                ToolTip.text: qsTr("終了色 (f%1)").arg(colorRow._endFrame)
 
                 MouseArea {
                     id: endSwatchMa
@@ -400,7 +406,7 @@ Loader {
 
             CheckBox {
                 checked: controlLoader.value === true
-                text: checked ? "On" : "Off"
+                text: checked ? qsTr("オン") : qsTr("オフ")
                 onCheckedChanged: {
                     controlLoader.valueModified(checked);
                 }
@@ -419,7 +425,7 @@ Loader {
             FileDialog {
                 id: fileDialog
 
-                title: controlLoader.definition.label || "ファイルを選択"
+                title: controlLoader.definition.label || qsTr("ファイルを選択")
                 currentFile: {
                     var v = controlLoader.value;
                     if (!v || v.toString() === "")
@@ -552,7 +558,7 @@ Loader {
             Layout.bottomMargin: 4
 
             Label {
-                text: controlLoader.definition.label || "Settings"
+                text: controlLoader.definition.label || qsTr("設定")
                 font.bold: true
                 font.pixelSize: 13
                 color: sysPalette.text
@@ -628,7 +634,7 @@ Loader {
             FontDialog {
                 id: fontPickerDialog
 
-                title: controlLoader.definition.label || "フォントを選択"
+                title: controlLoader.definition.label || qsTr("フォントを選択")
                 currentFont.family: controlLoader.value || ""
                 onAccepted: {
                     controlLoader.valueModified(selectedFont.family);
@@ -644,7 +650,7 @@ Loader {
 
             Button {
                 Layout.fillWidth: true
-                text: controlLoader.value ? controlLoader.value : "デフォルト"
+                text: controlLoader.value ? controlLoader.value : qsTr("デフォルト")
                 font.family: controlLoader.value || ""
                 font.pixelSize: 13
                 onClicked: {

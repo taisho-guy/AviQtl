@@ -6,7 +6,7 @@ import QtQuick.Layouts
 RowLayout {
     id: root
 
-    property string paramName: "パラメータ"
+    property string paramName: qsTr("パラメータ")
     property real minValue: 0
     property real maxValue: 100
     property real startValue: 0

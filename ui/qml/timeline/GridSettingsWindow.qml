@@ -49,7 +49,7 @@ Common.RinaWindow {
         };
     }
 
-    title: "グリッド設定"
+    title: qsTr("グリッド設定")
     width: 320
     height: 300
 
@@ -60,14 +60,14 @@ Common.RinaWindow {
 
         RowLayout {
             Label {
-                text: "モード:"
+                text: qsTr("モード:")
             }
 
             ComboBox {
                 id: modeCombo
 
                 Layout.fillWidth: true
-                model: ["自動 (秒/フレーム)", "BPM (音楽)", "フレーム数固定"]
+                model: [qsTr("自動 (秒/フレーム)"), qsTr("BPM (音楽)"), qsTr("フレーム数固定")]
                 onCurrentIndexChanged: apply()
             }
 
@@ -75,7 +75,7 @@ Common.RinaWindow {
 
         // BPM設定
         GroupBox {
-            title: "BPM設定"
+            title: qsTr("BPM設定")
             visible: modeCombo.currentIndex === 1
             Layout.fillWidth: true
 
@@ -83,7 +83,7 @@ Common.RinaWindow {
                 columns: 2
 
                 Label {
-                    text: "BPM:"
+                    text: qsTr("BPM:")
                 }
 
                 TextField {
@@ -95,7 +95,7 @@ Common.RinaWindow {
                 }
 
                 Label {
-                    text: "拍子 (分割数):"
+                    text: qsTr("拍子 (分割数):")
                 }
 
                 TextField {
@@ -107,7 +107,7 @@ Common.RinaWindow {
                 }
 
                 Label {
-                    text: "オフセット (秒):"
+                    text: qsTr("オフセット (秒):")
                 }
 
                 TextField {
@@ -124,7 +124,7 @@ Common.RinaWindow {
 
         // フレーム設定
         GroupBox {
-            title: "フレーム設定"
+            title: qsTr("フレーム設定")
             visible: modeCombo.currentIndex === 2
             Layout.fillWidth: true
 
@@ -132,7 +132,7 @@ Common.RinaWindow {
                 columns: 2
 
                 Label {
-                    text: "間隔 (Frames):"
+                    text: qsTr("間隔 (フレーム):")
                 }
 
                 TextField {
@@ -153,7 +153,7 @@ Common.RinaWindow {
         }
 
         Button {
-            text: "閉じる"
+            text: qsTr("閉じる")
             Layout.alignment: Qt.AlignRight
             onClicked: root.close()
         }

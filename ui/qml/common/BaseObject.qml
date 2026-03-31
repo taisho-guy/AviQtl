@@ -44,20 +44,20 @@ Node {
     // 合成モードの計算 (Transform.qmlを変更できないためここで処理)
     readonly property int blendMode: {
         var _ = _tmRev; // 依存関係作成
-        var m = transformModel ? transformModel.evaluatedParam("blendMode", relFrame) : "通常";
-        if (m === "スクリーン")
+        var m = transformModel ? transformModel.evaluatedParam("blendMode", relFrame) : qsTr("通常");
+        if (m === qsTr("スクリーン"))
             return DefaultMaterial.Screen;
 
-        if (m === "乗算")
+        if (m === qsTr("乗算"))
             return DefaultMaterial.Multiply;
 
-        if (m === "オーバーレイ")
+        if (m === qsTr("オーバーレイ"))
             return DefaultMaterial.Overlay;
 
-        if (m === "焼き込み")
+        if (m === qsTr("焼き込み"))
             return DefaultMaterial.ColorBurn;
 
-        if (m === "覆い焼き")
+        if (m === qsTr("覆い焼き"))
             return DefaultMaterial.ColorDodge;
 
         return DefaultMaterial.SourceOver;

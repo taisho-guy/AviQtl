@@ -4,7 +4,7 @@ import QtQuick.Window
 Window {
     id: splashWindow
 
-    property string currentLog: "Initializing Rina..."
+    property string currentLog: qsTr("Rina を起動中...")
     property string nextLog: ""
 
     function closeSplash() {

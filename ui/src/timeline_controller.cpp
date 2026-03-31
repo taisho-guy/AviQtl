@@ -418,7 +418,7 @@ bool TimelineController::saveProject(const QString &fileUrl) {
 
     // パスが空の場合は新規作成直後なのでエラーで返す
     if (targetUrl.isEmpty()) {
-        emit errorOccurred("保存先のファイルパスが不明です");
+        emit errorOccurred(tr("保存先のファイルパスが不明です"));
         return false;
     }
 

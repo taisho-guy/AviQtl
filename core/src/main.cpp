@@ -20,6 +20,7 @@
 #include <QQuickWindow>
 #include <QSplashScreen>
 #include <QTimer>
+#include <QTranslator>
 #include <cstdio>
 #include <cstring>
 #include <lua.hpp>
@@ -48,6 +49,19 @@ int main(int argc, char *argv[]) {
 #endif
     QApplication app(argc, argv);
     app.setApplicationName("Rina");
+
+    QString appDir = QCoreApplication::applicationDirPath();
+
+    // システムのロケールに合わせて翻訳ファイルをロード
+    QTranslator translator;
+    const QStringList uiLanguages = QLocale::system().uiLanguages();
+    for (const QString &locale : uiLanguages) {
+        const QString baseName = "Rina_" + QLocale(locale).name();
+        if (translator.load(baseName, appDir + "/i18n")) {
+            app.installTranslator(&translator);
+            break;
+        }
+    }
 
     // メインスレッド上で設定管理を初期化する
     QVariantMap settings = Rina::Core::SettingsManager::instance().settings();

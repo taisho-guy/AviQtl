@@ -8,7 +8,7 @@ Common.RinaWindow {
 
     width: 450
     height: 200
-    title: "プロジェクト設定"
+    title: qsTr("プロジェクト設定")
     // ウィンドウが表示されたときに現在の値をUIに反映
     onVisibleChanged: {
         if (visible && TimelineBridge && TimelineBridge.project) {
@@ -29,7 +29,7 @@ Common.RinaWindow {
             columnSpacing: 10
 
             Label {
-                text: "幅:"
+                text: qsTr("幅:")
             }
 
             TextField {
@@ -45,7 +45,7 @@ Common.RinaWindow {
             }
 
             Label {
-                text: "高さ:"
+                text: qsTr("高さ:")
             }
 
             TextField {
@@ -61,7 +61,7 @@ Common.RinaWindow {
             }
 
             Label {
-                text: "FPS:"
+                text: qsTr("FPS:")
             }
 
             TextField {
@@ -77,7 +77,7 @@ Common.RinaWindow {
             }
 
             Label {
-                text: "サンプリングレート:"
+                text: qsTr("サンプリングレート:")
             }
 
             TextField {
@@ -98,7 +98,7 @@ Common.RinaWindow {
             Layout.alignment: Qt.AlignHCenter
 
             Button {
-                text: "適用"
+                text: qsTr("適用")
                 highlighted: true
                 onClicked: {
                     if (TimelineBridge && TimelineBridge.project) {
@@ -112,7 +112,7 @@ Common.RinaWindow {
             }
 
             Button {
-                text: "キャンセル"
+                text: qsTr("キャンセル")
                 onClicked: root.hide()
             }
 

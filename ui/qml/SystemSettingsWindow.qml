@@ -11,90 +11,90 @@ Common.RinaWindow {
     property alias currentTabIndex: tabBar.currentIndex
     property var pluginFormats: ["LADSPA", "DSSI", "LV2", "VST2", "VST3", "CLAP", "SF2", "SFZ", "JSFX"]
     property var themeValues: ["Dark", "Light", "System"]
-    property var themeLabels: ["ダーク", "ライト", "システムに従う"]
+    property var themeLabels: [qsTr("ダーク"), qsTr("ライト"), qsTr("システムに従う")]
     property var timeUnitValues: ["frame", "second"]
-    property var timeUnitLabels: ["フレーム", "秒"]
+    property var timeUnitLabels: [qsTr("フレーム"), qsTr("秒")]
     property var renderThreadValues: [0, 1, 2, 4, 8, 16]
-    property var renderThreadLabels: ["自動", "1", "2", "4", "8", "16"]
+    property var renderThreadLabels: [qsTr("自動"), "1", "2", "4", "8", "16"]
     property var audioChannelValues: [1, 2]
-    property var audioChannelLabels: ["モノラル", "ステレオ"]
+    property var audioChannelLabels: [qsTr("モノラル"), qsTr("ステレオ")]
     property var blockSizeValues: [256, 512, 1024, 2048, 4096, 8192]
     property var videoCodecValues: ["h264_vaapi", "hevc_vaapi", "libx264"]
-    property var videoCodecLabels: ["H.264 (VAAPI)", "HEVC (VAAPI)", "H.264 (CPU)"]
+    property var videoCodecLabels: [qsTr("H.264 (VAAPI)"), qsTr("HEVC (VAAPI)"), qsTr("H.264 (CPU)")]
     property var audioCodecValues: ["aac", "opus", "flac", "pcm_s16le"]
     property var audioCodecLabels: ["AAC", "Opus", "FLAC", "PCM 16bit"]
     property var shortcutList: [{
         "id": "project.new",
-        "name": "新規プロジェクト"
+        "name": qsTr("新規プロジェクト")
     }, {
         "id": "project.open",
-        "name": "プロジェクトを開く"
+        "name": qsTr("プロジェクトを開く")
     }, {
         "id": "project.save",
-        "name": "上書き保存"
+        "name": qsTr("上書き保存")
     }, {
         "id": "project.saveAs",
-        "name": "名前を付けて保存"
+        "name": qsTr("名前を付けて保存")
     }, {
         "id": "app.quit",
-        "name": "終了"
+        "name": qsTr("終了")
     }, {
         "id": "edit.undo",
-        "name": "元に戻す"
+        "name": qsTr("元に戻す")
     }, {
         "id": "edit.redo",
-        "name": "やり直す"
+        "name": qsTr("やり直す")
     }, {
         "id": "edit.cut",
-        "name": "カット"
+        "name": qsTr("カット")
     }, {
         "id": "edit.copy",
-        "name": "コピー"
+        "name": qsTr("コピー")
     }, {
         "id": "edit.paste",
-        "name": "貼り付け"
+        "name": qsTr("貼り付け")
     }, {
         "id": "edit.delete",
-        "name": "削除"
+        "name": qsTr("削除")
     }, {
         "id": "edit.duplicate",
-        "name": "複製"
+        "name": qsTr("複製")
     }, {
         "id": "transport.playPause",
-        "name": "再生 / 一時停止"
+        "name": qsTr("再生 / 一時停止")
     }, {
         "id": "transport.nextFrame",
-        "name": "1フレーム進む"
+        "name": qsTr("1フレーム進む")
     }, {
         "id": "transport.prevFrame",
-        "name": "1フレーム戻る"
+        "name": qsTr("1フレーム戻る")
     }, {
         "id": "transport.jumpStart",
-        "name": "先頭へ移動"
+        "name": qsTr("先頭へ移動")
     }, {
         "id": "transport.jumpEnd",
-        "name": "末尾へ移動"
+        "name": qsTr("末尾へ移動")
     }, {
         "id": "view.zoomIn",
-        "name": "ズームイン"
+        "name": qsTr("ズームイン")
     }, {
         "id": "view.zoomOut",
-        "name": "ズームアウト"
+        "name": qsTr("ズームアウト")
     }, {
         "id": "timeline.split",
-        "name": "クリップを分割"
+        "name": qsTr("クリップを分割")
     }, {
         "id": "timeline.moveUp",
-        "name": "レイヤーを上へ移動"
+        "name": qsTr("レイヤーを上へ移動")
     }, {
         "id": "timeline.moveDown",
-        "name": "レイヤーを下へ移動"
+        "name": qsTr("レイヤーを下へ移動")
     }, {
         "id": "timeline.nudgeLeft",
-        "name": "1フレーム左へ移動"
+        "name": qsTr("1フレーム左へ移動")
     }, {
         "id": "timeline.nudgeRight",
-        "name": "1フレーム右へ移動"
+        "name": qsTr("1フレーム右へ移動")
     }]
 
     function getShortcutValue(actionId, fallback) {
@@ -180,7 +180,7 @@ Common.RinaWindow {
 
     width: 760
     height: 680
-    title: "システム設定"
+    title: qsTr("システム設定")
     Component.onCompleted: loadSettings()
     onVisibleChanged: {
         if (visible)
@@ -199,39 +199,39 @@ Common.RinaWindow {
             Layout.fillWidth: true
 
             TabButton {
-                text: "一般"
+                text: qsTr("一般")
             }
 
             TabButton {
-                text: "性能"
+                text: qsTr("性能")
             }
 
             TabButton {
-                text: "タイムライン"
+                text: qsTr("タイムライン")
             }
 
             TabButton {
-                text: "外観"
+                text: qsTr("外観")
             }
 
             TabButton {
-                text: "新規プロジェクト"
+                text: qsTr("新規プロジェクト")
             }
 
             TabButton {
-                text: "書き出し"
+                text: qsTr("書き出し")
             }
 
             TabButton {
-                text: "デコードと音声"
+                text: qsTr("デコードと音声")
             }
 
             TabButton {
-                text: "プラグイン"
+                text: qsTr("プラグイン")
             }
 
             TabButton {
-                text: "ショートカット"
+                text: qsTr("ショートカット")
             }
 
         }
@@ -254,20 +254,20 @@ Common.RinaWindow {
                     spacing: 14
 
                     GroupBox {
-                        title: "ファイル"
+                        title: qsTr("ファイル")
                         Layout.fillWidth: true
 
                         ColumnLayout {
                             anchors.fill: parent
 
                             CheckBox {
-                                text: "終了時に確認ダイアログを表示する"
+                                text: qsTr("終了時に確認ダイアログを表示する")
                                 checked: root.valueOr("showConfirmOnClose", true)
                                 onToggled: root.setValue("showConfirmOnClose", checked)
                             }
 
                             CheckBox {
-                                text: "自動バックアップを有効にする"
+                                text: qsTr("自動バックアップを有効にする")
                                 checked: root.valueOr("enableAutoBackup", true)
                                 onToggled: root.setValue("enableAutoBackup", checked)
                             }
@@ -276,7 +276,7 @@ Common.RinaWindow {
                                 enabled: root.valueOr("enableAutoBackup", true)
 
                                 Label {
-                                    text: "バックアップ間隔"
+                                    text: qsTr("バックアップ間隔")
                                 }
 
                                 SpinBox {
@@ -287,14 +287,14 @@ Common.RinaWindow {
                                 }
 
                                 Label {
-                                    text: "分"
+                                    text: qsTr("分")
                                 }
 
                             }
 
                             RowLayout {
                                 Label {
-                                    text: "最近使ったプロジェクトの保持数"
+                                    text: qsTr("最近使ったプロジェクトの保持数")
                                 }
 
                                 SpinBox {
@@ -305,7 +305,7 @@ Common.RinaWindow {
                                 }
 
                                 Label {
-                                    text: "件"
+                                    text: qsTr("件")
                                 }
 
                             }
@@ -315,7 +315,7 @@ Common.RinaWindow {
                     }
 
                     GroupBox {
-                        title: "編集"
+                        title: qsTr("編集")
                         Layout.fillWidth: true
 
                         ColumnLayout {
@@ -323,7 +323,7 @@ Common.RinaWindow {
 
                             RowLayout {
                                 Label {
-                                    text: "元に戻す回数"
+                                    text: qsTr("元に戻す回数")
                                 }
 
                                 SpinBox {
@@ -336,7 +336,7 @@ Common.RinaWindow {
                             }
 
                             Label {
-                                text: "回数を増やすとメモリ使用量が増えます"
+                                text: qsTr("回数を増やすとメモリ使用量が増えます")
                                 color: palette.mid
                                 font.pixelSize: 11
                             }
@@ -346,7 +346,7 @@ Common.RinaWindow {
                     }
 
                     GroupBox {
-                        title: "起動"
+                        title: qsTr("起動")
                         Layout.fillWidth: true
 
                         GridLayout {
@@ -356,7 +356,7 @@ Common.RinaWindow {
                             anchors.fill: parent
 
                             Label {
-                                text: "スプラッシュ表示時間"
+                                text: qsTr("スプラッシュ表示時間")
                             }
 
                             SpinBox {
@@ -368,7 +368,7 @@ Common.RinaWindow {
                             }
 
                             Label {
-                                text: "スプラッシュ画像サイズ"
+                                text: qsTr("スプラッシュ画像サイズ")
                             }
 
                             SpinBox {
@@ -380,7 +380,7 @@ Common.RinaWindow {
                             }
 
                             Label {
-                                text: "起動後の遅延時間"
+                                text: qsTr("起動後の遅延時間")
                             }
 
                             SpinBox {
@@ -416,7 +416,7 @@ Common.RinaWindow {
                     spacing: 14
 
                     GroupBox {
-                        title: "メモリとキャッシュ"
+                        title: qsTr("メモリとキャッシュ")
                         Layout.fillWidth: true
 
                         GridLayout {
@@ -426,7 +426,7 @@ Common.RinaWindow {
                             anchors.fill: parent
 
                             Label {
-                                text: "最大画像サイズ"
+                                text: qsTr("最大画像サイズ")
                             }
 
                             ComboBox {
@@ -436,7 +436,7 @@ Common.RinaWindow {
                             }
 
                             Label {
-                                text: "キャッシュ容量"
+                                text: qsTr("キャッシュ容量")
                             }
 
                             SpinBox {
@@ -448,7 +448,7 @@ Common.RinaWindow {
                             }
 
                             Label {
-                                text: "描画スレッド数"
+                                text: qsTr("描画スレッド数")
                             }
 
                             ComboBox {
@@ -462,20 +462,20 @@ Common.RinaWindow {
                     }
 
                     GroupBox {
-                        title: "補足"
+                        title: qsTr("補足")
                         Layout.fillWidth: true
 
                         ColumnLayout {
                             anchors.fill: parent
 
                             Label {
-                                text: "描画スレッド数が自動のときは実行環境に応じて決定します"
+                                text: qsTr("描画スレッド数が自動のときは実行環境に応じて決定します")
                                 wrapMode: Text.WordWrap
                                 color: palette.mid
                             }
 
                             Label {
-                                text: "CachyOS の最新環境では、まず自動設定のまま確認する構成が扱いやすいです"
+                                text: qsTr("ご使用の実行環境に合わせて、まずは自動設定で動作を確認してください")
                                 wrapMode: Text.WordWrap
                                 color: palette.mid
                             }
@@ -505,7 +505,7 @@ Common.RinaWindow {
                     spacing: 14
 
                     GroupBox {
-                        title: "操作"
+                        title: qsTr("操作")
                         Layout.fillWidth: true
 
                         ColumnLayout {
@@ -513,7 +513,7 @@ Common.RinaWindow {
 
                             RowLayout {
                                 Label {
-                                    text: "時間表示"
+                                    text: qsTr("時間表示")
                                 }
 
                                 ComboBox {
@@ -525,13 +525,13 @@ Common.RinaWindow {
                             }
 
                             CheckBox {
-                                text: "分割時にカーソル位置を使う"
+                                text: qsTr("分割時にカーソル位置を使う")
                                 checked: root.valueOr("splitAtCursor", true)
                                 onToggled: root.setValue("splitAtCursor", checked)
                             }
 
                             CheckBox {
-                                text: "レイヤー範囲を表示する"
+                                text: qsTr("レイヤー範囲を表示する")
                                 checked: root.valueOr("showLayerRange", true)
                                 onToggled: root.setValue("showLayerRange", checked)
                             }
@@ -541,7 +541,7 @@ Common.RinaWindow {
                     }
 
                     GroupBox {
-                        title: "見た目と寸法"
+                        title: qsTr("見た目と寸法")
                         Layout.fillWidth: true
 
                         GridLayout {
@@ -551,7 +551,7 @@ Common.RinaWindow {
                             anchors.fill: parent
 
                             Label {
-                                text: "トラックの高さ"
+                                text: qsTr("トラックの高さ")
                             }
 
                             SpinBox {
@@ -562,7 +562,7 @@ Common.RinaWindow {
                             }
 
                             Label {
-                                text: "ヘッダーの高さ"
+                                text: qsTr("ヘッダーの高さ")
                             }
 
                             SpinBox {
@@ -573,7 +573,7 @@ Common.RinaWindow {
                             }
 
                             Label {
-                                text: "設定サイドバーを右に配置"
+                                text: qsTr("設定サイドバーを右に配置")
                             }
 
                             CheckBox {
@@ -582,7 +582,7 @@ Common.RinaWindow {
                             }
 
                             Label {
-                                text: "ルーラーの高さ"
+                                text: qsTr("ルーラーの高さ")
                             }
 
                             SpinBox {
@@ -593,7 +593,7 @@ Common.RinaWindow {
                             }
 
                             Label {
-                                text: "最大レイヤー数"
+                                text: qsTr("最大レイヤー数")
                             }
 
                             SpinBox {
@@ -604,7 +604,7 @@ Common.RinaWindow {
                             }
 
                             Label {
-                                text: "レイヤーヘッダー幅"
+                                text: qsTr("レイヤーヘッダー幅")
                             }
 
                             SpinBox {
@@ -615,7 +615,7 @@ Common.RinaWindow {
                             }
 
                             Label {
-                                text: "時間表示欄の幅"
+                                text: qsTr("時間表示欄の幅")
                             }
 
                             SpinBox {
@@ -626,7 +626,7 @@ Common.RinaWindow {
                             }
 
                             Label {
-                                text: "クリップ端のつかみ幅"
+                                text: qsTr("クリップ端のつかみ幅")
                             }
 
                             SpinBox {
@@ -641,7 +641,7 @@ Common.RinaWindow {
                     }
 
                     GroupBox {
-                        title: "編集制約とズーム"
+                        title: qsTr("編集制約とズーム")
                         Layout.fillWidth: true
 
                         GridLayout {
@@ -651,7 +651,7 @@ Common.RinaWindow {
                             anchors.fill: parent
 
                             Label {
-                                text: "最小クリップ長"
+                                text: qsTr("最小クリップ長")
                             }
 
                             SpinBox {
@@ -662,7 +662,7 @@ Common.RinaWindow {
                             }
 
                             Label {
-                                text: "ズーム最小値"
+                                text: qsTr("ズーム最小値")
                             }
 
                             SpinBox {
@@ -673,7 +673,7 @@ Common.RinaWindow {
                             }
 
                             Label {
-                                text: "ズーム最大値"
+                                text: qsTr("ズーム最大値")
                             }
 
                             SpinBox {
@@ -684,7 +684,7 @@ Common.RinaWindow {
                             }
 
                             Label {
-                                text: "ズーム刻み"
+                                text: qsTr("ズーム刻み")
                             }
 
                             SpinBox {
@@ -719,7 +719,7 @@ Common.RinaWindow {
                     spacing: 14
 
                     GroupBox {
-                        title: "表示"
+                        title: qsTr("表示")
                         Layout.fillWidth: true
 
                         GridLayout {
@@ -729,7 +729,7 @@ Common.RinaWindow {
                             anchors.fill: parent
 
                             Label {
-                                text: "テーマ"
+                                text: qsTr("テーマ")
                             }
 
                             ComboBox {
@@ -753,7 +753,7 @@ Common.RinaWindow {
                             }
 
                             Label {
-                                text: "文字余白係数"
+                                text: qsTr("文字余白係数")
                             }
 
                             SpinBox {
@@ -775,7 +775,7 @@ Common.RinaWindow {
                     }
 
                     Label {
-                        text: "テーマ変更は再起動後に完全反映される場合があります"
+                        text: qsTr("テーマ変更は再起動後に完全反映される場合があります")
                         color: palette.mid
                         wrapMode: Text.WordWrap
                     }
@@ -801,7 +801,7 @@ Common.RinaWindow {
                     spacing: 14
 
                     GroupBox {
-                        title: "既定値"
+                        title: qsTr("既定値")
                         Layout.fillWidth: true
 
                         GridLayout {
@@ -811,7 +811,7 @@ Common.RinaWindow {
                             anchors.fill: parent
 
                             Label {
-                                text: "幅"
+                                text: qsTr("幅")
                             }
 
                             SpinBox {
@@ -822,7 +822,7 @@ Common.RinaWindow {
                             }
 
                             Label {
-                                text: "高さ"
+                                text: qsTr("高さ")
                             }
 
                             SpinBox {
@@ -833,7 +833,7 @@ Common.RinaWindow {
                             }
 
                             Label {
-                                text: "フレームレート"
+                                text: qsTr("フレームレート")
                             }
 
                             SpinBox {
@@ -851,7 +851,7 @@ Common.RinaWindow {
                             }
 
                             Label {
-                                text: "総フレーム数"
+                                text: qsTr("総フレーム数")
                             }
 
                             SpinBox {
@@ -862,7 +862,7 @@ Common.RinaWindow {
                             }
 
                             Label {
-                                text: "サンプリング周波数"
+                                text: qsTr("サンプリング周波数")
                             }
 
                             SpinBox {
@@ -874,7 +874,7 @@ Common.RinaWindow {
                             }
 
                             Label {
-                                text: "既定クリップ長"
+                                text: qsTr("既定クリップ長")
                             }
 
                             SpinBox {
@@ -909,7 +909,7 @@ Common.RinaWindow {
                     spacing: 14
 
                     GroupBox {
-                        title: "映像"
+                        title: qsTr("映像")
                         Layout.fillWidth: true
 
                         GridLayout {
@@ -919,7 +919,7 @@ Common.RinaWindow {
                             anchors.fill: parent
 
                             Label {
-                                text: "既定の映像コーデック"
+                                text: qsTr("既定の映像コーデック")
                             }
 
                             ComboBox {
@@ -929,7 +929,7 @@ Common.RinaWindow {
                             }
 
                             Label {
-                                text: "既定ビットレート"
+                                text: qsTr("既定ビットレート")
                             }
 
                             SpinBox {
@@ -940,7 +940,7 @@ Common.RinaWindow {
                             }
 
                             Label {
-                                text: "既定CRF"
+                                text: qsTr("既定CRF")
                             }
 
                             SpinBox {
@@ -951,7 +951,7 @@ Common.RinaWindow {
                             }
 
                             Label {
-                                text: "静止画品質"
+                                text: qsTr("静止画品質")
                             }
 
                             SpinBox {
@@ -962,7 +962,7 @@ Common.RinaWindow {
                             }
 
                             Label {
-                                text: "連番桁数"
+                                text: qsTr("連番桁数")
                             }
 
                             SpinBox {
@@ -977,7 +977,7 @@ Common.RinaWindow {
                     }
 
                     GroupBox {
-                        title: "音声と進行表示"
+                        title: qsTr("音声と進行表示")
                         Layout.fillWidth: true
 
                         GridLayout {
@@ -987,7 +987,7 @@ Common.RinaWindow {
                             anchors.fill: parent
 
                             Label {
-                                text: "既定の音声コーデック"
+                                text: qsTr("既定の音声コーデック")
                             }
 
                             ComboBox {
@@ -997,7 +997,7 @@ Common.RinaWindow {
                             }
 
                             Label {
-                                text: "音声ビットレート"
+                                text: qsTr("音声ビットレート")
                             }
 
                             SpinBox {
@@ -1009,7 +1009,7 @@ Common.RinaWindow {
                             }
 
                             Label {
-                                text: "フレーム取得待ち時間"
+                                text: qsTr("フレーム取得待ち時間")
                             }
 
                             SpinBox {
@@ -1021,7 +1021,7 @@ Common.RinaWindow {
                             }
 
                             Label {
-                                text: "進捗更新間隔"
+                                text: qsTr("進捗更新間隔")
                             }
 
                             SpinBox {
@@ -1056,7 +1056,7 @@ Common.RinaWindow {
                     spacing: 14
 
                     GroupBox {
-                        title: "映像デコード"
+                        title: qsTr("映像デコード")
                         Layout.fillWidth: true
 
                         GridLayout {
@@ -1066,7 +1066,7 @@ Common.RinaWindow {
                             anchors.fill: parent
 
                             Label {
-                                text: "インデックス予約数"
+                                text: qsTr("インデックス予約数")
                             }
 
                             SpinBox {
@@ -1078,7 +1078,7 @@ Common.RinaWindow {
                             }
 
                             Label {
-                                text: "最小キャッシュ量"
+                                text: qsTr("最小キャッシュ量")
                             }
 
                             SpinBox {
@@ -1090,7 +1090,7 @@ Common.RinaWindow {
                             }
 
                             Label {
-                                text: "ハードウェアフレームプール数"
+                                text: qsTr("ハードウェアフレームプール数")
                             }
 
                             SpinBox {
@@ -1105,7 +1105,7 @@ Common.RinaWindow {
                     }
 
                     GroupBox {
-                        title: "音声"
+                        title: qsTr("音声")
                         Layout.fillWidth: true
 
                         GridLayout {
@@ -1115,7 +1115,7 @@ Common.RinaWindow {
                             anchors.fill: parent
 
                             Label {
-                                text: "音声チャンネル数"
+                                text: qsTr("音声チャンネル数")
                             }
 
                             ComboBox {
@@ -1125,7 +1125,7 @@ Common.RinaWindow {
                             }
 
                             Label {
-                                text: "プラグイン最大ブロックサイズ"
+                                text: qsTr("プラグイン最大ブロックサイズ")
                             }
 
                             ComboBox {
@@ -1135,7 +1135,7 @@ Common.RinaWindow {
                             }
 
                             Label {
-                                text: "Lua フック間隔"
+                                text: qsTr("Lua フック間隔")
                             }
 
                             SpinBox {
@@ -1151,7 +1151,7 @@ Common.RinaWindow {
                     }
 
                     Label {
-                        text: "デコードと音声関連の設定は再起動後に効果が分かりやすい項目を含みます"
+                        text: qsTr("デコードと音声関連の設定は再起動後に反映されます")
                         color: palette.mid
                         wrapMode: Text.WordWrap
                     }
@@ -1177,7 +1177,7 @@ Common.RinaWindow {
                     spacing: 14
 
                     Label {
-                        text: "各形式ごとに有効化と検索パスを設定できます"
+                        text: qsTr("各形式ごとに有効化と検索パスを設定できます")
                         color: palette.mid
                         wrapMode: Text.WordWrap
                     }
@@ -1196,13 +1196,13 @@ Common.RinaWindow {
                                 spacing: 8
 
                                 CheckBox {
-                                    text: modelData + " を読み込む"
+                                    text: qsTr("%1 を読み込む").arg(modelData)
                                     checked: root.valueOr("pluginEnable" + modelData, true)
                                     onToggled: root.setPluginEnabled(modelData, checked)
                                 }
 
                                 Label {
-                                    text: "検索パス"
+                                    text: qsTr("検索パス")
                                     color: palette.mid
                                 }
 
@@ -1227,7 +1227,7 @@ Common.RinaWindow {
                                 }
 
                                 Label {
-                                    text: "1行に1パスを入力します"
+                                    text: qsTr("1行に1パスを入力します")
                                     color: palette.mid
                                     font.pixelSize: 11
                                 }
@@ -1259,13 +1259,13 @@ Common.RinaWindow {
                     spacing: 14
 
                     Label {
-                        text: "キーボードショートカット"
+                        text: qsTr("キーボードショートカット")
                         font.bold: true
                         font.pixelSize: 16
                     }
 
                     Label {
-                        text: "「Ctrl+S」や「Alt+Shift+N」の形式で入力してください"
+                        text: qsTr("「Ctrl+S」や「Alt+Shift+N」の形式で入力してください")
                         color: palette.mid
                     }
 
@@ -1292,7 +1292,7 @@ Common.RinaWindow {
 
                                     Layout.fillWidth: true
                                     text: root.getShortcutValue(modelData.id, "")
-                                    placeholderText: "未設定"
+                                    placeholderText: qsTr("未設定")
                                     onEditingFinished: {
                                         root.setShortcutValue(modelData.id, text);
                                     }
@@ -1324,23 +1324,23 @@ Common.RinaWindow {
 
                 Label {
                     Layout.fillWidth: true
-                    text: "設定は「適用」または「OK」で保存されます"
+                    text: qsTr("設定は「適用」または「OK」で保存されます")
                     color: palette.mid
                     elide: Text.ElideRight
                 }
 
                 Button {
-                    text: "再読込"
+                    text: qsTr("再読込")
                     onClicked: root.loadSettings()
                 }
 
                 Button {
-                    text: "適用"
+                    text: qsTr("適用")
                     onClicked: root.applySettings()
                 }
 
                 Button {
-                    text: "OK"
+                    text: qsTr("OK")
                     highlighted: true
                     onClicked: {
                         root.applySettings();
@@ -1349,7 +1349,7 @@ Common.RinaWindow {
                 }
 
                 Button {
-                    text: "閉じる"
+                    text: qsTr("閉じる")
                     onClicked: root.hide()
                 }
 

@@ -625,7 +625,7 @@ ScrollView {
                 })(item);
             }
             if (targetType === "timeline") {
-                var objectMenu = createSubMenu("オブジェクトを追加");
+                var objectMenu = createSubMenu(qsTr("オブジェクトを追加"));
                 var objects = TimelineBridge.getAvailableObjects();
                 for (var i = 0; i < objects.length; i++) {
                     var obj = objects[i];
@@ -642,17 +642,17 @@ ScrollView {
                 }
                 contextMenu.addMenu(objectMenu);
                 addSeparator();
-                contextMenu.addItem(createMenuItem("元に戻す", "edit.undo", "arrow_go_back_line"));
-                contextMenu.addItem(createMenuItem("やり直す", "edit.redo", "arrow_go_forward_line"));
-                contextMenu.addItem(createMenuItem("貼り付け", "edit.paste", "clipboard_line"));
+                contextMenu.addItem(createMenuItem(qsTr("元に戻す"), "edit.undo", "arrow_go_back_line"));
+                contextMenu.addItem(createMenuItem(qsTr("やり直す"), "edit.redo", "arrow_go_forward_line"));
+                contextMenu.addItem(createMenuItem(qsTr("貼り付け"), "edit.paste", "clipboard_line"));
                 addSeparator();
-                contextMenu.addItem(createMenuItem("グリッド設定...", "view.gridsettings", "grid_line"));
+                contextMenu.addItem(createMenuItem(qsTr("グリッド設定..."), "view.gridsettings", "grid_line"));
             } else if (targetType === "clip") {
-                contextMenu.addItem(createMenuItem("削除", "clip.delete", "delete_bin_line"));
-                contextMenu.addItem(createMenuItem("分割", "clip.split", "scissors_cut_line"));
+                contextMenu.addItem(createMenuItem(qsTr("削除"), "clip.delete", "delete_bin_line"));
+                contextMenu.addItem(createMenuItem(qsTr("分割"), "clip.split", "scissors_cut_line"));
                 addSeparator();
-                contextMenu.addItem(createMenuItem("切り取り", "clip.cut", "scissors_line"));
-                contextMenu.addItem(createMenuItem("コピー", "clip.copy", "file_copy_line"));
+                contextMenu.addItem(createMenuItem(qsTr("切り取り"), "clip.cut", "scissors_line"));
+                contextMenu.addItem(createMenuItem(qsTr("コピー"), "clip.copy", "file_copy_line"));
             }
         }
 

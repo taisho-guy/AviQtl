@@ -86,7 +86,7 @@ void TimelineExportManager::runExport(const Rina::Core::VideoEncoder::Config &co
 
     Rina::Core::VideoEncoder encoder;
     if (!encoder.open(config)) {
-        emit exportFinished(false, "エンコーダーの初期化に失敗しました");
+        emit exportFinished(false, tr("エンコーダーの初期化に失敗しました"));
         m_exporting = false;
         return;
     }
@@ -109,7 +109,7 @@ void TimelineExportManager::runExport(const Rina::Core::VideoEncoder::Config &co
 
     for (int frame = startFrame; frame < endFrame; ++frame) {
         if (m_cancelRequested.load()) {
-            emit exportFinished(false, "キャンセルされました");
+            emit exportFinished(false, tr("キャンセルされました"));
             goto cleanup;
         }
 
@@ -142,7 +142,7 @@ void TimelineExportManager::runExport(const Rina::Core::VideoEncoder::Config &co
     }
 
     encoder.close();
-    emit exportFinished(true, "書き出し完了");
+    emit exportFinished(true, tr("書き出し完了"));
 
 cleanup:
     if (view)

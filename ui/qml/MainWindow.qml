@@ -15,7 +15,7 @@ ApplicationWindow {
     height: 360
     x: 100
     y: 100
-    title: "Rina - プレビュー"
+    title: qsTr("Rina - プレビュー")
     // お前はこれで死ねぇ！！！！！
     onClosing: (close) => {
         if (WindowManager)
@@ -53,7 +53,7 @@ ApplicationWindow {
 
         property string shortcutText: SettingsManager ? SettingsManager.shortcut("project.new", "Ctrl+N") : "Ctrl+N"
 
-        text: "新規プロジェクト"
+        text: qsTr("新規プロジェクト")
         onTriggered: console.log("New Project")
     }
 
@@ -62,7 +62,7 @@ ApplicationWindow {
 
         property string shortcutText: SettingsManager ? SettingsManager.shortcut("project.save", "Ctrl+S") : "Ctrl+S"
 
-        text: "プロジェクトの上書き保存"
+        text: qsTr("プロジェクトの上書き保存")
         onTriggered: {
             if (TimelineBridge) {
                 // 現在のプロジェクトパスが未設定の場合は名前を付けて保存ダイアログを開く
@@ -79,7 +79,7 @@ ApplicationWindow {
 
         property string shortcutText: SettingsManager ? SettingsManager.shortcut("project.open", "Ctrl+O") : "Ctrl+O"
 
-        text: "プロジェクトを開く"
+        text: qsTr("プロジェクトを開く")
         onTriggered: loadDialog.open()
     }
 
@@ -88,7 +88,7 @@ ApplicationWindow {
 
         property string shortcutText: SettingsManager ? SettingsManager.shortcut("project.saveAs", "Ctrl+Shift+S") : "Ctrl+Shift+S"
 
-        text: "プロジェクトを名前を付けて保存..."
+        text: qsTr("プロジェクトを名前を付けて保存...")
         onTriggered: saveDialog.open()
     }
 
@@ -97,7 +97,7 @@ ApplicationWindow {
 
         property string shortcutText: SettingsManager ? SettingsManager.shortcut("app.quit", "Ctrl+Q") : "Ctrl+Q"
 
-        text: "終了"
+        text: qsTr("終了")
         onTriggered: {
             if (WindowManager)
                 WindowManager.requestQuit();
@@ -110,7 +110,7 @@ ApplicationWindow {
 
         property string shortcutText: SettingsManager ? SettingsManager.shortcut("edit.undo", "Ctrl+Z") : "Ctrl+Z"
 
-        text: "元に戻す"
+        text: qsTr("元に戻す")
         onTriggered: {
             if (TimelineBridge)
                 TimelineBridge.undo();
@@ -123,7 +123,7 @@ ApplicationWindow {
 
         property string shortcutText: SettingsManager ? SettingsManager.shortcut("edit.redo", "Ctrl+Shift+Z") : "Ctrl+Shift+Z"
 
-        text: "やり直す"
+        text: qsTr("やり直す")
         onTriggered: {
             if (TimelineBridge)
                 TimelineBridge.redo();
@@ -136,7 +136,7 @@ ApplicationWindow {
 
         property string shortcutText: SettingsManager ? SettingsManager.shortcut("transport.playPause", "Space") : "Space"
 
-        text: "再生 / 一時停止"
+        text: qsTr("再生 / 一時停止")
         onTriggered: {
             if (TimelineBridge)
                 TimelineBridge.togglePlay();
@@ -149,7 +149,7 @@ ApplicationWindow {
 
         property string shortcutText: SettingsManager ? SettingsManager.shortcut("timeline.split", "S") : "S"
 
-        text: "クリップを分割"
+        text: qsTr("クリップを分割")
         onTriggered: {
             if (TimelineBridge && TimelineBridge.transport) {
                 var f = TimelineBridge.transport.currentFrame;
@@ -171,7 +171,7 @@ ApplicationWindow {
 
         property string shortcutText: SettingsManager ? SettingsManager.shortcut("edit.delete", "Delete") : "Delete"
 
-        text: "削除"
+        text: qsTr("削除")
         onTriggered: {
             if (TimelineBridge)
                 TimelineBridge.deleteSelectedClips();
@@ -184,7 +184,7 @@ ApplicationWindow {
 
         property string shortcutText: SettingsManager ? SettingsManager.shortcut("edit.copy", "Ctrl+C") : "Ctrl+C"
 
-        text: "コピー"
+        text: qsTr("コピー")
         onTriggered: {
             if (TimelineBridge)
                 TimelineBridge.copySelectedClips();
@@ -197,7 +197,7 @@ ApplicationWindow {
 
         property string shortcutText: SettingsManager ? SettingsManager.shortcut("edit.cut", "Ctrl+X") : "Ctrl+X"
 
-        text: "カット"
+        text: qsTr("カット")
         onTriggered: {
             if (TimelineBridge)
                 TimelineBridge.cutSelectedClips();
@@ -210,7 +210,7 @@ ApplicationWindow {
 
         property string shortcutText: SettingsManager ? SettingsManager.shortcut("edit.paste", "Ctrl+V") : "Ctrl+V"
 
-        text: "貼り付け"
+        text: qsTr("貼り付け")
         onTriggered: {
             if (TimelineBridge && TimelineBridge.transport) {
                 var f = TimelineBridge.transport.currentFrame;
@@ -225,7 +225,7 @@ ApplicationWindow {
 
         property string shortcutText: SettingsManager ? SettingsManager.shortcut("edit.duplicate", "Ctrl+D") : "Ctrl+D"
 
-        text: "複製"
+        text: qsTr("複製")
         onTriggered: {
             if (TimelineBridge) {
                 TimelineBridge.copySelectedClips();
@@ -241,7 +241,7 @@ ApplicationWindow {
 
         property string shortcutText: SettingsManager ? SettingsManager.shortcut("transport.nextFrame", "Right") : "Right"
 
-        text: "1フレーム進む"
+        text: qsTr("1フレーム進む")
         onTriggered: {
             if (TimelineBridge && TimelineBridge.transport)
                 TimelineBridge.transport.currentFrame = Math.min(TimelineBridge.transport.currentFrame + 1, TimelineBridge.transport.totalFrames);
@@ -254,7 +254,7 @@ ApplicationWindow {
 
         property string shortcutText: SettingsManager ? SettingsManager.shortcut("transport.prevFrame", "Left") : "Left"
 
-        text: "1フレーム戻る"
+        text: qsTr("1フレーム戻る")
         onTriggered: {
             if (TimelineBridge && TimelineBridge.transport)
                 TimelineBridge.transport.currentFrame = Math.max(TimelineBridge.transport.currentFrame - 1, 0);
@@ -267,7 +267,7 @@ ApplicationWindow {
 
         property string shortcutText: SettingsManager ? SettingsManager.shortcut("transport.jumpStart", "Home") : "Home"
 
-        text: "先頭へ移動"
+        text: qsTr("先頭へ移動")
         onTriggered: {
             if (TimelineBridge && TimelineBridge.transport)
                 TimelineBridge.transport.currentFrame = 0;
@@ -280,7 +280,7 @@ ApplicationWindow {
 
         property string shortcutText: SettingsManager ? SettingsManager.shortcut("transport.jumpEnd", "End") : "End"
 
-        text: "末尾へ移動"
+        text: qsTr("末尾へ移動")
         onTriggered: {
             if (TimelineBridge && TimelineBridge.transport)
                 TimelineBridge.transport.currentFrame = TimelineBridge.transport.totalFrames;
@@ -293,7 +293,7 @@ ApplicationWindow {
 
         property string shortcutText: SettingsManager ? SettingsManager.shortcut("view.zoomIn", "Ctrl++") : "Ctrl++"
 
-        text: "ズームイン"
+        text: qsTr("ズームイン")
         onTriggered: {
             if (TimelineBridge) {
                 var step = SettingsManager ? SettingsManager.value("timelineZoomStep", 10) : 10;
@@ -308,7 +308,7 @@ ApplicationWindow {
 
         property string shortcutText: SettingsManager ? SettingsManager.shortcut("view.zoomOut", "Ctrl+-") : "Ctrl+-"
 
-        text: "ズームアウト"
+        text: qsTr("ズームアウト")
         onTriggered: {
             if (TimelineBridge) {
                 var step = SettingsManager ? SettingsManager.value("timelineZoomStep", 10) : 10;
@@ -323,7 +323,7 @@ ApplicationWindow {
 
         property string shortcutText: SettingsManager ? SettingsManager.shortcut("timeline.moveUp", "Alt+Up") : "Alt+Up"
 
-        text: "レイヤーを上へ移動"
+        text: qsTr("レイヤーを上へ移動")
         onTriggered: {
             if (TimelineBridge)
                 TimelineBridge.moveSelectedClips(-1, 0);
@@ -336,7 +336,7 @@ ApplicationWindow {
 
         property string shortcutText: SettingsManager ? SettingsManager.shortcut("timeline.moveDown", "Alt+Down") : "Alt+Down"
 
-        text: "レイヤーを下へ移動"
+        text: qsTr("レイヤーを下へ移動")
         onTriggered: {
             if (TimelineBridge)
                 TimelineBridge.moveSelectedClips(1, 0);
@@ -349,7 +349,7 @@ ApplicationWindow {
 
         property string shortcutText: SettingsManager ? SettingsManager.shortcut("timeline.nudgeLeft", "Alt+Left") : "Alt+Left"
 
-        text: "1フレーム左へ移動"
+        text: qsTr("1フレーム左へ移動")
         onTriggered: {
             if (TimelineBridge)
                 TimelineBridge.moveSelectedClips(0, -1);
@@ -362,7 +362,7 @@ ApplicationWindow {
 
         property string shortcutText: SettingsManager ? SettingsManager.shortcut("timeline.nudgeRight", "Alt+Right") : "Alt+Right"
 
-        text: "1フレーム右へ移動"
+        text: qsTr("1フレーム右へ移動")
         onTriggered: {
             if (TimelineBridge)
                 TimelineBridge.moveSelectedClips(0, 1);
@@ -373,7 +373,7 @@ ApplicationWindow {
     Platform.MessageDialog {
         id: errorDialog
 
-        title: "エラー"
+        title: qsTr("エラー")
         buttons: Platform.MessageDialog.Ok
     }
 
@@ -416,7 +416,7 @@ ApplicationWindow {
     Platform.FileDialog {
         id: saveDialog
 
-        fileMode: Platform.FileDialog.SaveFile
+        title: qsTr("名前を付けて保存")
         nameFilters: ["Rina Project files (*.rina)", "JSON files (*.json)"]
         defaultSuffix: "rina"
         onAccepted: {
@@ -429,7 +429,7 @@ ApplicationWindow {
     Platform.FileDialog {
         id: loadDialog
 
-        fileMode: Platform.FileDialog.OpenFile
+        title: qsTr("プロジェクトを開く")
         nameFilters: ["Rina Project files (*.rina)", "JSON files (*.json)"]
         onAccepted: {
             if (TimelineBridge)
@@ -611,7 +611,7 @@ ApplicationWindow {
                     spacing: 5
 
                     Label {
-                        text: "速度"
+                        text: qsTr("速度")
                         color: mainWin.palette.text
                         font.pixelSize: 12
                     }
@@ -799,7 +799,7 @@ ApplicationWindow {
 
     menuBar: MenuBar {
         Menu {
-            title: "ファイル"
+            title: qsTr("ファイル")
 
             Common.IconMenuItem {
                 action: newAction
@@ -828,7 +828,7 @@ ApplicationWindow {
             }
 
             Common.IconMenuItem {
-                text: "メディアの書き出し..."
+                text: qsTr("メディアの書き出し...")
                 iconName: "movie_line"
                 enabled: TimelineBridge && TimelineBridge.project
                 onTriggered: {
@@ -842,7 +842,7 @@ ApplicationWindow {
             }
 
             Common.IconMenuItem {
-                text: "環境設定"
+                text: qsTr("環境設定")
                 iconName: "settings_3_line"
                 onTriggered: {
                     if (WindowManager)
@@ -855,7 +855,7 @@ ApplicationWindow {
             }
 
             Common.IconMenuItem {
-                text: "終了"
+                text: qsTr("終了")
                 action: quitAction
                 iconName: "close_circle_line"
             }
@@ -863,10 +863,10 @@ ApplicationWindow {
         }
 
         Menu {
-            title: "フィルタ"
+            title: qsTr("フィルタ")
 
             Common.IconMenuItem {
-                text: "エフェクトの追加"
+                text: qsTr("エフェクトの追加")
                 iconName: "magic_line"
                 enabled: TimelineBridge && TimelineBridge.selection && TimelineBridge.selection.selectedClipId >= 0
                 onTriggered: {
@@ -879,10 +879,10 @@ ApplicationWindow {
         }
 
         Menu {
-            title: "設定"
+            title: qsTr("設定")
 
             Common.IconMenuItem {
-                text: "サイズの変更"
+                text: qsTr("サイズの変更")
                 iconName: "aspect_ratio_line"
                 onTriggered: {
                     if (WindowManager)
@@ -892,7 +892,7 @@ ApplicationWindow {
             }
 
             Common.IconMenuItem {
-                text: "フレームレートの変更"
+                text: qsTr("フレームレートの変更")
                 iconName: "speed_line"
                 onTriggered: {
                     if (WindowManager)
@@ -905,7 +905,7 @@ ApplicationWindow {
             }
 
             Common.IconMenuItem {
-                text: "環境設定"
+                text: qsTr("環境設定")
                 iconName: "settings_3_line"
                 onTriggered: {
                     if (WindowManager)
@@ -917,7 +917,7 @@ ApplicationWindow {
         }
 
         Menu {
-            title: "編集"
+            title: qsTr("編集")
 
             Common.IconMenuItem {
                 action: undoAction
@@ -932,16 +932,16 @@ ApplicationWindow {
         }
 
         Menu {
-            title: "表示"
+            title: qsTr("表示")
 
             Common.IconMenuItem {
-                text: "再生ウィンドウの表示"
+                text: qsTr("再生ウィンドウの表示")
                 iconName: "play_circle_line"
                 onTriggered: mainWin.requestActivate()
             }
 
             Common.IconMenuItem {
-                text: "タイムラインの表示"
+                text: qsTr("タイムラインの表示")
                 iconName: "layout_bottom_line"
                 onTriggered: {
                     if (WindowManager)
@@ -951,7 +951,7 @@ ApplicationWindow {
             }
 
             Common.IconMenuItem {
-                text: "設定ダイアログの表示"
+                text: qsTr("設定ダイアログの表示")
                 iconName: "equalizer_line"
                 onTriggered: {
                     if (WindowManager)
@@ -963,10 +963,10 @@ ApplicationWindow {
         }
 
         Menu {
-            title: "その他"
+            title: qsTr("その他")
 
             Common.IconMenuItem {
-                text: "バージョン情報"
+                text: qsTr("バージョン情報")
                 iconName: "information_line"
                 onTriggered: {
                     var win = WindowManager.getWindow("about");

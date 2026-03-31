@@ -234,6 +234,10 @@ class BuildWorker(QtCore.QThread):
             if self.do_tidy:
                 self.run_clang_tidy(work_dir)
 
+            # 2.5 翻訳ソースファイル (.ts) を自動更新 (常に実行)
+            self.log_signal.emit("翻訳ソースファイル (.ts) を更新中...")
+            self._run_cmd(["cmake", "--build", str(work_dir), "--target", "Rina_lupdate"], in_container=use_container)
+
             # 3. Build
             self.log_signal.emit(f"{name} コンパイル中...")
             build_cmd = ["cmake", "--build", str(work_dir), "-j", str(j_slots)]
@@ -266,10 +270,9 @@ class BuildWorker(QtCore.QThread):
                 src_path = self.source_dir / "ui/qml" / d
                 dest_path = self.output_dir / d
                 if src_path.exists():
-                    if dest_path.exists(): shutil.rmtree(dest_path)
                     # Linuxの場合は不要なシェーダーソースを除外
                     ignore_pat = shutil.ignore_patterns("*.frag", "*.vert", "*.glsl") if self.system == "Linux" else None
-                    shutil.copytree(src_path, dest_path, ignore=ignore_pat)
+                    shutil.copytree(src_path, dest_path, ignore=ignore_pat, dirs_exist_ok=True)
 
             # コンパイル済みシェーダー(.qsb)のコピー
             for d in ["effects", "objects"]:
@@ -283,9 +286,20 @@ class BuildWorker(QtCore.QThread):
             plugins_src = self.source_dir / "plugins"
             if plugins_src.exists() and any(plugins_src.iterdir()):
                 plugins_dest = self.output_dir / "plugins"
-                if plugins_src.exists():
-                    if plugins_dest.exists(): shutil.rmtree(plugins_dest)
-                    shutil.copytree(plugins_src, plugins_dest)
+                shutil.copytree(plugins_src, plugins_dest, dirs_exist_ok=True)
+
+            # i18n (国際化ファイル - 言語拡張)
+            i18n_src = self.source_dir / "i18n"
+            i18n_dest = self.output_dir / "i18n"
+            if i18n_src.exists():
+                shutil.copytree(i18n_src, i18n_dest, dirs_exist_ok=True)
+            
+            # CMake (LinguistTools) によって生成された .qm ファイルを収集
+            i18n_gen_src = work_dir / "i18n"
+            if i18n_gen_src.exists():
+                i18n_dest.mkdir(parents=True, exist_ok=True)
+                for qm_file in i18n_gen_src.glob("*.qm"):
+                    shutil.copy2(qm_file, i18n_dest / qm_file.name)
 
             # Windows固有のデプロイ処理 (windeployqtなど)
             if self.system == "Windows":

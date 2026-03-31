@@ -23,7 +23,7 @@ Window {
         visible = true;
     }
 
-    title: "メディアの書き出し"
+    title: qsTr("メディアの書き出し")
     width: 620
     height: 580
     modality: Qt.ApplicationModal
@@ -45,7 +45,7 @@ Window {
 
             Label {
                 Layout.alignment: Qt.AlignHCenter
-                text: "書き出し中..."
+                text: qsTr("書き出し中...")
                 font.pixelSize: 16
                 font.bold: true
                 color: "white"
@@ -64,14 +64,14 @@ Window {
                 id: progressLabel
 
                 Layout.alignment: Qt.AlignHCenter
-                text: "0 / 0 フレーム"
+                text: qsTr("0 / 0 フレーム")
                 color: palette.mid
                 font.pixelSize: 11
             }
 
             Button {
                 Layout.alignment: Qt.AlignHCenter
-                text: "キャンセル"
+                text: qsTr("キャンセル")
                 onClicked: TimelineBridge.cancelExport()
             }
 
@@ -83,7 +83,7 @@ Window {
     Connections {
         function onExportProgressChanged(progress, current, total) {
             exportProgressBar.value = progress;
-            progressLabel.text = current + " / " + total + " フレーム";
+            progressLabel.text = qsTr("%1 / %2 フレーム").arg(current).arg(total);
         }
 
         function onExportFinished(success, message) {
@@ -102,7 +102,7 @@ Window {
         property string message: ""
         property bool success: true
 
-        title: success ? "完了" : "エラー"
+        title: success ? qsTr("完了") : qsTr("エラー")
         modal: true
         anchors.centerIn: parent
         standardButtons: Dialog.Ok
@@ -127,11 +127,11 @@ Window {
                 id: filePathField
 
                 Layout.fillWidth: true
-                placeholderText: "保存先ファイルパス..."
+                placeholderText: qsTr("保存先ファイルパス...")
             }
 
             Button {
-                text: "参照..."
+                text: qsTr("参照...")
                 onClicked: fileDialog.open()
             }
 
@@ -139,7 +139,7 @@ Window {
 
         // ビデオ設定
         GroupBox {
-            title: "映像"
+            title: qsTr("映像")
             Layout.fillWidth: true
 
             GridLayout {
@@ -149,7 +149,7 @@ Window {
                 width: parent.width
 
                 Label {
-                    text: "解像度:"
+                    text: qsTr("解像度:")
                 }
 
                 Label {
@@ -159,7 +159,7 @@ Window {
                 }
 
                 Label {
-                    text: "FPS:"
+                    text: qsTr("FPS:")
                 }
 
                 Label {
@@ -169,7 +169,7 @@ Window {
                 }
 
                 Label {
-                    text: "コーデック:"
+                    text: qsTr("コーデック:")
                 }
 
                 ComboBox {
@@ -237,7 +237,7 @@ Window {
                 }
 
                 Label {
-                    text: "品質モード:"
+                    text: qsTr("品質モード:")
                 }
 
                 ButtonGroup {
@@ -247,13 +247,13 @@ Window {
                 RadioButton {
                     id: crfRadio
 
-                    text: "CRF"
+                    text: qsTr("CRF")
                     ButtonGroup.group: qualityModeGroup
                     checked: true
                 }
 
                 RadioButton {
-                    text: "ビットレート"
+                    text: qsTr("ビットレート")
                     ButtonGroup.group: qualityModeGroup
                 }
 
@@ -263,7 +263,7 @@ Window {
 
                 // CRF スライダー
                 Label {
-                    text: "CRF:"
+                    text: qsTr("CRF:")
                     visible: crfRadio.checked
                 }
 
@@ -288,7 +288,7 @@ Window {
                     }
 
                     Label {
-                        text: crfSlider.value <= 17 ? "高品質" : crfSlider.value <= 28 ? "標準" : "低品質"
+                        text: crfSlider.value <= 17 ? qsTr("高品質") : crfSlider.value <= 28 ? qsTr("標準") : qsTr("低品質")
                         font.pixelSize: 10
                         color: crfSlider.value <= 17 ? "#44cc88" : crfSlider.value <= 28 ? palette.text : "#cc4444"
                     }
@@ -297,7 +297,7 @@ Window {
 
                 // ビットレート入力
                 Label {
-                    text: "ビットレート:"
+                    text: qsTr("ビットレート:")
                     visible: !crfRadio.checked
                 }
 
@@ -314,7 +314,7 @@ Window {
                         stepSize: 1
                         editable: true
                         textFromValue: (v) => {
-                            return v + " Mbps";
+                            return qsTr("%1 Mbps").arg(v);
                         }
                         valueFromText: (t) => {
                             return parseInt(t);
@@ -329,7 +329,7 @@ Window {
 
         // オーディオ設定
         GroupBox {
-            title: "音声"
+            title: qsTr("音声")
             Layout.fillWidth: true
 
             GridLayout {
@@ -339,7 +339,7 @@ Window {
                 width: parent.width
 
                 Label {
-                    text: "コーデック:"
+                    text: qsTr("コーデック:")
                 }
 
                 ComboBox {
@@ -380,7 +380,7 @@ Window {
                 }
 
                 Label {
-                    text: "ビットレート:"
+                    text: qsTr("ビットレート:")
                 }
 
                 ComboBox {
@@ -407,7 +407,7 @@ Window {
 
         // 範囲設定
         GroupBox {
-            title: "範囲"
+            title: qsTr("範囲")
             Layout.fillWidth: true
 
             RowLayout {
@@ -417,12 +417,12 @@ Window {
                 CheckBox {
                     id: fullRangeCheck
 
-                    text: "タイムライン全体"
+                    text: qsTr("タイムライン全体")
                     checked: true
                 }
 
                 Label {
-                    text: "開始:"
+                    text: qsTr("開始:")
                 }
 
                 SpinBox {
@@ -436,7 +436,7 @@ Window {
                 }
 
                 Label {
-                    text: "終了:"
+                    text: qsTr("終了:")
                 }
 
                 SpinBox {
@@ -470,7 +470,7 @@ Window {
                         var s = fullRangeCheck.checked ? 0 : startFrameSpin.value;
                         var e = fullRangeCheck.checked ? (TimelineBridge ? TimelineBridge.timelineDuration : 300) : endFrameSpin.value;
                         var sec = (e - s) / pFps;
-                        return "(" + (e - s) + " フレーム / " + sec.toFixed(2) + " 秒)";
+                        return qsTr("(%1 フレーム / %2 秒)").arg(e - s).arg(sec.toFixed(2));
                     }
                     font.pixelSize: 11
                     color: palette.mid
@@ -493,12 +493,12 @@ Window {
             }
 
             Button {
-                text: "キャンセル"
+                text: qsTr("キャンセル")
                 onClicked: root.close()
             }
 
             Button {
-                text: "書き出し開始"
+                text: qsTr("書き出し開始")
                 enabled: filePathField.text !== ""
                 highlighted: true
                 onClicked: {
@@ -528,7 +528,7 @@ Window {
     Dialogs.FileDialog {
         id: fileDialog
 
-        title: "保存先を指定"
+        title: qsTr("保存先を指定")
         fileMode: Dialogs.FileDialog.SaveFile
         nameFilters: ["MP4 Video (*.mp4)", "MKV Video (*.mkv)", "All files (*)"]
         onAccepted: {

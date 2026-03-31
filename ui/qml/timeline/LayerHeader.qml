@@ -175,7 +175,7 @@ Rectangle {
         property int layerIndex: 0
 
         Common.IconMenuItem {
-            text: "表示/非表示を切り替え"
+            text: qsTr("表示/非表示を切り替え")
             iconName: headerRoot.getLayerVisible(layerMenu.layerIndex) ? "eye_off_line" : "eye_line"
             onTriggered: {
                 var visible = headerRoot.getLayerVisible(layerMenu.layerIndex);
@@ -189,7 +189,7 @@ Rectangle {
         Common.IconMenuItem {
             text: {
                 var locked = headerRoot.getLayerLocked(layerMenu.layerIndex);
-                return locked ? "ロックを解除" : "ロック";
+                return locked ? qsTr("ロックを解除") : qsTr("ロック");
             }
             iconName: headerRoot.getLayerLocked(layerMenu.layerIndex) ? "lock_unlock_line" : "lock_line"
             onTriggered: {
@@ -202,7 +202,7 @@ Rectangle {
         }
 
         Common.IconMenuItem {
-            text: "すべて表示"
+            text: qsTr("すべて表示")
             iconName: "eye_line"
             onTriggered: {
                 for (var i = 0; i < headerRoot.layerCount; i++) {
@@ -212,7 +212,7 @@ Rectangle {
         }
 
         Common.IconMenuItem {
-            text: "すべて非表示"
+            text: qsTr("すべて非表示")
             iconName: "eye_off_line"
             onTriggered: {
                 for (var i = 0; i < headerRoot.layerCount; i++) {

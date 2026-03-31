@@ -12,7 +12,7 @@ Common.RinaWindow {
 
     width: 700
     height: 500
-    title: "Rina - プロジェクトランチャー"
+    title: qsTr("Rina - プロジェクトランチャー")
     Component.onCompleted: {
         // 最近使ったプロジェクトをロード
         if (SettingsManager && SettingsManager.settings) {
@@ -54,13 +54,13 @@ Common.RinaWindow {
             spacing: 15
 
             Label {
-                text: "新規プロジェクト"
+                text: qsTr("新規プロジェクト")
                 font.pixelSize: 18
                 font.bold: true
             }
 
             GroupBox {
-                title: "プロジェクト設定"
+                title: qsTr("プロジェクト設定")
                 Layout.fillWidth: true
 
                 GridLayout {
@@ -70,14 +70,14 @@ Common.RinaWindow {
                     anchors.fill: parent
 
                     Label {
-                        text: "テンプレート:"
+                        text: qsTr("テンプレート:")
                     }
 
                     ComboBox {
                         id: templateCombo
 
                         Layout.fillWidth: true
-                        model: ["HD 1080p (1920x1080, 30fps)", "HD 720p (1280x720, 30fps)", "Full HD (1920x1080, 60fps)", "4K UHD (3840x2160, 30fps)", "カスタム"]
+                        model: [qsTr("HD 1080p (1920x1080, 30fps)"), qsTr("HD 720p (1280x720, 30fps)"), qsTr("Full HD (1920x1080, 60fps)"), qsTr("4K UHD (3840x2160, 30fps)"), qsTr("カスタム")]
                         onActivated: (index) => {
                             switch (index) {
                             case 0:
@@ -111,7 +111,7 @@ Common.RinaWindow {
                     }
 
                     Label {
-                        text: "幅 (Width):"
+                        text: qsTr("幅 (横):")
                     }
 
                     TextField {
@@ -127,7 +127,7 @@ Common.RinaWindow {
                     }
 
                     Label {
-                        text: "高さ (Height):"
+                        text: qsTr("高さ (縦):")
                     }
 
                     TextField {
@@ -143,7 +143,7 @@ Common.RinaWindow {
                     }
 
                     Label {
-                        text: "FPS:"
+                        text: qsTr("フレームレート (FPS):")
                     }
 
                     TextField {
@@ -159,7 +159,7 @@ Common.RinaWindow {
                     }
 
                     Label {
-                        text: "サンプリングレート:"
+                        text: qsTr("サンプリングレート:")
                     }
 
                     TextField {
@@ -200,7 +200,7 @@ Common.RinaWindow {
                     }
 
                     Text {
-                        text: "新規プロジェクトを作成"
+                        text: qsTr("新規プロジェクトを作成")
                         color: newProjectBtn.palette.buttonText
                         font: newProjectBtn.font
                     }
@@ -222,7 +222,7 @@ Common.RinaWindow {
             spacing: 15
 
             Label {
-                text: "最近使ったプロジェクト"
+                text: qsTr("最近使ったプロジェクト")
                 font.pixelSize: 18
                 font.bold: true
             }
@@ -251,7 +251,7 @@ Common.RinaWindow {
                             anchors.margins: 5
 
                             Label {
-                                text: model.name || "無題のプロジェクト"
+                                text: model.name || qsTr("無題のプロジェクト")
                                 font.bold: true
                             }
 
@@ -289,7 +289,7 @@ Common.RinaWindow {
                     }
 
                     Text {
-                        text: "既存プロジェクトを開く..."
+                        text: qsTr("既存プロジェクトを開く...")
                         color: openProjectBtn.palette.buttonText
                         font: openProjectBtn.font
                     }
@@ -305,7 +305,7 @@ Common.RinaWindow {
     FileDialog {
         id: fileDialog
 
-        title: "プロジェクトファイルを開く"
+        title: qsTr("プロジェクトファイルを開く")
         nameFilters: ["Rina Project (*.rina)", "All files (*)"]
         onAccepted: {
             var width = 1920;

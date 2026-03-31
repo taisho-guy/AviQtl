@@ -165,7 +165,7 @@ Common.RinaWindow {
 
     width: 350
     height: 500
-    title: "設定ダイアログ"
+    title: qsTr("設定ダイアログ")
     color: palette.window
     visible: true
     x: 500
@@ -584,11 +584,11 @@ Common.RinaWindow {
                                     interpolationType: interpType
                                     paramName: {
                                         var interpLabel = {
-                                            "linear": " (直線)",
-                                            "ease_in": " (加速)",
-                                            "ease_out": " (減速)",
-                                            "ease_in_out": " (加減速)",
-                                            "bezier": " (ベジェ)"
+                                            "linear": qsTr(" (直線)"),
+                                            "ease_in": qsTr(" (加速)"),
+                                            "ease_out": qsTr(" (減速)"),
+                                            "ease_in_out": qsTr(" (加減速)"),
+                                            "bezier": qsTr(" (ベジェ)")
                                         };
                                         var name = (def.label && def.label !== "") ? def.label : key;
                                         return name + (isMoving ? (interpLabel[interpType] || "") : "");
@@ -949,7 +949,7 @@ Common.RinaWindow {
         Menu {
             id: filterMenu
 
-            title: "フィルタ"
+            title: qsTr("フィルタ")
 
             Repeater {
                 model: (TimelineBridge && !TimelineBridge.isAudioClip(targetClipId)) ? TimelineBridge.getAvailableEffects() : []

@@ -46,7 +46,7 @@ Node {
             item = _component.createObject(loader, properties);
         } else if (status === Component.Error) {
             errorString = _component.errorString();
-            Logger.log("[NodeLoader] コンポーネントエラー: " + errorString);
+            Logger.log(qsTr("[NodeLoader] コンポーネントエラー: %1").arg(errorString));
         }
     }
 

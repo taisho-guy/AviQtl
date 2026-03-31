@@ -6,7 +6,7 @@ import "common" as Common
 Common.RinaWindow {
     id: root
 
-    title: "Rinaについて"
+    title: qsTr("Rinaについて")
     width: 420
     height: 260
     minimumWidth: 420
@@ -64,7 +64,7 @@ Common.RinaWindow {
 
         Label {
             Layout.fillWidth: true
-            text: "Rina is not AviUtl.\n\nこのソフトウェアはGNU Affero General Public License Version 3に基づいて公開されています。"
+            text: qsTr("Rina は AviUtl ではありません。\n\nこのソフトウェアは GNU Affero General Public License Version 3 に基づいて公開されています。")
             wrapMode: Text.WordWrap
             font.pixelSize: 13
             color: palette.text

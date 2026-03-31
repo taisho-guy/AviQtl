@@ -336,7 +336,7 @@ ApplicationWindow {
         TimelineBridge.setKeyframe(clipId, effectIndex, paramName, keyframeFrame, kf.value, options);
     }
 
-    title: "補間設定: " + paramName
+    title: qsTr("補間設定: %1").arg(paramName)
     width: 820
     height: 540
     onSelectedTypeChanged: {
@@ -373,7 +373,7 @@ ApplicationWindow {
                     spacing: 6
 
                     Label {
-                        text: "プレビュー"
+                        text: qsTr("プレビュー")
                         font.bold: true
                         color: palette.text
                     }
@@ -383,7 +383,7 @@ ApplicationWindow {
                     }
 
                     Label {
-                        text: "ズーム:"
+                        text: qsTr("ズーム:")
                         font.pixelSize: 11
                         color: palette.mid
                     }
@@ -646,7 +646,7 @@ ApplicationWindow {
                         anchors.right: parent.right
                         anchors.bottom: parent.bottom
                         anchors.margins: 4
-                        text: "右ドラッグ:パン  ホイール:ズーム" + (root.selectedType === "custom" ? "  左ドラッグ:ハンドル" : "")
+                        text: qsTr("右ドラッグ:パン  ホイール:ズーム") + (root.selectedType === "custom" ? qsTr("  左ドラッグ:ハンドル") : "")
                         font.pixelSize: 9
                         color: "#555"
                     }
@@ -655,7 +655,7 @@ ApplicationWindow {
 
                 // custom モード専用: 制御点テキスト入力
                 GroupBox {
-                    title: "制御点"
+                    title: qsTr("制御点")
                     enabled: root.selectedType === "custom"
                     opacity: root.selectedType === "custom" ? 1 : 0.35
                     Layout.fillWidth: true
@@ -739,40 +739,40 @@ ApplicationWindow {
                 property string filterText: ""
                 // イージングカテゴリ定義
                 property var categories: [{
-                    "name": "Linear",
+                    "name": qsTr("直線"),
                     "items": ["linear"]
                 }, {
-                    "name": "Sine",
+                    "name": qsTr("サイン"),
                     "items": ["ease_in_sine", "ease_out_sine", "ease_in_out_sine", "ease_out_in_sine"]
                 }, {
-                    "name": "Quad",
+                    "name": qsTr("2次"),
                     "items": ["ease_in_quad", "ease_out_quad", "ease_in_out_quad", "ease_out_in_quad"]
                 }, {
-                    "name": "Cubic",
+                    "name": qsTr("3次"),
                     "items": ["ease_in_cubic", "ease_out_cubic", "ease_in_out_cubic", "ease_out_in_cubic"]
                 }, {
-                    "name": "Quart",
+                    "name": qsTr("4次"),
                     "items": ["ease_in_quart", "ease_out_quart", "ease_in_out_quart", "ease_out_in_quart"]
                 }, {
-                    "name": "Quint",
+                    "name": qsTr("5次"),
                     "items": ["ease_in_quint", "ease_out_quint", "ease_in_out_quint", "ease_out_in_quint"]
                 }, {
-                    "name": "Expo",
+                    "name": qsTr("指数"),
                     "items": ["ease_in_expo", "ease_out_expo", "ease_in_out_expo", "ease_out_in_expo"]
                 }, {
-                    "name": "Circ",
+                    "name": qsTr("円"),
                     "items": ["ease_in_circ", "ease_out_circ", "ease_in_out_circ", "ease_out_in_circ"]
                 }, {
-                    "name": "Back",
+                    "name": qsTr("戻る"),
                     "items": ["ease_in_back", "ease_out_back", "ease_in_out_back", "ease_out_in_back"]
                 }, {
-                    "name": "Elastic",
+                    "name": qsTr("弾性"),
                     "items": ["ease_in_elastic", "ease_out_elastic", "ease_in_out_elastic", "ease_out_in_elastic"]
                 }, {
-                    "name": "Bounce",
+                    "name": qsTr("跳ね返り"),
                     "items": ["ease_in_bounce", "ease_out_bounce", "ease_in_out_bounce", "ease_out_in_bounce"]
                 }, {
-                    "name": "カスタム",
+                    "name": qsTr("カスタム"),
                     "items": ["custom"]
                 }]
 
@@ -783,7 +783,7 @@ ApplicationWindow {
 
                 RowLayout {
                     Label {
-                        text: "種類"
+                        text: qsTr("種類")
                         font.bold: true
                         color: palette.text
                     }
@@ -796,7 +796,7 @@ ApplicationWindow {
                     TextField {
                         id: searchField
 
-                        placeholderText: "検索..."
+                        placeholderText: qsTr("検索...")
                         implicitWidth: 110
                         font.pixelSize: 11
                         selectByMouse: true
@@ -1101,22 +1101,22 @@ ApplicationWindow {
                                                 Label {
                                                     text: {
                                                         if (easingName === "linear")
-                                                            return "Linear";
+                                                            return qsTr("直線");
 
                                                         if (easingName === "custom")
-                                                            return "Custom";
+                                                            return qsTr("カスタム");
 
                                                         if (easingName.indexOf("_in_out_") !== -1)
-                                                            return "In-Out";
+                                                            return qsTr("加減速");
 
                                                         if (easingName.indexOf("_out_in_") !== -1)
-                                                            return "Out-In";
+                                                            return qsTr("減加速");
 
                                                         if (easingName.indexOf("_in_") !== -1)
-                                                            return "In";
+                                                            return qsTr("加速");
 
                                                         if (easingName.indexOf("_out_") !== -1)
-                                                            return "Out";
+                                                            return qsTr("減速");
 
                                                         return easingName;
                                                     }
@@ -1163,7 +1163,7 @@ ApplicationWindow {
             spacing: 8
 
             Label {
-                text: "補間方法:"
+                text: qsTr("補間方法:")
                 font.pixelSize: 12
             }
 
@@ -1175,19 +1175,19 @@ ApplicationWindow {
                 textRole: "text"
                 valueRole: "value"
                 model: [{
-                    "text": "瞬間移動",
+                    "text": qsTr("瞬間移動"),
                     "value": "none"
                 }, {
-                    "text": "直線移動",
+                    "text": qsTr("直線移動"),
                     "value": "linear"
                 }, {
-                    "text": "曲線移動",
+                    "text": qsTr("曲線移動"),
                     "value": "custom"
                 }, {
-                    "text": "ランダム移動",
+                    "text": qsTr("ランダム移動"),
                     "value": "random"
                 }, {
-                    "text": "反復移動",
+                    "text": qsTr("反復移動"),
                     "value": "alternate"
                 }]
                 currentIndex: {
@@ -1210,7 +1210,7 @@ ApplicationWindow {
                 spacing: 4
 
                 Label {
-                    text: "更新間隔:"
+                    text: qsTr("更新間隔:")
                     font.pixelSize: 12
                 }
 
@@ -1223,7 +1223,7 @@ ApplicationWindow {
                 }
 
                 Label {
-                    text: "フレーム"
+                    text: qsTr("フレーム")
                     font.pixelSize: 12
                 }
 

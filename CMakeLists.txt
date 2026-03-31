@@ -51,7 +51,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     list(APPEND EXTRA_QT_COMPONENTS WaylandClient)
 endif()
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick QuickControls2 Quick3D Widgets Core5Compat Sql Svg Multimedia Concurrent ShaderTools ${EXTRA_QT_COMPONENTS})
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick QuickControls2 Quick3D Widgets Core5Compat Sql Svg Multimedia Concurrent ShaderTools LinguistTools ${EXTRA_QT_COMPONENTS})
 find_package(Vulkan REQUIRED)
 find_package(ECM REQUIRED NO_MODULE)
 list(APPEND CMAKE_MODULE_PATH ${ECM_MODULE_PATH})
@@ -89,6 +89,12 @@ file(GLOB_RECURSE CPP_SOURCES
     "scripting/*.hpp"
 )
 
+# QML/JSファイルの収集 (lupdateのスキャン対象にするため)
+file(GLOB_RECURSE QML_SOURCES 
+    "ui/qml/*.qml"
+    "ui/qml/*.js"
+)
+
 # 共通シェーダーライブラリ (依存関係用)
 file(GLOB_RECURSE COMMON_SHADERS "ui/qml/common/shaders/*.glsl")
 
@@ -115,6 +121,7 @@ qt_add_executable(Rina
     core/src/video_encoder.cpp
     scripting/mod_engine.cpp
     ${COMMON_SHADERS}
+    ${QML_SOURCES}
 )
 
 if(APPLE)
@@ -174,6 +181,13 @@ qt_add_qml_module(Rina
     RESOURCES
         ui/resources.qrc
 )
+
+file(GLOB RINA_TS_FILES "i18n/Rina_*.ts")
+
+qt_add_translations(Rina
+    TS_FILES ${RINA_TS_FILES}
+)
+add_dependencies(Rina Rina_lupdate)
 
 # リンク設定
 target_link_libraries(

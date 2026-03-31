@@ -26,7 +26,7 @@ Common.RinaWindow {
         return state ? state.visible : true;
     }
 
-    title: "Timeline"
+    title: qsTr("タイムライン")
     width: 1280
     height: 300
 
@@ -126,7 +126,7 @@ Common.RinaWindow {
                 flat: true
                 Layout.preferredWidth: 40
                 Layout.fillHeight: true
-                onClicked: TimelineBridge.createScene("Scene " + (sceneRepeater.count + 1))
+                onClicked: TimelineBridge.createScene(qsTr("シーン %1").arg(sceneRepeater.count + 1))
 
                 contentItem: Common.RinaIcon {
                     iconName: "add_line"

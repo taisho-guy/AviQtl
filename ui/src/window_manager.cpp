@@ -46,15 +46,15 @@ void WindowManager::onProjectSelected(const QString &path, int w, int h, double 
     }
 
     // プロジェクト設定を反映してメインウィンドウを開く
-    spawnWindow(m_engine, "main", "qrc:/qt/qml/Rina/ui/qml/MainWindow.qml", "Rina Main Preview", 640, 480, 100, 100, true);
-    spawnWindow(m_engine, "timeline", "qrc:/qt/qml/Rina/ui/qml/TimelineWindow.qml", "Timeline", 1280, 300, 100, 600, true);
-    spawnWindow(m_engine, "projectSettings", "qrc:/qt/qml/Rina/ui/qml/ProjectSettingsWindow.qml", "Project Settings", 450, 250, 800, 100, false);
-    spawnWindow(m_engine, "objectSettings", "qrc:/qt/qml/Rina/ui/qml/SettingDialog.qml", "Object Settings", 400, 600, 800, 420, false);
-    spawnWindow(m_engine, "systemSettings", "qrc:/qt/qml/Rina/ui/qml/SystemSettingsWindow.qml", "System Settings", 600, 500, 200, 200, false);
-    spawnWindow(m_engine, "about", "qrc:/qt/qml/Rina/ui/qml/AboutWindow.qml", "Rinaについて", 400, 250, 400, 300, false);
-    spawnWindow(m_engine, "sceneSettings", "qrc:/qt/qml/Rina/ui/qml/SceneSettingsWindow.qml", "Scene Settings", 450, 300, 300, 200, false);
-    spawnWindow(m_engine, "export", "qrc:/qt/qml/Rina/ui/qml/ExportDialog.qml", "メディアの書き出し", 620, 580, 240, 160, false);
-    spawnWindow(m_engine, "easingConfig", "qrc:/qt/qml/Rina/ui/qml/common/EasingConfigWindow.qml", "イージング設定", 820, 540, 420, 180, false);
+    spawnWindow(m_engine, "main", "qrc:/qt/qml/Rina/ui/qml/MainWindow.qml", tr("Rina メインプレビュー"), 640, 480, 100, 100, true);
+    spawnWindow(m_engine, "timeline", "qrc:/qt/qml/Rina/ui/qml/TimelineWindow.qml", tr("タイムライン"), 1280, 300, 100, 600, true);
+    spawnWindow(m_engine, "projectSettings", "qrc:/qt/qml/Rina/ui/qml/ProjectSettingsWindow.qml", tr("プロジェクト設定"), 450, 250, 800, 100, false);
+    spawnWindow(m_engine, "objectSettings", "qrc:/qt/qml/Rina/ui/qml/SettingDialog.qml", tr("オブジェクト設定"), 400, 600, 800, 420, false);
+    spawnWindow(m_engine, "systemSettings", "qrc:/qt/qml/Rina/ui/qml/SystemSettingsWindow.qml", tr("システム設定"), 600, 500, 200, 200, false);
+    spawnWindow(m_engine, "about", "qrc:/qt/qml/Rina/ui/qml/AboutWindow.qml", tr("Rinaについて"), 400, 250, 400, 300, false);
+    spawnWindow(m_engine, "sceneSettings", "qrc:/qt/qml/Rina/ui/qml/SceneSettingsWindow.qml", tr("シーン設定"), 450, 300, 300, 200, false);
+    spawnWindow(m_engine, "export", "qrc:/qt/qml/Rina/ui/qml/ExportDialog.qml", tr("メディアの書き出し"), 620, 580, 240, 160, false);
+    spawnWindow(m_engine, "easingConfig", "qrc:/qt/qml/Rina/ui/qml/common/EasingConfigWindow.qml", tr("補間設定"), 820, 540, 420, 180, false);
 
     // 設定の反映
     QObject *bridge = m_engine->rootContext()->contextProperty("TimelineBridge").value<QObject *>();
