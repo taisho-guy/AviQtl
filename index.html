@@ -15,6 +15,10 @@
     <meta property="og:url" content="https://rina.taisho-guy.org">
     <meta property="og:image" content="https://rina.taisho-guy.org/assets/icon.svg">
 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Outfit:wght@400;700&family=Roboto+Condensed:wght@400;700&display=swap" rel="stylesheet">
+
     <link rel="icon" href="./assets/icon.svg" type="image/svg+xml">
 
     <script type="application/ld+json">
@@ -36,7 +40,8 @@
         body {
             background-color: #0d0b14;
             color: #e0d7f0;
-            font-family: "MS PGothic", "Hiragino Kaku Gothic ProN", sans-serif;
+            font-family: 'Outfit', 'Noto Sans JP', sans-serif;
+            font-weight: 400;
             line-height: 1.6;
             margin: 0;
             padding: 20px;
@@ -57,7 +62,7 @@
 
         hr {
             border: 0;
-            border-top: 2px solid #3d2d52;
+            border-top: 2px solid #5b467a;
             margin: 20px 0;
         }
 
@@ -76,22 +81,22 @@
 
         table {
             width: 100%;
-            border: 2px solid #3d2d52;
+            border: 2px solid #5b467a;
             border-collapse: separate;
             border-spacing: 2px;
-            background-color: #16121f;
+            background-color: #0d0b14;
             margin: 15px 0;
         }
         th {
-            background-color: #251b3d;
+            background-color: #1a1429;
             color: #ff7597;
             padding: 8px;
-            border: 1px solid #3d2d52;
+            border: 1px solid #5b467a;
         }
         td {
             padding: 8px;
-            border: 1px solid #3d2d52;
-            background-color: #16121f;
+            border: 1px solid #5b467a;
+            background-color: #0d0b14;
             vertical-align: top;
         }
         #download-table td {
@@ -101,50 +106,33 @@
         .alert {
             margin: 20px 0;
             padding: 2px;
-            border: 2px solid #3d2d52;
-            background-color: #16121f;
+            border: 2px solid #5b467a;
+            background-color: #0d0b14;
         }
         .alert-title {
             font-weight: bold;
             padding: 8px 15px;
-            background-color: #251b3d;
-            color: #ff2e63;
-            border: 1px solid #3d2d52;
+            background-color: #1a1429;
+            color: #ff7597;
+            border: 1px solid #5b467a;
             margin-bottom: 2px;
         }
         .alert ul, .alert ol { 
             padding: 10px 15px 15px 40px; 
             margin: 0; 
-            border: 1px solid #3d2d52;
-            background-color: #16121f;
+            border: 1px solid #5b467a;
+            background-color: #0d0b14;
         }
 
-        .alert-important { border-color: #ff2e63; }
-        .alert-important .alert-title { background-color: #ff2e63; color: #0d0b14; border-color: #ff2e63; }
-        .alert-important ul, .alert-important ol { border-color: #ff2e63; }
-
-        .alert-warning { border-color: #ff2e63; }
-        .alert-warning .alert-title { background-color: #251b3d; color: #ff2e63; border-color: #ff2e63; }
-        .alert-warning ul, .alert-warning ol { border-color: #ff2e63; background-color: #16121f; }
-        .alert-warning a { font-weight: bold; }
-
-        .alert-note { border-color: #8a2be2; }
-        .alert-note .alert-title { background-color: #251b3d; color: #b388ff; border-color: #8a2be2; }
-        .alert-note ul, .alert-note ol { border-color: #8a2be2; }
-
-        .alert-tip { border-color: #ff2e63; }
-        .alert-tip .alert-title { border-color: #ff2e63; color: #ff2e63; }
-        .alert-tip ul, .alert-tip ol { border-color: #ff2e63; background-color: #16121f; }
-
         details {
-            background-color: #16121f;
-            border: 2px solid #3d2d52;
+            background-color: #0d0b14;
+            border: 2px solid #5b467a;
             margin: 10px 0;
             padding: 2px;
         }
         summary {
-            background-color: #251b3d;
-            border: 1px solid #3d2d52;
+            background-color: #1a1429;
+            border: 1px solid #5b467a;
             padding: 10px;
             cursor: pointer;
             font-weight: bold;
@@ -152,8 +140,8 @@
         }
         details[open] summary { margin-bottom: 2px; }
         details > p, details > h3, details > h4, details > ul, details > ol {
-            background-color: #16121f;
-            border: 1px solid #3d2d52;
+            background-color: #0d0b14;
+            border: 1px solid #5b467a;
             padding: 10px;
             margin: 0 0 2px 0;
         }
@@ -164,14 +152,14 @@
         details[open] summary + table, details[open] summary + p { margin-top: 0; }
         details table { 
             margin: 0 0 2px 0; 
-            border: 1px solid #3d2d52;
+            border: 1px solid #5b467a;
             border-spacing: 2px;
         }
-        details th, details td { border: 1px solid #3d2d52; }
+        details th, details td { border: 1px solid #5b467a; }
 
         .footer-info { font-size: 0.8em; margin-top: 20px; }
         
-        code { background: linear-gradient(transparent 70%, rgba(255, 46, 99, 0.3) 70%); font-family: monospace; color: #ff7597; padding: 0 2px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+        code { background: linear-gradient(transparent 70%, rgba(255, 46, 99, 0.3) 70%); font-family: 'Roboto Condensed', monospace; color: #ff7597; padding: 0 2px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
         code:hover { background: linear-gradient(transparent 40%, rgba(255, 46, 99, 0.4) 40%); }
         code:active { background: rgba(255, 46, 99, 0.5); }
 
@@ -291,10 +279,10 @@
         </ol>
     </div>
 
-    <div class="download-scroll-container" style="max-height: 350px; overflow-y: auto; border: 2px solid #3d2d52; background-color: #16121f; margin: 15px 0;">
+    <div class="download-scroll-container" style="max-height: 350px; overflow-y: auto; border: 2px solid #5b467a; background-color: #16121f; margin: 15px 0;">
         <table id="download-table" style="width: 100%; border: none; margin: 0;">
             <thead>
-                <tr style="background-color: #251b3d;">
+                <tr style="background-color: #1a1429;">
                     <th style="width: 10%;">タグ</th>
                     <th style="width: 15%;">更新内容</th>
                     <th style="width: 30%;">ビルド</th>
@@ -382,7 +370,7 @@
         <summary>なぜAviUtlのクローンを開発しているのですか？</summary>
         <p>Rinaは「AviUtlの再発明」ではありません。AviUtlを強く意識していますが、その中身は全く異なります。</p>
         <table>
-            <tr style="background-color: #251b3d;">
+            <tr style="background-color: #1a1429;">
                 <th>鳥瞰図</th><th>Rina</th><th>AviUtl1</th><th>ExEdit2</th>
             </tr>
             <tr>
