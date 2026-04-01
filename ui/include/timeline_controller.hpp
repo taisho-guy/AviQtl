@@ -165,6 +165,7 @@ class TimelineController : public QObject {
     Q_INVOKABLE QVariantMap getSceneInfo(int sceneId) const;
     Q_INVOKABLE int getSceneDuration(int sceneId) const;
     Q_INVOKABLE void requestVideoFrame(int clipId, int relFrame);
+    Q_INVOKABLE void requestImageLoad(int clipId, const QString &path);
 
     Q_INVOKABLE void updateViewport(double x, double y);
     Q_INVOKABLE QPoint resolveDragPosition(int clipId, int targetLayer, int proposedStartFrame, const QVariantList &batchIds = QVariantList());
@@ -215,6 +216,7 @@ class TimelineController : public QObject {
 
   signals:
     void videoFrameRequested(int clipId, int relFrame);
+    void imageLoadRequested(int clipId, const QString &path);
     void timelineScaleChanged();
     void clipStartFrameChanged();
     void clipDurationFramesChanged();

@@ -5,7 +5,6 @@
     "qml": "ImageObject.qml",
     "params": {
         "path": "",
-        "smooth": true,
         "opacity": 1.0
     },
     "ui": {
@@ -15,12 +14,7 @@
                 "type": "path",
                 "param": "path",
                 "label": "ファイルパス",
-                "filter": "画像ファイル (*.png *.jpg *.jpeg *.bmp *.svg)"
-            },
-            {
-                "type": "bool",
-                "param": "smooth",
-                "label": "スムーズ描画"
+                "filter": "画像ファイル (*.png *.jpg *.jpeg *.bmp *.gif *.tiff *.webp)"
             },
             {
                 "type": "slider",

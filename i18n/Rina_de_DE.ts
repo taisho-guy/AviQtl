@@ -1060,7 +1060,7 @@
 <context>
     <name>Rina::UI::TimelineController</name>
     <message>
-        <location filename="../ui/src/timeline_controller.cpp" line="421"/>
+        <location filename="../ui/src/timeline_controller.cpp" line="425"/>
         <source>保存先のファイルパスが不明です</source>
         <translation type="unfinished"></translation>
     </message>

@@ -1,5 +1,6 @@
 #include "timeline_media_manager.hpp"
 #include "../../core/include/audio_decoder.hpp"
+#include "../../core/include/image_decoder.hpp"
 #include "../../core/include/media_decoder.hpp"
 #include "../../core/include/video_decoder.hpp"
 #include "../../core/include/video_frame_store.hpp"
@@ -43,6 +44,10 @@ void TimelineMediaManager::onCurrentFrameChanged() {
 
         if (auto *vid = qobject_cast<Rina::Core::VideoDecoder *>(it.value())) {
             updateVideoClipFrame(vid, clip, nextFrame - clip->startFrame);
+        }
+
+        if (auto *img = qobject_cast<Rina::Core::ImageDecoder *>(it.value())) {
+            img->seek(0); // 描画を強制
         }
 
         if (auto *aud = qobject_cast<Rina::Core::AudioDecoder *>(it.value())) {
@@ -102,7 +107,8 @@ QUrl TimelineMediaManager::getClipSourceUrl(const ClipData &clip) const {
     }
     if (!effModel)
         return QUrl();
-    QString path = effModel->params().value(clip.type == "video" ? "path" : "source").toString();
+    // 音声以外は通常 "path" パラメータにファイルパスが入っている
+    QString path = effModel->params().value(clip.type == "audio" ? "source" : "path").toString();
     return QUrl::fromLocalFile(path);
 }
 
@@ -114,7 +120,7 @@ void TimelineMediaManager::updateMediaDecoders() {
 
     for (const auto &scene : scenes) {
         for (const auto &clip : scene.clips) {
-            if (clip.type != "video" && clip.type != "audio")
+            if (clip.type != "video" && clip.type != "audio" && clip.type != "image")
                 continue;
 
             currentClipIds.insert(clip.id);
@@ -135,7 +141,7 @@ void TimelineMediaManager::updateMediaDecoders() {
             if (m_decoders.contains(clip.id)) {
                 Rina::Core::MediaDecoder *existingDecoder = m_decoders[clip.id];
                 // If the source has changed, we must recreate the decoder
-                if (existingDecoder->property("sourceUrl").toUrl() != sourceUrl) {
+                if (existingDecoder->source() != sourceUrl) {
                     if (qobject_cast<Rina::Core::AudioDecoder *>(existingDecoder))
                         m_audioMixer->unregisterDecoder(clip.id);
                     if (existingDecoder)
@@ -151,6 +157,10 @@ void TimelineMediaManager::updateMediaDecoders() {
                 if (!m_videoFrameStore)
                     continue;
                 decoder = new Rina::Core::VideoDecoder(clip.id, sourceUrl, m_videoFrameStore, this);
+            } else if (clip.type == "image") {
+                if (!m_videoFrameStore)
+                    continue;
+                decoder = new Rina::Core::ImageDecoder(clip.id, sourceUrl, m_videoFrameStore, this);
             } else if (clip.type == "audio") {
                 decoder = new Rina::Core::AudioDecoder(clip.id, sourceUrl, this);
                 if (auto *audioDecoder = qobject_cast<Rina::Core::AudioDecoder *>(decoder))
@@ -158,10 +168,12 @@ void TimelineMediaManager::updateMediaDecoders() {
             }
 
             if (decoder) {
-                decoder->setProperty("sourceUrl", sourceUrl);
                 m_decoders.insert(clip.id, decoder);
+                int cid = clip.id;
+                // 画像や動画のデコード準備ができたらUIへ通知する
+                connect(decoder, &Rina::Core::MediaDecoder::ready, this, [this, cid]() { emit frameUpdated(cid); });
+
                 if (auto *vid = qobject_cast<Rina::Core::VideoDecoder *>(decoder)) {
-                    int cid = clip.id;
                     connect(decoder, &Rina::Core::MediaDecoder::frameReady, this, [this, cid](int) { emit frameUpdated(cid); });
                     // 動画メタ情報が揃った時点でクリップの最大長をクランプする
                     connect(vid, &Rina::Core::VideoDecoder::videoMetaReady, this, [this, cid](int totalFrameCount, double sourceFps) {
@@ -207,7 +219,8 @@ void TimelineMediaManager::updateMediaDecoders() {
             if (qobject_cast<Rina::Core::AudioDecoder *>(it.value()))
                 m_audioMixer->unregisterDecoder(it.key());
             if (m_videoFrameStore) {
-                m_videoFrameStore->invalidateFrame(QString::number(clipToScene.value(it.key(), -1)) + "_" + QString::number(it.key()));
+                // キー形式を ImageDecoder 等と統一 (clipId のみを使用)
+                m_videoFrameStore->invalidateFrame(QString::number(it.key()));
             }
             if (it.value())
                 it.value()->deleteLater();
@@ -289,6 +302,24 @@ void TimelineMediaManager::requestVideoFrame(int clipId, int relFrame) {
         return;
 
     updateVideoClipFrame(vid, targetClip, relFrame);
+}
+
+void TimelineMediaManager::requestImageLoad(int clipId, const QString &path) {
+    if (!m_videoFrameStore || path.isEmpty() || clipId <= 0)
+        return;
+
+    const QUrl url = QUrl::fromLocalFile(path);
+
+    if (m_imageDecoders.contains(clipId)) {
+        auto existing = m_imageDecoders.value(clipId);
+        if (existing && existing->source() == url)
+            return;
+    }
+
+    auto *decoder = new Rina::Core::ImageDecoder(clipId, url, m_videoFrameStore, this);
+    connect(decoder, &Rina::Core::MediaDecoder::ready, this, [this, clipId]() { emit frameUpdated(clipId); });
+    m_imageDecoders.insert(clipId, decoder);
+    decoder->load();
 }
 
 } // namespace Rina::UI

@@ -114,6 +114,7 @@ qt_add_executable(Rina
     core/src/video_frame_store.cpp
     core/src/video_frame_provider.cpp
     core/src/video_decoder.cpp
+    core/src/image_decoder.cpp
     core/src/audio_decoder.cpp
     engine/audio_mixer.cpp
     core/src/media_decoder.cpp

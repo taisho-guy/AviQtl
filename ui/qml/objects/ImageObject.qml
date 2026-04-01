@@ -1,3 +1,4 @@
+import QtMultimedia
 import QtQuick
 import QtQuick3D
 import "qrc:/qt/qml/Rina/ui/qml/common" as Common
@@ -6,14 +7,33 @@ Common.BaseObject {
     id: base
 
     property string imagePath: String(evalParam("image", "path", ""))
-    property int fillMode: Number(evalParam("image", "fillMode", Image.PreserveAspectFit))
-    property bool smooth: evalParam("image", "smooth", true)
+    property int fillMode: Number(evalParam("image", "fillMode", VideoOutput.PreserveAspectFit))
     property real imageOpacity: Number(evalParam("image", "opacity", 1))
+    property int updateCounter: 0
+    property string instanceKey: String(base.clipId)
 
-    // 【修正】sourceItemをコンテナItemに差し替え、idの曖昧さを排除
     sourceItem: containerItem
+    onImagePathChanged: {
+        if (TimelineBridge && typeof TimelineBridge.requestImageLoad === "function" && base.clipId > 0)
+            TimelineBridge.requestImageLoad(base.clipId, base.imagePath);
 
-    // 3Dシーンへのマッピング定義
+    }
+    Component.onCompleted: {
+        if (TimelineBridge && typeof TimelineBridge.requestImageLoad === "function" && base.clipId > 0)
+            TimelineBridge.requestImageLoad(base.clipId, base.imagePath);
+
+    }
+
+    Connections {
+        function onFrameUpdated(key) {
+            if (key === base.instanceKey)
+                base.updateCounter++;
+
+        }
+
+        target: videoFrameStore
+    }
+
     Model {
         source: "#Rectangle"
         scale: Qt.vector3d((renderer.output.sourceItem ? renderer.output.sourceItem.width : base.sourceItem.width) / 100, (renderer.output.sourceItem ? renderer.output.sourceItem.height : base.sourceItem.height) / 100, 1)
@@ -32,34 +52,47 @@ Common.BaseObject {
 
     }
 
-    // パディング確保用のコンテナItem（不可視・テクスチャソース用）
     Item {
         id: containerItem
 
-        // ぼかし半径の2倍（両側分）以上の余白を確保
-        // base.padding が変更されたら即座に再計算されるようにBinding
         readonly property real pad: base.padding * 2
 
-        width: imageSource.width + pad
-        height: imageSource.height + pad
-        visible: false // BaseObjectにより制御されるが、明示的にfalse
+        width: (TimelineBridge && TimelineBridge.project ? TimelineBridge.project.width : 1920) + pad
+        height: (TimelineBridge && TimelineBridge.project ? TimelineBridge.project.height : 1080) + pad
+        visible: false
 
-        Image {
-            id: imageSource
+        VideoOutput {
+            id: videoOut
 
             anchors.centerIn: parent
-            source: base.imagePath
-            fillMode: base.fillMode
-            smooth: base.smooth
-            opacity: base.imageOpacity
-            // プロジェクト解像度に合わせて表示
             width: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.width : 1920
             height: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.height : 1080
-            onStatusChanged: {
-                if (status === Image.Error)
-                    console.error("[ImageObject] 画像読み込みエラー:", source);
+            fillMode: base.fillMode
+            opacity: base.imageOpacity
+            layer.enabled: true
+            layer.format: ShaderEffectSource.RGBA
+            Component.onCompleted: {
+                if (base.clipId > 0 && typeof videoFrameStore !== "undefined")
+                    videoFrameStore.registerSink(base.instanceKey, videoOut.videoSink);
 
             }
+
+            Connections {
+                function onClipIdChanged() {
+                    if (base.clipId > 0 && typeof videoFrameStore !== "undefined")
+                        videoFrameStore.registerSink(base.instanceKey, videoOut.videoSink);
+
+                }
+
+                function onInstanceKeyChanged() {
+                    if (base.clipId > 0 && typeof videoFrameStore !== "undefined")
+                        videoFrameStore.registerSink(base.instanceKey, videoOut.videoSink);
+
+                }
+
+                target: base
+            }
+
         }
 
     }

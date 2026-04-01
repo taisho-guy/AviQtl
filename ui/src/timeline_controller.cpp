@@ -78,6 +78,9 @@ void TimelineController::setupConnections() {
         updateActiveClipsList();
     });
 
+    // 画像や動画の準備ができたらUI側に再描画を促す
+    connect(m_mediaManager, &TimelineMediaManager::frameUpdated, this, &TimelineController::clipEffectsChanged);
+
     connect(m_exportManager, &TimelineExportManager::exportStarted, this, &TimelineController::exportStarted);
     connect(m_exportManager, &TimelineExportManager::exportProgressChanged, this, &TimelineController::exportProgressChanged);
     connect(m_exportManager, &TimelineExportManager::exportFinished, this, &TimelineController::exportFinished);
@@ -94,6 +97,7 @@ void TimelineController::setupConnections() {
 
     // QML(VideoObject)からのフレーム要求をMediaManagerへ中継
     connect(this, &TimelineController::videoFrameRequested, m_mediaManager, &TimelineMediaManager::requestVideoFrame);
+    connect(this, &TimelineController::imageLoadRequested, m_mediaManager, &TimelineMediaManager::requestImageLoad);
 }
 
 void TimelineController::onPlayingChanged() { m_mediaManager->onPlayingChanged(); }
@@ -883,4 +887,7 @@ void TimelineController::requestVideoFrame(int clipId, int relFrame) {
     // ここでは一番手っ取り早い「シグナル」を追加してMediaManagerに拾わせる。
     emit videoFrameRequested(clipId, relFrame);
 }
+
+void TimelineController::requestImageLoad(int clipId, const QString &path) { emit imageLoadRequested(clipId, path); }
+
 } // namespace Rina::UI

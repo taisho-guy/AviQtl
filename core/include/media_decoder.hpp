@@ -24,6 +24,7 @@ class MediaDecoder : public QObject {
 
     bool isReady() const { return m_isReady; }
     int clipId() const { return m_clipId; }
+    QUrl source() const { return m_source; }
 
   signals:
     void ready();
