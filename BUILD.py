@@ -289,16 +289,14 @@ class BuildWorker(QtCore.QThread):
                 shutil.copytree(plugins_src, plugins_dest, dirs_exist_ok=True)
 
             # i18n (国際化ファイル - 言語拡張)
-            i18n_src = self.source_dir / "i18n"
             i18n_dest = self.output_dir / "i18n"
-            if i18n_src.exists():
-                shutil.copytree(i18n_src, i18n_dest, dirs_exist_ok=True)
             
             # CMake (LinguistTools) によって生成された .qm ファイルを収集
-            i18n_gen_src = work_dir / "i18n"
-            if i18n_gen_src.exists():
-                i18n_dest.mkdir(parents=True, exist_ok=True)
-                for qm_file in i18n_gen_src.glob("*.qm"):
+            # ビルドディレクトリ内を再帰的に探索して .qm ファイルだけを拾う
+            i18n_dest.mkdir(parents=True, exist_ok=True)
+            for qm_file in work_dir.rglob("*.qm"):
+                # CMake内部のパス（CMakeFiles等）に含まれるものは除外
+                if "CMakeFiles" not in qm_file.parts:
                     shutil.copy2(qm_file, i18n_dest / qm_file.name)
 
             # Windows固有のデプロイ処理 (windeployqtなど)

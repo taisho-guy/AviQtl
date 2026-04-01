@@ -1022,6 +1022,21 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location filename="../ui/src/timeline_service.cpp" line="394"/>
+        <source>複数クリップ絶対移動: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/src/timeline_service.cpp" line="445"/>
+        <source>複数クリップ移動: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/src/timeline_service.cpp" line="499"/>
+        <source>複数クリップ変形: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location filename="../ui/src/timeline_service.cpp" line="835"/>
         <source>クリップ削除</source>
         <translation type="unfinished"></translation>
@@ -1065,24 +1080,6 @@
     <message>
         <location filename="../ui/src/timeline_export_manager.cpp" line="145"/>
         <source>書き出し完了</source>
-        <translation type="unfinished"></translation>
-    </message>
-</context>
-<context>
-    <name>Rina::UI::TimelineService</name>
-    <message>
-        <location filename="../ui/src/timeline_service.cpp" line="394"/>
-        <source>複数クリップ絶対移動: %1</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/src/timeline_service.cpp" line="445"/>
-        <source>複数クリップ移動: %1</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/src/timeline_service.cpp" line="499"/>
-        <source>複数クリップ変形: %1</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

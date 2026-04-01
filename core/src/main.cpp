@@ -58,6 +58,7 @@ int main(int argc, char *argv[]) {
     for (const QString &locale : uiLanguages) {
         const QString baseName = "Rina_" + QLocale(locale).name();
         if (translator.load(baseName, appDir + "/i18n")) {
+            qDebug() << "[Main] 翻訳ファイルをロードしました:" << baseName;
             app.installTranslator(&translator);
             break;
         }

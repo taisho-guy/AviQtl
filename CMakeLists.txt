@@ -182,12 +182,15 @@ qt_add_qml_module(Rina
         ui/resources.qrc
 )
 
-file(GLOB RINA_TS_FILES "i18n/Rina_*.ts")
+file(GLOB RINA_TS_FILES "${CMAKE_CURRENT_SOURCE_DIR}/i18n/Rina_*.ts")
 
-qt_add_translations(Rina
-    TS_FILES ${RINA_TS_FILES}
-)
-add_dependencies(Rina Rina_lupdate)
+if(RINA_TS_FILES)
+    qt_add_translations(Rina
+        TS_FILES ${RINA_TS_FILES}
+    )
+    # ビルド時に抽出(lupdate)とバイナリ変換(lrelease)を両方実行させる
+    add_dependencies(Rina Rina_lupdate Rina_lrelease)
+endif()
 
 # リンク設定
 target_link_libraries(

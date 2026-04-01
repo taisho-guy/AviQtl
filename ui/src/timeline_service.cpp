@@ -391,7 +391,7 @@ void TimelineService::applyClipBatchMove(const QVariantList &moves) {
         loopCount++;
     }
 
-    m_undoStack->beginMacro(tr("複数クリップ絶対移動: %1").arg(pending.size()));
+    m_undoStack->beginMacro(QObject::tr("複数クリップ絶対移動: %1").arg(pending.size()));
     for (const auto &op : pending) {
         int finalStart = op.targetStart + maxPush;
         m_undoStack->push(new MoveClipCommand(this, op.id, op.oldLayer, op.oldStart, op.duration, op.targetLayer, finalStart, op.duration, op.name));
@@ -442,7 +442,7 @@ void TimelineService::moveSelectedClips(int deltaLayer, int deltaFrame) {
         });
     }
 
-    m_undoStack->beginMacro(tr("複数クリップ移動: %1").arg(pending.size()));
+    m_undoStack->beginMacro(QObject::tr("複数クリップ移動: %1").arg(pending.size()));
     for (const PendingOp &clip : pending) {
         const int newLayer = std::max(0, clip.oldLayer + deltaLayer);
         const int newStart = std::max(0, clip.oldStart + deltaFrame);
@@ -496,7 +496,7 @@ void TimelineService::resizeSelectedClips(int deltaStartFrame, int deltaDuration
         });
     }
 
-    m_undoStack->beginMacro(tr("複数クリップ変形: %1").arg(pending.size()));
+    m_undoStack->beginMacro(QObject::tr("複数クリップ変形: %1").arg(pending.size()));
     for (const PendingOp &clip : pending) {
         const int newStart = std::max(0, clip.oldStart + deltaStartFrame);
         const int newDuration = std::max(1, clip.duration + deltaDuration);
