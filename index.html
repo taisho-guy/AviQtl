@@ -46,9 +46,9 @@
             margin: 0;
             padding: 20px;
         }
-        a { color: #ff2e63; text-decoration: underline; transition: color 0.2s; }
-        a:hover { color: #ff7597; }
-        a:visited { color: #d63384; }
+        a { color: #b366ff; text-decoration: underline; transition: color 0.2s; }
+        a:hover { color: #d199ff; }
+        a:visited { color: #9044d9; }
         
         .container {
             max-width: 900px;
@@ -62,40 +62,41 @@
 
         hr {
             border: 0;
-            border-top: 2px solid #5b467a;
+            border-top: 2px solid #524075;
             margin: 20px 0;
         }
 
         h2.section-header {
             width: 100%;
             background-color: #1a1429;
-            color: #ff2e63;
-            border-bottom: 2px solid #ff2e63;
+            color: #b366ff;
+            border-bottom: 2px solid #b366ff;
             padding: 8px 0;
             margin: 30px 0 15px 0;
             font-size: 1.2em;
             font-weight: bold;
-            text-shadow: 0 0 10px rgba(255, 46, 99, 0.3);
+            text-shadow: 0 0 10px rgba(179, 102, 255, 0.3);
         }
-        .section-header span { color: #ff2e63; opacity: 0.6; }
+        .section-header span { color: #b366ff; opacity: 0.6; }
 
         table {
             width: 100%;
-            border: 2px solid #5b467a;
+            border: 2px solid #524075;
             border-collapse: separate;
             border-spacing: 2px;
             background-color: #0d0b14;
             margin: 15px 0;
         }
         th {
+            color: #b366ff;
             background-color: #1a1429;
-            color: #ff7597;
             padding: 8px;
-            border: 1px solid #5b467a;
+            border: 1px solid #524075;
+            vertical-align: middle;
         }
         td {
             padding: 8px;
-            border: 1px solid #5b467a;
+            border: 1px solid #524075;
             background-color: #0d0b14;
             vertical-align: top;
         }
@@ -106,42 +107,43 @@
         .alert {
             margin: 20px 0;
             padding: 2px;
-            border: 2px solid #5b467a;
+            border: 2px solid #524075;
             background-color: #0d0b14;
         }
         .alert-title {
             font-weight: bold;
             padding: 8px 15px;
             background-color: #1a1429;
-            color: #ff7597;
-            border: 1px solid #5b467a;
-            margin-bottom: 2px;
+            color: #b366ff;
+            border: 1px solid #524075;
+            margin: 0 0 2px 0;
         }
         .alert ul, .alert ol { 
-            padding: 10px 15px 15px 40px; 
+            padding: 10px 15px 10px 40px; 
             margin: 0; 
-            border: 1px solid #5b467a;
+            border: 1px solid #524075;
             background-color: #0d0b14;
         }
 
         details {
             background-color: #0d0b14;
-            border: 2px solid #5b467a;
+            border: 2px solid #524075;
             margin: 10px 0;
             padding: 2px;
         }
         summary {
             background-color: #1a1429;
-            border: 1px solid #5b467a;
+            border: 1px solid #524075;
             padding: 10px;
             cursor: pointer;
             font-weight: bold;
-            color: #ff2e63;
+            color: #b366ff;
         }
         details[open] summary { margin-bottom: 2px; }
+
         details > p, details > h3, details > h4, details > ul, details > ol {
             background-color: #0d0b14;
-            border: 1px solid #5b467a;
+            border: 1px solid #524075;
             padding: 10px;
             margin: 0 0 2px 0;
         }
@@ -151,17 +153,17 @@
 
         details[open] summary + table, details[open] summary + p { margin-top: 0; }
         details table { 
-            margin: 0 0 2px 0; 
-            border: 1px solid #5b467a;
+            margin: 0; 
+            border: 2px solid #524075;
             border-spacing: 2px;
         }
-        details th, details td { border: 1px solid #5b467a; }
+        details th, details td { border: 1px solid #524075; }
 
         .footer-info { font-size: 0.8em; margin-top: 20px; }
         
-        code { background: linear-gradient(transparent 70%, rgba(255, 46, 99, 0.3) 70%); font-family: 'Roboto Condensed', monospace; color: #ff7597; padding: 0 2px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
-        code:hover { background: linear-gradient(transparent 40%, rgba(255, 46, 99, 0.4) 40%); }
-        code:active { background: rgba(255, 46, 99, 0.5); }
+        code { background: linear-gradient(transparent 70%, rgba(179, 102, 255, 0.3) 70%); font-family: 'Roboto Condensed', monospace; color: #b366ff; padding: 0 2px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+        code:hover { background: linear-gradient(transparent 40%, rgba(179, 102, 255, 0.4) 40%); }
+        code:active { background: rgba(179, 102, 255, 0.5); }
 
         .hero {
             margin: 20px 0;
@@ -203,7 +205,7 @@
             transition: opacity 0.6s cubic-bezier(0.33, 1, 0.68, 1);
         }
         .hero-title .a-lower { color: #e0d7f0; }
-        .hero-title .a-upper { color: #ff2e63; }
+        .hero-title .a-upper { color: #b366ff; }
         .hero-title .a-upper {
             position: absolute;
             left: 0;
@@ -222,7 +224,7 @@
 
         .hero-title a { display: contents; color: inherit; text-decoration: none; }
         .hero-title:hover a .letter, .hero-title:hover a .expand-inner {
-            color: #ff2e63;
+            color: #b366ff;
         }
     </style>
 </head>
@@ -279,15 +281,15 @@
         </ol>
     </div>
 
-    <div class="download-scroll-container" style="max-height: 350px; overflow-y: auto; border: 2px solid #5b467a; background-color: #16121f; margin: 15px 0;">
-        <table id="download-table" style="width: 100%; border: none; margin: 0;">
+    <div class="download-scroll-container" style="max-height: 350px; overflow-y: auto; border: 2px solid #524075; background-color: #0d0b14; margin: 15px 0; padding: 0;">
+        <table id="download-table" style="width: 100%; border: none; margin: 0; border-spacing: 2px; border-collapse: separate;">
             <thead>
-                <tr style="background-color: #1a1429;">
-                    <th style="width: 10%;">タグ</th>
-                    <th style="width: 15%;">更新内容</th>
-                    <th style="width: 30%;">ビルド</th>
-                    <th style="width: 30%;">ソースコード</th>
-                    <th style="width: 15%;">更新日時</th>
+                <tr>
+                    <th style="width: 10%; background-color: #1a1429;">タグ</th>
+                    <th style="width: 15%; background-color: #1a1429;">更新内容</th>
+                    <th style="width: 30%; background-color: #1a1429;">ビルド</th>
+                    <th style="width: 30%; background-color: #1a1429;">ソースコード</th>
+                    <th style="width: 15%; background-color: #1a1429;">更新日時</th>
                 </tr>
             </thead>
             <tbody id="release-list">
@@ -370,8 +372,8 @@
         <summary>なぜAviUtlのクローンを開発しているのですか？</summary>
         <p>Rinaは「AviUtlの再発明」ではありません。AviUtlを強く意識していますが、その中身は全く異なります。</p>
         <table>
-            <tr style="background-color: #1a1429;">
-                <th>鳥瞰図</th><th>Rina</th><th>AviUtl1</th><th>ExEdit2</th>
+            <tr>
+                <th style="background-color: #1a1429;">鳥瞰図</th><th style="background-color: #1a1429;">Rina</th><th style="background-color: #1a1429;">AviUtl1</th><th style="background-color: #1a1429;">ExEdit2</th>
             </tr>
             <tr>
                 <td>基盤技術</td><td>Qt Quick/Vulkan</td><td>Win32 API</td><td>Win32 API</td>
