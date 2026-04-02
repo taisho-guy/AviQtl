@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
 
     // スプラッシュ画面をヒープ領域に確保する
     int splashSize = settings.value("splashSize", 128).toInt();
-    QPixmap splashPixmap = QIcon(":/assets/icon.svg").pixmap(splashSize, splashSize);
+    QPixmap splashPixmap = QIcon(":/assets/splash.svg").pixmap(splashSize, splashSize);
     auto *splash = new QSplashScreen(splashPixmap);
     splash->show();
     app.processEvents();
