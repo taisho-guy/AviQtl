@@ -16,6 +16,7 @@ Common.RinaWindow {
     property bool reloading: false
     property bool enableSnap: SettingsManager && SettingsManager.settings ? SettingsManager.settings.enableSnap : true
     property bool sidebarOnRight: (SettingsManager && SettingsManager.settings && SettingsManager.settings.settingDialogSidebarRight !== undefined) ? SettingsManager.settings.settingDialogSidebarRight : false
+    readonly property real _projectFps: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.fps : 60
 
     function currentSceneData() {
         if (!TimelineBridge || !TimelineBridge.scenes)
@@ -444,8 +445,8 @@ Common.RinaWindow {
                                 property var interval: findInterval(kfs, curRelFrame, clipDur)
                                 property int startFrame: interval.start
                                 property int endFrame: interval.end
-                                property var startVal: isNumber ? (effectModel ? effectModel.evaluatedParam(key, startFrame) : effVal) : effVal
-                                property var endVal: isNumber ? (effectModel ? effectModel.evaluatedParam(key, endFrame) : effVal) : effVal
+                                property var startVal: isNumber ? (effectModel ? effectModel.evaluatedParam(key, startFrame, root._projectFps) : effVal) : effVal
+                                property var endVal: isNumber ? (effectModel ? effectModel.evaluatedParam(key, endFrame, root._projectFps) : effVal) : effVal
                                 property string interpType: hasKeyframes ? getInterpAt(startFrame) : "constant"
                                 property bool isMoving: isNumber && (hasKeyframes || interpType !== "constant")
 
@@ -468,7 +469,7 @@ Common.RinaWindow {
                                     if (hasKeyframeAt(f))
                                         return ;
 
-                                    var raw = effectModel.evaluatedParam(key, f);
+                                    var raw = effectModel.evaluatedParam(key, f, root._projectFps);
                                     var v = (raw !== undefined && raw !== null) ? raw : effVal;
                                     var interp = (def.type === "color") ? "constant" : "linear";
                                     paramDelegate.effectModel.setKeyframe(paramDelegate.key, f, v, {
@@ -784,7 +785,7 @@ Common.RinaWindow {
                                                             paramDelegate.activeDragOriginal = -1;
 
                                                         if (kfItem.currentFrame !== kfItem.originalFrame) {
-                                                            var val = kfItem.targetModel.evaluatedParam(kfItem.targetKey, kfItem.originalFrame);
+                                                            var val = kfItem.targetModel.evaluatedParam(kfItem.targetKey, kfItem.originalFrame, root._projectFps);
                                                             var track = kfItem.targetModel.keyframeListForUi(kfItem.targetKey) || [];
                                                             var interp = "linear";
                                                             var pts = [];
@@ -843,7 +844,7 @@ Common.RinaWindow {
                                             let rawRelFrame = (mouse.x / trackItem.width) * clipDur;
                                             let f = snapRelativeFrame(rawRelFrame);
                                             f = Math.max(0, Math.min(clipDur, f));
-                                            let val = effectModel.evaluatedParam(key, f);
+                                            let val = effectModel.evaluatedParam(key, f, root._projectFps);
                                             let options = {
                                                 "interp": "linear"
                                             };

@@ -152,7 +152,7 @@ class TimelineController : public QObject {
     Q_INVOKABLE void setKeyframe(int clipId, int effectIndex, const QString &paramName, int frame, const QVariant &value, const QVariantMap &options);
     Q_INVOKABLE void removeKeyframe(int clipId, int effectIndex, const QString &paramName, int frame);
 
-    // シーン操作 (未実装)
+    // シーン操作
     QVariantList scenes() const;
     int currentSceneId() const;
     QString currentProjectUrl() const { return m_currentProjectUrl; }

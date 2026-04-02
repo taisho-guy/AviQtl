@@ -19,7 +19,7 @@ Item {
         // これを参照することで、_rev の変化＝params変更で依存が更新される
         var _ = base._rev;
         if (base.effectModel && base.effectModel.evaluatedParam) {
-            var v = base.effectModel.evaluatedParam(key, base.frame);
+            var v = base.effectModel.evaluatedParam(key, base.frame, (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.fps : 60);
             if (v !== undefined && v !== null)
                 return v;
 

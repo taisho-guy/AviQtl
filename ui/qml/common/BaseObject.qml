@@ -44,7 +44,7 @@ Node {
     // 合成モードの計算 (Transform.qmlを変更できないためここで処理)
     readonly property int blendMode: {
         var _ = _tmRev; // 依存関係作成
-        var m = transformModel ? transformModel.evaluatedParam("blendMode", relFrame) : qsTr("通常");
+        var m = transformModel ? transformModel.evaluatedParam("blendMode", relFrame, projectFps) : qsTr("通常");
         if (m === qsTr("スクリーン"))
             return DefaultMaterial.Screen;
 
@@ -68,6 +68,7 @@ Node {
     property int currentFrame: (TimelineBridge && TimelineBridge.transport) ? TimelineBridge.transport.currentFrame : 0
     // Will be overridden by CompositeView
     readonly property int relFrame: currentFrame - clipStartFrame
+    readonly property real projectFps: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.fps : 60
     property var rawEffectModels: (TimelineBridge && clipId > 0) ? TimelineBridge.getClipEffectsModel(clipId) : []
     // フィルタ系エフェクト（transform/object以外）
     readonly property var filterModels: {
@@ -111,12 +112,12 @@ Node {
     function getBlurPadding() {
         for (let i = 0; i < rawEffectModels.length; i++) {
             if ((rawEffectModels[i].id === "blur" || rawEffectModels[i].id === "border_blur" || rawEffectModels[i].id === "glow" || rawEffectModels[i].id === "flash" || rawEffectModels[i].id === "diffuse_light") && rawEffectModels[i].enabled) {
-                var v = rawEffectModels[i].evaluatedParam ? rawEffectModels[i].evaluatedParam("size", relFrame) : undefined;
+                var v = rawEffectModels[i].evaluatedParam ? rawEffectModels[i].evaluatedParam("size", relFrame, projectFps) : undefined;
                 if (v === undefined || v === null)
-                    v = rawEffectModels[i].evaluatedParam ? rawEffectModels[i].evaluatedParam("diffusion", relFrame) : undefined;
+                    v = rawEffectModels[i].evaluatedParam ? rawEffectModels[i].evaluatedParam("diffusion", relFrame, projectFps) : undefined;
 
                 if (v === undefined || v === null)
-                    v = rawEffectModels[i].evaluatedParam ? rawEffectModels[i].evaluatedParam("strength", relFrame) : undefined;
+                    v = rawEffectModels[i].evaluatedParam ? rawEffectModels[i].evaluatedParam("strength", relFrame, projectFps) : undefined;
 
                 if (v === undefined || v === null)
                     v = rawEffectModels[i].params["size"] || rawEffectModels[i].params["diffusion"] || rawEffectModels[i].params["strength"];

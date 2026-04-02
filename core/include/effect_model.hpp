@@ -617,7 +617,7 @@ class EffectModel : public QObject {
         return out;
     }
 
-    Q_INVOKABLE QVariant evaluatedParam(const QString &paramName, int frame) const {
+    Q_INVOKABLE QVariant evaluatedParam(const QString &paramName, int frame, double fps = 60.0) const {
         const QVariant fallback = m_params.value(paramName);
         if (!m_keyframeTracks.contains(paramName))
             return fallback;
@@ -640,9 +640,7 @@ class EffectModel : public QObject {
         if (strVal.startsWith("=")) {
             // "=time*100" -> "time*100"
             std::string expr = strVal.mid(1).toStdString();
-            // time: current frame / fps (needs context, passing frame/60.0 for now)
-            // TODO: 正確なFPSを取得するにはContextが必要
-            double time = frame / 60.0;
+            double time = (fps > 0.0) ? frame / fps : 0.0;
             return Rina::Scripting::LuaHost::instance().evaluate(expr, time, 0, baseValue.toDouble());
         }
 

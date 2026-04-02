@@ -72,11 +72,12 @@ void TimelineEngineSynchronizer::updateActiveClipsList() {
         batch.clips.append(clip);
     }
 
-    updateECSState(archetypeBatches.values(), current);
+    double fps = m_controller->project()->fps();
+    updateECSState(archetypeBatches.values(), current, fps);
 }
 
-void TimelineEngineSynchronizer::updateECSState(const QList<ArchetypeBatch> &batches, int currentFrame) {
-    auto batchMapper = [currentFrame](const ArchetypeBatch &batch) -> QList<ClipEngineResult> {
+void TimelineEngineSynchronizer::updateECSState(const QList<ArchetypeBatch> &batches, int currentFrame, double fps) {
+    auto batchMapper = [currentFrame, fps](const ArchetypeBatch &batch) -> QList<ClipEngineResult> {
         QList<ClipEngineResult> results;
         results.reserve(batch.clips.size());
 
@@ -95,11 +96,11 @@ void TimelineEngineSynchronizer::updateECSState(const QList<ArchetypeBatch> &bat
                 auto *eff = clip->effects[ed.index];
                 // 数値パラメータ (DOD path)
                 for (const auto &key : ed.floatKeys) {
-                    res.propertyValues.push_back(eff->evaluatedParam(key, res.relFrame).toFloat());
+                    res.propertyValues.push_back(eff->evaluatedParam(key, res.relFrame, fps).toFloat());
                 }
                 // 非数値パラメータ (Variant path)
                 for (const auto &key : ed.variantKeys) {
-                    res.variantValues.append(eff->evaluatedParam(key, res.relFrame));
+                    res.variantValues.append(eff->evaluatedParam(key, res.relFrame, fps));
                 }
             }
 
@@ -111,10 +112,10 @@ void TimelineEngineSynchronizer::updateECSState(const QList<ArchetypeBatch> &bat
                 for (const auto &ed : batch.activeEffects) {
                     auto *eff = clip->effects[ed.index];
                     if (eff->id() == clip->type) {
-                        QVariant vVol = eff->evaluatedParam("volume", res.relFrame);
+                        QVariant vVol = eff->evaluatedParam("volume", res.relFrame, fps);
                         res.vol = vVol.isValid() ? vVol.toFloat() : 1.0f;
-                        res.pan = eff->evaluatedParam("pan", res.relFrame).toFloat();
-                        res.mute = eff->evaluatedParam("mute", res.relFrame).toBool();
+                        res.pan = eff->evaluatedParam("pan", res.relFrame, fps).toFloat();
+                        res.mute = eff->evaluatedParam("mute", res.relFrame, fps).toBool();
                         break;
                     }
                 }

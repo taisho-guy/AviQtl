@@ -40,7 +40,7 @@ class TimelineEngineSynchronizer : public QObject {
     QVariantMap getCachedParams(int clipId) const { return m_frontParamCache.value(clipId); }
 
   private:
-    void updateECSState(const QList<struct ArchetypeBatch> &batches, int currentFrame);
+    void updateECSState(const QList<struct ArchetypeBatch> &batches, int currentFrame, double fps);
 
     void handleResultsReady();
     void finalizeCommit(const QHash<int, QVariantMap> &newCache);

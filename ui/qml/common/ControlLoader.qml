@@ -199,6 +199,7 @@ Loader {
             property int _effIdx: controlLoader.effectRootRef ? controlLoader.effectRootRef.effectIndex : 0
             property string _key: controlLoader.definition.param || controlLoader.definition.name || ""
             property int _clipDur: TimelineBridge ? TimelineBridge.clipDurationFrames : 100
+            property real _fps: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.fps : 60
             property int _curFrame: (TimelineBridge && TimelineBridge.transport) ? TimelineBridge.transport.currentFrame - TimelineBridge.clipStartFrame : 0
             property int _rev: 0
             property var _kfs: {
@@ -221,11 +222,11 @@ Loader {
             property bool _rightInteractive: _hasKf && _interp !== "" && _interp !== "constant" && _interp !== "none"
             property var _startVal: {
                 var _ = colorRow._rev;
-                return (_hasKf && _em) ? (_em.evaluatedParam(_key, _startFrame) || controlLoader.value || "#ffffff") : (controlLoader.value || "#ffffff");
+                return (_hasKf && _em) ? (_em.evaluatedParam(_key, _startFrame, _fps) || controlLoader.value || "#ffffff") : (controlLoader.value || "#ffffff");
             }
             property var _endVal: {
                 var _ = colorRow._rev;
-                return (_hasKf && _em) ? (_em.evaluatedParam(_key, _endFrame) || controlLoader.value || "#ffffff") : (controlLoader.value || "#ffffff");
+                return (_hasKf && _em) ? (_em.evaluatedParam(_key, _endFrame, _fps) || controlLoader.value || "#ffffff") : (controlLoader.value || "#ffffff");
             }
 
             function _hasKfAt(f) {
@@ -239,7 +240,7 @@ Loader {
                 if (!_em || !_key || _hasKfAt(f))
                     return ;
 
-                var v = _em.evaluatedParam(_key, f) || controlLoader.value || "#ffffff";
+                var v = _em.evaluatedParam(_key, f, _fps) || controlLoader.value || "#ffffff";
                 _em.setKeyframe(_key, f, v, {
                     "interp": "constant"
                 });

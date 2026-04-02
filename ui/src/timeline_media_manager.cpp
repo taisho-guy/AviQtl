@@ -62,7 +62,7 @@ void TimelineMediaManager::onCurrentFrameChanged() {
                 const QString playMode = eff->params().value("playMode", "開始時間＋再生速度").toString();
 
                 if (playMode == "時間直接指定") {
-                    audioTime = eff->evaluatedParam("directTime", relFrame).toDouble();
+                    audioTime = eff->evaluatedParam("directTime", relFrame, fps).toDouble();
                 } else {
                     const double startTime = eff->params().value("startTime", 0.0).toDouble();
                     const double speed = eff->params().value("speed", 100.0).toDouble();
@@ -249,11 +249,11 @@ void TimelineMediaManager::updateVideoClipFrame(Rina::Core::VideoDecoder *vid, c
         const QString playMode = eff->params().value("playMode", "開始フレーム＋再生速度").toString();
 
         if (playMode == "フレーム直接指定") {
-            const int absFrame = eff->evaluatedParam("directFrame", relFrame).toInt();
+            const int absFrame = eff->evaluatedParam("directFrame", relFrame, fps).toInt();
             vid->seekToFrame(absFrame, vid->sourceFps());
         } else {
-            const int startFrame = eff->evaluatedParam("startFrame", 0).toInt();
-            const double speed = eff->evaluatedParam("speed", 100.0).toDouble();
+            const int startFrame = eff->evaluatedParam("startFrame", 0, fps).toInt();
+            const double speed = eff->evaluatedParam("speed", 100, fps).toDouble();
 
             double vfps = vid->sourceFps();
             if (vfps <= 0.0)
