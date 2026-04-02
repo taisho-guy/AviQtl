@@ -1,5 +1,5 @@
 <div align="center">
-    <img src="./assets/icon.svg" alt="" width="256"/>
+    <img src="./assets/splash.svg" alt="" width="256"/>
     <h1>Rina is not AviUtl</h1>
     <p>AviUtlのまま、AviUtlを超える。</p>
 </div>
