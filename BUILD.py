@@ -33,6 +33,11 @@ class BuildWorker(QtCore.QThread):
         prefix = "[Container] " if in_container else ""
         self.log_signal.emit(f"{prefix}Run: {display_cmd}")
 
+        # インタラクティブなプロンプト（Gitのユーザー名入力など）を無効化し、オートアップデートを抑制
+        env = os.environ.copy()
+        env["GIT_TERMINAL_PROMPT"] = "0"
+        env["HOMEBREW_NO_AUTO_UPDATE"] = "1"
+
         actual_cmd = cmd
         if in_container and self.system == "Linux":
             if isinstance(cmd, str):
@@ -53,7 +58,8 @@ class BuildWorker(QtCore.QThread):
             text=True,
             encoding='utf-8',
             errors='replace',
-            shell=shell
+            shell=shell,
+            env=env
         )
         for line in process.stdout:
             self.log_signal.emit(line.rstrip())
@@ -152,7 +158,12 @@ class BuildWorker(QtCore.QThread):
                 return
 
             # KDE関連のパッケージを取得するために tap を追加
-            self._run_cmd(["brew", "tap", "kde-mac/kde"])
+            # URLを明示し、かつ認証プロンプトを抑制することで、クローン時の停止を回避します
+            try:
+                self._run_cmd(["brew", "tap", "kde-mac/kde", "https://github.com/kde-mac/homebrew-kde.git", "--force"])
+            except subprocess.CalledProcessError:
+                self.log_signal.emit("警告: brew tap に失敗しました。既に tap されているか、ネットワークエラーの可能性があります。")
+
             deps = [
                 "cmake", "ninja", "qt6", "ffmpeg", "luajit", "vulkan-headers", "vulkan-loader",
                 "pkg-config", "lilv", "kf6-kirigami", "kf6-kcolorscheme", "extra-cmake-modules", "carla"
@@ -289,6 +300,12 @@ class BuildWorker(QtCore.QThread):
             
             elif self.system == "Darwin":
                  conf_cmd.append("-DCMAKE_BUILD_TYPE=Release")
+                 # HomebrewのパスをCMakeの検索対象に追加 (ECMやKF6を見つけるため)
+                 try:
+                     brew_prefix = subprocess.check_output(["brew", "--prefix"], text=True).strip()
+                     conf_cmd.append(f"-DCMAKE_PREFIX_PATH={brew_prefix}")
+                 except:
+                     conf_cmd.append("-DCMAKE_PREFIX_PATH=/opt/homebrew")
 
             conf_cmd.append(str(self.source_dir))
             
