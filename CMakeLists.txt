@@ -63,7 +63,34 @@ pkg_check_modules(FFMPEG REQUIRED libavcodec libavformat libavutil libswscale li
 
 
 # Carla Audio Plugin Backend
-pkg_check_modules(CARLA REQUIRED carla-standalone carla-native-plugin carla-host-plugin carla-utils)
+if(WIN32)
+    # BUILD.py が生成するパスを優先
+    if(NOT CARLA_SDK_DIR)
+        set(CARLA_SDK_DIR "${CMAKE_SOURCE_DIR}/carla-sdk")
+    endif()
+
+    # Windowsでは手動指定を優先し、なければpkg-configを試す
+    find_path(CARLA_INCLUDE_DIR NAMES CarlaBackend.h PATHS ${CARLA_SDK_DIR}/include)
+    find_library(CARLA_LIBRARY NAMES carla-standalone PATHS ${CARLA_SDK_DIR}/lib ${CARLA_SDK_DIR})
+    
+    if(CARLA_INCLUDE_DIR AND CARLA_LIBRARY)
+        set(CARLA_FOUND TRUE)
+        set(CARLA_INCLUDE_DIRS ${CARLA_INCLUDE_DIR})
+        set(CARLA_LIBRARIES ${CARLA_LIBRARY})
+        message(STATUS "Found Carla manually: ${CARLA_LIBRARY}")
+    endif()
+    # If not found manually, try pkg-config
+    if(NOT CARLA_FOUND)
+        pkg_check_modules(CARLA carla-standalone carla-native-plugin carla-host-plugin carla-utils)
+    endif()
+else()
+    pkg_check_modules(CARLA REQUIRED carla-standalone carla-native-plugin carla-host-plugin carla-utils)
+endif()
+
+if(NOT CARLA_FOUND AND NOT CARLA_LIBRARIES) # Check both for robustness
+    message(FATAL_ERROR "Carla not found. Ensure it's installed (e.g., via Homebrew on macOS, or CARLA_SDK_DIR is set on Windows).")
+endif()
+
 pkg_check_modules(LUAJIT REQUIRED luajit)
 
 # macOSでのLuaJITリンク問題の修正

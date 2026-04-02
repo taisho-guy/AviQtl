@@ -8,6 +8,7 @@ from PySide6 import QtCore
 import platform
 import shlex
 import concurrent.futures
+import urllib.request
 
 class BuildWorker(QtCore.QThread):
     progress_signal = QtCore.Signal(int, str)
@@ -60,12 +61,49 @@ class BuildWorker(QtCore.QThread):
         if process.returncode != 0:
             raise subprocess.CalledProcessError(process.returncode, actual_cmd)
 
+    def _setup_carla_sdk(self):
+        sdk_dir = self.source_dir / "carla-sdk"
+        inc_dir = sdk_dir / "include"
+        lib_dir = sdk_dir / "lib"
+        
+        if not inc_dir.exists():
+            self.log_signal.emit("Carla ヘッダーを取得中...")
+            temp_clone = self.source_dir / ".carla_tmp"
+            if temp_clone.exists(): shutil.rmtree(temp_clone)
+            
+            # ヘッダーのみが必要なので、浅いクローンを実行
+            self._run_cmd(["git", "clone", "--depth", "1", "https://github.com/falkTX/Carla.git", str(temp_clone)])
+            inc_dir.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(temp_clone / "source/includes", inc_dir, dirs_exist_ok=True)
+            shutil.rmtree(temp_clone)
+
+        # This part is only for Windows, macOS will use Homebrew
+        if self.system == "Windows" and not (lib_dir / "carla-standalone.dll").exists():
+            self.log_signal.emit("Carla Windows バイナリをダウンロード中...")
+            lib_dir.mkdir(parents=True, exist_ok=True)
+            version = "2.6.0"
+            suffix = "win64"
+            carla_zip_url = f"https://github.com/falkTX/Carla/releases/download/v{version}/Carla_{version}-{suffix}.zip"
+            zip_path = sdk_dir / "carla.zip"
+            
+            urllib.request.urlretrieve(carla_zip_url, zip_path)
+            shutil.unpack_archive(zip_path, sdk_dir)
+            
+            # 必要なライブラリを整理
+            ext = "*.dll"
+            for lib_file in sdk_dir.rglob(ext):
+                shutil.move(str(lib_file), lib_dir / lib_file.name)
+            zip_path.unlink()
+
     def install_dependencies(self):
         self.log_signal.emit("依存関係を確認中...")
         
         if self.system == "Windows":
             # MSYS2 (UCRT64)
             if "MSYSTEM" in os.environ:
+                if os.environ["MSYSTEM"] != "UCRT64":
+                    self.log_signal.emit("警告: UCRT64 環境以外が検出されました。UCRT64 での実行を強く推奨します。")
+
                 self.log_signal.emit("MSYS2 環境を検出しました。")
                 deps = [
                     "mingw-w64-ucrt-x86_64-toolchain",
@@ -97,6 +135,9 @@ class BuildWorker(QtCore.QThread):
                 # Audio Plugin SDKs
                 if not (self.source_dir / "clap").exists():
                     self._run_cmd(["git", "clone", "https://github.com/free-audio/clap.git", "--depth", "1"])
+
+                # Carla SDK 自動セットアップ
+                self._setup_carla_sdk()
 
             else:
                 self.log_signal.emit("警告: MSYS2 環境外で実行されています。依存関係の自動インストールはスキップされます。")
@@ -221,8 +262,12 @@ class BuildWorker(QtCore.QThread):
             
             elif self.system == "Windows":
                  conf_cmd.append("-DCMAKE_BUILD_TYPE=Release")
-                 # VST3/CLAP SDKのパス指定 (Windowsの場合、ソースディレクトリ直下にクローンしたと仮定)
                  conf_cmd.append(f"-DCLAP_SDK_DIR={self.source_dir}/clap")
+                 if (self.source_dir / "carla-sdk").exists():
+                     conf_cmd.append(f"-DCARLA_SDK_DIR={self.source_dir}/carla-sdk")
+            
+            elif self.system == "Darwin":
+                 conf_cmd.append("-DCMAKE_BUILD_TYPE=Release")
 
             conf_cmd.append(str(self.source_dir))
             
@@ -249,26 +294,32 @@ class BuildWorker(QtCore.QThread):
             self.dist_dir.mkdir(parents=True, exist_ok=True)
             
             exe_name = "Rina.exe" if self.system == "Windows" else "Rina"
-            dest_bin = self.output_dir / exe_name
-            
-            # Windowsの場合、ビルド成果物は直下にあるとは限らない (Release/Debugサブディレクトリなど)
-            # Ninjaジェネレーターなら直下にあるはず
-            src_bin = work_dir / exe_name
-            
-            if dest_bin.exists():
-                dest_bin.unlink()
-            
-            if src_bin.exists():
-                shutil.copy2(src_bin, dest_bin)
+
+            if self.system == "Darwin":
+                src_app = work_dir / "Rina.app"
+                dest_app = self.output_dir / "Rina.app"
+                if dest_app.exists(): shutil.rmtree(dest_app)
+                if src_app.exists():
+                    shutil.copytree(src_app, dest_app)
+                    dest_bin = dest_app / "Contents/MacOS/Rina"
+                    asset_dest = dest_app / "Contents/Resources"
+                else:
+                    raise FileNotFoundError(f"{src_app} not found")
             else:
-                self.log_signal.emit(f"エラー: 実行ファイルが見つかりません: {src_bin}")
-                # 続行不能
-                raise FileNotFoundError(f"{src_bin} not found")
+                dest_bin = self.output_dir / exe_name
+                src_bin = work_dir / exe_name
+                if dest_bin.exists(): dest_bin.unlink()
+                if src_bin.exists():
+                    shutil.copy2(src_bin, dest_bin)
+                else:
+                    self.log_signal.emit(f"エラー: 実行ファイルが見つかりません: {src_bin}")
+                    raise FileNotFoundError(f"{src_bin} not found")
+                asset_dest = self.output_dir
 
             # アセットのコピー (アプリ動作に必要なデータのみ)
             for d in ["effects", "objects"]:
                 src_path = self.source_dir / "ui/qml" / d
-                dest_path = self.output_dir / d
+                dest_path = asset_dest / d
                 if src_path.exists():
                     # Linuxの場合は不要なシェーダーソースを除外
                     ignore_pat = shutil.ignore_patterns("*.frag", "*.vert", "*.glsl") if self.system == "Linux" else None
@@ -277,7 +328,7 @@ class BuildWorker(QtCore.QThread):
             # コンパイル済みシェーダー(.qsb)のコピー
             for d in ["effects", "objects"]:
                 qsb_src_dir = work_dir / d
-                qsb_dest_dir = self.output_dir / d
+                qsb_dest_dir = asset_dest / d
                 if qsb_src_dir.exists() and qsb_dest_dir.exists():
                     for qsb_file in qsb_src_dir.glob("*.qsb"):
                         shutil.copy2(qsb_file, qsb_dest_dir / qsb_file.name)
@@ -326,17 +377,38 @@ class BuildWorker(QtCore.QThread):
                 # ここではwindeployqtが主要なQt依存関係を処理したと仮定する。
                 # 必要であれば、objdump等で依存関係を解析してコピーする処理を追加する。
 
+            elif self.system == "Darwin":
+                self.log_signal.emit("macOS デプロイメント処理を実行中...")
+                qt_prefix = subprocess.check_output(["brew", "--prefix", "qt6"], text=True).strip()
+                macdeployqt = f"{qt_prefix}/bin/macdeployqt"
+                deploy_cmd = [
+                    macdeployqt, str(dest_app),
+                    "-qmldir=" + str(self.source_dir / "ui/qml"),
+                    "-verbose=1"
+                ]
+                self._run_cmd(deploy_cmd)
+
             # ZIP圧縮
             self.log_signal.emit("アーカイブを作成中...")
             archive_name = f"Rina-{self.system}-x64"
             if self.system == "Linux":
                 archive_name = "Rina-Linux-x86_64-v3"
+            elif self.system == "Darwin":
+                archive_name = "Rina-macOS-Universal"
             
-            shutil.make_archive(
-                str(self.dist_dir / archive_name),
-                'zip',
-                root_dir=self.output_dir
-            )
+            if self.system == "Darwin":
+                shutil.make_archive(
+                    str(self.dist_dir / archive_name),
+                    'zip',
+                    root_dir=self.output_dir,
+                    base_dir="Rina.app"
+                )
+            else:
+                shutil.make_archive(
+                    str(self.dist_dir / archive_name),
+                    'zip',
+                    root_dir=self.output_dir
+                )
 
             self.log_signal.emit(f"ビルド完了：{dest_bin}")
             self.log_signal.emit(f"アーカイブ：{self.dist_dir / (archive_name + '.zip')}")
