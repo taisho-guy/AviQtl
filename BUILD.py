@@ -127,6 +127,9 @@ class BuildWorker(QtCore.QThread):
                     "mingw-w64-ucrt-x86_64-lilv",
                     "mingw-w64-ucrt-x86_64-ladspa-sdk",
                     "mingw-w64-ucrt-x86_64-curl",
+                    "mingw-w64-ucrt-x86_64-extra-cmake-modules",
+                    "mingw-w64-ucrt-x86_64-kf6-kirigami",
+                    "mingw-w64-ucrt-x86_64-kf6-kcolorscheme",
                     "zip",
                     "mingw-w64-ucrt-x86_64-clang-tools-extra"
                 ]
@@ -141,6 +144,24 @@ class BuildWorker(QtCore.QThread):
 
             else:
                 self.log_signal.emit("警告: MSYS2 環境外で実行されています。依存関係の自動インストールはスキップされます。")
+
+        elif self.system == "Darwin":
+            self.log_signal.emit("macOS (Homebrew) 環境を検出しました。")
+            if not shutil.which("brew"):
+                self.log_signal.emit("エラー: Homebrew が見つかりません。")
+                return
+
+            # KDE関連のパッケージを取得するために tap を追加
+            self._run_cmd(["brew", "tap", "kde-mac/kde"])
+            deps = [
+                "cmake", "ninja", "qt6", "ffmpeg", "luajit", "vulkan-headers", "vulkan-loader",
+                "pkg-config", "lilv", "kf6-kirigami", "kf6-kcolorscheme", "extra-cmake-modules", "carla"
+            ]
+            self._run_cmd(["brew", "install"] + deps)
+            
+            if not (self.source_dir / "clap").exists():
+                self._run_cmd(["git", "clone", "https://github.com/free-audio/clap.git", "--depth", "1"])
+            self._setup_carla_sdk()
 
         elif self.system == "Linux":
             if not self.use_container_opt:
