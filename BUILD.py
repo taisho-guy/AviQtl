@@ -157,12 +157,29 @@ class BuildWorker(QtCore.QThread):
                 self.log_signal.emit("エラー: Homebrew が見つかりません。")
                 return
 
-            # KDE関連のパッケージを取得するために tap を追加
-            # URLを明示し、かつ認証プロンプトを抑制することで、クローン時の停止を回避します
+            # 公式ドキュメントの手順に従い、KDE Homebrew Tap を構成します
+            self.log_signal.emit("KDE公式のHomebrew Tapを構成中...")
+            tap_name = "kde-mac/kde"
+            tap_url = "https://invent.kde.org/packaging/homebrew-kde.git"
+            
+            # 既存の誤った設定（もしあれば）をクリアするために untap を試行
             try:
-                self._run_cmd(["brew", "tap", "kde-mac/kde", "https://github.com/kde-mac/homebrew-kde.git", "--force"])
+                subprocess.run(["brew", "untap", tap_name], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+            except:
+                pass
+
+            # 正しいURLで tap を実行
+            try:
+                self._run_cmd(["brew", "tap", tap_name, tap_url, "--force-auto-update"])
+                
+                # ECMやKF6のリンク問題を解決するための caveat スクリプトを実行
+                repo_path = subprocess.check_output(["brew", "--repo", tap_name], text=True).strip()
+                caveat_script = Path(repo_path) / "tools" / "do-caveats.sh"
+                if caveat_script.exists():
+                    self.log_signal.emit("KDE Caveats スクリプトを実行中...")
+                    self._run_cmd(["sh", str(caveat_script)])
             except subprocess.CalledProcessError:
-                self.log_signal.emit("警告: brew tap に失敗しました。既に tap されているか、ネットワークエラーの可能性があります。")
+                self.log_signal.emit("警告: brew tap または caveats の実行に失敗しました。ネットワーク状態を確認してください。")
 
             deps = [
                 "cmake", "ninja", "qt6", "ffmpeg", "luajit", "vulkan-headers", "vulkan-loader",
