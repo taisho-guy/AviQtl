@@ -215,7 +215,7 @@ class BuildWorker(QtCore.QThread):
                     "-DCMAKE_CXX_COMPILER=clang++",
                 ])
                 if not self.is_debug:
-                    conf_cmd.append("-DCMAKE_CXX_FLAGS=-O3 -flto -fno-semantic-interposition")
+                    conf_cmd.append("-DCMAKE_CXX_FLAGS=-O3 -flto -fno-semantic-interposition -funsafe-math-optimizations")
                     conf_cmd.append("-DCMAKE_POLICY_DEFAULT_CMP0056=NEW")
                     conf_cmd.append("-DCMAKE_SKIP_INSTALL_RPATH=ON")
             
