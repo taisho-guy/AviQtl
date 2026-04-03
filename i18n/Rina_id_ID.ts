@@ -52,54 +52,54 @@
 <context>
     <name>ControlLoader</name>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="24"/>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="26"/>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="26"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="30"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="32"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="32"/>
         <source>パラメータ</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="309"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="270"/>
         <source>開始色 (f%1)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="309"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="270"/>
         <source>色を選択</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="385"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="346"/>
         <source>終了色 (f%1)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="421"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="382"/>
         <source>オン</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="421"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="382"/>
         <source>オフ</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="440"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="401"/>
         <source>ファイルを選択</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="573"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="534"/>
         <source>設定</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="649"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="610"/>
         <source>フォントを選択</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="665"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="626"/>
         <source>デフォルト</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1164,7 +1164,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="967"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="981"/>
         <source>フィルタ</source>
         <translation type="unfinished"></translation>
     </message>

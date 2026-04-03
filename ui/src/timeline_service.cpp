@@ -650,7 +650,16 @@ QPoint TimelineService::resolveDragPosition(int clipId, int targetLayer, int pro
     }
 
     int finalFrame = proposedStartFrame + maxPush;
-    return QPoint(finalFrame, targetLayer);
+    if (finalFrame < 0)
+        finalFrame = 0;
+
+    int finalLayer = targetLayer;
+    if (finalLayer < 0)
+        finalLayer = 0;
+    if (finalLayer > 127)
+        finalLayer = 127;
+
+    return QPoint(finalFrame, finalLayer);
 }
 
 void TimelineService::updateClipInternal(int id, int layer, int startFrame, int duration, bool emitSignal) {

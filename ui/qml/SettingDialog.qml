@@ -640,6 +640,10 @@ Common.RinaWindow {
 
                                 // 非数値 (ControlLoader で型別UI)
                                 Common.ControlLoader {
+                                    property int startFrameState: startFrame
+                                    property int endFrameState: endFrame
+                                    property bool rightInteractiveState: isMoving && hasKeyframeAt(endFrame) && interpType !== "" && interpType !== "constant"
+
                                     Layout.fillWidth: true
                                     Layout.margins: 4
                                     visible: !isNumber
@@ -647,6 +651,16 @@ Common.RinaWindow {
                                     definition: def
                                     value: effVal
                                     effectRootRef: effectRoot
+                                    onStartValueModified: function(val) {
+                                        root.inputting = true;
+                                        updateParam(startFrame, val);
+                                        root.inputting = false;
+                                    }
+                                    onEndValueModified: function(val) {
+                                        root.inputting = true;
+                                        updateParam(endFrame, val);
+                                        root.inputting = false;
+                                    }
                                     onValueModified: function(val) {
                                         root.inputting = true;
                                         TimelineBridge.updateClipEffectParam(targetClipId, effIdx, key, val);

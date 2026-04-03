@@ -14,9 +14,15 @@ Loader {
     })
     property var value: null
     property var effectRootRef: null
+    // 親(SettingDialog)から補間状態を受け取るためのプロパティ
+    property int startFrameState: 0
+    property int endFrameState: 0
+    property bool rightInteractiveState: false
 
     signal valueModified(var newValue)
     signal paramButtonClicked()
+    signal startValueModified(var val)
+    signal endValueModified(var val)
 
     function _label() {
         var d = controlLoader.definition;
@@ -202,71 +208,26 @@ Loader {
             property real _fps: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.fps : 60
             property int _curFrame: (TimelineBridge && TimelineBridge.transport) ? TimelineBridge.transport.currentFrame - TimelineBridge.clipStartFrame : 0
             property int _rev: 0
-            property var _kfs: {
-                var _ = colorRow._rev;
-                return _em ? _em.keyframeListForUi(_key) : [];
-            }
-            property bool _hasKf: _kfs.length > 0
-            property var _interval: controlLoader._findKeyframeInterval(_kfs, _curFrame, _clipDur)
-            property int _startFrame: _interval.start
-            property int _endFrame: _interval.end
-            property var _startKf: {
-                for (var i = 0; i < _kfs.length; i++) {
-                    if (_kfs[i].frame === _startFrame)
-                        return _kfs[i];
-
-                }
-                return null;
-            }
-            property string _interp: (_startKf && _startKf.interp) ? _startKf.interp : ""
-            property bool _rightInteractive: _hasKf && _interp !== "" && _interp !== "constant" && _hasKfAt(_endFrame)
+            property int _startFrame: controlLoader.startFrameState
+            property int _endFrame: controlLoader.endFrameState
+            property bool _rightInteractive: controlLoader.rightInteractiveState
+            property bool _hasKf: true
             property var _startVal: {
                 var _ = colorRow._rev;
-                return (_hasKf && _em) ? (_em.evaluatedParam(_key, _startFrame, _fps) || controlLoader.value || "#ffffff") : (controlLoader.value || "#ffffff");
+                return (_em) ? (_em.evaluatedParam(_key, _startFrame, _fps) || controlLoader.value || "#ffffff") : (controlLoader.value || "#ffffff");
             }
             property var _endVal: {
                 var _ = colorRow._rev;
-                return (_hasKf && _em) ? (_em.evaluatedParam(_key, _endFrame, _fps) || controlLoader.value || "#ffffff") : (controlLoader.value || "#ffffff");
-            }
-
-            function _hasKfAt(f) {
-                for (var i = 0; i < _kfs.length; i++) if (_kfs[i].frame === f) {
-                    return true;
-                }
-                return false;
-            }
-
-            function _ensureAt(f) {
-                if (!_em || !_key || _hasKfAt(f))
-                    return ;
-
-                var v = _em.evaluatedParam(_key, f, _fps) || controlLoader.value || "#ffffff";
-                _em.setKeyframe(_key, f, v, {
-                    "interp": "linear"
-                });
+                return (_em) ? (_em.evaluatedParam(_key, _endFrame, _fps) || controlLoader.value || "#ffffff") : (controlLoader.value || "#ffffff");
             }
 
             function _commit(frame, val) {
-                if (!_em || !_key || !_hasKf) {
+                if (frame === _startFrame)
+                    controlLoader.startValueModified(val);
+                else if (frame === _endFrame)
+                    controlLoader.endValueModified(val);
+                else
                     controlLoader.valueModified(val);
-                    return ;
-                }
-                _ensureAt(_startFrame);
-                _ensureAt(_endFrame);
-                // 既存の補間設定を維持するため、キーフレームの現在状態から引っ張るか、なければ linear
-                var currentInterp = "linear";
-                for (var i = 0; i < _kfs.length; i++) {
-                    if (_kfs[i].frame === frame) {
-                        currentInterp = _kfs[i].interp || "linear";
-                        break;
-                    }
-                }
-                if (currentInterp === "constant")
-                    currentInterp = "linear";
- // UI操作で恒久的にconstantに戻らないようにする措置
-                _em.setKeyframe(_key, frame, val, {
-                    "interp": currentInterp
-                });
             }
 
             spacing: 8

@@ -183,7 +183,7 @@ ScrollView {
 
     function snapFrame(frame, ignoreSnap) {
         if (!enableSnap || ignoreSnap)
-            return Math.round(frame);
+            return Math.max(0, Math.round(frame));
 
         // グリッド無視時は整数丸めのみ
         var step = getGridInterval();
