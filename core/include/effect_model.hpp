@@ -329,7 +329,6 @@ class EffectModel : public QObject {
     }
 
     static QVariantMap normalizeTrackForDuration(const QVariant &rawTrack, const QVariant &fallback, int durationFrames) {
-        const int maxFrame = std::max(0, durationFrames - 1);
         if (isStructuredTrack(rawTrack)) {
             QVariantMap raw = rawTrack.toMap();
             QVariantMap start = raw.value("start").toMap();
@@ -338,20 +337,16 @@ class EffectModel : public QObject {
             if (!start.contains("value"))
                 start["value"] = fallback;
 
-            // 明示的終了点が範囲内にある場合のみ評価に含める（フレーム位置は変更しない）
-            const bool inRangeEnd = hasExplicitEnd(rawTrack) && raw.value("end").toMap().value("frame").toInt() > 0 && raw.value("end").toMap().value("frame").toInt() <= maxFrame;
-            const int ceiling = inRangeEnd ? raw.value("end").toMap().value("frame").toInt() : durationFrames;
+            const int ceiling = durationFrames;
 
             for (const auto &v : points) {
                 const int f = v.toMap().value("frame").toInt();
-                if (f > 0 && f < ceiling)
+                if (f > 0 && f <= ceiling)
                     nextPoints.append(v);
             }
             QVariantMap out;
             out["start"] = start;
-            out["points"] = sortPoints(nextPoints);
-            if (inRangeEnd)
-                out["end"] = raw.value("end"); // フレーム位置はユーザー設定値のまま
+            out["points"] = sortPoints(nextPoints); // フレーム位置はユーザー設定値のまま
             return out;
         }
         // レガシーリスト形式（end なし）
@@ -423,14 +418,7 @@ class EffectModel : public QObject {
     Q_INVOKABLE bool isEndpointFrame(const QString &paramName, int frame) const {
         const QVariant raw = m_keyframeTracks.value(paramName);
         const int startFrame = isStructuredTrack(raw) ? raw.toMap().value("start").toMap().value("frame").toInt() : 0;
-        if (frame == startFrame)
-            return true;
-        if (hasExplicitEnd(raw)) {
-            const int endFrame = raw.toMap().value("end").toMap().value("frame").toInt();
-            if (frame == endFrame)
-                return true;
-        }
-        return false;
+        return frame == startFrame;
     }
     Q_INVOKABLE bool hasExplicitEndPoint(const QString &paramName) const { return hasExplicitEnd(m_keyframeTracks.value(paramName)); }
 
@@ -559,18 +547,6 @@ class EffectModel : public QObject {
         const QVariant fallback = m_params.value(paramName);
         QVariantMap track = normalizeTrackForDuration(m_keyframeTracks.value(paramName), fallback, inferredDurationForTrack(m_keyframeTracks.value(paramName)));
 
-        // isEnd オプションが true の場合、指定フレームを終了点として明示的に生成
-        if (options.value("isEnd").toBool()) {
-            QVariantMap end;
-            end["frame"] = frame;
-            end["value"] = value;
-            end["interp"] = options.value("interp", "none").toString();
-            track["end"] = end;
-            m_keyframeTracks[paramName] = track;
-            emit keyframeTracksChanged();
-            return;
-        }
-
         QVariantMap start = track.value("start").toMap();
         QVariantList points = track.value("points").toList();
         const QString interp = options.value("interp", "none").toString();
@@ -633,12 +609,6 @@ class EffectModel : public QObject {
         // 開始点は削除不可（終了点は明示的な場合のみ保護）
         if (frame <= startFrame)
             return;
-        if (hasExplicitEnd(m_keyframeTracks.value(paramName))) {
-            const int endFrame = m_keyframeTracks.value(paramName).toMap().value("end").toMap().value("frame").toInt();
-            if (frame >= endFrame)
-                return;
-        }
-
         QVariantList points = track.value("points").toList(), next;
         for (const auto &v : points)
             if (v.toMap().value("frame").toInt() != frame)

@@ -748,7 +748,7 @@ Common.RinaWindow {
                                             width: 16
                                             height: 16
                                             anchors.verticalCenter: parent.verticalCenter
-                                            x: (currentFrame / clipDur) * trackItem.width - width / 2
+                                            x: Math.min(trackItem.width - width / 2, (currentFrame / clipDur) * trackItem.width - width / 2)
 
                                             Rectangle {
                                                 width: 8
@@ -764,10 +764,10 @@ Common.RinaWindow {
 
                                                 anchors.fill: parent
                                                 hoverEnabled: true
-                                                cursorShape: kfItem.isEndpoint ? Qt.ArrowCursor : Qt.OpenHandCursor
+                                                cursorShape: kfItem.originalFrame === 0 ? Qt.ArrowCursor : Qt.OpenHandCursor
                                                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                                                 onClicked: function(mouse) {
-                                                    if (mouse.button === Qt.RightButton && !kfItem.isEndpoint)
+                                                    if (mouse.button === Qt.RightButton && kfItem.originalFrame !== 0)
                                                         kfItem.targetModel.removeKeyframe(kfItem.targetKey, kfItem.originalFrame);
 
                                                 }
@@ -782,7 +782,7 @@ Common.RinaWindow {
                                                 property real startX: 0
 
                                                 target: null
-                                                enabled: !kfItem.isEndpoint
+                                                enabled: kfItem.originalFrame !== 0
                                                 acceptedButtons: Qt.LeftButton
                                                 onActiveChanged: {
                                                     if (active) {

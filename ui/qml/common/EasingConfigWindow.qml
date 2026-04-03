@@ -277,17 +277,23 @@ ApplicationWindow {
         previewScale = 1;
         previewOffsetX = 0;
         previewOffsetY = 0;
-        // 方針4: デフォルト状態で初めて開いた時、クリップ末に終了点を自動生成
-        if (!effectModel.hasExplicitEndPoint(paramName)) {
-            const clipDur = TimelineBridge ? TimelineBridge.clipDurationFrames : 100;
-            const fps = (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.fps : 60;
-            const endFrame = Math.max(0, clipDur - 1);
-            const endVal = effectModel.evaluatedParam(paramName, endFrame, fps);
-            TimelineBridge.setKeyframe(clipId, effectIndex, paramName, endFrame, endVal, {
-                "isEnd": true
+        // 初回オープン時: 最終フレームにキーフレームがなければ通常の中間点として自動追加
+        {
+            const _clipDur = TimelineBridge ? TimelineBridge.clipDurationFrames : 100;
+            const _fps = (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.fps : 60;
+            const _endFrame = _clipDur;
+            const _track = effectModel.keyframeListForUi(paramName) || [];
+            const _hasKfAtEnd = _track.some(function(kf) {
+                return kf.frame === _endFrame;
             });
-            keyframeFrame = endFrame;
-        }
+            if (!_hasKfAtEnd) {
+                const _endVal = effectModel.evaluatedParam(paramName, _endFrame, _fps);
+                TimelineBridge.setKeyframe(clipId, effectIndex, paramName, _endFrame, _endVal, {
+                    "interp": "linear"
+                });
+                keyframeFrame = _endFrame;
+            }
+        };
         typeCombo.model = effectModel.availableEasings();
         const tracks = effectModel.keyframeTracks;
         const track = effectModel ? effectModel.keyframeListForUi(paramName) : undefined;
