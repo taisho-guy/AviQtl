@@ -279,6 +279,8 @@ ApplicationWindow {
         previewOffsetY = 0;
         // 初回オープン時: 最終フレームにキーフレームがなければ通常の中間点として自動追加
         {
+            // keyframeFrame は変更しない（元フレームの interp をUIに正しく表示する）
+
             const _clipDur = TimelineBridge ? TimelineBridge.clipDurationFrames : 100;
             const _fps = (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.fps : 60;
             const _endFrame = _clipDur;
@@ -288,10 +290,18 @@ ApplicationWindow {
             });
             if (!_hasKfAtEnd) {
                 const _endVal = effectModel.evaluatedParam(paramName, _endFrame, _fps);
+                // 末尾の既存キーフレーム（= 末尾セグメントの左端）の interp を linear に更新
+                // これにより 左端フレーム→endFrame が直線補間になる
+                if (_track.length > 0) {
+                    const _prevKf = _track[_track.length - 1];
+                    TimelineBridge.setKeyframe(clipId, effectIndex, paramName, _prevKf.frame, _prevKf.value, {
+                        "interp": "linear"
+                    });
+                }
+                // endFrame 自体は末尾なので interp は使われない（none のまま）
                 TimelineBridge.setKeyframe(clipId, effectIndex, paramName, _endFrame, _endVal, {
-                    "interp": "linear"
+                    "interp": "none"
                 });
-                keyframeFrame = _endFrame;
             }
         };
         typeCombo.model = effectModel.availableEasings();
