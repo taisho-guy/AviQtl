@@ -242,7 +242,7 @@ Loader {
 
                 var v = _em.evaluatedParam(_key, f, _fps) || controlLoader.value || "#ffffff";
                 _em.setKeyframe(_key, f, v, {
-                    "interp": "constant"
+                    "interp": "linear"
                 });
             }
 
@@ -253,8 +253,19 @@ Loader {
                 }
                 _ensureAt(_startFrame);
                 _ensureAt(_endFrame);
+                // 既存の補間設定を維持するため、キーフレームの現在状態から引っ張るか、なければ linear
+                var currentInterp = "linear";
+                for (var i = 0; i < _kfs.length; i++) {
+                    if (_kfs[i].frame === frame) {
+                        currentInterp = _kfs[i].interp || "linear";
+                        break;
+                    }
+                }
+                if (currentInterp === "constant")
+                    currentInterp = "linear";
+ // UI操作で恒久的にconstantに戻らないようにする措置
                 _em.setKeyframe(_key, frame, val, {
-                    "interp": "constant"
+                    "interp": currentInterp
                 });
             }
 

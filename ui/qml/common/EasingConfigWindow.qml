@@ -25,6 +25,10 @@ ApplicationWindow {
     }
 
     function evalEasing(t) {
+        return evalEasingByType(t, root.selectedType);
+    }
+
+    function evalEasingByType(t, type) {
         function _bounceOut(x) {
             var n1 = 7.5625, d1 = 2.75;
             if (x < 1 / d1)
@@ -43,7 +47,6 @@ ApplicationWindow {
         }
 
         var bz = root.bezierParams;
-        var type = root.selectedType;
         if (type === "linear")
             return t;
 
@@ -439,8 +442,8 @@ ApplicationWindow {
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    color: "#1a1a1a"
-                    border.color: "#444"
+                    color: palette.base
+                    border.color: palette.mid
                     border.width: 1
                     radius: 4
                     clip: true
@@ -656,7 +659,7 @@ ApplicationWindow {
                         anchors.margins: 4
                         text: qsTr("右ドラッグ:パン  ホイール:ズーム") + (root.selectedType === "custom" ? qsTr("  左ドラッグ:ハンドル") : "")
                         font.pixelSize: 9
-                        color: "#555"
+                        color: palette.mid
                     }
 
                 }
@@ -909,165 +912,7 @@ ApplicationWindow {
 
                                                     // ミニプレビュー専用軽量評価
                                                     function miniEval(t, type) {
-                                                        function bo(x) {
-                                                            var n = 7.5625, d = 2.75;
-                                                            if (x < 1 / d)
-                                                                return n * x * x;
-
-                                                            if (x < 2 / d) {
-                                                                x -= 1.5 / d;
-                                                                return n * x * x + 0.75;
-                                                            }
-                                                            if (x < 2.5 / d) {
-                                                                x -= 2.25 / d;
-                                                                return n * x * x + 0.9375;
-                                                            }
-                                                            x -= 2.625 / d;
-                                                            return n * x * x + 0.984375;
-                                                        }
-
-                                                        // type = type.toLowerCase().replace(/_/g, ""); // キー名統一により不要
-                                                        if (type === "linear")
-                                                            return t;
-
-                                                        if (type === "ease_in_quad")
-                                                            return t * t;
-
-                                                        if (type === "ease_out_quad")
-                                                            return 1 - (1 - t) * (1 - t);
-
-                                                        if (type === "ease_in_out_quad")
-                                                            return t < 0.5 ? 2 * t * t : 1 - ((-2 * t + 2) ** 2) / 2;
-
-                                                        if (type === "ease_in_sine")
-                                                            return 1 - Math.cos(t * Math.PI / 2);
-
-                                                        if (type === "ease_out_sine")
-                                                            return Math.sin(t * Math.PI / 2);
-
-                                                        if (type === "ease_in_out_sine")
-                                                            return -(Math.cos(Math.PI * t) - 1) / 2;
-
-                                                        if (type === "ease_out_in_sine")
-                                                            return t < 0.5 ? Math.sin(t * Math.PI) / 2 : (1 - Math.cos((t * 2 - 1) * Math.PI / 2)) / 2 + 0.5;
-
-                                                        if (type === "ease_in_cubic")
-                                                            return t ** 3;
-
-                                                        if (type === "ease_out_cubic")
-                                                            return 1 - (1 - t) ** 3;
-
-                                                        if (type === "ease_in_out_cubic")
-                                                            return t < 0.5 ? 4 * t ** 3 : 1 - ((-2 * t + 2) ** 3) / 2;
-
-                                                        if (type === "ease_out_in_cubic")
-                                                            return t < 0.5 ? (1 - (1 - 2 * t) ** 3) / 2 : (2 * t - 1) ** 3 / 2 + 0.5;
-
-                                                        if (type === "ease_in_quart")
-                                                            return t ** 4;
-
-                                                        if (type === "ease_out_quart")
-                                                            return 1 - (1 - t) ** 4;
-
-                                                        if (type === "ease_in_quint")
-                                                            return t ** 5;
-
-                                                        if (type === "ease_out_quint")
-                                                            return 1 - (1 - t) ** 5;
-
-                                                        if (type === "ease_in_expo")
-                                                            return t === 0 ? 0 : Math.pow(2, 10 * t - 10);
-
-                                                        if (type === "ease_out_expo")
-                                                            return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
-
-                                                        if (type === "ease_out_in_expo") {
-                                                            if (t === 0)
-                                                                return 0;
-
-                                                            if (t === 1)
-                                                                return 1;
-
-                                                            return t < 0.5 ? (1 - Math.pow(2, -20 * t)) / 2 : Math.pow(2, 20 * t - 20) / 2 + 0.5;
-                                                        }
-                                                        if (type === "ease_in_circ")
-                                                            return 1 - Math.sqrt(1 - t * t);
-
-                                                        if (type === "ease_out_circ")
-                                                            return Math.sqrt(1 - (t - 1) ** 2);
-
-                                                        if (type === "ease_out_in_circ")
-                                                            return t < 0.5 ? Math.sqrt(1 - (2 * t - 1) ** 2) / 2 : (1 - Math.sqrt(1 - (2 * t - 1) ** 2)) / 2 + 0.5;
-
-                                                        if (type === "ease_in_back") {
-                                                            var c = 1.70158;
-                                                            return (c + 1) * t ** 3 - c * t ** 2;
-                                                        }
-                                                        if (type === "ease_out_back") {
-                                                            var cb = 1.70158;
-                                                            return 1 + (cb + 1) * (t - 1) ** 3 + cb * (t - 1) ** 2;
-                                                        }
-                                                        if (type === "ease_out_in_back") {
-                                                            var c1 = 1.70158, c3 = c1 + 1;
-                                                            var eout = (u) => {
-                                                                return 1 + c3 * (u - 1) ** 3 + c1 * (u - 1) ** 2;
-                                                            };
-                                                            var ein = (u) => {
-                                                                return c3 * u ** 3 - c1 * u ** 2;
-                                                            };
-                                                            return t < 0.5 ? eout(2 * t) / 2 : ein(2 * t - 1) / 2 + 0.5;
-                                                        }
-                                                        if (type === "ease_in_elastic") {
-                                                            if (t === 0)
-                                                                return 0;
-
-                                                            if (t === 1)
-                                                                return 1;
-
-                                                            return -Math.pow(2, 10 * t - 10) * Math.sin((10 * t - 10.75) * 2 * Math.PI / 3);
-                                                        }
-                                                        if (type === "ease_out_elastic") {
-                                                            if (t === 0)
-                                                                return 0;
-
-                                                            if (t === 1)
-                                                                return 1;
-
-                                                            return Math.pow(2, -10 * t) * Math.sin((10 * t - 0.75) * 2 * Math.PI / 3) + 1;
-                                                        }
-                                                        if (type === "ease_out_in_elastic") {
-                                                            var c4 = 2 * Math.PI / 3;
-                                                            if (t === 0)
-                                                                return 0;
-
-                                                            if (t === 1)
-                                                                return 1;
-
-                                                            var eout = (u) => {
-                                                                return Math.pow(2, -10 * u) * Math.sin((u * 10 - 0.75) * c4) + 1;
-                                                            };
-                                                            var ein = (u) => {
-                                                                return -Math.pow(2, 10 * u - 10) * Math.sin((u * 10 - 10.75) * c4);
-                                                            };
-                                                            return t < 0.5 ? eout(2 * t) / 2 : ein(2 * t - 1) / 2 + 0.5;
-                                                        }
-                                                        if (type === "ease_out_bounce")
-                                                            return bo(t);
-
-                                                        if (type === "ease_in_bounce")
-                                                            return 1 - bo(1 - t);
-
-                                                        if (type === "ease_in_out_bounce")
-                                                            return t < 0.5 ? (1 - bo(1 - 2 * t)) / 2 : (1 + bo(2 * t - 1)) / 2;
-
-                                                        if (type === "ease_out_in_bounce")
-                                                            return t < 0.5 ? bo(2 * t) / 2 : (1 - bo(1 - 2 * (t - 0.5))) / 2 + 0.5;
-
-                                                        if (type === "custom")
-                                                            return t;
-
-                                                        // custom はメインプレビューで確認
-                                                        return t;
+                                                        return root.evalEasingByType(t, type);
                                                     }
 
                                                     Layout.fillWidth: true
@@ -1139,7 +984,7 @@ ApplicationWindow {
 
                                             background: Rectangle {
                                                 color: isCurrent ? palette.highlight : (parent.hovered ? Qt.rgba(1, 1, 1, 0.06) : Qt.rgba(1, 1, 1, 0.03))
-                                                border.color: isCurrent ? palette.highlight : "#444"
+                                                border.color: isCurrent ? palette.highlight : palette.mid
                                                 border.width: isCurrent ? 2 : 1
                                                 radius: 4
                                             }

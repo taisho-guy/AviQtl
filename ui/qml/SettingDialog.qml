@@ -478,7 +478,7 @@ Common.RinaWindow {
 
                                     var raw = effectModel.evaluatedParam(key, f, root._projectFps);
                                     var v = (raw !== undefined && raw !== null) ? raw : effVal;
-                                    var interp = (def.type === "color") ? "constant" : "linear";
+                                    var interp = "linear";
                                     paramDelegate.effectModel.setKeyframe(paramDelegate.key, f, v, {
                                         "interp": interp
                                     });
