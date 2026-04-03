@@ -291,7 +291,7 @@ class EffectModel : public QObject {
             const QVariantMap modeParams = getModeParams(track[i]);
 
             if (type == "none")
-                return v0;
+                return (frame < f1) ? v0 : v1;
             if (v0.typeId() == QMetaType::QString && v1.typeId() == QMetaType::QString) {
                 QColor c0(v0.toString()), c1(v1.typeId() == QMetaType::QString ? v1.toString() : v0.toString());
                 if (c0.isValid() && c1.isValid()) {
