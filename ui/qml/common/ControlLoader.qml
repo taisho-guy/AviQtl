@@ -219,7 +219,7 @@ Loader {
                 return null;
             }
             property string _interp: (_startKf && _startKf.interp) ? _startKf.interp : ""
-            property bool _rightInteractive: _hasKf && _interp !== "" && _interp !== "constant" && _interp !== "none"
+            property bool _rightInteractive: _hasKf && _interp !== "" && _interp !== "constant" && _hasKfAt(_endFrame)
             property var _startVal: {
                 var _ = colorRow._rev;
                 return (_hasKf && _em) ? (_em.evaluatedParam(_key, _startFrame, _fps) || controlLoader.value || "#ffffff") : (controlLoader.value || "#ffffff");

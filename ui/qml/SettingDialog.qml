@@ -423,6 +423,8 @@ Common.RinaWindow {
 
                         // 全パラメータ（統一処理）
                         Repeater {
+                            // 終了点は EasingConfigWindow が isEnd=true で生成する
+
                             model: getUiModel(effectModel)
 
                             delegate: ColumnLayout {
@@ -440,11 +442,16 @@ Common.RinaWindow {
                                 property int curRelFrame: (TimelineBridge && TimelineBridge.transport) ? Math.max(0, TimelineBridge.transport.currentFrame - TimelineBridge.clipStartFrame) : 0
                                 property int clipDur: TimelineBridge ? TimelineBridge.clipDurationFrames : 100
                                 property var tracks: effectModel ? effectModel.keyframeTracks : null
-                                property var kfs: effectModel ? effectModel.keyframeListForUi(key) : []
+                                property var kfs: {
+                                    var _ = tracks;
+                                    return effectModel ? effectModel.keyframeListForUi(key) : [];
+                                }
                                 property bool hasKeyframes: kfs.length > 0
                                 property var interval: findInterval(kfs, curRelFrame, clipDur)
                                 property int startFrame: interval.start
                                 property int endFrame: interval.end
+                                property bool trackHasEnd: effectModel ? effectModel.hasExplicitEndPoint(key) : false
+                                property bool isAfterEnd: trackHasEnd && startFrame !== 0 && effectModel.isEndpointFrame(key, startFrame)
                                 property var startVal: isNumber ? (effectModel ? effectModel.evaluatedParam(key, startFrame, root._projectFps) : effVal) : effVal
                                 property var endVal: isNumber ? (effectModel ? effectModel.evaluatedParam(key, endFrame, root._projectFps) : effVal) : effVal
                                 property string interpType: hasKeyframes ? getInterpAt(startFrame) : "constant"
@@ -479,7 +486,10 @@ Common.RinaWindow {
 
                                 function ensureRangeKeyframes() {
                                     ensureKeyframeAt(startFrame);
-                                    ensureKeyframeAt(endFrame);
+                                    if (endFrame === clipDur && !effectModel.hasExplicitEndPoint(key)) {
+                                    } else {
+                                        ensureKeyframeAt(endFrame);
+                                    }
                                 }
 
                                 function findInterval(kfs, cur, totalDur) {
@@ -580,8 +590,8 @@ Common.RinaWindow {
                                     Layout.fillWidth: true
                                     Layout.margins: 4
                                     visible: isNumber
-                                    enabled: isNumber
-                                    isRangeMode: isMoving
+                                    enabled: isNumber && !isAfterEnd
+                                    isRangeMode: isMoving && hasKeyframeAt(endFrame)
                                     interpolationType: interpType
                                     paramName: {
                                         var interpLabel = {
@@ -633,6 +643,7 @@ Common.RinaWindow {
                                     Layout.fillWidth: true
                                     Layout.margins: 4
                                     visible: !isNumber
+                                    enabled: !isAfterEnd
                                     definition: def
                                     value: effVal
                                     effectRootRef: effectRoot
@@ -743,7 +754,7 @@ Common.RinaWindow {
                                                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                                                 onClicked: function(mouse) {
                                                     if (mouse.button === Qt.RightButton && !kfItem.isEndpoint)
-                                                        kfItem.targetModel.removeKeyframe(kfItem.targetKey, modelData.frame);
+                                                        kfItem.targetModel.removeKeyframe(kfItem.targetKey, kfItem.originalFrame);
 
                                                 }
                                                 onDoubleClicked: function(mouse) {
@@ -844,6 +855,9 @@ Common.RinaWindow {
                                             let rawRelFrame = (mouse.x / trackItem.width) * clipDur;
                                             let f = snapRelativeFrame(rawRelFrame);
                                             f = Math.max(0, Math.min(clipDur, f));
+                                            if (hasKeyframeAt(f))
+                                                return ;
+
                                             let val = effectModel.evaluatedParam(key, f, root._projectFps);
                                             let options = {
                                                 "interp": "linear"

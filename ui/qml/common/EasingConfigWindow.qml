@@ -274,9 +274,17 @@ ApplicationWindow {
         previewScale = 1;
         previewOffsetX = 0;
         previewOffsetY = 0;
-        if (!effectModel)
-            return ;
-
+        // 方針4: デフォルト状態で初めて開いた時、クリップ末に終了点を自動生成
+        if (!effectModel.hasExplicitEndPoint(paramName)) {
+            const clipDur = TimelineBridge ? TimelineBridge.clipDurationFrames : 100;
+            const fps = (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.fps : 60;
+            const endFrame = Math.max(0, clipDur - 1);
+            const endVal = effectModel.evaluatedParam(paramName, endFrame, fps);
+            TimelineBridge.setKeyframe(clipId, effectIndex, paramName, endFrame, endVal, {
+                "isEnd": true
+            });
+            keyframeFrame = endFrame;
+        }
         typeCombo.model = effectModel.availableEasings();
         const tracks = effectModel.keyframeTracks;
         const track = effectModel ? effectModel.keyframeListForUi(paramName) : undefined;
