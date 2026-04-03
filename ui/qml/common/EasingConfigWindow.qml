@@ -265,6 +265,8 @@ ApplicationWindow {
     }
 
     function openConfig(args) {
+        // keyframeFrame は変更しない（元フレームの interp をUIに正しく表示する）
+
         isInitializing = true;
         clipId = args.clipId;
         effectIndex = args.effectIndex;
@@ -279,8 +281,6 @@ ApplicationWindow {
         previewOffsetY = 0;
         // 初回オープン時: 最終フレームにキーフレームがなければ通常の中間点として自動追加
         {
-            // keyframeFrame は変更しない（元フレームの interp をUIに正しく表示する）
-
             const _clipDur = TimelineBridge ? TimelineBridge.clipDurationFrames : 100;
             const _fps = (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.fps : 60;
             const _endFrame = _clipDur;
@@ -301,6 +301,12 @@ ApplicationWindow {
                 // endFrame 自体は末尾なので interp は使われない（none のまま）
                 TimelineBridge.setKeyframe(clipId, effectIndex, paramName, _endFrame, _endVal, {
                     "interp": "none"
+                });
+                // 初回設定直後に UI の補間状態を確定させる（右値変更なしでも補間が反映されるよう）
+                Qt.callLater(function() {
+                    if (!isInitializing)
+                        updateKeyframe();
+
                 });
             }
         };

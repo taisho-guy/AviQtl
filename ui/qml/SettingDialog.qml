@@ -452,9 +452,18 @@ Common.RinaWindow {
                                 property int endFrame: interval.end
                                 property bool trackHasEnd: effectModel ? effectModel.hasExplicitEndPoint(key) : false
                                 property bool isAfterEnd: trackHasEnd && startFrame !== 0 && effectModel.isEndpointFrame(key, startFrame)
-                                property var startVal: isNumber ? (effectModel ? effectModel.evaluatedParam(key, startFrame, root._projectFps) : effVal) : effVal
-                                property var endVal: isNumber ? (effectModel ? effectModel.evaluatedParam(key, endFrame, root._projectFps) : effVal) : effVal
-                                property string interpType: hasKeyframes ? getInterpAt(startFrame) : "constant"
+                                property var startVal: {
+                                    var _ = tracks;
+                                    return isNumber ? (effectModel ? effectModel.evaluatedParam(key, startFrame, root._projectFps) : effVal) : effVal;
+                                }
+                                property var endVal: {
+                                    var _ = tracks;
+                                    return isNumber ? (effectModel ? effectModel.evaluatedParam(key, endFrame, root._projectFps) : effVal) : effVal;
+                                }
+                                property string interpType: {
+                                    var _ = tracks;
+                                    return hasKeyframes ? getInterpAt(startFrame) : "constant";
+                                }
                                 property bool isMoving: isNumber && (hasKeyframes || interpType !== "constant")
 
                                 function hasKeyframeAt(f) {
@@ -612,6 +621,12 @@ Common.RinaWindow {
                                     onStartValueModified: function(val) {
                                         root.inputting = true;
                                         updateParam(startFrame, val);
+                                        // 暗転状態（右側が非アクティブ）では左値変更を右側にも同期する
+                                        var _rightActive = isMoving && hasKeyframeAt(endFrame) && interpType !== "" && interpType !== "constant";
+                                        if (!_rightActive && endFrame !== startFrame) {
+                                            ensureKeyframeAt(endFrame);
+                                            updateParam(endFrame, val);
+                                        }
                                         root.inputting = false;
                                     }
                                     onEndValueModified: function(val) {
@@ -654,6 +669,11 @@ Common.RinaWindow {
                                     onStartValueModified: function(val) {
                                         root.inputting = true;
                                         updateParam(startFrame, val);
+                                        // 暗転状態（右側が非アクティブ）では左値変更を右側にも同期する
+                                        if (!rightInteractiveState && endFrame !== startFrame) {
+                                            ensureKeyframeAt(endFrame);
+                                            updateParam(endFrame, val);
+                                        }
                                         root.inputting = false;
                                     }
                                     onEndValueModified: function(val) {
