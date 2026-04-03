@@ -56,6 +56,7 @@ class TimelineController : public QObject {
     Q_PROPERTY(QVariantList scenes READ scenes NOTIFY scenesChanged)
     Q_PROPERTY(int currentSceneId READ currentSceneId NOTIFY currentSceneIdChanged)
     Q_PROPERTY(QString currentProjectUrl READ currentProjectUrl NOTIFY currentProjectUrlChanged)
+    Q_PROPERTY(QVariantList previewSelectionIds READ previewSelectionIds NOTIFY previewSelectionIdsChanged)
 
   public:
     explicit TimelineController(QObject *parent = nullptr);
@@ -182,10 +183,18 @@ class TimelineController : public QObject {
     Q_PROPERTY(bool isExporting READ isExporting NOTIFY exportFinished)
     bool isExporting() const;
 
+    Q_INVOKABLE void handleClipClick(int clipId, int modifiers);
+    Q_INVOKABLE void updateSelectionPreview(int frameA, int frameB, int layerA, int layerB, bool additive);
+    Q_INVOKABLE void finalizeSelectionPreview();
+    Q_INVOKABLE void clearSelectionPreview();
+    Q_INVOKABLE QVariantList previewSelectionIds() const;
+
     Q_INVOKABLE void selectClip(int id);
     Q_INVOKABLE void selectClipsInRange(int frameA, int frameB, int layerA, int layerB, bool additive = false);
     Q_INVOKABLE void toggleSelection(int id, const QVariantMap &data);
     Q_INVOKABLE void applySelectionIds(const QVariantList &ids);
+
+    Q_INVOKABLE QPoint resolveDragDelta(int clipId, int deltaFrame, int deltaLayer, const QVariantList &batchIds, int minFrame, int minLayer, int maxLayer, int totalLayers);
 
     Q_INVOKABLE void togglePlay();
     Q_INVOKABLE void undo();
@@ -230,6 +239,7 @@ class TimelineController : public QObject {
     void currentProjectUrlChanged();
     void clipEffectsChanged(int clipId);
     void layerStateChanged(int layer);
+    void previewSelectionIdsChanged();
     void selectedLayerChanged();
     void errorOccurred(const QString &message);
     void exportStarted(int totalFrames);
@@ -261,6 +271,8 @@ class TimelineController : public QObject {
     TimelineMediaManager *m_mediaManager;
     TimelineEngineSynchronizer *m_engineSync;
     TimelineExportManager *m_exportManager;
+
+    QVariantList m_previewSelectionIds;
 
     // デバッグ用: Luaスクリプト直接実行
     Q_INVOKABLE QString debugRunLua(const QString &script);

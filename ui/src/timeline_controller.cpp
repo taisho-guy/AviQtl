@@ -108,6 +108,55 @@ void TimelineController::onCurrentFrameChanged() {
     updateActiveClipsList();
 }
 
+void TimelineController::handleClipClick(int clipId, int modifiers) {
+    if (modifiers & Qt::ControlModifier) {
+        m_timeline->toggleSelection(clipId, m_timeline->findClipById(clipId) ? QVariantMap() : QVariantMap());
+    } else {
+        m_timeline->applySelectionIds({clipId});
+    }
+}
+
+void TimelineController::updateSelectionPreview(int frameA, int frameB, int layerA, int layerB, bool additive) {
+    QVariantList ids;
+    if (additive && m_selection) {
+        ids = m_selection->selectedClipIds();
+    }
+
+    int minF = std::min(frameA, frameB);
+    int maxF = std::max(frameA, frameB);
+    int minL = std::min(layerA, layerB);
+    int maxL = std::max(layerA, layerB);
+
+    for (const auto &clip : m_timeline->clips()) {
+        int clipEnd = clip.startFrame + clip.durationFrames;
+        if (clip.startFrame < maxF && minF < clipEnd && clip.layer >= minL && clip.layer <= maxL) {
+            if (!ids.contains(clip.id))
+                ids.append(clip.id);
+        }
+    }
+
+    if (m_previewSelectionIds != ids) {
+        m_previewSelectionIds = ids;
+        emit previewSelectionIdsChanged();
+    }
+}
+
+void TimelineController::finalizeSelectionPreview() {
+    if (!m_previewSelectionIds.isEmpty()) {
+        applySelectionIds(m_previewSelectionIds);
+        clearSelectionPreview();
+    }
+}
+
+void TimelineController::clearSelectionPreview() {
+    if (!m_previewSelectionIds.isEmpty()) {
+        m_previewSelectionIds.clear();
+        emit previewSelectionIdsChanged();
+    }
+}
+
+QVariantList TimelineController::previewSelectionIds() const { return m_previewSelectionIds; }
+
 void TimelineController::setVideoFrameStore(Rina::Core::VideoFrameStore *store) {
     qDebug() << "TimelineController: VideoFrameStore set. Updating decoders...";
     m_mediaManager->setVideoFrameStore(store);
@@ -256,6 +305,15 @@ QVariantList TimelineController::clips() const {
         params["startFrame"] = clip.startFrame;
         params["durationFrames"] = clip.durationFrames;
         params["id"] = clip.id;
+
+        int groupLayerCount = 0;
+        for (auto *eff : clip.effects) {
+            if (eff->id() == "GroupControl") {
+                groupLayerCount = eff->params().value("layerCount", 0).toInt();
+                break;
+            }
+        }
+        map["groupLayerCount"] = groupLayerCount;
 
         for (auto *eff : clip.effects) {
             QVariantMap p = eff->params();
@@ -873,6 +931,28 @@ void TimelineController::updateViewport(double x, double y) {
 }
 
 QPoint TimelineController::resolveDragPosition(int clipId, int targetLayer, int proposedStartFrame, const QVariantList &batchIds) { return m_timeline->resolveDragPosition(clipId, targetLayer, proposedStartFrame, batchIds); }
+
+QPoint TimelineController::resolveDragDelta(int clipId, int deltaFrame, int deltaLayer, const QVariantList &batchIds, int minFrame, int minLayer, int maxLayer, int totalLayers) {
+    const auto *clip = m_timeline->findClipById(clipId);
+    if (!clip)
+        return QPoint(0, 0);
+
+    // 1. 衝突判定を含めた座標解決
+    QPoint resolved = m_timeline->resolveDragPosition(clipId, clip->layer + deltaLayer, clip->startFrame + deltaFrame, batchIds);
+
+    int dF = resolved.x() - clip->startFrame;
+    int dL = resolved.y() - clip->layer;
+
+    // 2. タイムライン境界によるクランプ (QMLから移行)
+    if (minFrame + dF < 0)
+        dF = -minFrame;
+    if (minLayer + dL < 0)
+        dL = -minLayer;
+    if (maxLayer + dL >= totalLayers)
+        dL = totalLayers - 1 - maxLayer;
+
+    return QPoint(dF, dL);
+}
 
 QString TimelineController::debugRunLua(const QString &script) {
     // テスト用に time=currentFrame/fps, index=0, value=0 で実行

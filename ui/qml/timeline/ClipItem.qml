@@ -8,8 +8,6 @@ Item {
     property int layerHeight: 30
     property int layerCount: 128
     property int clipResizeHandleWidth: 6
-    property bool isBoxSelecting: false
-    property var boxSelectionPreviewIds: []
     property Item flickableContentItem: null
     property var snapFrameFunc: function(f, ignoreSnap) {
         return f;
@@ -20,72 +18,30 @@ Item {
     property bool forceVisualSelection: false
     property var forcedSelectedIds: []
     readonly property bool committedSelected: ((TimelineBridge && TimelineBridge.selection) ? (TimelineBridge.selection.selectedClipIds.includes(modelData.id)) : false)
-    readonly property bool previewSelected: isBoxSelecting && boxSelectionPreviewIds.includes(modelData.id)
+    readonly property bool previewSelected: TimelineBridge && TimelineBridge.previewSelectionIds ? TimelineBridge.previewSelectionIds.includes(modelData.id) : false
     readonly property bool forcedSelected: forceVisualSelection && forcedSelectedIds.includes(modelData.id)
     readonly property bool isSelected: previewSelected || (forceVisualSelection ? forcedSelected : committedSelected)
     readonly property bool isLayerLocked: getLayerLocked(modelData.layer)
-    property int groupLayerCount: 0
-    property var groupEffectModel: null
     property string clipDisplayName: (typeof modelData.name === "string" && modelData.name.length > 0) ? modelData.name : modelData.type
     property int dragDeltaStart: (isSelected && timelineViewRoot.isDraggingMulti) ? timelineViewRoot.activeDragDeltaFrame : 0
     property int dragDeltaLayer: (isSelected && timelineViewRoot.isDraggingMulti) ? timelineViewRoot.activeDragDeltaLayer : 0
 
-    signal clipSelected(int clipId, int modifiers, bool isSelected)
     signal clipMoved(int clipId, int deltaLayer, int deltaStartFrame, int duration)
     signal clipResized(int clipId, int deltaStartFrame, int deltaDuration, int unused)
     signal clipDoubleClicked(int clipId)
-
-    function updateGroupInfo() {
-        groupLayerCount = 0;
-        groupEffectModel = null;
-        if (!isSelected || !TimelineBridge)
-            return ;
-
-        var effects = TimelineBridge.getClipEffectsModel(modelData.id);
-        for (var i = 0; i < effects.length; i++) {
-            if (effects[i].id === "GroupControl") {
-                groupEffectModel = effects[i];
-                groupLayerCount = groupEffectModel.params["layerCount"] || 0;
-                break;
-            }
-        }
-    }
 
     x: (resizeDraftStart >= 0 ? resizeDraftStart : Math.max(0, modelData.startFrame + dragDeltaStart)) * scale
     y: Math.max(0, modelData.layer + dragDeltaLayer) * layerHeight
     width: (resizeDraftDuration >= 0 ? resizeDraftDuration : modelData.durationFrames) * scale
     height: layerHeight
     z: modelData.layer
-    onIsSelectedChanged: updateGroupInfo()
-    Component.onCompleted: updateGroupInfo()
-
-    Connections {
-        function onClipEffectsChanged(clipId) {
-            if (clipId === modelData.id)
-                clipDelegate.updateGroupInfo();
-
-        }
-
-        target: TimelineBridge
-    }
-
-    Connections {
-        function onParamsChanged() {
-            if (clipDelegate.groupEffectModel)
-                clipDelegate.groupLayerCount = clipDelegate.groupEffectModel.params["layerCount"] || 0;
-
-        }
-
-        target: clipDelegate.groupEffectModel
-        ignoreUnknownSignals: true
-    }
 
     Rectangle {
-        visible: clipDelegate.isSelected && clipDelegate.groupLayerCount > 0
+        visible: clipDelegate.isSelected && (modelData.groupLayerCount > 0)
         x: 0
         y: layerHeight
         width: parent.width
-        height: clipDelegate.groupLayerCount * layerHeight
+        height: modelData.groupLayerCount * layerHeight
         color: Qt.rgba(palette.highlight.r, palette.highlight.g, palette.highlight.b, 0.18)
         border.color: Qt.rgba(palette.highlight.r, palette.highlight.g, palette.highlight.b, 0.55)
         border.width: 1
@@ -221,36 +177,26 @@ Item {
             function updateDragFromScenePos(sp, modifiers) {
                 var dX = sp.x - dragStartScenePos.x;
                 var dY = sp.y - dragStartScenePos.y;
-                var rawF = initialFrame + dX / clipDelegate.scale;
+                var deltaFrame = Math.round(dX / clipDelegate.scale);
+                var deltaLayer = Math.round(dY / layerHeight);
                 var ignoreSnap = (modifiers & Qt.ShiftModifier);
-                var propF = snapFrameFunc(rawF, ignoreSnap);
-                var propL = initialLayer + Math.round(dY / layerHeight);
-                var finalF = propF, finalL = propL;
-                if (TimelineBridge && typeof TimelineBridge.resolveDragPosition === "function") {
+                if (TimelineBridge && typeof TimelineBridge.resolveDragDelta === "function") {
                     var activeIds = (timelineViewRoot && timelineViewRoot.selectionVisualLatchIds) || [];
                     if (activeIds.length === 0 && TimelineBridge.selection)
                         activeIds = TimelineBridge.selection.selectedClipIds;
 
-                    var pos = TimelineBridge.resolveDragPosition(modelData.id, propL, propF, activeIds);
-                    finalF = pos.x;
-                    finalL = pos.y;
+                    var res = TimelineBridge.resolveDragDelta(modelData.id, deltaFrame, deltaLayer, activeIds, timelineViewRoot.selectionMinFrame, timelineViewRoot.selectionMinLayer, timelineViewRoot.selectionMaxLayer, timelineViewRoot.layerCount);
+                    var dF = res.x;
+                    var dL = res.y;
+                    if (!ignoreSnap)
+                        dF = snapFrameFunc(initialFrame + dF, false) - initialFrame;
+
+                    if (dF === timelineViewRoot.activeDragDeltaFrame && dL === timelineViewRoot.activeDragDeltaLayer)
+                        return ;
+
+                    timelineViewRoot.activeDragDeltaFrame = dF;
+                    timelineViewRoot.activeDragDeltaLayer = dL;
                 }
-                var deltaF = finalF - initialFrame;
-                var deltaL = finalL - initialLayer;
-                if (timelineViewRoot.selectionMinFrame + deltaF < 0)
-                    deltaF = -timelineViewRoot.selectionMinFrame;
-
-                if (timelineViewRoot.selectionMinLayer + deltaL < 0)
-                    deltaL = -timelineViewRoot.selectionMinLayer;
-
-                if (timelineViewRoot.selectionMaxLayer + deltaL >= timelineViewRoot.layerCount)
-                    deltaL = timelineViewRoot.layerCount - 1 - timelineViewRoot.selectionMaxLayer;
-
-                if (deltaF === timelineViewRoot.activeDragDeltaFrame && deltaL === timelineViewRoot.activeDragDeltaLayer)
-                    return ;
-
-                timelineViewRoot.activeDragDeltaFrame = deltaF;
-                timelineViewRoot.activeDragDeltaLayer = deltaL;
             }
 
             anchors.fill: parent
@@ -295,10 +241,8 @@ Item {
                         return ;
 
                     dragActive = true;
-                    // UX Fix: Select the clip immediately before dragging starts, if it's not selected
-                    // AND if it's not a Ctrl+Drag (which usually isn't standard in this app).
-                    if (!clipDelegate.isSelected)
-                        clipSelected(modelData.id, pressModifiers, false);
+                    if (!clipDelegate.isSelected && TimelineBridge)
+                        TimelineBridge.handleClipClick(modelData.id, pressModifiers);
 
                     var minF = modelData.startFrame;
                     var minL = modelData.layer;
@@ -347,7 +291,9 @@ Item {
                     return ;
 
                 if (!dragActive) {
-                    clipSelected(modelData.id, pressModifiers, clipDelegate.isSelected);
+                    if (TimelineBridge)
+                        TimelineBridge.handleClipClick(modelData.id, pressModifiers);
+
                     return ;
                 }
                 var deltaF = timelineViewRoot.activeDragDeltaFrame;
@@ -396,8 +342,8 @@ Item {
                     if (clipDelegate.isLayerLocked)
                         return ;
 
-                    if (!clipDelegate.isSelected && !(mouse.modifiers & Qt.ControlModifier))
-                        clipSelected(modelData.id, mouse.modifiers, false);
+                    if (!clipDelegate.isSelected && TimelineBridge)
+                        TimelineBridge.handleClipClick(modelData.id, mouse.modifiers);
 
                     var sp = mapToItem(flickableContentItem, mouse.x, mouse.y);
                     startSceneX = sp.x;
@@ -469,8 +415,8 @@ Item {
                     if (clipDelegate.isLayerLocked)
                         return ;
 
-                    if (!clipDelegate.isSelected && !(mouse.modifiers & Qt.ControlModifier))
-                        clipSelected(modelData.id, mouse.modifiers, false);
+                    if (!clipDelegate.isSelected && TimelineBridge)
+                        TimelineBridge.handleClipClick(modelData.id, mouse.modifiers);
 
                     var sp = mapToItem(flickableContentItem, mouse.x, mouse.y);
                     startSceneX = sp.x;

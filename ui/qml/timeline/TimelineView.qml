@@ -22,7 +22,6 @@ ScrollView {
     property point boxSelectionCurrent: Qt.point(0, 0)
     property real boxSelectionThreshold: 6
     property bool boxSelectionAdditive: false
-    property var boxSelectionPreviewIds: []
     property int activeDragDeltaFrame: 0
     property bool autoScrollSuspended: false
     property int activeDragDeltaLayer: 0
@@ -93,61 +92,6 @@ ScrollView {
     function endDragAutoScroll() {
         dragAutoScrollActive = false;
         dragAutoScrollCallback = null;
-    }
-
-    function effectiveSelectionIds() {
-        if (TimelineBridge && TimelineBridge.selection)
-            return TimelineBridge.selection.selectedClipIds.slice(0);
-
-        return [];
-    }
-
-    function handleClipSelection(clipId, modifiers, isSelected) {
-        if (!TimelineBridge || !TimelineBridge.selection)
-            return ;
-
-        if (modifiers & Qt.ControlModifier)
-            TimelineBridge.toggleSelection(clipId, {
-        });
-        else
-            TimelineBridge.applySelectionIds([clipId]);
-    }
-
-    function clipHitsBox(clip, frameA, frameB, layerA, layerB) {
-        var minFrame = Math.min(frameA, frameB);
-        var maxFrame = Math.max(frameA, frameB);
-        var minLayer = Math.min(layerA, layerB);
-        var maxLayer = Math.max(layerA, layerB);
-        var clipStart = clip.startFrame;
-        var clipEnd = clip.startFrame + clip.durationFrames;
-        var frameOverlap = clipStart < maxFrame && minFrame < clipEnd;
-        var layerMatch = clip.layer >= minLayer && clip.layer <= maxLayer;
-        return frameOverlap && layerMatch;
-    }
-
-    function updateBoxSelectionPreview() {
-        var scale = TimelineBridge ? TimelineBridge.timelineScale : 1;
-        var x1 = Math.min(boxSelectionStart.x, boxSelectionCurrent.x);
-        var x2 = Math.max(boxSelectionStart.x, boxSelectionCurrent.x);
-        var y1 = Math.min(boxSelectionStart.y, boxSelectionCurrent.y);
-        var y2 = Math.max(boxSelectionStart.y, boxSelectionCurrent.y);
-        var frameA = Math.floor(x1 / scale);
-        var frameB = Math.ceil(x2 / scale);
-        var layerA = Math.max(0, Math.floor(y1 / layerHeight));
-        var layerB = Math.max(0, Math.floor(y2 / layerHeight));
-        var ids = [];
-        if (boxSelectionAdditive)
-            ids = effectiveSelectionIds();
-
-        if (TimelineBridge && TimelineBridge.clips) {
-            for (var j = 0; j < TimelineBridge.clips.length; j++) {
-                var c = TimelineBridge.clips[j];
-                if (clipHitsBox(c, frameA, frameB, layerA, layerB) && !ids.includes(c.id))
-                    ids.push(c.id);
-
-            }
-        }
-        boxSelectionPreviewIds = ids;
     }
 
     function clamp(v, lo, hi) {
@@ -311,18 +255,13 @@ ScrollView {
                 layerHeight: timelineViewRoot.layerHeight
                 layerCount: timelineViewRoot.layerCount
                 clipResizeHandleWidth: timelineViewRoot.clipResizeHandleWidth
-                isBoxSelecting: timelineViewRoot.boxSelecting
-                boxSelectionPreviewIds: timelineViewRoot.boxSelectionPreviewIds
                 forceVisualSelection: false
                 forcedSelectedIds: []
                 flickableContentItem: timelineFlickable.contentItem
                 snapFrameFunc: timelineViewRoot.snapFrame
-                onClipSelected: (clipId, modifiers, isSelected) => {
-                    timelineViewRoot.handleClipSelection(clipId, modifiers, isSelected);
-                }
                 onClipMoved: (clipId, deltaLayer, deltaStart, unused) => {
                     if (TimelineBridge) {
-                        var selectedIds = effectiveSelectionIds();
+                        var selectedIds = TimelineBridge.selection ? TimelineBridge.selection.selectedClipIds : [];
                         if (selectedIds.includes(clipId)) {
                             var moves = [];
                             for (var i = 0; i < TimelineBridge.clips.length; i++) {
@@ -416,13 +355,22 @@ ScrollView {
                 boxSelectionStart = mapToItem(timelineFlickable.contentItem, mouse.x, mouse.y);
                 boxSelectionCurrent = boxSelectionStart;
                 boxSelectionAdditive = !!(mouse.modifiers & Qt.ControlModifier);
-                boxSelectionPreviewIds = [];
+                if (TimelineBridge)
+                    TimelineBridge.clearSelectionPreview();
+
             }
             onPositionChanged: (mouse) => {
                 boxSelectionCurrent = mapToItem(timelineFlickable.contentItem, mouse.x, mouse.y);
                 if (Math.abs(boxSelectionCurrent.x - boxSelectionStart.x) >= boxSelectionThreshold || Math.abs(boxSelectionCurrent.y - boxSelectionStart.y) >= boxSelectionThreshold) {
                     boxSelecting = true;
-                    timelineViewRoot.updateBoxSelectionPreview();
+                    if (TimelineBridge) {
+                        var scale = TimelineBridge.timelineScale;
+                        var f1 = Math.floor(boxSelectionStart.x / scale);
+                        var f2 = Math.ceil(boxSelectionCurrent.x / scale);
+                        var l1 = Math.floor(boxSelectionStart.y / layerHeight);
+                        var l2 = Math.floor(boxSelectionCurrent.y / layerHeight);
+                        TimelineBridge.updateSelectionPreview(f1, f2, l1, l2, boxSelectionAdditive);
+                    }
                 }
             }
             onReleased: (mouse) => {
@@ -440,20 +388,17 @@ ScrollView {
                             }
                         }
                     }
-                    var currentSel = effectiveSelectionIds();
-                    if (clickedClipId >= 0 && !currentSel.includes(clickedClipId))
+                    if (clickedClipId >= 0 && TimelineBridge && TimelineBridge.selection && !TimelineBridge.selection.selectedClipIds.includes(clickedClipId))
                         TimelineBridge.applySelectionIds([clickedClipId]);
 
                     contextMenu.openAt(mouse.x, mouse.y, clickedClipId >= 0 ? "clip" : "timeline", frame, layer, clickedClipId);
                     return ;
                 }
-                // Update current position to exactly where the mouse was released
                 boxSelectionCurrent = mapToItem(timelineFlickable.contentItem, mouse.x, mouse.y);
-                timelineViewRoot.updateBoxSelectionPreview();
-                var finalIds = boxSelectionPreviewIds.slice(0);
-                TimelineBridge.applySelectionIds(finalIds);
+                if (TimelineBridge)
+                    TimelineBridge.finalizeSelectionPreview();
+
                 boxSelecting = false;
-                boxSelectionPreviewIds = [];
             }
         }
 
@@ -610,19 +555,18 @@ ScrollView {
         }
 
         function rebuildMenu() {
+            // 非同期の destroy を避け、同期的にアイテムを削除・破棄することで
+            // Kirigami/KDE Menuの実装におけるレイアウト計算のタイミング問題を回避する
             while (contextMenu.count > 0) {
-                var item = contextMenu.itemAt(0);
-                contextMenu.removeItem(item);
-                (function(obj) {
-                    Qt.callLater(() => {
-                        try {
-                            if (obj)
-                                obj.destroy();
+                var it = contextMenu.takeItem(0);
+                if (it) {
+                    // プラットフォーム固有の項目など、破棄不可能なオブジェクトはスキップする
 
-                        } catch (e) {
-                        }
-                    });
-                })(item);
+                    try {
+                        it.destroy();
+                    } catch (e) {
+                    }
+                }
             }
             if (targetType === "timeline") {
                 var objectMenu = createSubMenu(qsTr("オブジェクトを追加"));

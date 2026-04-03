@@ -3,6 +3,8 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 ApplicationWindow {
+    // keyframeFrame は変更しない（元フレームの interp をUIに正しく表示する）
+
     id: root
 
     property int clipId: -1
@@ -265,8 +267,6 @@ ApplicationWindow {
     }
 
     function openConfig(args) {
-        // keyframeFrame は変更しない（元フレームの interp をUIに正しく表示する）
-
         isInitializing = true;
         clipId = args.clipId;
         effectIndex = args.effectIndex;
