@@ -94,6 +94,18 @@ ScrollView {
         dragAutoScrollCallback = null;
     }
 
+    function syncBoxSelectionPreview() {
+        if (!TimelineBridge)
+            return ;
+
+        var scale = TimelineBridge.timelineScale;
+        var f1 = Math.floor(boxSelectionStart.x / scale);
+        var f2 = Math.ceil(boxSelectionCurrent.x / scale);
+        var l1 = Math.floor(boxSelectionStart.y / layerHeight);
+        var l2 = Math.floor(boxSelectionCurrent.y / layerHeight);
+        TimelineBridge.updateSelectionPreview(f1, f2, l1, l2, boxSelectionAdditive);
+    }
+
     function clamp(v, lo, hi) {
         return Math.max(lo, Math.min(hi, v));
     }
@@ -363,21 +375,24 @@ ScrollView {
                 boxSelectionCurrent = mapToItem(timelineFlickable.contentItem, mouse.x, mouse.y);
                 if (Math.abs(boxSelectionCurrent.x - boxSelectionStart.x) >= boxSelectionThreshold || Math.abs(boxSelectionCurrent.y - boxSelectionStart.y) >= boxSelectionThreshold) {
                     boxSelecting = true;
-                    if (TimelineBridge) {
-                        var scale = TimelineBridge.timelineScale;
-                        var f1 = Math.floor(boxSelectionStart.x / scale);
-                        var f2 = Math.ceil(boxSelectionCurrent.x / scale);
-                        var l1 = Math.floor(boxSelectionStart.y / layerHeight);
-                        var l2 = Math.floor(boxSelectionCurrent.y / layerHeight);
-                        TimelineBridge.updateSelectionPreview(f1, f2, l1, l2, boxSelectionAdditive);
-                    }
+                    syncBoxSelectionPreview();
                 }
             }
             onReleased: (mouse) => {
-                var scale = TimelineBridge ? TimelineBridge.timelineScale : 1;
-                var frame = timelineViewRoot.snapFrame(mouse.x / scale);
+                boxSelectionCurrent = mapToItem(timelineFlickable.contentItem, mouse.x, mouse.y);
+                // マウスを放した瞬間に、ドラッグ距離がしきい値を超えているか再判定（高速移動対策）
                 if (!boxSelecting) {
-                    var layer = Math.floor(mouse.y / layerHeight);
+                    if (Math.abs(boxSelectionCurrent.x - boxSelectionStart.x) >= boxSelectionThreshold || Math.abs(boxSelectionCurrent.y - boxSelectionStart.y) >= boxSelectionThreshold)
+                        boxSelecting = true;
+
+                }
+                if (!boxSelecting) {
+                    // 単一クリック（コンテキストメニュー）ロジック
+                    var scale = TimelineBridge ? TimelineBridge.timelineScale : 1;
+                    // ビューポート座標(mouse.x)ではなく、内容座標(boxSelectionCurrent.x)を使用することで
+                    // スクロール状態に依存せず正確な位置を特定する
+                    var frame = timelineViewRoot.snapFrame(boxSelectionCurrent.x / scale);
+                    var layer = Math.floor(boxSelectionCurrent.y / layerHeight);
                     var clickedClipId = -1;
                     if (TimelineBridge && TimelineBridge.clips) {
                         for (var i = TimelineBridge.clips.length - 1; i >= 0; i--) {
@@ -388,16 +403,20 @@ ScrollView {
                             }
                         }
                     }
-                    if (clickedClipId >= 0 && TimelineBridge && TimelineBridge.selection && !TimelineBridge.selection.selectedClipIds.includes(clickedClipId))
-                        TimelineBridge.applySelectionIds([clickedClipId]);
+                    if (clickedClipId >= 0) {
+                        // すでに選択されている場合を除き、右クリックしたクリップを選択
+                        if (TimelineBridge && TimelineBridge.selection && !TimelineBridge.selection.selectedClipIds.includes(clickedClipId))
+                            TimelineBridge.applySelectionIds([clickedClipId]);
 
+                    }
+                    // メニューを開く座標はビューポート（mouse.x/y）基準で良い
                     contextMenu.openAt(mouse.x, mouse.y, clickedClipId >= 0 ? "clip" : "timeline", frame, layer, clickedClipId);
                     return ;
                 }
-                boxSelectionCurrent = mapToItem(timelineFlickable.contentItem, mouse.x, mouse.y);
-                if (TimelineBridge)
+                if (TimelineBridge) {
+                    syncBoxSelectionPreview(); // 確定直前に最終座標で同期
                     TimelineBridge.finalizeSelectionPreview();
-
+                }
                 boxSelecting = false;
             }
         }
@@ -457,6 +476,8 @@ ScrollView {
     }
 
     Menu {
+        // プラットフォーム固有の項目など、破棄不可能なオブジェクトはスキップする
+
         id: contextMenu
 
         property string targetType: ""
@@ -560,8 +581,6 @@ ScrollView {
             while (contextMenu.count > 0) {
                 var it = contextMenu.takeItem(0);
                 if (it) {
-                    // プラットフォーム固有の項目など、破棄不可能なオブジェクトはスキップする
-
                     try {
                         it.destroy();
                     } catch (e) {

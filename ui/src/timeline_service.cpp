@@ -1063,7 +1063,10 @@ void TimelineService::updateEffectParamInternal(int clipId, int effectIndex, con
                 if (m_selection->selectedClipId() == clipId) {
                     QVariantMap data = m_selection->selectedClipData();
                     data[paramName] = value;
-                    m_selection->select(clipId, data);
+                    // select() は単一選択にリセットしてしまうため、
+                    // 既存の複数選択リストを破壊しない refreshSelectionData を使用する。
+                    // これにより UI からの意図しない書き戻しによる選択解除を防ぐ。
+                    m_selection->refreshSelectionData(clipId, data);
                 }
             }
             break;

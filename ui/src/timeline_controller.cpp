@@ -128,8 +128,18 @@ void TimelineController::updateSelectionPreview(int frameA, int frameB, int laye
     int maxL = std::max(layerA, layerB);
 
     for (const auto &clip : m_timeline->clips()) {
+        // GroupControlによるレイヤーの拡張分を考慮
+        int groupLayerCount = 0;
+        for (auto *eff : clip.effects) {
+            if (eff->id() == "GroupControl") {
+                groupLayerCount = eff->params().value("layerCount", 0).toInt();
+                break;
+            }
+        }
+        int clipMaxL = clip.layer + groupLayerCount;
+
         int clipEnd = clip.startFrame + clip.durationFrames;
-        if (clip.startFrame < maxF && minF < clipEnd && clip.layer >= minL && clip.layer <= maxL) {
+        if (clip.startFrame < maxF && minF < clipEnd && clipMaxL >= minL && clip.layer <= maxL) {
             if (!ids.contains(clip.id))
                 ids.append(clip.id);
         }
@@ -142,10 +152,8 @@ void TimelineController::updateSelectionPreview(int frameA, int frameB, int laye
 }
 
 void TimelineController::finalizeSelectionPreview() {
-    if (!m_previewSelectionIds.isEmpty()) {
-        applySelectionIds(m_previewSelectionIds);
-        clearSelectionPreview();
-    }
+    applySelectionIds(m_previewSelectionIds);
+    clearSelectionPreview();
 }
 
 void TimelineController::clearSelectionPreview() {
@@ -180,62 +188,87 @@ void TimelineController::setTimelineScale(double scale) {
 
 // プロパティアクセサ
 void TimelineController::setClipProperty(const QString &name, const QVariant &value) {
-    int id = m_selection->selectedClipId();
-    if (id == -1)
+    const QVariantList ids = m_selection->selectedClipIds();
+    if (ids.isEmpty())
         return;
 
-    const ClipData *clip = m_timeline->findClipById(id);
-    if (!clip)
-        return;
+    m_timeline->undoStack()->beginMacro(tr("プロパティ変更: %1").arg(name));
 
-    // 暫定対応：プロパティ名に応じて適切なエフェクトのパラメータを更新する
-    int targetEffectIndex = -1;
+    for (const QVariant &vId : ids) {
+        int id = vId.toInt();
+        const ClipData *clip = m_timeline->findClipById(id);
+        if (!clip)
+            continue;
 
-    for (int i = 0; i < clip->effects.size(); ++i) {
-        if (clip->effects[i]->params().contains(name)) {
-            targetEffectIndex = i;
-            break;
+        int targetEffectIndex = -1;
+        for (int i = 0; i < clip->effects.size(); ++i) {
+            if (clip->effects[i]->params().contains(name)) {
+                targetEffectIndex = i;
+                break;
+            }
+        }
+
+        if (targetEffectIndex == -1 && !clip->effects.isEmpty()) {
+            targetEffectIndex = 0;
+            static const QStringList transformKeys = {"x", "y", "z", "scale", "aspect", "rotationX", "rotationY", "rotationZ", "opacity"};
+            if (!transformKeys.contains(name) && clip->effects.size() > 1) {
+                targetEffectIndex = 1;
+            }
+        }
+
+        if (targetEffectIndex != -1 && targetEffectIndex < clip->effects.size()) {
+            updateClipEffectParam(id, targetEffectIndex, name, value);
         }
     }
 
-    if (targetEffectIndex == -1 && !clip->effects.isEmpty()) {
-        targetEffectIndex = 0;
-        // transform に属するキーかどうかで対象エフェクトを振り分け
-        static const QStringList transformKeys = {"x", "y", "z", "scale", "aspect", "rotationX", "rotationY", "rotationZ", "opacity"};
-        if (!transformKeys.contains(name) && clip->effects.size() > 1) {
-            targetEffectIndex = 1;
-        }
-    }
-
-    if (targetEffectIndex != -1 && targetEffectIndex < clip->effects.size()) {
-        updateClipEffectParam(id, targetEffectIndex, name, value);
-    }
+    m_timeline->undoStack()->endMacro();
 }
 
 QVariant TimelineController::getClipProperty(const QString &name) const { return m_selection->selectedClipData().value(name); }
 
 int TimelineController::clipStartFrame() const { return m_selection->selectedClipData().value("startFrame", 0).toInt(); }
 void TimelineController::setClipStartFrame(int frame) {
-    int id = m_selection->selectedClipId();
-    if (id < 0)
+    const QVariantList ids = m_selection->selectedClipIds();
+    if (ids.isEmpty())
         return;
-    m_timeline->updateClip(id, layer(), frame, clipDurationFrames());
+
+    m_timeline->undoStack()->beginMacro(tr("開始フレーム変更"));
+    for (const QVariant &vId : ids) {
+        int id = vId.toInt();
+        if (const auto *c = m_timeline->findClipById(id))
+            m_timeline->updateClip(id, c->layer, frame, c->durationFrames);
+    }
+    m_timeline->undoStack()->endMacro();
 }
 
 int TimelineController::clipDurationFrames() const { return m_selection->selectedClipData().value("durationFrames", 100).toInt(); }
 void TimelineController::setClipDurationFrames(int frames) {
-    int id = m_selection->selectedClipId();
-    if (id < 0)
+    const QVariantList ids = m_selection->selectedClipIds();
+    if (ids.isEmpty())
         return;
-    m_timeline->updateClip(id, layer(), clipStartFrame(), frames);
+
+    m_timeline->undoStack()->beginMacro(tr("長さ変更"));
+    for (const QVariant &vId : ids) {
+        int id = vId.toInt();
+        if (const auto *c = m_timeline->findClipById(id))
+            m_timeline->updateClip(id, c->layer, c->startFrame, frames);
+    }
+    m_timeline->undoStack()->endMacro();
 }
 
 int TimelineController::layer() const { return m_selection->selectedClipData().value("layer", 0).toInt(); }
 void TimelineController::setLayer(int layer) {
-    int id = m_selection->selectedClipId();
-    if (id < 0)
+    const QVariantList ids = m_selection->selectedClipIds();
+    if (ids.isEmpty())
         return;
-    m_timeline->updateClip(id, layer, clipStartFrame(), clipDurationFrames());
+
+    m_timeline->undoStack()->beginMacro(tr("レイヤー変更"));
+    for (const QVariant &vId : ids) {
+        int id = vId.toInt();
+        if (const auto *c = m_timeline->findClipById(id))
+            m_timeline->updateClip(id, layer, c->startFrame, c->durationFrames);
+    }
+    m_timeline->undoStack()->endMacro();
 }
 
 void TimelineController::setSelectedLayer(int layer) {
