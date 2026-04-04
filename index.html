@@ -17,7 +17,7 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Outfit:wght@400;700&family=Roboto+Condensed:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Lexend:wght@400;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
 
     <link rel="icon" href="./assets/icon.svg" type="image/svg+xml">
 
@@ -40,7 +40,7 @@
         body {
             background-color: #0d0b14;
             color: #e0d7f0;
-            font-family: 'Outfit', 'Noto Sans JP', sans-serif;
+            font-family: 'Lexend', 'Noto Sans JP', sans-serif;
             font-weight: 400;
             line-height: 1.6;
             margin: 0;
@@ -130,6 +130,7 @@
             border: 2px solid #524075;
             margin: 10px 0;
             padding: 2px;
+            overflow-x: auto;
         }
         summary {
             background-color: #1a1429;
@@ -157,13 +158,13 @@
             border: 2px solid #524075;
             border-spacing: 2px;
         }
-        details th, details td { border: 1px solid #524075; }
+        details th, details td { border: 1px solid #524075; white-space: nowrap; }
 
         .footer-info { font-size: 0.8em; margin-top: 20px; }
         
-        code { background: linear-gradient(transparent 70%, rgba(179, 102, 255, 0.3) 70%); font-family: 'Roboto Condensed', monospace; color: #b366ff; padding: 0 2px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
-        code:hover { background: linear-gradient(transparent 40%, rgba(179, 102, 255, 0.4) 40%); }
-        code:active { background: rgba(179, 102, 255, 0.5); }
+        code { background: linear-gradient(transparent 70%, rgba(179, 102, 255, 0.3) 70%); font-family: 'JetBrains Mono', monospace; color: #e0d7f0; padding: 0 2px; font-weight: bold; cursor: pointer; transition: background 0.2s, color 0.2s; }
+        code:hover { background: rgba(179, 102, 255, 0.4); }
+        code:active { background: #b366ff; color: #0d0b14; }
 
         .hero {
             margin: 20px 0;
@@ -171,7 +172,8 @@
         .hero-title {
             font-size: 2.5em;
             margin: 10px 0;
-            display: inline-flex;
+            display: flex;
+            justify-content: center;
             font-weight: bold;
             align-items: baseline;
             cursor: pointer;
@@ -179,6 +181,12 @@
             user-select: none;
             white-space: nowrap;
         }
+        .hero-title .word-group {
+            display: inline-flex;
+            align-items: baseline;
+            white-space: nowrap;
+        }
+
         .hero-title .letter {
             display: inline-block;
             position: relative;
@@ -226,6 +234,12 @@
         .hero-title:hover a .letter, .hero-title:hover a .expand-inner {
             color: #b366ff;
         }
+
+        @media (max-width: 600px) {
+            .hero-title {
+                font-size: clamp(1rem, 4.5vw, 1.5em);
+            }
+        }
     </style>
 </head>
 <body>
@@ -234,19 +248,27 @@
     <hr>
     <div class="hero">
         <h1 class="hero-title">
-            <span class="letter" style="z-index:1">R</span>
-            <span class="expand" style="z-index:1"><span class="expand-inner">ina&nbsp;</span></span>
-            <span class="letter" style="z-index:2">i</span>
-            <span class="expand" style="z-index:2"><span class="expand-inner">s&nbsp;</span></span>
-            <span class="letter" style="z-index:3">n</span>
-            <span class="expand" style="z-index:3"><span class="expand-inner">ot&nbsp;</span></span>
+            <span class="word-group" style="z-index:1">
+                <span class="letter">R</span>
+                <span class="expand"><span class="expand-inner">ina&nbsp;</span></span>
+            </span>
+            <span class="word-group" style="z-index:2">
+                <span class="letter">i</span>
+                <span class="expand"><span class="expand-inner">s&nbsp;</span></span>
+            </span>
+            <span class="word-group" style="z-index:3">
+                <span class="letter">n</span>
+                <span class="expand"><span class="expand-inner">ot&nbsp;</span></span>
+            </span>
             <a href="http://spring-fragrance.mints.ne.jp/aviutl/" target="_blank">
-                <span class="letter a-letter-wrapper" style="z-index:4">
-                    <span class="a-lower">a</span><span class="a-upper">A</span>
+                <span class="word-group" style="z-index:4">
+                    <span class="letter a-letter-wrapper">
+                        <span class="a-lower">a</span><span class="a-upper">A</span>
+                    </span>
+                    <span class="expand"><span class="expand-inner">viUtl</span></span>
                 </span>
-                <span class="expand" style="z-index:4"><span class="expand-inner">viUtl</span></span>
             </a>
-            <span class="letter" style="z-index:5">のお部屋</span>
+            <span class="word-group" style="z-index:5"><span class="letter">のお部屋</span></span>
         </h1>
     </div>
     <hr>
@@ -596,12 +618,11 @@
             if (e.target.tagName === 'CODE') {
                 const text = e.target.textContent;
                 navigator.clipboard.writeText(text).then(() => {
-                    const originalColor = e.target.style.color;
-                    e.target.style.color = '#ffffff';
-                    const originalBackground = e.target.style.background;
+                    e.target.style.color = '#0d0b14';
+                    e.target.style.background = '#b366ff';
                     setTimeout(() => {
-                        e.target.style.color = originalColor;
-                        e.target.style.background = originalBackground;
+                        e.target.style.color = '';
+                        e.target.style.background = '';
                     }, 200);
                 });
             }
