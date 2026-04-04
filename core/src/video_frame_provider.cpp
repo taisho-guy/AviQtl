@@ -10,7 +10,7 @@ auto VideoFrameProvider::requestImage(const QString &id, QSize *size, const QSiz
     const QString key = id.split('?').first();
 
     // 無効なキーや"-1"が来た場合は即座に透明な画像を返す（エラーログ抑制）
-    if (key.isEmpty() || key == "-1" || key == "0") {
+    if (key.isEmpty() || key == QLatin1String("-1") || key == QLatin1String("0")) {
         return QImage(requestedSize.isValid() ? requestedSize : QSize(1, 1), QImage::Format_ARGB32_Premultiplied);
     }
 

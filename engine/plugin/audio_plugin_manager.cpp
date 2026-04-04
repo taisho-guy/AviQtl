@@ -78,15 +78,15 @@ class CarlaHostedPlugin final : public IAudioPlugin {
     void deinterleave(const float *src, int frames) {
         ensureBuffers(frames);
         for (int i = 0; i < frames; ++i) {
-            m_inL[i] = src[(i * 2) + 0];
-            m_inR[i] = src[(i * 2) + 1];
+            m_inL.insert(i, src[(i * 2) + 0]);
+            m_inR.insert(i, src[(i * 2) + 1]);
         }
     }
 
     void interleave(float *dst, int frames) const {
         for (int i = 0; i < frames; ++i) {
-            dst[(i * 2) + 0] = m_outL[i];
-            dst[(i * 2) + 1] = m_outR[i];
+            dst[(i * 2) + 0] = m_outL.value(i);
+            dst[(i * 2) + 1] = m_outR.value(i);
         }
     }
 
@@ -313,7 +313,7 @@ class CarlaHostedPlugin final : public IAudioPlugin {
     std::vector<float> m_outR;
 };
 
-static auto discoverySearchPaths() -> const QStringList & {
+auto discoverySearchPaths() -> const QStringList & {
     static const QStringList paths = {
         "/usr/lib/carla/carla-discovery-native", "/usr/local/lib/carla/carla-discovery-native", "/usr/lib64/carla/carla-discovery-native", "/usr/bin/carla-discovery-native", "/usr/local/bin/carla-discovery-native",
     };
@@ -329,7 +329,7 @@ struct FormatConfig {
     bool bundleDir;
 };
 
-static auto formats() -> const QList<FormatConfig> & {
+auto formats() -> const QList<FormatConfig> & {
     static const QList<FormatConfig> list = {
         {.type = "lv2", .format = "LV2", .envVars = {"LV2_PATH"}, .defaultPaths = {"/usr/lib/lv2", "/usr/local/lib/lv2"}, .fileFilter = "*.lv2", .bundleDir = true},
         {.type = "vst2", .format = "VST2", .envVars = {"VST_PATH"}, .defaultPaths = {"/usr/lib/vst", "/usr/lib/vst2", "/usr/local/lib/vst", "/usr/local/lib/vst2"}, .fileFilter = "*.so", .bundleDir = false},
@@ -345,59 +345,59 @@ static auto formats() -> const QList<FormatConfig> & {
 auto toCategoryStr(int cat) -> QString {
     switch (static_cast<CarlaBackend::PluginCategory>(cat)) {
     case CarlaBackend::PLUGIN_CATEGORY_SYNTH:
-        return "Synth";
+        return QStringLiteral("Synth");
     case CarlaBackend::PLUGIN_CATEGORY_DELAY:
-        return "Delay";
+        return QStringLiteral("Delay");
     case CarlaBackend::PLUGIN_CATEGORY_EQ:
-        return "EQ";
+        return QStringLiteral("EQ");
     case CarlaBackend::PLUGIN_CATEGORY_FILTER:
-        return "Filter";
+        return QStringLiteral("Filter");
     case CarlaBackend::PLUGIN_CATEGORY_DISTORTION:
-        return "Distortion";
+        return QStringLiteral("Distortion");
     case CarlaBackend::PLUGIN_CATEGORY_DYNAMICS:
-        return "Dynamics";
+        return QStringLiteral("Dynamics");
     case CarlaBackend::PLUGIN_CATEGORY_MODULATOR:
-        return "Modulator";
+        return QStringLiteral("Modulator");
     case CarlaBackend::PLUGIN_CATEGORY_UTILITY:
-        return "Utility";
+        return QStringLiteral("Utility");
     case CarlaBackend::PLUGIN_CATEGORY_OTHER: // fall through
     default:
-        return "Other";
+        return QStringLiteral("Other");
     }
 }
 
 auto normalizeCategoryTitle(QString category) -> QString {
     category = category.trimmed();
     if (category.isEmpty()) {
-        return "Other";
+        return QStringLiteral("Other");
     }
     const QString lower = category.toLower();
-    if (lower == "synth" || lower == QStringLiteral("instrument")) {
-        return "Synth";
+    if (lower == QLatin1String("synth") || lower == QStringLiteral("instrument")) {
+        return QStringLiteral("Synth");
     }
-    if (lower == "delay" || lower == QStringLiteral("reverb")) {
-        return "Delay";
+    if (lower == QLatin1String("delay") || lower == QStringLiteral("reverb")) {
+        return QStringLiteral("Delay");
     }
     if (lower == QStringLiteral("eq")) {
-        return "EQ";
+        return QStringLiteral("EQ");
     }
     if (lower == QStringLiteral("filter")) {
-        return "Filter";
+        return QStringLiteral("Filter");
     }
     if (lower == QStringLiteral("distortion")) {
-        return "Distortion";
+        return QStringLiteral("Distortion");
     }
     if (lower == QStringLiteral("dynamics")) {
-        return "Dynamics";
+        return QStringLiteral("Dynamics");
     }
-    if (lower == "modulator" || lower == QStringLiteral("modulation")) {
-        return "Modulator";
+    if (lower == QLatin1String("modulator") || lower == QStringLiteral("modulation")) {
+        return QStringLiteral("Modulator");
     }
-    if (lower == "utility" || lower == "tools" || lower == QStringLiteral("tool")) {
-        return "Utility";
+    if (lower == QLatin1String("utility") || lower == QLatin1String("tools") || lower == QStringLiteral("tool")) {
+        return QStringLiteral("Utility");
     } // NOLINT(bugprone-easily-swappable-parameters)
-    if (lower == "other" || lower == "unknown" || lower == "misc" || lower == "none" || lower == QStringLiteral("null")) {
-        return "Other";
+    if (lower == QLatin1String("other") || lower == QLatin1String("unknown") || lower == QLatin1String("misc") || lower == QLatin1String("none") || lower == QStringLiteral("null")) {
+        return QStringLiteral("Other");
     }
     return category;
 }
@@ -463,9 +463,9 @@ auto parseDiscoveryOutput(const QString &output, const QString &format, const QS
             continue;
         }
         const QString &key = parts.at(1);
-        const QString val = parts.size() >= 3 ? parts.mid(2).join("::") : "";
+        const QString val = parts.size() >= 3 ? parts.mid(2).join(QStringLiteral("::")) : QLatin1String("");
 
-        if (key == "begin" || key == QStringLiteral("init")) {
+        if (key == QLatin1String("begin") || key == QStringLiteral("init")) {
             current = PluginInfo{};
             current.format = format;
             current.path = filePath;
@@ -494,7 +494,7 @@ auto parseDiscoveryOutput(const QString &output, const QString &format, const QS
             current.label = normalizePluginLabel(current.label, current.name);
             current.category = normalizeCategoryTitle(current.category);
             if (!current.name.isEmpty()) {
-                current.id = QString("%1:%2:%3").arg(current.format, current.label, QString::number(current.uniqueId));
+                current.id = QString(QStringLiteral("%1:%2:%3")).arg(current.format, current.label, QString::number(current.uniqueId));
                 results.append(current);
             }
             inBlock = false;
@@ -558,7 +558,7 @@ auto collectSearchPaths(const FormatConfig &cfg) -> QStringList {
             paths << QString::fromLocal8Bit(val).split(':');
         }
     }
-    paths << (QDir::homePath() + "/." + cfg.type);
+    paths << (QDir::homePath() + QLatin1String("/.") + cfg.type);
     paths << cfg.defaultPaths;
     return paths;
 }
@@ -587,7 +587,7 @@ auto discoverFormat(const QString &tool, const FormatConfig &cfg, std::atomic<bo
         if (!lv2PathEnv.isEmpty()) {
             lv2SearchPaths << QString::fromLocal8Bit(lv2PathEnv).split(':', Qt::SkipEmptyParts);
         }
-        lv2SearchPaths << QDir::homePath() + "/.lv2" << "/usr/lib/lv2" << "/usr/local/lib/lv2";
+        lv2SearchPaths << QDir::homePath() + QLatin1String("/.lv2") << QStringLiteral("/usr/lib/lv2") << QStringLiteral("/usr/local/lib/lv2");
         QSet<QString> visited;
         for (const QString &searchPath : std::as_const(lv2SearchPaths)) {
             QDir dir(searchPath);
@@ -596,7 +596,7 @@ auto discoverFormat(const QString &tool, const FormatConfig &cfg, std::atomic<bo
             }
             for (const QFileInfo &fi : dir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot)) {
                 const QString bundlePath = fi.absoluteFilePath();
-                if (fi.suffix() == "lv2" && !visited.contains(bundlePath)) {
+                if (fi.suffix() == QLatin1String("lv2") && !visited.contains(bundlePath)) {
                     visited.insert(bundlePath);
                     targets.append(bundlePath);
                 }
@@ -705,7 +705,7 @@ void AudioPluginManager::scanPlugins() {
         }
     }
     if (tool.isEmpty()) {
-        tool = QStandardPaths::findExecutable("carla-discovery-native");
+        tool = QStandardPaths::findExecutable(QStringLiteral("carla-discovery-native"));
     }
     if (tool.isEmpty()) {
         qWarning() << "[AudioPluginManager] carla-discovery-native が見つかりません";
@@ -753,13 +753,13 @@ auto AudioPluginManager::getPluginList() const -> QVariantList {
     list.reserve(m_plugins.size());
     for (const auto &info : std::as_const(m_plugins)) {
         QVariantMap map;
-        map[QStringLiteral("id")] = info.id;
-        map[QStringLiteral("name")] = info.name;
-        map[QStringLiteral("format")] = info.format;
-        map[QStringLiteral("category")] = info.category;
-        map[QStringLiteral("maker")] = info.maker;
-        map[QStringLiteral("audioIns")] = info.audioIns;
-        map[QStringLiteral("audioOuts")] = info.audioOuts;
+        map.insert(QStringLiteral("id"), info.id);
+        map.insert(QStringLiteral("name"), info.name);
+        map.insert(QStringLiteral("format"), info.format);
+        map.insert(QStringLiteral("category"), info.category);
+        map.insert(QStringLiteral("maker"), info.maker);
+        map.insert(QStringLiteral("audioIns"), info.audioIns);
+        map.insert(QStringLiteral("audioOuts"), info.audioOuts);
         list.append(map);
     }
     return list;
@@ -799,11 +799,11 @@ auto AudioPluginManager::getPluginsInCategory(const QString &category) const -> 
     QVariantList list;
     for (const auto &info : std::as_const(matched)) {
         QVariantMap map;
-        map[QStringLiteral("id")] = info.id;
-        map[QStringLiteral("name")] = normalizePluginName(info.name, info.label, info.path);
-        map[QStringLiteral("format")] = info.format;
-        map[QStringLiteral("maker")] = info.maker;
-        map[QStringLiteral("category")] = normalizeCategoryTitle(info.category);
+        map.insert(QStringLiteral("id"), info.id);
+        map.insert(QStringLiteral("name"), normalizePluginName(info.name, info.label, info.path));
+        map.insert(QStringLiteral("format"), info.format);
+        map.insert(QStringLiteral("maker"), info.maker);
+        map.insert(QStringLiteral("category"), normalizeCategoryTitle(info.category));
         list.append(map);
     }
     return list;

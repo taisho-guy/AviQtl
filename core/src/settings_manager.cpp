@@ -132,7 +132,7 @@ auto SettingsManager::defaultShortcutSettings() -> QVariantMap {
 auto SettingsManager::getSettingsFilePath() -> QString {
     // 1. 実行ファイルディレクトリを試す (ポータブルモード)
     QString exeDir = QCoreApplication::applicationDirPath();
-    QString portablePath = exeDir + "/rina_settings.json";
+    QString portablePath = exeDir + QLatin1String("/rina_settings.json");
 
     // 書き込み可能かチェック
     QFile file(portablePath);
@@ -153,7 +153,7 @@ auto SettingsManager::getSettingsFilePath() -> QString {
     // 2. AppLocalDataLocationにフォールバック
     QString dataPath = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
     QDir().mkpath(dataPath);
-    return dataPath + "/settings.json";
+    return dataPath + QLatin1String("/settings.json");
 }
 
 void SettingsManager::setSettings(const QVariantMap &settings) {
@@ -176,16 +176,16 @@ void SettingsManager::load() {
     if (doc.isObject()) {
         QVariantMap loaded = doc.object().toVariantMap();
         for (auto it = loaded.begin(); it != loaded.end(); ++it) {
-            if (it.key() == "shortcuts" && it.value().canConvert<QVariantMap>()) {
+            if (it.key() == QLatin1String("shortcuts") && it.value().canConvert<QVariantMap>()) {
                 QVariantMap mergedShortcuts = m_settings.value(QStringLiteral("shortcuts")).toMap();
                 QVariantMap loadedShortcuts = it.value().toMap();
                 for (auto shortcutIt = loadedShortcuts.begin(); shortcutIt != loadedShortcuts.end(); ++shortcutIt) {
-                    mergedShortcuts[shortcutIt.key()] = shortcutIt.value();
+                    mergedShortcuts.insert(shortcutIt.key(), shortcutIt.value());
                 }
-                m_settings[it.key()] = mergedShortcuts;
+                m_settings.insert(it.key(), mergedShortcuts);
                 continue;
             }
-            m_settings[it.key()] = it.value();
+            m_settings.insert(it.key(), it.value());
         }
         emit settingsChanged();
         qDebug() << "設定をロードしました:" << path;
@@ -208,7 +208,7 @@ void SettingsManager::save() {
 
 void SettingsManager::setValue(const QString &key, const QVariant &value) {
     if (m_settings.value(key) != value) {
-        m_settings[key] = value;
+        m_settings.insert(key, value);
         emit settingsChanged();
         // Runtime keys starting with "_" are not saved to disk
         if (!key.startsWith(QStringLiteral("_"))) {

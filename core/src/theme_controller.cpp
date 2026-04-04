@@ -23,7 +23,7 @@ void ThemeController::setTheme(const QString &theme) {
     }
 
     m_theme = theme;
-    SettingsManager::instance().setValue("theme", theme);
+    SettingsManager::instance().setValue(QStringLiteral("theme"), theme);
     applyTheme();
     emit themeChanged();
 }

@@ -209,7 +209,7 @@ static auto l_clip_list(lua_State *L) -> int {
     QVariantList clips = g_ctrl->clips();
     lua_newtable(L);
     for (int i = 0; i < clips.size(); i++) {
-        QVariantMap m = clips[i].toMap();
+        QVariantMap m = clips.value(i).toMap();
         lua_newtable(L);
         auto push = [&](const char *k, const QVariant &v) -> void {
             lua_pushstring(L, k);
@@ -222,11 +222,11 @@ static auto l_clip_list(lua_State *L) -> int {
             }
             lua_settable(L, -3);
         };
-        push("id", m["id"]);
-        push("type", m["type"]);
-        push("layer", m["layer"]);
-        push("startFrame", m["startFrame"]);
-        push("duration", m["durationFrames"]);
+        push("id", m.value(QStringLiteral("id")));
+        push("type", m.value(QStringLiteral("type")));
+        push("layer", m.value(QStringLiteral("layer")));
+        push("startFrame", m.value(QStringLiteral("startFrame")));
+        push("duration", m.value(QStringLiteral("durationFrames")));
         lua_rawseti(L, -2, i + 1);
     }
     return 1;
@@ -465,16 +465,16 @@ rina = {
 }
 
 void ModEngine::loadPlugins() {
-    QString pluginsPath = QCoreApplication::applicationDirPath() + "/plugins";
+    QString pluginsPath = QCoreApplication::applicationDirPath() + QLatin1String("/plugins");
     QDir dir(pluginsPath);
 
     if (!dir.exists()) {
-        dir.mkpath(".");
+        dir.mkpath(QStringLiteral("."));
         return;
     }
 
     QStringList filters;
-    filters << "*.lua";
+    filters << QStringLiteral("*.lua");
     QFileInfoList files = dir.entryInfoList(filters, QDir::Files, QDir::Name);
 
     for (const QFileInfo &fileInfo : files) {

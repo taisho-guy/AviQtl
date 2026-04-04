@@ -57,7 +57,7 @@ void LuaHost::initialize() {
 // スレッドローカルなLuaステート管理ラッパー
 struct ThreadLocalLua {
     ThreadLocalLua(const ThreadLocalLua &) = delete;
-    ThreadLocalLua &operator=(const ThreadLocalLua &) = delete;
+    auto operator=(const ThreadLocalLua &) -> ThreadLocalLua & = delete;
 
     lua_State *state = nullptr;
     std::unordered_map<std::string, int> compiledRegistry; // スクリプト文字列 -> Registry Index

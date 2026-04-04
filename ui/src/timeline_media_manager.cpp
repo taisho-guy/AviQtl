@@ -65,7 +65,7 @@ void TimelineMediaManager::onCurrentFrameChanged() {
                 const QString playMode = eff->params().value(QStringLiteral("playMode"), "開始時間＋再生速度").toString();
 
                 if (playMode == QStringLiteral("時間直接指定")) {
-                    audioTime = eff->evaluatedParam("directTime", relFrame, fps).toDouble();
+                    audioTime = eff->evaluatedParam(QStringLiteral("directTime"), relFrame, fps).toDouble();
                 } else {
                     const double startTime = eff->params().value(QStringLiteral("startTime"), 0.0).toDouble();
                     const double speed = eff->params().value(QStringLiteral("speed"), 100.0).toDouble();
@@ -116,7 +116,7 @@ auto TimelineMediaManager::getClipSourceUrl(const ClipData &clip) -> QUrl {
         return {};
     }
     // 音声以外は通常 "path" パラメータにファイルパスが入っている
-    QString path = effModel->params().value(clip.type == "audio" ? "source" : "path").toString();
+    QString path = effModel->params().value(clip.type == QStringLiteral("audio") ? QLatin1String("source") : "path").toString();
     return QUrl::fromLocalFile(path);
 }
 
@@ -138,11 +138,11 @@ void TimelineMediaManager::updateMediaDecoders() {
             QUrl sourceUrl = getClipSourceUrl(clip);
             if (!sourceUrl.isValid() || sourceUrl.isEmpty()) {
                 if (m_decoders.contains(clip.id)) {
-                    if (qobject_cast<Rina::Core::AudioDecoder *>(m_decoders[clip.id]) != nullptr) {
+                    if (qobject_cast<Rina::Core::AudioDecoder *>(m_decoders.value(clip.id)) != nullptr) {
                         m_audioMixer->unregisterDecoder(clip.id);
                     }
-                    if (m_decoders[clip.id]) {
-                        m_decoders[clip.id]->deleteLater();
+                    if (m_decoders.value(clip.id)) {
+                        m_decoders.value(clip.id)->deleteLater();
                     }
                     m_decoders.remove(clip.id);
                 }
@@ -150,7 +150,7 @@ void TimelineMediaManager::updateMediaDecoders() {
             }
 
             if (m_decoders.contains(clip.id)) {
-                Rina::Core::MediaDecoder *existingDecoder = m_decoders[clip.id];
+                Rina::Core::MediaDecoder *existingDecoder = m_decoders.value(clip.id);
                 // If the source has changed, we must recreate the decoder
                 if (existingDecoder->source() != sourceUrl) {
                     if (qobject_cast<Rina::Core::AudioDecoder *>(existingDecoder) != nullptr) {
@@ -274,11 +274,11 @@ void TimelineMediaManager::updateVideoClipFrame(Rina::Core::VideoDecoder *vid, c
         const QString playMode = eff->params().value(QStringLiteral("playMode"), "開始フレーム＋再生速度").toString();
 
         if (playMode == QStringLiteral("フレーム直接指定")) {
-            const int absFrame = eff->evaluatedParam("directFrame", relFrame, fps).toInt();
+            const int absFrame = eff->evaluatedParam(QStringLiteral("directFrame"), relFrame, fps).toInt();
             vid->seekToFrame(absFrame, vid->sourceFps());
         } else {
-            const int startFrame = eff->evaluatedParam("startFrame", 0, fps).toInt();
-            const double speed = eff->evaluatedParam("speed", 100, fps).toDouble();
+            const int startFrame = eff->evaluatedParam(QStringLiteral("startFrame"), 0, fps).toInt();
+            const double speed = eff->evaluatedParam(QStringLiteral("speed"), 100, fps).toDouble();
 
             double vfps = vid->sourceFps();
             if (vfps <= 0.0) {

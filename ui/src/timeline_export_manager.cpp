@@ -26,7 +26,7 @@ auto TimelineExportManager::exportMedia(const QString &fileUrl, const QString &f
         localPath = fileUrl;
     }
 
-    if (format == "image_sequence") {
+    if (format == QLatin1String("image_sequence")) {
         return exportImageSequence(localPath, quality);
     }
     return false;
@@ -35,12 +35,12 @@ auto TimelineExportManager::exportMedia(const QString &fileUrl, const QString &f
 auto TimelineExportManager::exportImageSequence(const QString &dir, int quality) -> bool {
     int totalFrames = m_controller->timelineDuration();
     QString baseName = dir;
-    if (baseName.endsWith(".png")) {
+    if (baseName.endsWith(QLatin1String(".png"))) {
         baseName.chop(4);
     }
-    const int sequencePadding = Rina::Core::SettingsManager::instance().value("exportSequencePadding", 6).toInt();
-    const int timeoutMs = Rina::Core::SettingsManager::instance().value("exportFrameGrabTimeoutMs", 2000).toInt();
-    const int progressInterval = Rina::Core::SettingsManager::instance().value("exportProgressInterval", 5).toInt();
+    const int sequencePadding = Rina::Core::SettingsManager::instance().value(QStringLiteral("exportSequencePadding"), 6).toInt();
+    const int timeoutMs = Rina::Core::SettingsManager::instance().value(QStringLiteral("exportFrameGrabTimeoutMs"), 2000).toInt();
+    const int progressInterval = Rina::Core::SettingsManager::instance().value(QStringLiteral("exportProgressInterval"), 5).toInt();
 
     QQuickItem *view = m_controller->compositeView();
     if (view != nullptr) {
@@ -61,7 +61,7 @@ auto TimelineExportManager::exportImageSequence(const QString &dir, int quality)
                 renderedFrame = grabResult->image();
             }
         }
-        QString filename = QString("%1_%2.png").arg(baseName).arg(frame, sequencePadding, 10, QChar('0'));
+        QString filename = QString(QStringLiteral("%1_%2.png")).arg(baseName).arg(frame, sequencePadding, 10, QChar('0'));
         renderedFrame.save(filename, "PNG", quality);
         if (frame % progressInterval == 0 || frame == totalFrames - 1) {
             emit m_controller->exportProgressChanged((frame * 100) / totalFrames, frame + 1, totalFrames);
@@ -96,8 +96,8 @@ void TimelineExportManager::runExport(const Rina::Core::VideoEncoder::Config &co
         m_exporting = false;
         return;
     }
-    const int sr = Rina::Core::SettingsManager::instance().value("defaultProjectSampleRate", 48000).toInt();
-    const int ch = Rina::Core::SettingsManager::instance().value("audioChannels", 2).toInt();
+    const int sr = Rina::Core::SettingsManager::instance().value(QStringLiteral("defaultProjectSampleRate"), 48000).toInt();
+    const int ch = Rina::Core::SettingsManager::instance().value(QStringLiteral("audioChannels"), 2).toInt();
     encoder.addAudioStream(sr, ch);
 
     const double fps = m_controller->project()->fps();
@@ -129,7 +129,7 @@ void TimelineExportManager::runExport(const Rina::Core::VideoEncoder::Config &co
             if (grab) {
                 QEventLoop loop;
                 connect(grab.get(), &QQuickItemGrabResult::ready, &loop, &QEventLoop::quit);
-                const int grabTimeout = Rina::Core::SettingsManager::instance().value("exportFrameGrabTimeoutMs", 2000).toInt();
+                const int grabTimeout = Rina::Core::SettingsManager::instance().value(QStringLiteral("exportFrameGrabTimeoutMs"), 2000).toInt();
                 QTimer::singleShot(grabTimeout, &loop, &QEventLoop::quit);
                 loop.exec();
                 img = grab->image();
@@ -143,7 +143,7 @@ void TimelineExportManager::runExport(const Rina::Core::VideoEncoder::Config &co
         encoder.pushAudio(audio.data(), samplesNeeded);
 
         const int done = frame - startFrame + 1;
-        const int progInterval = Rina::Core::SettingsManager::instance().value("exportProgressInterval", 5).toInt();
+        const int progInterval = Rina::Core::SettingsManager::instance().value(QStringLiteral("exportProgressInterval"), 5).toInt();
         if (done % progInterval == 0 || done == totalFrames) {
             emit exportProgressChanged(done * 100 / totalFrames, done, totalFrames);
         }

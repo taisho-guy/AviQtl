@@ -16,15 +16,15 @@ auto ClipModel::rowCount(const QModelIndex &parent) const -> int {
 
 auto ClipModel::roleNames() const -> QHash<int, QByteArray> {
     QHash<int, QByteArray> roles;
-    roles[IdRole] = "id";
-    roles[TypeRole] = "type";
-    roles[NameRole] = "name";
-    roles[StartFrameRole] = "startFrame";
-    roles[DurationRole] = "durationFrames";
-    roles[LayerRole] = "layer";
-    roles[Qt::UserRole + 100] = "qmlSource";
-    roles[ParamsRole] = "params";
-    roles[EffectsRole] = "effectModels";
+    roles.insert(IdRole, "id");
+    roles.insert(TypeRole, "type");
+    roles.insert(NameRole, "name");
+    roles.insert(StartFrameRole, "startFrame");
+    roles.insert(DurationRole, "durationFrames");
+    roles.insert(LayerRole, "layer");
+    roles.insert(Qt::UserRole + 100, "qmlSource");
+    roles.insert(ParamsRole, "params");
+    roles.insert(EffectsRole, "effectModels");
     return roles;
 }
 
@@ -32,7 +32,7 @@ auto ClipModel::data(const QModelIndex &index, int role) const -> QVariant {
     if (!index.isValid() || index.row() >= m_activeClips.size()) {
         return {};
     }
-    const ClipData *clip = m_activeClips[index.row()];
+    const ClipData *clip = m_activeClips.value(index.row());
 
     switch (role) {
     case IdRole:
@@ -74,7 +74,7 @@ void ClipModel::updateClips(const QList<ClipData *> &newClips) {
     bool identical = (m_activeClips.size() == newClips.size());
     if (identical) {
         for (int i = 0; i < m_activeClips.size(); ++i) {
-            if (m_activeClips[i] != newClips[i]) {
+            if (m_activeClips.value(i) != newClips.value(i)) {
                 identical = false;
                 break;
             }

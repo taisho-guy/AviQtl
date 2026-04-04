@@ -20,7 +20,7 @@ void AudioMixer::processChain(float *buffer, int samples, const Plugin::AudioPlu
 }
 
 AudioMixer::AudioMixer(QObject *parent) : QObject(parent) {
-    int sampleRate = Rina::Core::SettingsManager::instance().value("_runtime_projectSampleRate", 48000).toInt();
+    int sampleRate = Rina::Core::SettingsManager::instance().value(QStringLiteral("_runtime_projectSampleRate"), 48000).toInt();
     m_format.setSampleRate(sampleRate);
     m_format.setChannelCount(2);
     m_format.setSampleFormat(QAudioFormat::Float);
@@ -31,7 +31,7 @@ AudioMixer::AudioMixer(QObject *parent) : QObject(parent) {
         const auto &audioStates = state->audioStates;
         for (const auto &audio : audioStates) {
             if (!m_chains.contains(audio.clipId)) {
-                m_chains[audio.clipId] = std::make_shared<Plugin::AudioPluginChain>();
+                m_chains.insert(audio.clipId, std::make_shared<Plugin::AudioPluginChain>());
             }
         }
     }
@@ -124,13 +124,13 @@ auto AudioMixer::mix(int currentFrame, double fps, int samplesPerFrame) -> std::
 
         // 位相と連続再生の管理
         double startTime = static_cast<double>(currentFrame - audio.startFrame) / fps;
-        if (m_clipLastFrame.contains(clipId) && currentFrame == m_clipLastFrame[clipId] + 1) {
-            startTime = m_clipPhase[clipId];
+        if (m_clipLastFrame.contains(clipId) && currentFrame == m_clipLastFrame.value(clipId) + 1) {
+            startTime = m_clipPhase.value(clipId);
         } else {
             // シークまたは初回再生時
-            m_clipPhase[clipId] = startTime;
+            m_clipPhase.insert(clipId, startTime);
         }
-        m_clipLastFrame[clipId] = currentFrame;
+        m_clipLastFrame.insert(clipId, currentFrame);
 
         auto *decoder = m_decoders[clipId];
         std::vector<float> clipSamples;
@@ -163,32 +163,32 @@ auto AudioMixer::mix(int currentFrame, double fps, int samplesPerFrame) -> std::
                     double t = srcIdx - idx0;
 
                     // L ch
-                    clipSamples[static_cast<std::size_t>(i) * 2] = static_cast<float>((rawSamples[static_cast<std::size_t>(idx0) * 2] * (1.0 - t)) + (rawSamples[static_cast<std::size_t>(idx1) * 2] * t));
+                    clipSamples.insert(static_cast<std::size_t>(i) * 2, static_cast<float>((rawSamples.value(static_cast<std::size_t>(idx0) * 2) * (1.0 - t)) + (rawSamples.value(static_cast<std::size_t>(idx1) * 2) * t)));
                     // R ch
-                    clipSamples[static_cast<std::size_t>(i) * 2 + 1] = static_cast<float>((rawSamples[static_cast<std::size_t>(idx0) * 2 + 1] * (1.0 - t)) + (rawSamples[static_cast<std::size_t>(idx1) * 2 + 1] * t));
+                    clipSamples.insert((static_cast<std::size_t>(i) * 2) + 1, static_cast<float>((rawSamples.at((static_cast<std::size_t>(idx0) * 2) + 1) * (1.0 - t)) + (rawSamples.at((static_cast<std::size_t>(idx1) * 2) + 1) * t)));
                 }
             }
             // 次のフレームのための開始位置を進める（m_playbackSpeed 分の秒数）
-            m_clipPhase[clipId] = startTime + ((static_cast<double>(samplesPerFrame) / m_format.sampleRate()) * m_playbackSpeed);
+            m_clipPhase.insert(clipId, startTime + ((static_cast<double>(samplesPerFrame) / m_format.sampleRate()) * m_playbackSpeed));
         } else {
             // 1倍速の場合はそのまま取得
             int neededSamples = samplesPerFrame;
             clipSamples = decoder->getSamples(startTime, neededSamples * 2);
-            m_clipPhase[clipId] = startTime + (static_cast<double>(samplesPerFrame) / m_format.sampleRate());
+            m_clipPhase.insert(clipId, startTime + (static_cast<double>(samplesPerFrame) / m_format.sampleRate()));
         }
 
         // プラグインチェーンを適用
         if (m_chains.contains(clipId)) {
-            m_chains[clipId]->process(clipSamples.data(), samplesPerFrame);
+            m_chains.value(clipId)->process(clipSamples.data(), samplesPerFrame);
         }
 
         float leftVol = audio.volume * (audio.pan <= 0 ? 1.0F : 1.0F - audio.pan);
         float rightVol = audio.volume * (audio.pan >= 0 ? 1.0F : 1.0F + audio.pan);
 
         for (size_t i = 0; i < clipSamples.size() && i < masterBuffer.size(); i += 2) {
-            masterBuffer[i] += clipSamples[i] * leftVol;
+            masterBuffer.value(i) += clipSamples.value(i) * leftVol;
             if (i + 1 < clipSamples.size()) {
-                masterBuffer[i + 1] += clipSamples[i + 1] * rightVol;
+                masterBuffer.value(i + 1) += clipSamples.value(i + 1) * rightVol;
             }
         }
     }
@@ -234,9 +234,9 @@ void AudioMixer::reset() {
 auto AudioMixer::getChain(int clipId) -> Plugin::AudioPluginChain & {
     // m_chains[clipId] will default-construct an AudioPluginChain if it doesn't exist.
     if (!m_chains.contains(clipId)) {
-        m_chains[clipId] = std::make_shared<Plugin::AudioPluginChain>();
+        m_chains.insert(clipId, std::make_shared<Plugin::AudioPluginChain>());
     }
-    return *m_chains[clipId];
+    return *m_chains.value(clipId);
 }
 
 void AudioMixer::clearChain(int clipId) { m_chains.remove(clipId); }

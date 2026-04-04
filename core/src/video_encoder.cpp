@@ -64,19 +64,19 @@ auto VideoEncoder::initHardware(const QString &codecName) -> bool {
     AVHWDeviceType type = AV_HWDEVICE_TYPE_NONE;
 
     // コーデック名から適切なHWデバイスタイプを推論
-    if (codecName.contains("nvenc")) {
+    if (codecName.contains(QLatin1String("nvenc"))) {
         type = AV_HWDEVICE_TYPE_CUDA;
-    } else if (codecName.contains("vaapi")) {
+    } else if (codecName.contains(QLatin1String("vaapi"))) {
         type = AV_HWDEVICE_TYPE_VAAPI;
-    } else if (codecName.contains("qsv")) {
+    } else if (codecName.contains(QLatin1String("qsv"))) {
         type = AV_HWDEVICE_TYPE_QSV;
-    } else if (codecName.contains("d3d11")) {
+    } else if (codecName.contains(QLatin1String("d3d11"))) {
         type = AV_HWDEVICE_TYPE_D3D11VA;
-    } else if (codecName.contains("dxva2")) {
+    } else if (codecName.contains(QLatin1String("dxva2"))) {
         type = AV_HWDEVICE_TYPE_DXVA2;
-    } else if (codecName.contains("videotoolbox")) {
+    } else if (codecName.contains(QLatin1String("videotoolbox"))) {
         type = AV_HWDEVICE_TYPE_VIDEOTOOLBOX;
-    } else if (codecName.contains("amf")) {
+    } else if (codecName.contains(QLatin1String("amf"))) {
         // AMFは通常DX11/Vulkanコンテキストを内部で作るが、FFmpeg上では明示的なデバイス作成が不要な場合が多い
         // 必要に応じて AV_HWDEVICE_TYPE_D3D11VA 等を割り当てる
         type = AV_HWDEVICE_TYPE_NONE;
@@ -137,20 +137,20 @@ auto VideoEncoder::open(const Config &config) -> bool {
         auto *frames_ctx = reinterpret_cast<AVHWFramesContext *>(hw_frames_ref->data);
 
         // コーデックに応じたピクセルフォーマット設定
-        if (config.codecName.contains("vaapi")) {
+        if (config.codecName.contains(QLatin1String("vaapi"))) {
             frames_ctx->format = AV_PIX_FMT_VAAPI;
             frames_ctx->sw_format = AV_PIX_FMT_NV12;
-        } else if (config.codecName.contains("nvenc")) {
+        } else if (config.codecName.contains(QLatin1String("nvenc"))) {
             frames_ctx->format = AV_PIX_FMT_CUDA;
             frames_ctx->sw_format = AV_PIX_FMT_NV12; // or YUV420P
-        } else if (config.codecName.contains("qsv")) {
+        } else if (config.codecName.contains(QLatin1String("qsv"))) {
             frames_ctx->format = AV_PIX_FMT_QSV;
             frames_ctx->sw_format = AV_PIX_FMT_NV12;
         }
 
         frames_ctx->width = config.width;
         frames_ctx->height = config.height;
-        frames_ctx->initial_pool_size = SettingsManager::instance().value("hwFramePoolSize", 32).toInt();
+        frames_ctx->initial_pool_size = SettingsManager::instance().value(QStringLiteral("hwFramePoolSize"), 32).toInt();
 
         if (av_hwframe_ctx_init(hw_frames_ref) >= 0) {
             m_encCtx->hw_frames_ctx = hw_frames_ref;
@@ -235,12 +235,12 @@ auto VideoEncoder::open(const Config &config) -> bool {
 
 auto VideoEncoder::open(const QVariantMap &configMap) -> bool {
     Config config;
-    config.width = configMap.value("width").toInt();
-    config.height = configMap.value("height").toInt();
-    config.fps_num = configMap.value("fps_num").toInt();
-    config.fps_den = configMap.value("fps_den").toInt();
-    config.bitrate = configMap.value("bitrate").toLongLong();
-    config.outputUrl = configMap.value("outputUrl").toString();
+    config.width = configMap.value(QStringLiteral("width")).toInt();
+    config.height = configMap.value(QStringLiteral("height")).toInt();
+    config.fps_num = configMap.value(QStringLiteral("fps_num")).toInt();
+    config.fps_den = configMap.value(QStringLiteral("fps_den")).toInt();
+    config.bitrate = configMap.value(QStringLiteral("bitrate")).toLongLong();
+    config.outputUrl = configMap.value(QStringLiteral("outputUrl")).toString();
     // codecName defaults to h264_vaapi if not present
     return open(config);
 }

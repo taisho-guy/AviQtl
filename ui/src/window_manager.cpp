@@ -19,14 +19,14 @@ auto WindowManager::instance() -> WindowManager & {
 void WindowManager::spawnInitialWindows(QQmlEngine *engine) {
     m_engine = engine;
 
-    QQmlComponent component(engine, QUrl("qrc:/qt/qml/Rina/ui/qml/ProjectLauncherWindow.qml"));
+    QQmlComponent component(engine, QUrl(QStringLiteral("qrc:/qt/qml/Rina/ui/qml/ProjectLauncherWindow.qml")));
     QObject *obj = component.create();
 
     auto *launcher = qobject_cast<QQuickWindow *>(obj);
     if (launcher != nullptr) {
         // プロジェクトが選択されたらメインウィンドウを開く
         QObject::connect(launcher, SIGNAL(projectSelected(QString, int, int, double)), this, SLOT(onProjectSelected(QString, int, int, double)));
-        registerWindow("launcher", launcher);
+        registerWindow(QStringLiteral("launcher"), launcher);
         launcher->show();
     } else {
         qWarning() << "ProjectLauncherWindowはQQuickWindowではありません";
@@ -46,18 +46,18 @@ void WindowManager::onProjectSelected(const QString &path, int w, int h, double 
     }
 
     // プロジェクト設定を反映してメインウィンドウを開く
-    spawnWindow(m_engine, "main", "qrc:/qt/qml/Rina/ui/qml/MainWindow.qml", tr("Rina メインプレビュー"), 640, 480, 100, 100, true);
-    spawnWindow(m_engine, "timeline", "qrc:/qt/qml/Rina/ui/qml/TimelineWindow.qml", tr("タイムライン"), 1280, 300, 100, 600, true);
-    spawnWindow(m_engine, "projectSettings", "qrc:/qt/qml/Rina/ui/qml/ProjectSettingsWindow.qml", tr("プロジェクト設定"), 450, 250, 800, 100, false);
-    spawnWindow(m_engine, "objectSettings", "qrc:/qt/qml/Rina/ui/qml/SettingDialog.qml", tr("オブジェクト設定"), 400, 600, 800, 420, false);
-    spawnWindow(m_engine, "systemSettings", "qrc:/qt/qml/Rina/ui/qml/SystemSettingsWindow.qml", tr("システム設定"), 600, 500, 200, 200, false);
-    spawnWindow(m_engine, "about", "qrc:/qt/qml/Rina/ui/qml/AboutWindow.qml", tr("Rinaについて"), 400, 250, 400, 300, false);
-    spawnWindow(m_engine, "sceneSettings", "qrc:/qt/qml/Rina/ui/qml/SceneSettingsWindow.qml", tr("シーン設定"), 450, 300, 300, 200, false);
-    spawnWindow(m_engine, "export", "qrc:/qt/qml/Rina/ui/qml/ExportDialog.qml", tr("メディアの書き出し"), 620, 580, 240, 160, false);
-    spawnWindow(m_engine, "easingConfig", "qrc:/qt/qml/Rina/ui/qml/common/EasingConfigWindow.qml", tr("補間設定"), 820, 540, 420, 180, false);
+    spawnWindow(m_engine, QStringLiteral("main"), QStringLiteral("qrc:/qt/qml/Rina/ui/qml/MainWindow.qml"), tr("Rina メインプレビュー"), 640, 480, 100, 100, true);
+    spawnWindow(m_engine, QStringLiteral("timeline"), QStringLiteral("qrc:/qt/qml/Rina/ui/qml/TimelineWindow.qml"), tr("タイムライン"), 1280, 300, 100, 600, true);
+    spawnWindow(m_engine, QStringLiteral("projectSettings"), QStringLiteral("qrc:/qt/qml/Rina/ui/qml/ProjectSettingsWindow.qml"), tr("プロジェクト設定"), 450, 250, 800, 100, false);
+    spawnWindow(m_engine, QStringLiteral("objectSettings"), QStringLiteral("qrc:/qt/qml/Rina/ui/qml/SettingDialog.qml"), tr("オブジェクト設定"), 400, 600, 800, 420, false);
+    spawnWindow(m_engine, QStringLiteral("systemSettings"), QStringLiteral("qrc:/qt/qml/Rina/ui/qml/SystemSettingsWindow.qml"), tr("システム設定"), 600, 500, 200, 200, false);
+    spawnWindow(m_engine, QStringLiteral("about"), QStringLiteral("qrc:/qt/qml/Rina/ui/qml/AboutWindow.qml"), tr("Rinaについて"), 400, 250, 400, 300, false);
+    spawnWindow(m_engine, QStringLiteral("sceneSettings"), QStringLiteral("qrc:/qt/qml/Rina/ui/qml/SceneSettingsWindow.qml"), tr("シーン設定"), 450, 300, 300, 200, false);
+    spawnWindow(m_engine, QStringLiteral("export"), QStringLiteral("qrc:/qt/qml/Rina/ui/qml/ExportDialog.qml"), tr("メディアの書き出し"), 620, 580, 240, 160, false);
+    spawnWindow(m_engine, QStringLiteral("easingConfig"), QStringLiteral("qrc:/qt/qml/Rina/ui/qml/common/EasingConfigWindow.qml"), tr("補間設定"), 820, 540, 420, 180, false);
 
     // 設定の反映
-    auto *bridge = m_engine->rootContext()->contextProperty("TimelineBridge").value<QObject *>();
+    auto *bridge = m_engine->rootContext()->contextProperty(QStringLiteral("TimelineBridge")).value<QObject *>();
     if (bridge != nullptr) {
         if (!path.isEmpty()) {
             QMetaObject::invokeMethod(bridge, "loadProject", Q_ARG(QString, path));
@@ -118,7 +118,7 @@ void WindowManager::spawnWindow(QQmlEngine *engine, const QString &id, const QSt
 }
 
 void WindowManager::registerWindow(const QString &id, QQuickWindow *win) {
-    m_windows[id] = win;
+    m_windows.insert(id, win);
 
     // hide/showした場合の同期
     connect(win, &QQuickWindow::visibleChanged, this, [this, id]() -> void { emitVisibilityChanged(id); });
@@ -195,12 +195,12 @@ void WindowManager::requestQuit() {
     QCoreApplication::quit();
 }
 
-auto WindowManager::timelineVisible() const -> bool { return isVisible("timeline"); }
-void WindowManager::setTimelineVisible(bool v) { setVisible("timeline", v); }
-auto WindowManager::projectSettingsVisible() const -> bool { return isVisible("projectSettings"); }
-void WindowManager::setProjectSettingsVisible(bool v) { setVisible("projectSettings", v); }
-auto WindowManager::objectSettingsVisible() const -> bool { return isVisible("objectSettings"); }
-void WindowManager::setObjectSettingsVisible(bool v) { setVisible("objectSettings", v); }
-auto WindowManager::systemSettingsVisible() const -> bool { return isVisible("systemSettings"); }
-void WindowManager::setSystemSettingsVisible(bool v) { setVisible("systemSettings", v); }
+auto WindowManager::timelineVisible() const -> bool { return isVisible(QStringLiteral("timeline")); }
+void WindowManager::setTimelineVisible(bool v) { setVisible(QStringLiteral("timeline"), v); }
+auto WindowManager::projectSettingsVisible() const -> bool { return isVisible(QStringLiteral("projectSettings")); }
+void WindowManager::setProjectSettingsVisible(bool v) { setVisible(QStringLiteral("projectSettings"), v); }
+auto WindowManager::objectSettingsVisible() const -> bool { return isVisible(QStringLiteral("objectSettings")); }
+void WindowManager::setObjectSettingsVisible(bool v) { setVisible(QStringLiteral("objectSettings"), v); }
+auto WindowManager::systemSettingsVisible() const -> bool { return isVisible(QStringLiteral("systemSettings")); }
+void WindowManager::setSystemSettingsVisible(bool v) { setVisible(QStringLiteral("systemSettings"), v); }
 } // namespace Rina::UI

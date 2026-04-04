@@ -233,8 +233,8 @@ void AudioDecoder::buildPeakCache() {
         float pMin = 0.0F;
         float pMax = 0.0F;
         for (int j = 0; j < 32 && (i + j) < numSamples; ++j) {
-            float l = m_fullAudioData[static_cast<std::size_t>(i + j) * 2];
-            float r = m_fullAudioData[static_cast<std::size_t>(i + j) * 2 + 1];
+            float l = m_fullAudioData.value(static_cast<std::size_t>(i + j) * 2);
+            float r = m_fullAudioData.value((static_cast<std::size_t>(i + j) * 2) + 1);
             pMin = std::min({pMin, l, r});
             pMax = std::max({pMax, l, r});
         }
@@ -257,8 +257,8 @@ void AudioDecoder::buildPeakCache() {
             float pMin = 0.0F;
             float pMax = 0.0F;
             for (size_t k = 0; k < 8 && (j + k) < prev.peaks.size(); ++k) {
-                pMin = std::min(pMin, prev.peaks[j + k].min);
-                pMax = std::max(pMax, prev.peaks[j + k].max);
+                pMin = std::min(pMin, prev.peaks.value(j + k).min);
+                pMax = std::max(pMax, prev.peaks.value(j + k).max);
             }
             next.peaks.push_back({.min = pMin, .max = pMax});
         }
@@ -290,8 +290,8 @@ auto AudioDecoder::getPeaks(double startSec, double durationSec, int pixelWidth)
             float pMin = 0.0F;
             float pMax = 0.0F;
             for (int j = idxStart; j < idxEnd; ++j) {
-                pMin = std::min({pMin, m_fullAudioData[static_cast<std::size_t>(j) * 2], m_fullAudioData[static_cast<std::size_t>(j) * 2 + 1]});
-                pMax = std::max({pMax, m_fullAudioData[static_cast<std::size_t>(j) * 2], m_fullAudioData[static_cast<std::size_t>(j) * 2 + 1]});
+                pMin = std::min({pMin, m_fullAudioData.value(static_cast<std::size_t>(j) * 2), m_fullAudioData.value((static_cast<std::size_t>(j) * 2) + 1)});
+                pMax = std::max({pMax, m_fullAudioData.value(static_cast<std::size_t>(j) * 2), m_fullAudioData.value((static_cast<std::size_t>(j) * 2) + 1)});
             }
             result.push_back(pMin);
             result.push_back(pMax);
@@ -300,18 +300,18 @@ auto AudioDecoder::getPeaks(double startSec, double durationSec, int pixelWidth)
         // 通常・広域表示: ピラミッドキャッシュを使用
         size_t levelIdx = 0;
         for (size_t i = 0; i < m_peakPyramid.size(); ++i) {
-            if (m_peakPyramid[i].samplesPerEntry <= samplesPerPixel) {
+            if (m_peakPyramid.value(i).samplesPerEntry <= samplesPerPixel) {
                 levelIdx = i;
             } else {
                 break;
             }
         }
-        const auto &level = m_peakPyramid[levelIdx];
+        const auto &level = m_peakPyramid.value(levelIdx);
         for (int i = 0; i < pixelWidth; ++i) {
             auto entryIdx = static_cast<size_t>(((startSec + (durationSec * i / pixelWidth)) * m_sampleRate) / level.samplesPerEntry);
             if (entryIdx < level.peaks.size()) {
-                result.push_back(level.peaks[entryIdx].min);
-                result.push_back(level.peaks[entryIdx].max);
+                result.push_back(level.peaks.value(entryIdx).min);
+                result.push_back(level.peaks.value(entryIdx).max);
             } else {
                 result.push_back(0.0F);
                 result.push_back(0.0F);

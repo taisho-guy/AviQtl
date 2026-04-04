@@ -136,8 +136,8 @@ void SplitClipCommand::redo() {
     newClip.durationFrames = secondHalfDuration;
 
     for (int i = 0; i < it->effects.size() && i < newClip.effects.size(); ++i) {
-        auto *originalEffect = it->effects[i];
-        auto *newEffect = newClip.effects[i];
+        auto *originalEffect = it->effects.value(i);
+        auto *newEffect = newClip.effects.value(i);
         if ((originalEffect == nullptr) || (newEffect == nullptr)) {
             continue;
         }
@@ -321,7 +321,7 @@ void TimelineService::createClipInternal(int clipId, const QString &type, int st
     currentClips.append(newClip);
 
     // デフォルトで transform エフェクトを追加
-    addEffectInternal(clipId, "transform");
+    addEffectInternal(clipId, QStringLiteral("transform"));
     addEffectInternal(clipId, type);
 
     if (emitSignal) {
@@ -577,8 +577,8 @@ auto TimelineService::computeMagneticSnapPosition(int clipId, int targetLayer, i
 
     // 4-2. クリップ間の隙間を候補に
     for (int i = 0; i < layerClips.size() - 1; ++i) {
-        int gapStart = layerClips[i]->startFrame + layerClips[i]->durationFrames;
-        int gapEnd = layerClips[i + 1]->startFrame;
+        int gapStart = layerClips.value(i)->startFrame + layerClips.value(i)->durationFrames;
+        int gapEnd = layerClips.value(i + 1)->startFrame;
         if (gapEnd - gapStart >= clipDuration) {
             snapPoints.append(gapStart);
         }
@@ -593,10 +593,10 @@ auto TimelineService::computeMagneticSnapPosition(int clipId, int targetLayer, i
         int minDelta = std::abs(proposedStartFrame - bestSnapPoint);
 
         for (int i = 1; i < snapPoints.size(); ++i) {
-            int delta = std::abs(proposedStartFrame - snapPoints[i]);
+            int delta = std::abs(proposedStartFrame - snapPoints.value(i));
             if (delta < minDelta) {
                 minDelta = delta;
-                bestSnapPoint = snapPoints[i];
+                bestSnapPoint = snapPoints.value(i);
             }
         }
         finalStart = bestSnapPoint;
@@ -731,9 +731,9 @@ void TimelineService::updateClipInternal(int id, int layer, int startFrame, int 
                 // 選択中のクリップであればSelectionServiceのキャッシュも更新する
                 if (m_selection->selectedClipId() == id) {
                     QVariantMap data = m_selection->selectedClipData();
-                    data[QStringLiteral("layer")] = layer;
-                    data[QStringLiteral("startFrame")] = startFrame;
-                    data[QStringLiteral("durationFrames")] = duration;
+                    data.insert(QStringLiteral("layer"), layer);
+                    data.insert(QStringLiteral("startFrame"), startFrame);
+                    data.insert(QStringLiteral("durationFrames"), duration);
                     m_selection->refreshSelectionData(id, data);
                 }
             }
@@ -752,7 +752,7 @@ void TimelineService::toggleSelection(int id, const QVariantMap &data) {
     QVariantList ids = m_selection->selectedClipIds();
     int idx = -1;
     for (int i = 0; i < ids.size(); ++i) {
-        if (ids[i].toInt() == id) {
+        if (ids.value(i).toInt() == id) {
             idx = i;
             break;
         }
@@ -790,10 +790,10 @@ void TimelineService::applySelectionIds(const QVariantList &ids) {
                     primaryData.insert(it.key(), it.value());
                 }
             }
-            primaryData[QStringLiteral("startFrame")] = clip->startFrame;
-            primaryData[QStringLiteral("durationFrames")] = clip->durationFrames;
-            primaryData[QStringLiteral("layer")] = clip->layer;
-            primaryData[QStringLiteral("type")] = clip->type;
+            primaryData.insert(QStringLiteral("startFrame"), clip->startFrame);
+            primaryData.insert(QStringLiteral("durationFrames"), clip->durationFrames);
+            primaryData.insert(QStringLiteral("layer"), clip->layer);
+            primaryData.insert(QStringLiteral("type"), clip->type);
         }
     }
 
@@ -830,10 +830,10 @@ void TimelineService::selectClipsInRange(int frameA, int frameB, int layerA, int
                     primaryData.insert(it.key(), it.value());
                 }
             }
-            primaryData[QStringLiteral("startFrame")] = clip.startFrame;
-            primaryData[QStringLiteral("durationFrames")] = clip.durationFrames;
-            primaryData[QStringLiteral("layer")] = clip.layer;
-            primaryData[QStringLiteral("type")] = clip.type;
+            primaryData.insert(QStringLiteral("startFrame"), clip.startFrame);
+            primaryData.insert(QStringLiteral("durationFrames"), clip.durationFrames);
+            primaryData.insert(QStringLiteral("layer"), clip.layer);
+            primaryData.insert(QStringLiteral("type"), clip.type);
         }
     }
 
@@ -939,11 +939,11 @@ void TimelineService::addClipDirectInternal(const ClipData &clip, bool emitSigna
 void TimelineService::restoreEffectInternal(int clipId, const QVariantMap &data) {
     for (auto &clip : clipsMutable()) {
         if (clip.id == clipId) {
-            auto meta = Rina::Core::EffectRegistry::instance().getEffect(data[QStringLiteral("id")].toString());
-            auto *model = new EffectModel(data[QStringLiteral("id")].toString(), data[QStringLiteral("name")].toString(), meta.category, data[QStringLiteral("params")].toMap(), data[QStringLiteral("qmlSource")].toString(),
-                                          data[QStringLiteral("uiDefinition")].toMap(), this);
-            model->setEnabled(data[QStringLiteral("enabled")].toBool());
-            model->setKeyframeTracks(data[QStringLiteral("keyframes")].toMap());
+            auto meta = Rina::Core::EffectRegistry::instance().getEffect(data.value(QStringLiteral("id")).toString());
+            auto *model = new EffectModel(data.value(QStringLiteral("id")).toString(), data.value(QStringLiteral("name")).toString(), meta.category, data.value(QStringLiteral("params")).toMap(), data.value(QStringLiteral("qmlSource")).toString(),
+                                          data.value(QStringLiteral("uiDefinition")).toMap(), this);
+            model->setEnabled(data.value(QStringLiteral("enabled")).toBool());
+            model->setKeyframeTracks(data.value(QStringLiteral("keyframes")).toMap());
             connect(model, &EffectModel::keyframeTracksChanged, this, &TimelineService::clipsChanged);
             clip.effects.append(model);
             emit clipsChanged();
@@ -962,14 +962,14 @@ void TimelineService::removeEffect(int clipId, int effectIndex) {
 
     int idx = (effectIndex == -1) ? static_cast<int>(clip->effects.size()) - 1 : effectIndex;
     if (idx >= 0 && idx < clip->effects.size()) {
-        auto *eff = clip->effects[idx];
-        removedData[QStringLiteral("id")] = eff->id();
-        removedData[QStringLiteral("name")] = eff->name();
-        removedData[QStringLiteral("enabled")] = eff->isEnabled();
-        removedData[QStringLiteral("params")] = eff->params();
-        removedData[QStringLiteral("qmlSource")] = eff->qmlSource();
-        removedData[QStringLiteral("uiDefinition")] = eff->uiDefinition();
-        removedData[QStringLiteral("keyframes")] = eff->keyframeTracks();
+        auto *eff = clip->effects.value(idx);
+        removedData.insert(QStringLiteral("id"), eff->id());
+        removedData.insert(QStringLiteral("name"), eff->name());
+        removedData.insert(QStringLiteral("enabled"), eff->isEnabled());
+        removedData.insert(QStringLiteral("params"), eff->params());
+        removedData.insert(QStringLiteral("qmlSource"), eff->qmlSource());
+        removedData.insert(QStringLiteral("uiDefinition"), eff->uiDefinition());
+        removedData.insert(QStringLiteral("keyframes"), eff->keyframeTracks());
 
         auto *cmd = new RemoveEffectCommand(this, clipId, effectIndex, eff->name());
         cmd->setRemovedEffect(removedData);
@@ -985,7 +985,7 @@ void TimelineService::removeEffectInternal(int clipId, int effectIndex) { // NOL
             }
             if (effectIndex >= 0 && effectIndex < clip.effects.size()) {
                 // Transformエフェクトは削除不可
-                if (effectIndex == 0 && clip.effects[0]->id() == QStringLiteral("transform")) {
+                if (effectIndex == 0 && clip.effects.value(0)->id() == QStringLiteral("transform")) {
                     return;
                 }
                 auto *eff = clip.effects.takeAt(effectIndex);
@@ -1035,7 +1035,7 @@ void TimelineService::setEffectEnabledInternal(int clipId, int effectIndex, bool
         return;
     }
 
-    clip->effects[effectIndex]->setEnabled(enabled);
+    clip->effects.value(effectIndex)->setEnabled(enabled);
     emit clipEffectsChanged(clipId);
 }
 
@@ -1045,7 +1045,7 @@ void TimelineService::setAudioPluginEnabledInternal(int clipId, int index, bool 
         return;
     }
 
-    clip->audioPlugins[index].enabled = enabled;
+    clip->audioPlugins.value(index).enabled = enabled;
 
     emit clipEffectsChanged(clipId);
     emit clipsChanged(); // エンジン側の同期を促す
@@ -1067,7 +1067,7 @@ void TimelineService::reorderAudioPluginsInternal(int clipId, int oldIndex, int 
 void TimelineService::copyEffect(int clipId, int effectIndex) { // NOLINT(bugprone-easily-swappable-parameters)
     auto *clip = findClipById(clipId);
     if ((clip != nullptr) && effectIndex >= 0 && effectIndex < static_cast<int>(clip->effects.size())) {
-        m_effectClipboard.reset(clip->effects[effectIndex]->clone());
+        m_effectClipboard.reset(clip->effects.value(effectIndex)->clone());
     }
 }
 
@@ -1095,7 +1095,7 @@ void TimelineService::updateEffectParam(int clipId, int effectIndex, const QStri
         return;
     }
 
-    const auto *eff = clip->effects[effectIndex];
+    const auto *eff = clip->effects.value(effectIndex);
     oldValue = eff->params().value(paramName);
 
     m_undoStack->push(new UpdateEffectParamCommand(this, clipId, effectIndex, paramName, value, oldValue, eff->name()));
@@ -1105,18 +1105,18 @@ void TimelineService::updateEffectParamInternal(int clipId, int effectIndex, con
     for (auto &clip : clipsMutable()) {
         if (clip.id == clipId) {
             if (effectIndex >= 0 && effectIndex < static_cast<int>(clip.effects.size())) {
-                clip.effects[effectIndex]->setParam(paramName, value);
+                clip.effects.value(effectIndex)->setParam(paramName, value);
 
                 // メディアの再読み込みが必要なパラメータ（ファイルパスや参照シーン）が変更された場合、
                 // clipsChanged シグナルを発火させて MediaManager 等に通知する
-                if (paramName == "path" || paramName == "source" || paramName == QStringLiteral("targetSceneId")) {
+                if (paramName == QLatin1String("path") || paramName == QLatin1String("source") || paramName == QStringLiteral("targetSceneId")) {
                     emit clipsChanged();
                 }
 
                 emit effectParamChanged(clipId, effectIndex, paramName, value);
                 if (m_selection->selectedClipId() == clipId) {
                     QVariantMap data = m_selection->selectedClipData();
-                    data[paramName] = value;
+                    data.insert(paramName, value);
                     // select() は単一選択にリセットしてしまうため、
                     // 既存の複数選択リストを破壊しない refreshSelectionData を使用する。
                     // これにより UI からの意図しない書き戻しによる選択解除を防ぐ。
@@ -1217,7 +1217,7 @@ void TimelineService::cutSelectedClips() {
     for (const QVariant &v : std::as_const(ids)) {
         intIds.append(v.toInt());
     }
-    m_undoStack->push(new DeleteClipsCommand(this, intIds, QString("複数クリップ切り取り: %1").arg(ids.size())));
+    m_undoStack->push(new DeleteClipsCommand(this, intIds, QString(QStringLiteral("複数クリップ切り取り: %1")).arg(ids.size())));
     m_selection->clearSelection();
 }
 
@@ -1350,19 +1350,19 @@ auto TimelineService::scenes() const -> QVariantList {
     QVariantList list;
     for (const auto &scene : std::as_const(m_scenes)) {
         QVariantMap map;
-        map[QStringLiteral("id")] = scene.id;
-        map[QStringLiteral("name")] = scene.name;
-        map[QStringLiteral("width")] = scene.width;
-        map[QStringLiteral("height")] = scene.height;
-        map[QStringLiteral("fps")] = scene.fps;
-        map[QStringLiteral("totalFrames")] = scene.totalFrames;
-        map[QStringLiteral("gridMode")] = scene.gridMode;
-        map[QStringLiteral("gridBpm")] = scene.gridBpm;
-        map[QStringLiteral("gridOffset")] = scene.gridOffset;
-        map[QStringLiteral("gridInterval")] = scene.gridInterval;
-        map[QStringLiteral("gridSubdivision")] = scene.gridSubdivision;
-        map[QStringLiteral("enableSnap")] = scene.enableSnap;
-        map[QStringLiteral("magneticSnapRange")] = scene.magneticSnapRange;
+        map.insert(QStringLiteral("id"), scene.id);
+        map.insert(QStringLiteral("name"), scene.name);
+        map.insert(QStringLiteral("width"), scene.width);
+        map.insert(QStringLiteral("height"), scene.height);
+        map.insert(QStringLiteral("fps"), scene.fps);
+        map.insert(QStringLiteral("totalFrames"), scene.totalFrames);
+        map.insert(QStringLiteral("gridMode"), scene.gridMode);
+        map.insert(QStringLiteral("gridBpm"), scene.gridBpm);
+        map.insert(QStringLiteral("gridOffset"), scene.gridOffset);
+        map.insert(QStringLiteral("gridInterval"), scene.gridInterval);
+        map.insert(QStringLiteral("gridSubdivision"), scene.gridSubdivision);
+        map.insert(QStringLiteral("enableSnap"), scene.enableSnap);
+        map.insert(QStringLiteral("magneticSnapRange"), scene.magneticSnapRange);
         list.append(map);
     }
     return list;
@@ -1700,7 +1700,7 @@ void TimelineService::setKeyframe(int clipId, int effectIndex, const QString &pa
     if ((clip == nullptr) || effectIndex >= clip->effects.size()) {
         return;
     }
-    const auto *eff = clip->effects[effectIndex];
+    const auto *eff = clip->effects.value(effectIndex);
 
     bool wasExisting = false;
     QVariant oldValue;
@@ -1723,7 +1723,7 @@ void TimelineService::removeKeyframe(int clipId, int effectIndex, const QString 
     if ((clip == nullptr) || effectIndex >= clip->effects.size()) {
         return;
     }
-    const auto *eff = clip->effects[effectIndex];
+    const auto *eff = clip->effects.value(effectIndex);
 
     QVariant savedValue;
     QVariantMap savedOptions;
@@ -1742,14 +1742,14 @@ void TimelineService::removeKeyframe(int clipId, int effectIndex, const QString 
 void TimelineService::setKeyframeInternal(int clipId, int effectIndex, const QString &paramName, int frame, const QVariant &value, const QVariantMap &options) { // NOLINT(bugprone-easily-swappable-parameters)
     const auto *clip = findClipById(clipId);
     if ((clip != nullptr) && effectIndex < clip->effects.size()) {
-        clip->effects[effectIndex]->setKeyframe(paramName, frame, value, options);
+        clip->effects.value(effectIndex)->setKeyframe(paramName, frame, value, options);
     }
 }
 
 void TimelineService::removeKeyframeInternal(int clipId, int effectIndex, const QString &paramName, int frame) { // NOLINT(bugprone-easily-swappable-parameters)
     const auto *clip = findClipById(clipId);
     if ((clip != nullptr) && effectIndex < clip->effects.size()) {
-        clip->effects[effectIndex]->removeKeyframe(paramName, frame);
+        clip->effects.value(effectIndex)->removeKeyframe(paramName, frame);
     }
 }
 

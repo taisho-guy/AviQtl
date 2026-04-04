@@ -42,12 +42,12 @@ void EffectRegistry::loadEffectsFromDirectory(const QString &path) {
         }
 
         QJsonObject obj = doc.object();
-        QString id = obj[QStringLiteral("id")].toString();
-        QString name = obj[QStringLiteral("name")].toString();
-        QString category = obj[QStringLiteral("category")].toString(QStringLiteral("filter"));
-        QString qmlFileName = obj[QStringLiteral("qml")].toString();
-        QVariantMap params = obj[QStringLiteral("params")].toObject().toVariantMap();
-        QVariantMap uiDef = obj[QStringLiteral("ui")].toObject().toVariantMap();
+        QString id = obj.value(QStringLiteral("id")).toString();
+        QString name = obj.value(QStringLiteral("name")).toString();
+        QString category = obj.value(QStringLiteral("category")).toString(QStringLiteral("filter"));
+        QString qmlFileName = obj.value(QStringLiteral("qml")).toString();
+        QVariantMap params = obj.value(QStringLiteral("params")).toObject().toVariantMap();
+        QVariantMap uiDef = obj.value(QStringLiteral("ui")).toObject().toVariantMap();
 
         if (id.isEmpty() || name.isEmpty() || qmlFileName.isEmpty()) {
             qWarning().noquote() << QStringLiteral("不完全なエフェクト定義のためスキップ:") << file.fileName() << QStringLiteral("。");
@@ -70,7 +70,7 @@ void EffectRegistry::loadEffectsFromDirectory(const QString &path) {
         meta.category = category;
         meta.defaultParams = params;
         meta.uiDefinition = uiDef;
-        meta.color = obj[QStringLiteral("color")].toString();
+        meta.color = obj.value(QStringLiteral("color")).toString();
 
         // qrc: で始まる場合は絶対パスとしてそのまま使用
         if (qmlFileName.startsWith(QStringLiteral("qrc:"))) {

@@ -46,17 +46,17 @@ void TimelineEngineSynchronizer::updateActiveClipsList() {
         QString sig = clip->type;
         for (auto *eff : clip->effects) {
             if (eff->isEnabled()) {
-                sig += ":" + eff->id();
+                sig += QLatin1String(":") + eff->id();
             }
         }
 
-        auto &batch = archetypeBatches[sig];
+        auto &batch = archetypeBatches.value(sig);
         if (batch.clips.isEmpty()) {
             for (int i = 0; i < clip->effects.size(); ++i) {
-                if (clip->effects[i]->isEnabled()) {
+                if (clip->effects.value(i)->isEnabled()) {
                     QStringList fKeys;
                     QStringList vKeys;
-                    QVariantMap params = clip->effects[i]->params();
+                    QVariantMap params = clip->effects.value(i)->params();
                     for (auto it = params.begin(); it != params.end(); ++it) {
                         // 数値として扱えるか判定（文字列や色はVariantとして残す）
                         auto type = it.value().typeId();
@@ -96,7 +96,7 @@ void TimelineEngineSynchronizer::updateECSState(const QList<ArchetypeBatch> &bat
 
             // 1. エフェクト計算
             for (const auto &ed : batch.activeEffects) {
-                auto *eff = clip->effects[ed.index];
+                auto *eff = clip->effects.value(ed.index);
                 // 数値パラメータ (DOD path)
                 for (const auto &key : ed.floatKeys) {
                     res.propertyValues.push_back(eff->evaluatedParam(key, res.relFrame, fps).toFloat());
@@ -108,17 +108,17 @@ void TimelineEngineSynchronizer::updateECSState(const QList<ArchetypeBatch> &bat
             }
 
             // 2. オーディオ/ビデオ共通属性
-            if (clip->type == "audio" || clip->type == "video") {
+            if (clip->type == QLatin1String("audio") || clip->type == QLatin1String("video")) {
                 res.hasAudio = true;
                 res.startFrame = clip->startFrame;
                 res.durationFrames = clip->durationFrames;
                 for (const auto &ed : batch.activeEffects) {
-                    auto *eff = clip->effects[ed.index];
+                    auto *eff = clip->effects.value(ed.index);
                     if (eff->id() == clip->type) {
-                        QVariant vVol = eff->evaluatedParam("volume", res.relFrame, fps);
+                        QVariant vVol = eff->evaluatedParam(QStringLiteral("volume"), res.relFrame, fps);
                         res.vol = vVol.isValid() ? vVol.toFloat() : 1.0F;
-                        res.pan = eff->evaluatedParam("pan", res.relFrame, fps).toFloat();
-                        res.mute = eff->evaluatedParam("mute", res.relFrame, fps).toBool();
+                        res.pan = eff->evaluatedParam(QStringLiteral("pan"), res.relFrame, fps).toFloat();
+                        res.mute = eff->evaluatedParam(QStringLiteral("mute"), res.relFrame, fps).toBool();
                         break;
                     }
                 }
@@ -144,11 +144,11 @@ void TimelineEngineSynchronizer::handleResultsReady() {
                 // UIスレッド用に QVariantMap を復元
                 QVariantMap resMap;
                 for (int i = 0; i < static_cast<int>(res.propertyNames.size()); ++i) {
-                    resMap.insert(res.propertyNames[i], res.propertyValues[i]);
+                    resMap.insert(res.propertyNames.value(i), res.propertyValues.value(i));
                 }
                 // 非数値（テキスト等）を復元
                 for (int i = 0; i < res.variantNames.size(); ++i) {
-                    resMap.insert(res.variantNames[i], res.variantValues[i]);
+                    resMap.insert(res.variantNames.value(i), res.variantValues.value(i));
                 }
                 nextCache.insert(res.clipId, resMap);
 

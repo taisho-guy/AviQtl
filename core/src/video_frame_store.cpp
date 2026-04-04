@@ -115,7 +115,7 @@ void VideoFrameStore::invalidateScene(int sceneId) {
     }
 
     QMutexLocker locker(&m_mutex);
-    QString prefix = QString::number(sceneId) + "_";
+    QString prefix = QString::number(sceneId) + QLatin1String("_");
 
     for (auto it = m_frames.begin(); it != m_frames.end();) {
         if (it.key().startsWith(prefix)) {

@@ -131,8 +131,8 @@ void TimelineController::updateSelectionPreview(int frameA, int frameB, int laye
         // GroupControlによるレイヤーの拡張分を考慮
         int groupLayerCount = 0;
         for (auto *eff : clip.effects) {
-            if (eff->id() == "GroupControl") {
-                groupLayerCount = eff->params().value("layerCount", 0).toInt();
+            if (eff->id() == QLatin1String("GroupControl")) {
+                groupLayerCount = eff->params().value(QStringLiteral("layerCount"), 0).toInt();
                 break;
             }
         }
@@ -206,7 +206,7 @@ void TimelineController::setClipProperty(const QString &name, const QVariant &va
 
         int targetEffectIndex = -1;
         for (int i = 0; i < clip->effects.size(); ++i) {
-            if (clip->effects[i]->params().contains(name)) {
+            if (clip->effects.value(i)->params().contains(name)) {
                 targetEffectIndex = i;
                 break;
             }
@@ -230,7 +230,7 @@ void TimelineController::setClipProperty(const QString &name, const QVariant &va
 
 auto TimelineController::getClipProperty(const QString &name) const -> QVariant { return m_selection->selectedClipData().value(name); }
 
-auto TimelineController::clipStartFrame() const -> int { return m_selection->selectedClipData().value("startFrame", 0).toInt(); }
+auto TimelineController::clipStartFrame() const -> int { return m_selection->selectedClipData().value(QStringLiteral("startFrame"), 0).toInt(); }
 void TimelineController::setClipStartFrame(int frame) {
     const QVariantList ids = m_selection->selectedClipIds();
     if (ids.isEmpty()) {
@@ -247,7 +247,7 @@ void TimelineController::setClipStartFrame(int frame) {
     m_timeline->undoStack()->endMacro();
 }
 
-auto TimelineController::clipDurationFrames() const -> int { return m_selection->selectedClipData().value("durationFrames", 100).toInt(); }
+auto TimelineController::clipDurationFrames() const -> int { return m_selection->selectedClipData().value(QStringLiteral("durationFrames"), 100).toInt(); }
 void TimelineController::setClipDurationFrames(int frames) {
     const QVariantList ids = m_selection->selectedClipIds();
     if (ids.isEmpty()) {
@@ -264,7 +264,7 @@ void TimelineController::setClipDurationFrames(int frames) {
     m_timeline->undoStack()->endMacro();
 }
 
-auto TimelineController::layer() const -> int { return m_selection->selectedClipData().value("layer", 0).toInt(); }
+auto TimelineController::layer() const -> int { return m_selection->selectedClipData().value(QStringLiteral("layer"), 0).toInt(); }
 void TimelineController::setLayer(int layer) {
     const QVariantList ids = m_selection->selectedClipIds();
     if (ids.isEmpty()) {
@@ -302,7 +302,7 @@ void TimelineController::updateClipActiveState() {
     }
 }
 
-auto TimelineController::activeObjectType() const -> QString { return m_selection->selectedClipData().value("type", "rect").toString(); }
+auto TimelineController::activeObjectType() const -> QString { return m_selection->selectedClipData().value(QStringLiteral("type"), "rect").toString(); }
 
 void TimelineController::createObject(const QString &type, int startFrame, int layer) {
     if (m_timeline != nullptr) {
@@ -329,35 +329,35 @@ auto TimelineController::clips() const -> QVariantList {
     QVariantList list;
     for (const auto &clip : m_timeline->clips()) {
         QVariantMap map;
-        map["id"] = clip.id;
-        map["type"] = clip.type;
-        map["startFrame"] = clip.startFrame;
-        map["durationFrames"] = clip.durationFrames;
-        map["layer"] = clip.layer;
+        map.insert(QStringLiteral("id"), clip.id);
+        map.insert(QStringLiteral("type"), clip.type);
+        map.insert(QStringLiteral("startFrame"), clip.startFrame);
+        map.insert(QStringLiteral("durationFrames"), clip.durationFrames);
+        map.insert(QStringLiteral("layer"), clip.layer);
 
         // オブジェクトのQMLパスを取得して追加
         auto meta = Rina::Core::EffectRegistry::instance().getEffect(clip.type);
-        map["name"] = !meta.name.isEmpty() ? meta.name : clip.type;
+        map.insert(QStringLiteral("name"), !meta.name.isEmpty() ? meta.name : clip.type);
         if (!meta.qmlSource.isEmpty()) {
-            map["qmlSource"] = meta.qmlSource;
+            map.insert(QStringLiteral("qmlSource"), meta.qmlSource);
         }
 
         // params を構築して追加
         QVariantMap params;
         // 基本情報もparamsに入れておく（QML側での利便性とBaseObjectでの参照用）
-        params["layer"] = clip.layer;
-        params["startFrame"] = clip.startFrame;
-        params["durationFrames"] = clip.durationFrames;
-        params["id"] = clip.id;
+        params.insert(QStringLiteral("layer"), clip.layer);
+        params.insert(QStringLiteral("startFrame"), clip.startFrame);
+        params.insert(QStringLiteral("durationFrames"), clip.durationFrames);
+        params.insert(QStringLiteral("id"), clip.id);
 
         int groupLayerCount = 0;
         for (auto *eff : clip.effects) {
-            if (eff->id() == "GroupControl") {
-                groupLayerCount = eff->params().value("layerCount", 0).toInt();
+            if (eff->id() == QLatin1String("GroupControl")) {
+                groupLayerCount = eff->params().value(QStringLiteral("layerCount"), 0).toInt();
                 break;
             }
         }
-        map["groupLayerCount"] = groupLayerCount;
+        map.insert(QStringLiteral("groupLayerCount"), groupLayerCount);
 
         for (auto *eff : clip.effects) {
             QVariantMap p = eff->params();
@@ -365,7 +365,7 @@ auto TimelineController::clips() const -> QVariantList {
                 params.insert(it.key(), it.value());
             }
         }
-        map["params"] = params;
+        map.insert(QStringLiteral("params"), params);
 
         list.append(map);
     }
@@ -400,7 +400,7 @@ void TimelineController::updateClip(int id, int layer, int startFrame, int durat
     if (clip != nullptr) {
         const int projectFps = static_cast<int>(project()->fps());
 
-        if (clip->type == "video") {
+        if (clip->type == QLatin1String("video")) {
             auto *vid = qobject_cast<Rina::Core::VideoDecoder *>(m_mediaManager->decoderForClip(id));
             if ((vid != nullptr) && vid->isReady()) {
                 int startVideoFrame = 0;
@@ -411,13 +411,13 @@ void TimelineController::updateClip(int id, int layer, int startFrame, int durat
                     if (eff->id() != "video") {
                         continue;
                     }
-                    const QString playMode = eff->params().value("playMode", "開始フレーム＋再生速度").toString();
-                    if (playMode == "フレーム直接指定") {
+                    const QString playMode = eff->params().value(QStringLiteral("playMode"), "開始フレーム＋再生速度").toString();
+                    if (playMode == QStringLiteral("フレーム直接指定")) {
                         isDirectMode = true;
                         break;
                     }
-                    startVideoFrame = eff->params().value("startFrame", 0).toInt();
-                    speed = eff->params().value("speed", 100.0).toDouble();
+                    startVideoFrame = eff->params().value(QStringLiteral("startFrame"), 0).toInt();
+                    speed = eff->params().value(QStringLiteral("speed"), 100.0).toDouble();
                     break;
                 }
 
@@ -443,7 +443,7 @@ void TimelineController::updateClip(int id, int layer, int startFrame, int durat
                     duration = maxDuration;
                 }
             }
-        } else if (clip->type == "audio") {
+        } else if (clip->type == QLatin1String("audio")) {
             auto *aud = qobject_cast<Rina::Core::AudioDecoder *>(m_mediaManager->decoderForClip(id));
             if ((aud != nullptr) && aud->isReady()) {
                 double startTime = 0.0;
@@ -454,13 +454,13 @@ void TimelineController::updateClip(int id, int layer, int startFrame, int durat
                     if (eff->id() != "audio") {
                         continue;
                     }
-                    const QString playMode = eff->params().value("playMode", "開始時間＋再生速度").toString();
-                    if (playMode == "時間直接指定") {
+                    const QString playMode = eff->params().value(QStringLiteral("playMode"), "開始時間＋再生速度").toString();
+                    if (playMode == QStringLiteral("時間直接指定")) {
                         isDirectMode = true;
                         break;
                     }
-                    startTime = eff->params().value("startTime", 0.0).toDouble();
-                    speed = eff->params().value("speed", 100.0).toDouble();
+                    startTime = eff->params().value(QStringLiteral("startTime"), 0.0).toDouble();
+                    speed = eff->params().value(QStringLiteral("speed"), 100.0).toDouble();
                     break;
                 }
 
@@ -481,7 +481,7 @@ void TimelineController::updateClip(int id, int layer, int startFrame, int durat
                     duration = maxDuration;
                 }
             }
-        } else if (clip->type == "scene") {
+        } else if (clip->type == QLatin1String("scene")) {
             int targetSceneId = 0;
             double speed = 1.0;
             int offset = 0;
@@ -493,9 +493,9 @@ void TimelineController::updateClip(int id, int layer, int startFrame, int durat
                 }
                 // ※ 現在Sceneには playMode パラメータは無いが、将来のために概念として考慮。
                 // 現状の仕様では「speed と offset」による計算。
-                targetSceneId = eff->params().value("targetSceneId", 0).toInt();
-                speed = eff->params().value("speed", 1.0).toDouble();
-                offset = eff->params().value("offset", 0).toInt();
+                targetSceneId = eff->params().value(QStringLiteral("targetSceneId"), 0).toInt();
+                speed = eff->params().value(QStringLiteral("speed"), 1.0).toDouble();
+                offset = eff->params().value(QStringLiteral("offset"), 0).toInt();
                 break;
             }
 
@@ -581,8 +581,8 @@ auto TimelineController::getProjectInfo(const QString &fileUrl) -> QVariantMap {
     }
 
     QJsonObject root = doc.object();
-    if (root.contains("settings")) {
-        result = root["settings"].toObject().toVariantMap();
+    if (root.contains(QStringLiteral("settings"))) {
+        result = root.value(QStringLiteral("settings")).toObject().toVariantMap();
     }
 
     return result;
@@ -592,18 +592,18 @@ auto TimelineController::exportMedia(const QString &fileUrl, const QString &form
 
 void TimelineController::exportVideoAsync(const QVariantMap &cfg) {
     Rina::Core::VideoEncoder::Config c;
-    c.width = cfg.value("width", 1920).toInt();
-    c.height = cfg.value("height", 1080).toInt();
-    c.fps_num = cfg.value("fps_num", 60000).toInt();
-    c.fps_den = cfg.value("fps_den", 1000).toInt();
-    c.bitrate = cfg.value("bitrate", 15'000'000).toLongLong();
-    c.crf = cfg.value("crf", -1).toInt();
-    c.codecName = cfg.value("codecName", "h264_vaapi").toString();
-    c.audioCodecName = cfg.value("audioCodecName", "aac").toString();
-    c.audioBitrate = cfg.value("audioBitrate", 192'000).toLongLong();
-    c.outputUrl = cfg.value("outputUrl").toString();
-    c.startFrame = cfg.value("startFrame", 0).toInt();
-    c.endFrame = cfg.value("endFrame", -1).toInt();
+    c.width = cfg.value(QStringLiteral("width"), 1920).toInt();
+    c.height = cfg.value(QStringLiteral("height"), 1080).toInt();
+    c.fps_num = cfg.value(QStringLiteral("fps_num"), 60000).toInt();
+    c.fps_den = cfg.value(QStringLiteral("fps_den"), 1000).toInt();
+    c.bitrate = cfg.value(QStringLiteral("bitrate"), 15'000'000).toLongLong();
+    c.crf = cfg.value(QStringLiteral("crf"), -1).toInt();
+    c.codecName = cfg.value(QStringLiteral("codecName"), "h264_vaapi").toString();
+    c.audioCodecName = cfg.value(QStringLiteral("audioCodecName"), "aac").toString();
+    c.audioBitrate = cfg.value(QStringLiteral("audioBitrate"), 192'000).toLongLong();
+    c.outputUrl = cfg.value(QStringLiteral("outputUrl")).toString();
+    c.startFrame = cfg.value(QStringLiteral("startFrame"), 0).toInt();
+    c.endFrame = cfg.value(QStringLiteral("endFrame"), -1).toInt();
     m_exportManager->exportVideoAsync(c);
 }
 
@@ -644,8 +644,8 @@ auto TimelineController::getAvailableEffects() -> QVariantList {
             continue;
         }
         QVariantMap m;
-        m["id"] = meta.id;
-        m["name"] = meta.name;
+        m.insert(QStringLiteral("id"), meta.id);
+        m.insert(QStringLiteral("name"), meta.name);
         list.append(m);
     }
     return list;
@@ -659,8 +659,8 @@ auto TimelineController::getAvailableObjects() -> QVariantList {
             continue;
         }
         QVariantMap m;
-        m["id"] = meta.id;
-        m["name"] = meta.name;
+        m.insert(QStringLiteral("id"), meta.id);
+        m.insert(QStringLiteral("name"), meta.name);
         list.append(m);
     }
     return list;
@@ -675,8 +675,8 @@ auto TimelineController::getAvailableObjects(const QString &category) -> QVarian
     for (const auto &meta : effects) {
         if (meta.category == category) {
             QVariantMap map;
-            map["id"] = meta.id;
-            map["name"] = meta.name;
+            map.insert(QStringLiteral("id"), meta.id);
+            map.insert(QStringLiteral("name"), meta.name);
             list.append(map);
         }
     }
@@ -756,7 +756,7 @@ auto TimelineController::getPluginsByCategory(const QString &category) -> QVaria
 
 auto TimelineController::isAudioClip(int clipId) const -> bool {
     const auto *clip = m_timeline->findClipById(clipId);
-    return (clip != nullptr) && clip->type == "audio";
+    return (clip != nullptr) && clip->type == QLatin1String("audio");
 }
 
 auto TimelineController::getWaveformPeaks(int clipId, int pixelWidth, int displayDurationFrames) const -> QVariantList { // NOLINT(bugprone-easily-swappable-parameters)
@@ -802,8 +802,8 @@ auto TimelineController::getClipEffectStack(int clipId) const -> QVariantList {
         auto *plugin = chain.get(i);
         if (plugin != nullptr) {
             QVariantMap effectInfo;
-            effectInfo["name"] = plugin->name();
-            effectInfo["format"] = plugin->format();
+            effectInfo.insert(QStringLiteral("name"), plugin->name());
+            effectInfo.insert(QStringLiteral("format"), plugin->format());
             list.append(effectInfo);
         }
     }
@@ -823,18 +823,18 @@ auto TimelineController::getEffectParameters(int clipId, int effectIndex) const 
             QVariantMap paramInfo;
             auto info = plugin->getParamInfo(i);
 
-            paramInfo["pIdx"] = i;
-            paramInfo["name"] = info.name;
-            paramInfo["current"] = plugin->getParam(i);
-            paramInfo["min"] = info.min;
-            paramInfo["max"] = info.max;
+            paramInfo.insert(QStringLiteral("pIdx"), i);
+            paramInfo.insert(QStringLiteral("name"), info.name);
+            paramInfo.insert(QStringLiteral("current"), plugin->getParam(i));
+            paramInfo.insert(QStringLiteral("min"), info.min);
+            paramInfo.insert(QStringLiteral("max"), info.max);
 
             if (info.isToggle) {
-                paramInfo["type"] = "bool";
+                paramInfo.insert(QStringLiteral("type"), "bool");
             } else if (info.isInteger) {
-                paramInfo["type"] = "int";
+                paramInfo.insert(QStringLiteral("type"), "int");
             } else {
-                paramInfo["type"] = "slider";
+                paramInfo.insert(QStringLiteral("type"), "slider");
             }
 
             list.append(paramInfo);
@@ -943,25 +943,25 @@ auto TimelineController::getSceneClips(int sceneId) const -> QVariantList {
 
     for (const auto &clip : clips) {
         QVariantMap map;
-        map["id"] = clip.id;
-        map["type"] = clip.type;
-        map["startFrame"] = clip.startFrame;
-        map["durationFrames"] = clip.durationFrames;
-        map["layer"] = clip.layer;
+        map.insert(QStringLiteral("id"), clip.id);
+        map.insert(QStringLiteral("type"), clip.type);
+        map.insert(QStringLiteral("startFrame"), clip.startFrame);
+        map.insert(QStringLiteral("durationFrames"), clip.durationFrames);
+        map.insert(QStringLiteral("layer"), clip.layer);
 
         // QMLソースの解決
         auto meta = Rina::Core::EffectRegistry::instance().getEffect(clip.type);
         if (!meta.qmlSource.isEmpty()) {
-            map["qmlSource"] = meta.qmlSource;
+            map.insert(QStringLiteral("qmlSource"), meta.qmlSource);
         }
 
         // パラメータの収集 (エフェクトからフラット化)
         QVariantMap params;
         // 基本情報もparamsに入れておく
-        params["layer"] = clip.layer;
-        params["startFrame"] = clip.startFrame;
-        params["durationFrames"] = clip.durationFrames;
-        params["id"] = clip.id;
+        params.insert(QStringLiteral("layer"), clip.layer);
+        params.insert(QStringLiteral("startFrame"), clip.startFrame);
+        params.insert(QStringLiteral("durationFrames"), clip.durationFrames);
+        params.insert(QStringLiteral("id"), clip.id);
 
         for (auto *eff : clip.effects) {
             if (!eff->isEnabled()) {
@@ -974,7 +974,7 @@ auto TimelineController::getSceneClips(int sceneId) const -> QVariantList {
                 params.insert(it.key(), it.value());
             }
         }
-        map["params"] = params;
+        map.insert(QStringLiteral("params"), params);
         list.append(map);
     }
     return list;

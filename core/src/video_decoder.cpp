@@ -135,10 +135,10 @@ hwinitdone:
     if (mhwDeviceCtx == nullptr) {
         if ((codec->capabilities & AV_CODEC_CAP_FRAME_THREADS) != 0) {
             mdecCtx->thread_type = FF_THREAD_FRAME;
-            mdecCtx->thread_count = Rina::Core::SettingsManager::instance().value("videoDecoderThreads", 0).toInt();
+            mdecCtx->thread_count = Rina::Core::SettingsManager::instance().value(QStringLiteral("videoDecoderThreads"), 0).toInt();
         } else if ((codec->capabilities & AV_CODEC_CAP_SLICE_THREADS) != 0) {
             mdecCtx->thread_type = FF_THREAD_SLICE;
-            mdecCtx->thread_count = Rina::Core::SettingsManager::instance().value("videoDecoderThreads", 0).toInt();
+            mdecCtx->thread_count = Rina::Core::SettingsManager::instance().value(QStringLiteral("videoDecoderThreads"), 0).toInt();
         }
     }
 
@@ -159,7 +159,7 @@ auto VideoDecoder::buildIndex() -> bool {
     if (mstream->nb_frames > 0) {
         mindex.reserve(mstream->nb_frames);
     } else {
-        mindex.reserve(SettingsManager::instance().value("videoDecoderIndexReserve", 108000).toInt());
+        mindex.reserve(SettingsManager::instance().value(QStringLiteral("videoDecoderIndexReserve"), 108000).toInt());
     }
 
     AVPacket *pkt = av_packet_alloc();
@@ -221,8 +221,8 @@ auto VideoDecoder::frameIndexFromSeconds(double seconds) const -> int {
     if (std::cmp_greater_equal(idx, mindex.size())) {
         return static_cast<int>(mindex.size()) - 1;
     }
-    const int64_t a = mindex[idx - 1].pts;
-    const int64_t b = mindex[idx].pts;
+    const int64_t a = mindex.value(idx - 1).pts;
+    const int64_t b = mindex.value(idx).pts;
     return std::llabs(targetPts - a) <= std::llabs(b - targetPts) ? idx - 1 : idx;
 }
 
@@ -283,12 +283,12 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) { // NOLINT(bugprone-
     }
 
     if (mframeCache.contains(targetFrame)) {
-        mstore->setVideoFrameSafe(QString::number(clipId()), *mframeCache[targetFrame]);
+        mstore->setVideoFrameSafe(QString::number(clipId()), *mframeCache.value(targetFrame));
         QMetaObject::invokeMethod(this, [this, targetFrame]() -> void { emit frameReady(targetFrame); }, Qt::QueuedConnection);
         return;
     }
 
-    const auto &targetEntry = mindex[targetFrame];
+    const auto &targetEntry = mindex.value(targetFrame);
     int64_t targetPts = targetEntry.pts;
     bool needSeek = true;
 
@@ -298,10 +298,10 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) { // NOLINT(bugprone-
 
     if (needSeek) {
         int keyIndex = targetFrame;
-        while (keyIndex > 0 && !mindex[keyIndex].isKeyframe) {
+        while (keyIndex > 0 && !mindex.value(keyIndex).isKeyframe) {
             --keyIndex;
         }
-        int64_t seekPts = mindex[keyIndex].pts;
+        int64_t seekPts = mindex.value(keyIndex).pts;
         int ret = av_seek_frame(mfmtCtx, mstreamIndex, seekPts, AVSEEK_FLAG_BACKWARD);
         if (ret < 0) {
             av_seek_frame(mfmtCtx, -1, seekPts, AVSEEK_FLAG_BACKWARD);
@@ -312,7 +312,7 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) { // NOLINT(bugprone-
 
     bool frameFound = false;
     AVPacket *pkt = av_packet_alloc();
-    int maxDecodeCount = SettingsManager::instance().value("videoDecoderMaxPrefetchCount", 500).toInt();
+    int maxDecodeCount = SettingsManager::instance().value(QStringLiteral("videoDecoderMaxPrefetchCount"), 500).toInt();
     bool eof = false;
 
     while (maxDecodeCount-- > 0 && !frameFound) {
@@ -441,7 +441,7 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) { // NOLINT(bugprone-
     av_packet_free(&pkt);
 
     if (mframeCache.contains(targetFrame)) {
-        mstore->setVideoFrameSafe(QString::number(clipId()), *mframeCache[targetFrame]);
+        mstore->setVideoFrameSafe(QString::number(clipId()), *mframeCache.value(targetFrame));
         QPointer<VideoDecoder> self(this);
         QMetaObject::invokeMethod(
             this,
@@ -465,8 +465,8 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) { // NOLINT(bugprone-
 }
 
 void VideoDecoder::updateCacheSize() {
-    int sizeMB = SettingsManager::instance().settings().value("cacheSize", 512).toInt();
-    int minSizeMB = SettingsManager::instance().value("videoDecoderMinCacheMB", 64).toInt();
+    int sizeMB = SettingsManager::instance().settings().value(QStringLiteral("cacheSize"), 512).toInt();
+    int minSizeMB = SettingsManager::instance().value(QStringLiteral("videoDecoderMinCacheMB"), 64).toInt();
     sizeMB = std::max(sizeMB, minSizeMB);
     mframeCache.setMaxCost(static_cast<qsizetype>(sizeMB) * 1024 * 1024);
 }
