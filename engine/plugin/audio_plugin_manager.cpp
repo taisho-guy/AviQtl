@@ -665,7 +665,7 @@ auto AudioPluginManager::instance() -> AudioPluginManager & {
     return inst;
 }
 
-AudioPluginManager::AudioPluginManager() = default;
+AudioPluginManager::AudioPluginManager(QObject *parent) : QObject(parent) {}
 
 AudioPluginManager::~AudioPluginManager() { stopScan(); }
 

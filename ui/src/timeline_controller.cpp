@@ -86,7 +86,7 @@ void TimelineController::setupConnections() {
     connect(m_exportManager, &TimelineExportManager::exportFinished, this, &TimelineController::exportFinished);
 
     // FPSが変更されたら再生タイマーの間隔を更新
-    connect(m_project, &ProjectService::fpsChanged, [this]() -> void { m_transport->updateTimerInterval(m_project->fps()); });
+    connect(m_project, &ProjectService::fpsChanged, this, [this]() -> void { m_transport->updateTimerInterval(m_project->fps()); });
     m_transport->updateTimerInterval(m_project->fps());
 
     // 再生状態の変化をデコーダーに伝播

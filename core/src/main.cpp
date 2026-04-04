@@ -102,7 +102,7 @@ auto main(int argc, char *argv[]) -> int {
     engine.rootContext()->setContextProperty("WindowManager", static_cast<QObject *>(&Rina::UI::WindowManager::instance()));
 
     // 遅延初期化処理を実行する
-    QTimer::singleShot(10, [&engine, timelineController, &modEngine, splash]() -> void {
+    QTimer::singleShot(10, &engine, [&engine, timelineController, &modEngine, splash]() -> void {
         Rina::Core::initializeStandardEffects();
         modEngine.initialize(nullptr);
         modEngine.registerController(timelineController);

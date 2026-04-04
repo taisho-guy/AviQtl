@@ -7,6 +7,7 @@ namespace Rina::Core {
 class VideoFrameStore;
 
 class VideoFrameProvider : public QQuickImageProvider {
+    Q_OBJECT
   public:
     VideoFrameProvider(const VideoFrameProvider &) = delete;
     VideoFrameProvider &operator=(const VideoFrameProvider &) = delete;

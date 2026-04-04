@@ -243,7 +243,7 @@ auto ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
     }
 
     // クリップを各シーンに分配
-    for (auto &clip : std::as_const(tempClips)) {
+    for (const auto &clip : std::as_const(tempClips)) {
         for (auto *eff : std::as_const(clip.effects)) {
             eff->setParent(timeline); // 所有権を移譲
             QObject::connect(eff, &UI::EffectModel::keyframeTracksChanged, timeline, &UI::TimelineService::clipsChanged);
@@ -251,7 +251,7 @@ auto ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
 
         // 対応するシーンを探して追加
         bool added = false;
-        for (auto &scene : std::as_const(tempScenes)) {
+        for (auto &scene : tempScenes) {
             if (scene.id == clip.sceneId) {
                 scene.clips.append(clip);
                 added = true;

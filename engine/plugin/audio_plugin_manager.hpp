@@ -44,7 +44,7 @@ class AudioPluginManager : public QObject {
     void pluginsReady(int count);
 
   private:
-    AudioPluginManager();
+    explicit AudioPluginManager(QObject *parent = nullptr);
     bool m_initialized = false;
     std::atomic<bool> m_scanning{false};
     std::atomic<bool> m_stopRequested{false};

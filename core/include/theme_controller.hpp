@@ -18,7 +18,7 @@ class ThemeController : public QObject {
     void themeChanged();
 
   private:
-    ThemeController();
+    explicit ThemeController(QObject *parent = nullptr);
     ~ThemeController() = default;
 
     void applyTheme();

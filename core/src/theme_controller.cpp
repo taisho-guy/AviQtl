@@ -10,7 +10,7 @@ auto ThemeController::instance() -> ThemeController & {
     return inst;
 }
 
-ThemeController::ThemeController() : QObject(nullptr) {
+ThemeController::ThemeController(QObject *parent) : QObject(parent) {
     m_theme = SettingsManager::instance().value(QStringLiteral("theme"), "System").toString();
     applyTheme();
 }
