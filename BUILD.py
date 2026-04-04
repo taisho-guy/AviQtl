@@ -7,7 +7,6 @@ from pathlib import Path
 from PySide6 import QtCore
 import platform
 import shlex
-import concurrent.futures
 import urllib.request
 
 class BuildWorker(QtCore.QThread):
@@ -16,13 +15,12 @@ class BuildWorker(QtCore.QThread):
     finished_signal = QtCore.Signal(bool, str)
     dist_dir = None
 
-    def __init__(self, source_dir, temp_base, output_dir, is_debug=False, use_container=True, do_tidy=False):
+    def __init__(self, source_dir, temp_base, output_dir, is_debug=False, use_container=True):
         super().__init__()
         self.source_dir = source_dir
         self.temp_base = temp_base
         self.output_dir = output_dir
         self.is_debug = is_debug
-        self.do_tidy = do_tidy
         self.use_container_opt = use_container
         self.dist_dir = self.source_dir / "dist"
         self.system = platform.system()
@@ -225,55 +223,6 @@ class BuildWorker(QtCore.QThread):
                 pass
 
             self._run_cmd(["sudo", "pacman", "-Syu", "--needed", "--noconfirm"] + container_deps, in_container=True)
-    def _run_tidy_single(self, file, build_dir):
-        """個別のファイルに対してclang-tidyを実行する（並列実行用）"""
-        cmd = ["clang-tidy", "-p", str(build_dir), "--fix", "--format-style=file", "--quiet", file]
-        
-        use_container = (self.system == "Linux" and self.use_container_opt)
-        actual_cmd = cmd
-        shell = False
-        
-        if use_container:
-            cmd_str = shlex.join(cmd)
-            cwd = os.getcwd()
-            inner_cmd = f"cd {shlex.quote(cwd)} && {cmd_str}"
-            actual_cmd = f"distrobox enter {self.container_name} -- bash -c {shlex.quote(inner_cmd)}"
-            shell = True
-            
-        # ログ混雑を防ぐため標準出力を捨てる
-        subprocess.run(actual_cmd, shell=shell, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
-
-    def run_clang_tidy(self, build_dir):
-        self.log_signal.emit("clang-tidy による静的解析と自動修正を開始します...")
-        
-        cc_json = build_dir / "compile_commands.json"
-        if not cc_json.exists():
-            self.log_signal.emit("警告: compile_commands.json が見つかりません。clang-tidyをスキップします。")
-            return
-
-        import json
-        with open(cc_json, 'r', encoding='utf-8') as f:
-            commands = json.load(f)
-
-        files_to_check = []
-        for entry in commands:
-            file_path = Path(entry['file'])
-            # ソースディレクトリ以下のファイルのみ対象（外部ライブラリや自動生成ファイルを除外）
-            if self.source_dir in file_path.parents:
-                if "qrc_" in file_path.name or "moc_" in file_path.name:
-                    continue
-                files_to_check.append(str(file_path))
-
-        if not files_to_check:
-            self.log_signal.emit("チェック対象のファイルがありません。")
-            return
-
-        self.log_signal.emit(f"{len(files_to_check)} ファイルを並列処理中...")
-        
-        max_workers = multiprocessing.cpu_count()
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-            # 全ファイルを並列で処理
-            list(executor.map(lambda f: self._run_tidy_single(f, build_dir), files_to_check))
 
     def run(self):
         try:
@@ -329,10 +278,6 @@ class BuildWorker(QtCore.QThread):
             # Linuxの場合はコンテナ内で実行
             use_container = (self.system == "Linux" and self.use_container_opt)
             self._run_cmd(conf_cmd, in_container=use_container)
-
-            # 2. Clang-Tidy (Optional)
-            if self.do_tidy:
-                self.run_clang_tidy(work_dir)
 
             # 2.5 翻訳ソースファイル (.ts) を自動更新 (常に実行)
             self.log_signal.emit("翻訳ソースファイル (.ts) を更新中...")
@@ -487,9 +432,8 @@ if __name__ == "__main__":
     
     # Host Native Release Build
     use_container = "--no-container" not in sys.argv
-    do_tidy = "--fix-lint" in sys.argv
     
-    worker = BuildWorker(source_dir, temp_base, output_dir, is_debug=False, use_container=use_container, do_tidy=do_tidy)
+    worker = BuildWorker(source_dir, temp_base, output_dir, is_debug=False, use_container=use_container)
     
     worker.log_signal.connect(print)
     worker.progress_signal.connect(lambda val, msg: print(f"[{val}%] {msg}"))

@@ -27,8 +27,9 @@ void EffectRegistry::loadEffectsFromDirectory(const QString &path) {
 
     while (it.hasNext()) {
         QFile file(it.next());
-        if (!file.open(QIODevice::ReadOnly))
+        if (!file.open(QIODevice::ReadOnly)) {
             continue;
+        }
 
         QJsonParseError error;
         // 最適化: 巨大なJSONの場合はメモリマップドファイル化を検討

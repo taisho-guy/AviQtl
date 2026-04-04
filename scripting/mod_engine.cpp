@@ -13,74 +13,103 @@ static Rina::UI::TimelineController *g_ctrl = nullptr;
 // C API Wrappers for HostApiTable
 extern "C" {
 static void api_log(const char *msg) {
-    if (g_ctrl)
-        g_ctrl->log(QString::fromUtf8(msg));
+    if (g_ctrl != nullptr) {
+        Rina::UI::TimelineController::log(QString::fromUtf8(msg));
+    }
 }
 static void api_transport_play() {
-    if (g_ctrl && !g_ctrl->transport()->isPlaying())
+    if ((g_ctrl != nullptr) && !g_ctrl->transport()->isPlaying()) {
         g_ctrl->transport()->togglePlay();
+    }
 }
 static void api_transport_pause() {
-    if (g_ctrl && g_ctrl->transport()->isPlaying())
+    if ((g_ctrl != nullptr) && g_ctrl->transport()->isPlaying()) {
         g_ctrl->transport()->togglePlay();
+    }
 }
 static void api_transport_toggle() {
-    if (g_ctrl)
+    if (g_ctrl != nullptr) {
         g_ctrl->transport()->togglePlay();
+    }
 }
 static void api_transport_seek(int frame) {
-    if (g_ctrl)
+    if (g_ctrl != nullptr) {
         g_ctrl->transport()->setCurrentFrame(frame);
+    }
 }
-static int api_transport_get_frame() { return (g_ctrl) ? g_ctrl->transport()->currentFrame() : 0; }
-static int api_transport_is_playing() { return (g_ctrl) ? (int)g_ctrl->transport()->isPlaying() : 0; }
+static auto api_transport_get_frame() -> int { return (g_ctrl != nullptr) ? g_ctrl->transport()->currentFrame() : 0; }
+static auto api_transport_is_playing() -> int { return (g_ctrl != nullptr) ? (int)g_ctrl->transport()->isPlaying() : 0; }
 
 static void api_clip_create(const char *type, int start, int layer) {
-    if (g_ctrl)
+    if (g_ctrl != nullptr) {
         g_ctrl->createObject(QString::fromUtf8(type), start, layer);
+    }
 }
 static void api_clip_delete(int id) {
-    if (g_ctrl)
+    if (g_ctrl != nullptr) {
         g_ctrl->deleteClip(id);
+    }
 }
 static void api_clip_update(int id, int layer, int start, int dur) {
-    if (g_ctrl)
+    if (g_ctrl != nullptr) {
         g_ctrl->updateClip(id, layer, start, dur);
+    }
 }
 static void api_clip_select(int id) {
-    if (g_ctrl)
+    if (g_ctrl != nullptr) {
         g_ctrl->selectClip(id);
+    }
 }
 
-static int api_project_get_width() { return (g_ctrl) ? g_ctrl->project()->width() : 0; }
-static int api_project_get_height() { return (g_ctrl) ? g_ctrl->project()->height() : 0; }
-static double api_project_get_fps() { return (g_ctrl) ? g_ctrl->project()->fps() : 0.0; }
+static auto api_project_get_width() -> int { return (g_ctrl != nullptr) ? g_ctrl->project()->width() : 0; }
+static auto api_project_get_height() -> int { return (g_ctrl != nullptr) ? g_ctrl->project()->height() : 0; }
+static auto api_project_get_fps() -> double { return (g_ctrl != nullptr) ? g_ctrl->project()->fps() : 0.0; }
 
 static void api_scene_create(const char *name) {
-    if (g_ctrl)
+    if (g_ctrl != nullptr) {
         g_ctrl->createScene(QString::fromUtf8(name));
+    }
 }
 static void api_scene_switch(int id) {
-    if (g_ctrl)
+    if (g_ctrl != nullptr) {
         g_ctrl->switchScene(id);
+    }
 }
 
 static void api_command_begin_group(const char *text) {
-    if (g_ctrl && g_ctrl->timeline())
+    if ((g_ctrl != nullptr) && (g_ctrl->timeline() != nullptr)) {
         g_ctrl->timeline()->undoStack()->beginMacro(QString::fromUtf8(text));
+    }
 }
 static void api_command_end_group() {
-    if (g_ctrl && g_ctrl->timeline())
+    if ((g_ctrl != nullptr) && (g_ctrl->timeline() != nullptr)) {
         g_ctrl->timeline()->undoStack()->endMacro();
+    }
 }
 }
 
-static HostApiTable g_hostApi = {api_log,         api_transport_play, api_transport_pause,   api_transport_toggle,   api_transport_seek,  api_transport_get_frame, api_transport_is_playing, api_clip_create,         api_clip_delete,
-                                 api_clip_update, api_clip_select,    api_project_get_width, api_project_get_height, api_project_get_fps, api_scene_create,        api_scene_switch,         api_command_begin_group, api_command_end_group};
+static HostApiTable g_hostApi = {.log = api_log,
+                                 .transport_play = api_transport_play,
+                                 .transport_pause = api_transport_pause,
+                                 .transport_toggle = api_transport_toggle,
+                                 .transport_seek = api_transport_seek,
+                                 .transport_get_frame = api_transport_get_frame,
+                                 .transport_is_playing = api_transport_is_playing,
+                                 .clip_create = api_clip_create,
+                                 .clip_delete = api_clip_delete,
+                                 .clip_update = api_clip_update,
+                                 .clip_select = api_clip_select,
+                                 .project_get_width = api_project_get_width,
+                                 .project_get_height = api_project_get_height,
+                                 .project_get_fps = api_project_get_fps,
+                                 .scene_create = api_scene_create,
+                                 .scene_switch = api_scene_switch,
+                                 .command_begin_group = api_command_begin_group,
+                                 .command_end_group = api_command_end_group};
 
 // ヘルパー
-static int _checkCtrl(lua_State *L) {
-    if (!g_ctrl) {
+static auto _checkCtrl(lua_State *L) -> int {
+    if (g_ctrl == nullptr) {
         lua_pushstring(L, "[RinaAPI] controller not ready");
         lua_error(L);
     }
@@ -88,106 +117,109 @@ static int _checkCtrl(lua_State *L) {
 }
 
 // transport
-static int l_transport_play(lua_State *L) {
+static auto l_transport_play(lua_State *L) -> int {
     _checkCtrl(L);
-    if (!g_ctrl->transport()->isPlaying())
+    if (!g_ctrl->transport()->isPlaying()) {
         g_ctrl->transport()->togglePlay();
+    }
     return 0;
 }
-static int l_transport_pause(lua_State *L) {
+static auto l_transport_pause(lua_State *L) -> int {
     _checkCtrl(L);
-    if (g_ctrl->transport()->isPlaying())
+    if (g_ctrl->transport()->isPlaying()) {
         g_ctrl->transport()->togglePlay();
+    }
     return 0;
 }
-static int l_transport_toggle(lua_State *L) {
+static auto l_transport_toggle(lua_State *L) -> int {
     _checkCtrl(L);
     g_ctrl->transport()->togglePlay();
     return 0;
 }
-static int l_transport_seek(lua_State *L) {
+static auto l_transport_seek(lua_State *L) -> int {
     _checkCtrl(L);
-    int frame = (int)luaL_checkinteger(L, 1);
+    int frame = static_cast<int>(luaL_checkinteger(L, 1));
     g_ctrl->transport()->setCurrentFrame(frame);
     return 0;
 }
-static int l_transport_get_frame(lua_State *L) {
+static auto l_transport_get_frame(lua_State *L) -> int {
     _checkCtrl(L);
     lua_pushinteger(L, g_ctrl->transport()->currentFrame());
     return 1;
 }
-static int l_transport_is_playing(lua_State *L) {
+static auto l_transport_is_playing(lua_State *L) -> int {
     _checkCtrl(L);
-    lua_pushboolean(L, g_ctrl->transport()->isPlaying());
+    lua_pushboolean(L, static_cast<int>(g_ctrl->transport()->isPlaying()));
     return 1;
 }
 
 // clip
-static int l_clip_create(lua_State *L) {
+static auto l_clip_create(lua_State *L) -> int {
     _checkCtrl(L);
     // rina_clip_create(type, startFrame, layer)
     const char *type = luaL_checkstring(L, 1);
-    int startFrame = (int)luaL_checkinteger(L, 2);
-    int layer = (int)luaL_checkinteger(L, 3);
+    int startFrame = static_cast<int>(luaL_checkinteger(L, 2));
+    int layer = static_cast<int>(luaL_checkinteger(L, 3));
     g_ctrl->createObject(QString::fromUtf8(type), startFrame, layer);
     return 0;
 }
-static int l_clip_delete(lua_State *L) {
+static auto l_clip_delete(lua_State *L) -> int {
     _checkCtrl(L);
-    int clipId = (int)luaL_checkinteger(L, 1);
+    int clipId = static_cast<int>(luaL_checkinteger(L, 1));
     g_ctrl->deleteClip(clipId);
     return 0;
 }
-static int l_clip_update(lua_State *L) {
+static auto l_clip_update(lua_State *L) -> int {
     _checkCtrl(L);
     // rina_clip_update(clipId, layer, startFrame, duration)
-    int id = (int)luaL_checkinteger(L, 1);
-    int layer = (int)luaL_checkinteger(L, 2);
-    int start = (int)luaL_checkinteger(L, 3);
-    int dur = (int)luaL_checkinteger(L, 4);
+    int id = static_cast<int>(luaL_checkinteger(L, 1));
+    int layer = static_cast<int>(luaL_checkinteger(L, 2));
+    int start = static_cast<int>(luaL_checkinteger(L, 3));
+    int dur = static_cast<int>(luaL_checkinteger(L, 4));
     g_ctrl->updateClip(id, layer, start, dur);
     return 0;
 }
-static int l_clip_select(lua_State *L) {
+static auto l_clip_select(lua_State *L) -> int {
     _checkCtrl(L);
-    g_ctrl->selectClip((int)luaL_checkinteger(L, 1));
+    g_ctrl->selectClip(static_cast<int>(luaL_checkinteger(L, 1)));
     return 0;
 }
-static int l_clip_split(lua_State *L) {
+static auto l_clip_split(lua_State *L) -> int {
     _checkCtrl(L);
-    g_ctrl->splitClip((int)luaL_checkinteger(L, 1), (int)luaL_checkinteger(L, 2));
+    g_ctrl->splitClip(static_cast<int>(luaL_checkinteger(L, 1)), static_cast<int>(luaL_checkinteger(L, 2)));
     return 0;
 }
-static int l_clip_copy(lua_State *L) {
+static auto l_clip_copy(lua_State *L) -> int {
     _checkCtrl(L);
-    g_ctrl->copyClip((int)luaL_checkinteger(L, 1));
+    g_ctrl->copyClip(static_cast<int>(luaL_checkinteger(L, 1)));
     return 0;
 }
-static int l_clip_cut(lua_State *L) {
+static auto l_clip_cut(lua_State *L) -> int {
     _checkCtrl(L);
-    g_ctrl->cutClip((int)luaL_checkinteger(L, 1));
+    g_ctrl->cutClip(static_cast<int>(luaL_checkinteger(L, 1)));
     return 0;
 }
-static int l_clip_paste(lua_State *L) {
+static auto l_clip_paste(lua_State *L) -> int {
     _checkCtrl(L);
-    g_ctrl->pasteClip((int)luaL_checkinteger(L, 1), (int)luaL_checkinteger(L, 2));
+    g_ctrl->pasteClip(static_cast<int>(luaL_checkinteger(L, 1)), static_cast<int>(luaL_checkinteger(L, 2)));
     return 0;
 }
-static int l_clip_list(lua_State *L) {
+static auto l_clip_list(lua_State *L) -> int {
     _checkCtrl(L);
     QVariantList clips = g_ctrl->clips();
     lua_newtable(L);
     for (int i = 0; i < clips.size(); i++) {
         QVariantMap m = clips[i].toMap();
         lua_newtable(L);
-        auto push = [&](const char *k, QVariant v) {
+        auto push = [&](const char *k, const QVariant &v) -> void {
             lua_pushstring(L, k);
-            if (v.typeId() == QMetaType::Int || v.typeId() == QMetaType::LongLong)
+            if (v.typeId() == QMetaType::Int || v.typeId() == QMetaType::LongLong) {
                 lua_pushinteger(L, v.toInt());
-            else if (v.typeId() == QMetaType::Double || v.typeId() == QMetaType::Float)
+            } else if (v.typeId() == QMetaType::Double || v.typeId() == QMetaType::Float) {
                 lua_pushnumber(L, v.toDouble());
-            else
+            } else {
                 lua_pushstring(L, v.toString().toUtf8().constData());
+            }
             lua_settable(L, -3);
         };
         push("id", m["id"]);
@@ -201,119 +233,124 @@ static int l_clip_list(lua_State *L) {
 }
 
 // effect
-static int l_effect_add(lua_State *L) {
+static auto l_effect_add(lua_State *L) -> int {
     _checkCtrl(L);
-    g_ctrl->addEffect((int)luaL_checkinteger(L, 1), QString::fromUtf8(luaL_checkstring(L, 2)));
+    g_ctrl->addEffect(static_cast<int>(luaL_checkinteger(L, 1)), QString::fromUtf8(luaL_checkstring(L, 2)));
     return 0;
 }
-static int l_effect_remove(lua_State *L) {
+static auto l_effect_remove(lua_State *L) -> int {
     _checkCtrl(L);
-    g_ctrl->removeEffect((int)luaL_checkinteger(L, 1), (int)luaL_checkinteger(L, 2));
+    g_ctrl->removeEffect(static_cast<int>(luaL_checkinteger(L, 1)), static_cast<int>(luaL_checkinteger(L, 2)));
     return 0;
 }
-static int l_effect_set_param(lua_State *L) {
+static auto l_effect_set_param(lua_State *L) -> int {
     _checkCtrl(L);
     // rina_effect_set_param(clipId, effectIndex, paramName, value)
-    int clipId = (int)luaL_checkinteger(L, 1);
-    int effectIndex = (int)luaL_checkinteger(L, 2);
+    int clipId = static_cast<int>(luaL_checkinteger(L, 1));
+    int effectIndex = static_cast<int>(luaL_checkinteger(L, 2));
     const char *key = luaL_checkstring(L, 3);
     QVariant val;
-    if (lua_type(L, 4) == LUA_TNUMBER)
+    if (lua_type(L, 4) == LUA_TNUMBER) {
         val = lua_tonumber(L, 4);
-    else if (lua_type(L, 4) == LUA_TBOOLEAN)
-        val = (bool)lua_toboolean(L, 4);
-    else
+    } else if (lua_type(L, 4) == LUA_TBOOLEAN) {
+        val = static_cast<bool>(lua_toboolean(L, 4));
+    } else {
         val = QString::fromUtf8(lua_tostring(L, 4));
+    }
     g_ctrl->updateClipEffectParam(clipId, effectIndex, QString::fromUtf8(key), val);
     return 0;
 }
 
 // project
-static int l_project_get_width(lua_State *L) {
+static auto l_project_get_width(lua_State *L) -> int {
     _checkCtrl(L);
     lua_pushinteger(L, g_ctrl->project()->width());
     return 1;
 }
-static int l_project_get_height(lua_State *L) {
+static auto l_project_get_height(lua_State *L) -> int {
     _checkCtrl(L);
     lua_pushinteger(L, g_ctrl->project()->height());
     return 1;
 }
-static int l_project_get_fps(lua_State *L) {
+static auto l_project_get_fps(lua_State *L) -> int {
     _checkCtrl(L);
     lua_pushnumber(L, g_ctrl->project()->fps());
     return 1;
 }
-static int l_project_save(lua_State *L) {
+static auto l_project_save(lua_State *L) -> int {
     _checkCtrl(L);
     bool ok = g_ctrl->saveProject(QString::fromUtf8(luaL_checkstring(L, 1)));
-    lua_pushboolean(L, ok);
+    lua_pushboolean(L, static_cast<int>(ok));
     return 1;
 }
-static int l_project_load(lua_State *L) {
+static auto l_project_load(lua_State *L) -> int {
     _checkCtrl(L);
     bool ok = g_ctrl->loadProject(QString::fromUtf8(luaL_checkstring(L, 1)));
-    lua_pushboolean(L, ok);
+    lua_pushboolean(L, static_cast<int>(ok));
     return 1;
 }
 
 // undo/redo
-static int l_undo(lua_State *L) {
+static auto l_undo(lua_State *L) -> int {
     _checkCtrl(L);
     g_ctrl->undo();
     return 0;
 }
-static int l_redo(lua_State *L) {
+static auto l_redo(lua_State *L) -> int {
     _checkCtrl(L);
     g_ctrl->redo();
     return 0;
 }
 
 // scene
-static int l_scene_create(lua_State *L) {
+static auto l_scene_create(lua_State *L) -> int {
     _checkCtrl(L);
     g_ctrl->createScene(QString::fromUtf8(luaL_checkstring(L, 1)));
     return 0;
 }
-static int l_scene_remove(lua_State *L) {
+static auto l_scene_remove(lua_State *L) -> int {
     _checkCtrl(L);
-    g_ctrl->removeScene((int)luaL_checkinteger(L, 1));
+    g_ctrl->removeScene(static_cast<int>(luaL_checkinteger(L, 1)));
     return 0;
 }
-static int l_scene_switch(lua_State *L) {
+static auto l_scene_switch(lua_State *L) -> int {
     _checkCtrl(L);
-    g_ctrl->switchScene((int)luaL_checkinteger(L, 1));
+    g_ctrl->switchScene(static_cast<int>(luaL_checkinteger(L, 1)));
     return 0;
 }
 
 // command
-static int l_command_begin_group(lua_State *L) {
+static auto l_command_begin_group(lua_State *L) -> int {
     _checkCtrl(L);
     const char *text = luaL_checkstring(L, 1);
-    if (g_ctrl->timeline())
+    if (g_ctrl->timeline() != nullptr) {
         g_ctrl->timeline()->undoStack()->beginMacro(QString::fromUtf8(text));
+    }
     return 0;
 }
-static int l_command_end_group(lua_State *L) {
+static auto l_command_end_group(lua_State *L) -> int {
     _checkCtrl(L);
-    if (g_ctrl->timeline())
+    if (g_ctrl->timeline() != nullptr) {
         g_ctrl->timeline()->undoStack()->endMacro();
+    }
     return 0;
 }
 
-ModEngine &ModEngine::instance() {
+auto ModEngine::instance() -> ModEngine & {
     static ModEngine inst;
     return inst;
 }
 
 ModEngine::~ModEngine() {
-    if (L)
+    if (L != nullptr) {
         lua_close(L);
+    }
 }
 
 void ModEngine::initialize(void *ecsPtr) {
-    if (L)
+    if (L != nullptr) {
         return;
+    }
     L = luaL_newstate();
     luaL_openlibs(L); // 全標準ライブラリ（io, os, debug, ffi等）を解放
 
@@ -325,7 +362,7 @@ void ModEngine::initialize(void *ecsPtr) {
 
 void ModEngine::registerController(void *controller) {
     g_ctrl = static_cast<Rina::UI::TimelineController *>(controller);
-    if (L) {
+    if (L != nullptr) {
         _registerRinaAPI();
 
         // Export Host API Table
@@ -450,8 +487,9 @@ void ModEngine::loadPlugins() {
 }
 
 void ModEngine::onUpdate() {
-    if (!L)
+    if (L == nullptr) {
         return;
+    }
     lua_getglobal(L, "RinaUpdateHook");
     if (lua_isfunction(L, -1)) {
         if (lua_pcall(L, 0, 0, 0) != 0) {

@@ -4,13 +4,13 @@
 
 namespace Rina::Engine::Timeline {
 
-ECS::ECS() {
+ECS::ECS() : m_editIndex(1) {
     m_activeIndex.store(0, std::memory_order_relaxed);
-    m_editIndex = 1;
+
     m_fullSyncRequired.fill(true);
 }
 
-ECS &ECS::instance() {
+auto ECS::instance() -> ECS & {
     static ECS inst;
     return inst;
 }
@@ -118,14 +118,18 @@ void ECS::commit() {
         dst.renderGraphDirty = src.renderGraphDirty;
 
         for (int id : m_dirtyForBuffer[m_editIndex]) {
-            if (const auto *s = src.transforms.find(id))
+            if (const auto *s = src.transforms.find(id)) {
                 dst.transforms[id] = *s;
-            if (const auto *s = src.renderStates.find(id))
+            }
+            if (const auto *s = src.renderStates.find(id)) {
                 dst.renderStates[id] = *s;
-            if (const auto *s = src.audioStates.find(id))
+            }
+            if (const auto *s = src.audioStates.find(id)) {
                 dst.audioStates[id] = *s;
-            if (const auto *s = src.metadataStates.find(id))
+            }
+            if (const auto *s = src.metadataStates.find(id)) {
                 dst.metadataStates[id] = *s;
+            }
         }
         m_dirtyForBuffer[m_editIndex].clear();
     }
@@ -134,24 +138,25 @@ void ECS::commit() {
     m_activeIndex.store(nextActive, std::memory_order_release);
 }
 
-const ECSState *ECS::getSnapshot() const { return &m_buffers[m_activeIndex.load(std::memory_order_acquire)]; }
+auto ECS::getSnapshot() const -> const ECSState * { return &m_buffers[m_activeIndex.load(std::memory_order_acquire)]; }
 
-bool ECS::isRenderGraphDirty() const { return m_buffers[m_editIndex].renderGraphDirty; }
+auto ECS::isRenderGraphDirty() const -> bool { return m_buffers[m_editIndex].renderGraphDirty; }
 
 void ECS::markRenderGraphClean() { m_buffers[m_editIndex].renderGraphDirty = false; }
 
 } // namespace Rina::Engine::Timeline
 
 extern "C" {
-float rina_lua_get_audio_volume(int clipId) {
-    auto state = Rina::Engine::Timeline::ECS::instance().getSnapshot();
-    if (!state)
-        return 1.0f;
+auto rina_lua_get_audio_volume(int clipId) -> float {
+    const auto *state = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    if (state == nullptr) {
+        return 1.0F;
+    }
 
-    auto it = state->audioStates.find(clipId);
-    if (it) {
+    const auto *it = state->audioStates.find(clipId);
+    if (it != nullptr) {
         return it->volume;
     }
-    return 1.0f;
+    return 1.0F;
 }
 }

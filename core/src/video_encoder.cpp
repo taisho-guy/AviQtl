@@ -20,46 +20,46 @@ VideoEncoder::VideoEncoder(QObject *parent) : QObject(parent) {}
 VideoEncoder::~VideoEncoder() { close(); }
 
 void VideoEncoder::cleanup() {
-    if (m_swsCtx) {
+    if (m_swsCtx != nullptr) {
         sws_freeContext(m_swsCtx);
         m_swsCtx = nullptr;
     }
-    if (m_swrCtx) {
+    if (m_swrCtx != nullptr) {
         swr_free(&m_swrCtx);
         m_swrCtx = nullptr;
     }
-    if (m_hwFrame) {
+    if (m_hwFrame != nullptr) {
         av_frame_free(&m_hwFrame);
     }
-    if (m_swFrame) {
+    if (m_swFrame != nullptr) {
         av_frame_free(&m_swFrame);
     }
-    if (m_audioFrame) {
+    if (m_audioFrame != nullptr) {
         av_frame_free(&m_audioFrame);
     }
-    if (m_audioFifo) {
+    if (m_audioFifo != nullptr) {
         av_audio_fifo_free(m_audioFifo);
         m_audioFifo = nullptr;
     }
-    if (m_encCtx) {
+    if (m_encCtx != nullptr) {
         avcodec_free_context(&m_encCtx);
     }
-    if (m_fmtCtx) {
-        if (!(m_fmtCtx->oformat->flags & AVFMT_NOFILE)) {
+    if (m_fmtCtx != nullptr) {
+        if ((m_fmtCtx->oformat->flags & AVFMT_NOFILE) == 0) {
             avio_closep(&m_fmtCtx->pb);
         }
         avformat_free_context(m_fmtCtx);
         m_fmtCtx = nullptr;
     }
-    if (m_hwDeviceCtx) {
+    if (m_hwDeviceCtx != nullptr) {
         av_buffer_unref(&m_hwDeviceCtx);
     }
-    if (m_audioEncCtx) {
+    if (m_audioEncCtx != nullptr) {
         avcodec_free_context(&m_audioEncCtx);
     }
 }
 
-bool VideoEncoder::initHardware(const QString &codecName) {
+auto VideoEncoder::initHardware(const QString &codecName) -> bool {
     int err = 0;
     AVHWDeviceType type = AV_HWDEVICE_TYPE_NONE;
 
@@ -94,8 +94,8 @@ bool VideoEncoder::initHardware(const QString &codecName) {
     return true;
 }
 
-bool VideoEncoder::open(const Config &config) {
-    std::lock_guard<std::mutex> lock(m_mutex);
+auto VideoEncoder::open(const Config &config) -> bool {
+    std::scoped_lock lock(m_mutex);
     cleanup();
     m_config = config;
     m_headerWritten = false;
@@ -103,34 +103,37 @@ bool VideoEncoder::open(const Config &config) {
 
     // 1. コンテナフォーマットの初期化
     avformat_alloc_output_context2(&m_fmtCtx, nullptr, nullptr, config.outputUrl.toStdString().c_str());
-    if (!m_fmtCtx) {
+    if (m_fmtCtx == nullptr) {
         qWarning() << "Could not deduce output format from file extension.";
         return false;
     }
 
     // 2. コーデックの検索
     const AVCodec *codec = avcodec_find_encoder_by_name(config.codecName.toStdString().c_str());
-    if (!codec) {
+    if (codec == nullptr) {
         qWarning() << "Codec not found:" << config.codecName;
         return false;
     }
 
     m_stream = avformat_new_stream(m_fmtCtx, codec);
-    if (!m_stream)
+    if (m_stream == nullptr) {
         return false;
+    }
 
     m_encCtx = avcodec_alloc_context3(codec);
-    if (!m_encCtx)
+    if (m_encCtx == nullptr) {
         return false;
+    }
 
     // 3. ハードウェア初期化
-    if (!initHardware(config.codecName))
+    if (!initHardware(config.codecName)) {
         return false;
+    }
 
-    if (m_hwDeviceCtx) {
+    if (m_hwDeviceCtx != nullptr) {
         // ハードウェアフレームコンテキストの設定
         AVBufferRef *hw_frames_ref = av_hwframe_ctx_alloc(m_hwDeviceCtx);
-        AVHWFramesContext *frames_ctx = (AVHWFramesContext *)(hw_frames_ref->data);
+        auto *frames_ctx = reinterpret_cast<AVHWFramesContext *>(hw_frames_ref->data);
 
         // コーデックに応じたピクセルフォーマット設定
         if (config.codecName.contains("vaapi")) {
@@ -148,26 +151,28 @@ bool VideoEncoder::open(const Config &config) {
         frames_ctx->height = config.height;
         frames_ctx->initial_pool_size = SettingsManager::instance().value("hwFramePoolSize", 32).toInt();
 
-        if (av_hwframe_ctx_init(hw_frames_ref) >= 0)
+        if (av_hwframe_ctx_init(hw_frames_ref) >= 0) {
             m_encCtx->hw_frames_ctx = hw_frames_ref;
+        }
     }
 
     // 4. エンコーダパラメータ設定
     m_encCtx->width = config.width;
     m_encCtx->height = config.height;
-    m_encCtx->time_base = {config.fps_den, config.fps_num};
+    m_encCtx->time_base = {.num = config.fps_den, .den = config.fps_num};
     m_stream->time_base = m_encCtx->time_base;
-    m_stream->avg_frame_rate = {config.fps_num, config.fps_den};
+    m_stream->avg_frame_rate = {.num = config.fps_num, .den = config.fps_den};
     m_stream->r_frame_rate = m_stream->avg_frame_rate;
 
     // ピクセルフォーマットの自動選択
-    if (m_encCtx->hw_frames_ctx) {
-        m_encCtx->pix_fmt = ((AVHWFramesContext *)m_encCtx->hw_frames_ctx->data)->format;
+    if (m_encCtx->hw_frames_ctx != nullptr) {
+        m_encCtx->pix_fmt = (reinterpret_cast<AVHWFramesContext *>(m_encCtx->hw_frames_ctx->data))->format;
     } else {
         // SWエンコードのデフォルト
         m_encCtx->pix_fmt = AV_PIX_FMT_YUV420P;
-        if (codec->pix_fmts)
+        if (codec->pix_fmts != nullptr) {
             m_encCtx->pix_fmt = codec->pix_fmts[0];
+        }
     }
 
     // ビットレート制御 (CBR/VBR) - 簡易設定
@@ -183,8 +188,9 @@ bool VideoEncoder::open(const Config &config) {
     }
 
     // グローバルヘッダーが必要なコンテナ(mp4等)の場合
-    if (m_fmtCtx->oformat->flags & AVFMT_GLOBALHEADER)
+    if ((m_fmtCtx->oformat->flags & AVFMT_GLOBALHEADER) != 0) {
         m_encCtx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+    }
 
     if (avcodec_open2(m_encCtx, codec, nullptr) < 0) {
         qWarning() << "Could not open codec.";
@@ -194,7 +200,7 @@ bool VideoEncoder::open(const Config &config) {
     avcodec_parameters_from_context(m_stream->codecpar, m_encCtx);
 
     // 5. ファイルオープン
-    if (!(m_fmtCtx->oformat->flags & AVFMT_NOFILE)) {
+    if ((m_fmtCtx->oformat->flags & AVFMT_NOFILE) == 0) {
         if (avio_open(&m_fmtCtx->pb, config.outputUrl.toStdString().c_str(), AVIO_FLAG_WRITE) < 0) {
             qWarning() << "Could not open output file:" << config.outputUrl;
             return false;
@@ -218,7 +224,7 @@ bool VideoEncoder::open(const Config &config) {
     m_stopEncoding = false;
     m_errorOccurred = false;
     {
-        std::lock_guard<std::mutex> qlock(m_queueMutex);
+        std::scoped_lock qlock(m_queueMutex);
         std::queue<EncodeTask> empty;
         std::swap(m_taskQueue, empty);
     }
@@ -226,7 +232,7 @@ bool VideoEncoder::open(const Config &config) {
     return true;
 }
 
-bool VideoEncoder::open(const QVariantMap &configMap) {
+auto VideoEncoder::open(const QVariantMap &configMap) -> bool {
     Config config;
     config.width = configMap.value("width").toInt();
     config.height = configMap.value("height").toInt();
@@ -238,36 +244,41 @@ bool VideoEncoder::open(const QVariantMap &configMap) {
     return open(config);
 }
 
-bool VideoEncoder::addAudioStream(int sampleRate, int channels) {
-    std::lock_guard<std::mutex> lock(m_mutex);
-    if (!m_fmtCtx)
+auto VideoEncoder::addAudioStream(int sampleRate, int channels) -> bool {
+    std::scoped_lock lock(m_mutex);
+    if (m_fmtCtx == nullptr) {
         return false;
+    }
 
     const AVCodec *codec = avcodec_find_encoder_by_name(m_config.audioCodecName.toStdString().c_str());
-    if (!codec)
+    if (codec == nullptr) {
         codec = avcodec_find_encoder(AV_CODEC_ID_AAC); // フォールバック
+    }
 
-    if (!codec) {
+    if (codec == nullptr) {
         qWarning() << "AAC codec not found.";
         return false;
     }
 
     m_audioStream = avformat_new_stream(m_fmtCtx, codec);
-    if (!m_audioStream)
+    if (m_audioStream == nullptr) {
         return false;
+    }
 
     m_audioEncCtx = avcodec_alloc_context3(codec);
-    if (!m_audioEncCtx)
+    if (m_audioEncCtx == nullptr) {
         return false;
+    }
 
-    m_audioEncCtx->sample_fmt = codec->sample_fmts ? codec->sample_fmts[0] : AV_SAMPLE_FMT_FLTP;
+    m_audioEncCtx->sample_fmt = (codec->sample_fmts != nullptr) ? codec->sample_fmts[0] : AV_SAMPLE_FMT_FLTP;
     m_audioEncCtx->bit_rate = m_config.audioBitrate;
     m_audioEncCtx->sample_rate = sampleRate;
     av_channel_layout_default(&m_audioEncCtx->ch_layout, channels);
-    m_audioStream->time_base = {1, sampleRate};
+    m_audioStream->time_base = {.num = 1, .den = sampleRate};
 
-    if (m_fmtCtx->oformat->flags & AVFMT_GLOBALHEADER)
+    if ((m_fmtCtx->oformat->flags & AVFMT_GLOBALHEADER) != 0) {
         m_audioEncCtx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+    }
 
     if (avcodec_open2(m_audioEncCtx, codec, nullptr) < 0) {
         qWarning() << "Could not open audio codec.";
@@ -293,9 +304,10 @@ bool VideoEncoder::addAudioStream(int sampleRate, int channels) {
     return true;
 }
 
-bool VideoEncoder::writeHeaderIfNeeded() {
-    if (m_headerWritten)
+auto VideoEncoder::writeHeaderIfNeeded() -> bool {
+    if (m_headerWritten) {
         return true;
+    }
     if (avformat_write_header(m_fmtCtx, nullptr) < 0) {
         qWarning() << "Error occurred when opening output file.";
         return false;
@@ -304,16 +316,18 @@ bool VideoEncoder::writeHeaderIfNeeded() {
     return true;
 }
 
-bool VideoEncoder::pushFrame(const QImage &img, int64_t pts) {
-    if (m_errorOccurred)
+auto VideoEncoder::pushFrame(const QImage &img, int64_t pts) -> bool {
+    if (m_errorOccurred) {
         return false;
+    }
 
     std::unique_lock<std::mutex> lock(m_queueMutex);
     // バックプレッシャー: キューがいっぱいなら消費されるのを待つ
-    m_queuePushCv.wait(lock, [this] { return m_taskQueue.size() < MAX_QUEUE_SIZE || m_stopEncoding; });
+    m_queuePushCv.wait(lock, [this] -> bool { return m_taskQueue.size() < MAX_QUEUE_SIZE || m_stopEncoding; });
 
-    if (m_stopEncoding)
+    if (m_stopEncoding) {
         return false;
+    }
 
     EncodeTask task;
     task.type = EncodeTask::Video;
@@ -325,14 +339,16 @@ bool VideoEncoder::pushFrame(const QImage &img, int64_t pts) {
     return true;
 }
 
-bool VideoEncoder::processVideo(const QImage &img, int64_t pts) {
+auto VideoEncoder::processVideo(const QImage &img, int64_t pts) -> bool {
     // 内部スレッドで実行される実際の映像エンコード処理
-    std::lock_guard<std::mutex> lock(m_mutex);
-    if (!m_encCtx)
+    std::scoped_lock lock(m_mutex);
+    if (m_encCtx == nullptr) {
         return false;
+    }
 
-    if (!writeHeaderIfNeeded())
+    if (!writeHeaderIfNeeded()) {
         return false;
+    }
 
     // 色味修正: 入力画像を RGBA8888 (R-G-B-A) に統一
     // ARGB32 (B-G-R-A on LE) のままだと sws_scale で赤青が反転するため
@@ -342,14 +358,15 @@ bool VideoEncoder::processVideo(const QImage &img, int64_t pts) {
     }
 
     // 1. QImage (ARGB32) -> SW Frame (NV12) 変換
-    if (!m_swsCtx) {
+    if (m_swsCtx == nullptr) {
         m_swsCtx = sws_getContext(sourceImg.width(), sourceImg.height(), AV_PIX_FMT_RGBA, // 【重要】入力はRGBA
                                   m_config.width, m_config.height, AV_PIX_FMT_NV12, SWS_BILINEAR, nullptr, nullptr, nullptr);
     }
 
     // SWフレームを書き込み可能にする
-    if (av_frame_make_writable(m_swFrame) < 0)
+    if (av_frame_make_writable(m_swFrame) < 0) {
         return false;
+    }
 
     // QImageのメモリレイアウトに合わせる
     const uint8_t *srcData[1] = {sourceImg.bits()};
@@ -362,7 +379,7 @@ bool VideoEncoder::processVideo(const QImage &img, int64_t pts) {
     AVFrame *encodeFrame = m_swFrame;
 
     // 2. HWエンコードの場合: SW Frame -> HW Frame 転送 (CPU -> GPU Upload)
-    if (m_encCtx->hw_frames_ctx) {
+    if (m_encCtx->hw_frames_ctx != nullptr) {
         if (av_hwframe_get_buffer(m_encCtx->hw_frames_ctx, m_hwFrame, 0) < 0) {
             qWarning() << "Failed to allocate HW frame.";
             return false;
@@ -388,21 +405,24 @@ bool VideoEncoder::processVideo(const QImage &img, int64_t pts) {
             if (rxRet == AVERROR(EAGAIN) || rxRet == AVERROR_EOF) {
                 av_packet_free(&pkt);
                 break;
-            } else if (rxRet < 0) {
+            }
+            if (rxRet < 0) {
                 av_packet_free(&pkt);
                 return false;
             }
 
-            if (pkt->duration == 0)
+            if (pkt->duration == 0) {
                 pkt->duration = 1;
+            }
             av_packet_rescale_ts(pkt, m_encCtx->time_base, m_stream->time_base);
             pkt->stream_index = m_stream->index;
             av_interleaved_write_frame(m_fmtCtx, pkt);
             av_packet_free(&pkt);
             packetRead = true;
         }
-        if (!packetRead)
+        if (!packetRead) {
             break; // 進展がない場合は抜ける
+        }
         ret = avcodec_send_frame(m_encCtx, encodeFrame);
     }
 
@@ -421,7 +441,8 @@ bool VideoEncoder::processVideo(const QImage &img, int64_t pts) {
         if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
             av_packet_free(&pkt);
             break;
-        } else if (ret < 0) {
+        }
+        if (ret < 0) {
             qWarning() << "Error during encoding.";
             av_packet_free(&pkt);
             return false;
@@ -442,7 +463,7 @@ bool VideoEncoder::processVideo(const QImage &img, int64_t pts) {
     return true;
 }
 
-bool VideoEncoder::pushTexture(const GpuTextureHandle &handle, int64_t pts) {
+auto VideoEncoder::pushTexture(const GpuTextureHandle &handle, int64_t pts) -> bool {
     // Vulkanバックエンドへの移行に伴い、OpenGL依存のテクスチャ読み出しは廃止。
     // 代わりに pushFrame(QImage) を使用してください。
     // 将来的には Vulkan Interop によるゼロコピー転送を実装予定。
@@ -450,15 +471,17 @@ bool VideoEncoder::pushTexture(const GpuTextureHandle &handle, int64_t pts) {
     return false;
 }
 
-bool VideoEncoder::pushAudio(const float *samples, int sampleCount) {
-    if (m_errorOccurred)
+auto VideoEncoder::pushAudio(const float *samples, int sampleCount) -> bool {
+    if (m_errorOccurred) {
         return false;
+    }
 
     std::unique_lock<std::mutex> lock(m_queueMutex);
-    m_queuePushCv.wait(lock, [this] { return m_taskQueue.size() < MAX_QUEUE_SIZE || m_stopEncoding; });
+    m_queuePushCv.wait(lock, [this] -> bool { return m_taskQueue.size() < MAX_QUEUE_SIZE || m_stopEncoding; });
 
-    if (m_stopEncoding)
+    if (m_stopEncoding) {
         return false;
+    }
 
     EncodeTask task;
     task.type = EncodeTask::Audio;
@@ -469,48 +492,51 @@ bool VideoEncoder::pushAudio(const float *samples, int sampleCount) {
     return true;
 }
 
-bool VideoEncoder::processAudio(const std::vector<float> &samples) {
+auto VideoEncoder::processAudio(const std::vector<float> &samples) -> bool {
     // 内部スレッドで実行される実際の音声エンコード処理
-    std::lock_guard<std::mutex> lock(m_mutex);
-    if (!m_audioEncCtx || !m_audioFifo)
+    std::scoped_lock lock(m_mutex);
+    if ((m_audioEncCtx == nullptr) || (m_audioFifo == nullptr)) {
         return false;
+    }
 
     // 不正な浮動小数点数 (NaN/Inf) がエンコーダに渡されるのを防ぐためのサニタイズ処理
     std::vector<float> cleanSamples = samples;
     for (float &sample : cleanSamples) {
         if (std::isnan(sample) || std::isinf(sample)) {
-            sample = 0.0f;
+            sample = 0.0F;
         }
     }
 
     // 1. リサンプリング & フォーマット変換 (Float -> FLTP等)
     // 一時バッファに変換
     uint8_t **convertedData = nullptr;
-    int linesize;
+    int linesize = 0;
     // 入力はインターリーブされたステレオFloatなので、サンプル数は全要素数をチャンネル数で割った値
     const int sampleCount = static_cast<int>(cleanSamples.size() / m_audioEncCtx->ch_layout.nb_channels);
-    if (sampleCount <= 0)
+    if (sampleCount <= 0) {
         return true;
+    }
     av_samples_alloc_array_and_samples(&convertedData, &linesize, m_audioEncCtx->ch_layout.nb_channels, sampleCount, m_audioEncCtx->sample_fmt, 0);
 
     const uint8_t *inputData[1] = {reinterpret_cast<const uint8_t *>(cleanSamples.data())};
     swr_convert(m_swrCtx, convertedData, sampleCount, inputData, sampleCount);
 
     // 2. FIFOに追加
-    av_audio_fifo_write(m_audioFifo, (void **)convertedData, sampleCount);
+    av_audio_fifo_write(m_audioFifo, reinterpret_cast<void **>(convertedData), sampleCount);
 
-    if (convertedData) {
+    if (convertedData != nullptr) {
         av_freep(&convertedData[0]);
         free(convertedData);
     }
 
     // 3. エンコーダーのフレームサイズ分溜まったらエンコード
     while (av_audio_fifo_size(m_audioFifo) >= m_audioEncCtx->frame_size) {
-        if (av_frame_make_writable(m_audioFrame) < 0)
+        if (av_frame_make_writable(m_audioFrame) < 0) {
             break;
+        }
 
         // FIFOから読み出し
-        av_audio_fifo_read(m_audioFifo, (void **)m_audioFrame->data, m_audioEncCtx->frame_size);
+        av_audio_fifo_read(m_audioFifo, reinterpret_cast<void **>(m_audioFrame->data), m_audioEncCtx->frame_size);
 
         m_audioFrame->pts = m_audioPts;
         m_audioPts += m_audioFrame->nb_samples;
@@ -527,7 +553,8 @@ bool VideoEncoder::processAudio(const std::vector<float> &samples) {
                 if (rxRet == AVERROR(EAGAIN) || rxRet == AVERROR_EOF) {
                     av_packet_free(&pkt);
                     break;
-                } else if (rxRet < 0) {
+                }
+                if (rxRet < 0) {
                     av_packet_free(&pkt);
                     return false;
                 }
@@ -538,8 +565,9 @@ bool VideoEncoder::processAudio(const std::vector<float> &samples) {
                 av_packet_free(&pkt);
                 packetRead = true;
             }
-            if (!packetRead)
+            if (!packetRead) {
                 break;
+            }
             ret = avcodec_send_frame(m_audioEncCtx, m_audioFrame);
         }
 
@@ -554,7 +582,8 @@ bool VideoEncoder::processAudio(const std::vector<float> &samples) {
             if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
                 av_packet_free(&pkt);
                 break;
-            } else if (ret < 0) {
+            }
+            if (ret < 0) {
                 av_packet_free(&pkt);
                 return false;
             }
@@ -573,7 +602,7 @@ void VideoEncoder::encodingLoop() {
         EncodeTask task;
         {
             std::unique_lock<std::mutex> lock(m_queueMutex);
-            m_queueCv.wait(lock, [this] { return !m_taskQueue.empty() || m_stopEncoding; });
+            m_queueCv.wait(lock, [this] -> bool { return !m_taskQueue.empty() || m_stopEncoding; });
 
             if (m_taskQueue.empty() && m_stopEncoding) {
                 break; // 終了
@@ -602,7 +631,7 @@ void VideoEncoder::encodingLoop() {
 void VideoEncoder::close() {
     // 1. スレッドに終了シグナルを送る
     {
-        std::lock_guard<std::mutex> lock(m_queueMutex);
+        std::scoped_lock lock(m_queueMutex);
         m_stopEncoding = true;
         m_queueCv.notify_all();
         m_queuePushCv.notify_all(); // push待ちも解除
@@ -613,9 +642,10 @@ void VideoEncoder::close() {
         m_workerThread.join();
     }
 
-    std::lock_guard<std::mutex> lock(m_mutex);
-    if (!m_encCtx)
+    std::scoped_lock lock(m_mutex);
+    if (m_encCtx == nullptr) {
         return;
+    }
 
     writeHeaderIfNeeded(); // 何も書き込まれずにcloseされた場合の安全策
 
@@ -627,7 +657,8 @@ void VideoEncoder::close() {
         if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
             av_packet_free(&pkt);
             break;
-        } else if (ret < 0) {
+        }
+        if (ret < 0) {
             av_packet_free(&pkt);
             qWarning() << "Error flushing video encoder:" << ret;
             break;
@@ -639,7 +670,7 @@ void VideoEncoder::close() {
     }
 
     // 音声フラッシュ
-    if (m_audioEncCtx) {
+    if (m_audioEncCtx != nullptr) {
         ret = avcodec_send_frame(m_audioEncCtx, nullptr);
         while (ret >= 0) {
             AVPacket *pkt = av_packet_alloc();
@@ -647,7 +678,8 @@ void VideoEncoder::close() {
             if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
                 av_packet_free(&pkt);
                 break;
-            } else if (ret < 0) {
+            }
+            if (ret < 0) {
                 av_packet_free(&pkt);
                 qWarning() << "Error flushing audio encoder:" << ret;
                 break;

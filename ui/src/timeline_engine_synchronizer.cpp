@@ -21,21 +21,22 @@ struct ArchetypeBatch {
     QStringList allVariantKeys;
 };
 
-TimelineEngineSynchronizer::TimelineEngineSynchronizer(TimelineController *controller, QObject *parent) : QObject(parent), m_controller(controller) {
-    m_clipModel = new ClipModel(controller->transport(), this);
+TimelineEngineSynchronizer::TimelineEngineSynchronizer(TimelineController *controller, QObject *parent) : QObject(parent), m_controller(controller), m_clipModel(new ClipModel(controller->transport(), this)) {
+
     connect(&m_futureWatcher, &QFutureWatcher<QList<ClipEngineResult>>::finished, this, &TimelineEngineSynchronizer::handleResultsReady);
 }
 
 void TimelineEngineSynchronizer::updateActiveClipsList() {
     // 前回のバックグラウンド・コミットが継続中の場合はスキップして最新に追従させる
-    if (m_isCommitting.load(std::memory_order_acquire))
+    if (m_isCommitting.load(std::memory_order_acquire)) {
         return;
+    }
 
     int current = m_controller->transport()->currentFrame();
     QList<ClipData *> active = m_controller->timeline()->resolvedActiveClipsAt(current);
 
     // レイヤー番号が小さいほど背面、大きいほど前面になるようソート
-    std::sort(active.begin(), active.end(), [](const ClipData *a, const ClipData *b) { return a->layer > b->layer; });
+    std::ranges::sort(active, [](const ClipData *a, const ClipData *b) -> bool { return a->layer > b->layer; });
 
     m_clipModel->updateClips(active);
 
@@ -44,15 +45,17 @@ void TimelineEngineSynchronizer::updateActiveClipsList() {
     for (ClipData *clip : active) {
         QString sig = clip->type;
         for (auto *eff : clip->effects) {
-            if (eff->isEnabled())
+            if (eff->isEnabled()) {
                 sig += ":" + eff->id();
+            }
         }
 
         auto &batch = archetypeBatches[sig];
         if (batch.clips.isEmpty()) {
             for (int i = 0; i < clip->effects.size(); ++i) {
                 if (clip->effects[i]->isEnabled()) {
-                    QStringList fKeys, vKeys;
+                    QStringList fKeys;
+                    QStringList vKeys;
                     QVariantMap params = clip->effects[i]->params();
                     for (auto it = params.begin(); it != params.end(); ++it) {
                         // 数値として扱えるか判定（文字列や色はVariantとして残す）
@@ -63,7 +66,7 @@ void TimelineEngineSynchronizer::updateActiveClipsList() {
                             vKeys << it.key();
                         }
                     }
-                    batch.activeEffects.append({i, fKeys, vKeys});
+                    batch.activeEffects.append({.index = i, .floatKeys = fKeys, .variantKeys = vKeys});
                     batch.allFloatKeys << fKeys;
                     batch.allVariantKeys << vKeys;
                 }
@@ -113,7 +116,7 @@ void TimelineEngineSynchronizer::updateECSState(const QList<ArchetypeBatch> &bat
                     auto *eff = clip->effects[ed.index];
                     if (eff->id() == clip->type) {
                         QVariant vVol = eff->evaluatedParam("volume", res.relFrame, fps);
-                        res.vol = vVol.isValid() ? vVol.toFloat() : 1.0f;
+                        res.vol = vVol.isValid() ? vVol.toFloat() : 1.0F;
                         res.pan = eff->evaluatedParam("pan", res.relFrame, fps).toFloat();
                         res.mute = eff->evaluatedParam("mute", res.relFrame, fps).toBool();
                         break;
@@ -133,14 +136,14 @@ void TimelineEngineSynchronizer::handleResultsReady() {
     const auto batchResults = m_futureWatcher.future().results();
     m_isCommitting.store(true, std::memory_order_release);
 
-    QThreadPool::globalInstance()->start([this, batchResults]() {
+    QThreadPool::globalInstance()->start([this, batchResults]() -> void {
         QHash<int, QVariantMap> nextCache;
 
         for (const auto &results : batchResults) {
             for (const auto &res : results) {
                 // UIスレッド用に QVariantMap を復元
                 QVariantMap resMap;
-                for (int i = 0; i < (int)res.propertyNames.size(); ++i) {
+                for (int i = 0; i < static_cast<int>(res.propertyNames.size()); ++i) {
                     resMap.insert(res.propertyNames[i], res.propertyValues[i]);
                 }
                 // 非数値（テキスト等）を復元
@@ -158,7 +161,7 @@ void TimelineEngineSynchronizer::handleResultsReady() {
         }
 
         // 全ての書き込みが完了したらメインスレッドでスワップ（O(1)）のみ行う
-        QMetaObject::invokeMethod(this, [this, nextCache]() { finalizeCommit(nextCache); }, Qt::QueuedConnection);
+        QMetaObject::invokeMethod(this, [this, nextCache]() -> void { finalizeCommit(nextCache); }, Qt::QueuedConnection);
     });
 }
 
@@ -180,14 +183,12 @@ void TimelineEngineSynchronizer::rebuildClipIndex() {
     for (auto &clip : clips) {
         aliveIds.insert(clip.id);
         m_sortedClips.push_back(&clip);
-        if (clip.durationFrames > m_maxDuration)
-            m_maxDuration = clip.durationFrames;
+        m_maxDuration = std::max(clip.durationFrames, m_maxDuration);
 
         int end = clip.startFrame + clip.durationFrames;
-        if (end > m_timelineDuration)
-            m_timelineDuration = end;
+        m_timelineDuration = std::max(end, m_timelineDuration);
     }
-    std::sort(m_sortedClips.begin(), m_sortedClips.end(), [](const ClipData *a, const ClipData *b) { return a->startFrame < b->startFrame; });
+    std::ranges::sort(m_sortedClips, [](const ClipData *a, const ClipData *b) -> bool { return a->startFrame < b->startFrame; });
 
     // ECSの不要になったコンポーネントを掃除する
     Rina::Engine::Timeline::ECS::instance().syncClipIds(aliveIds);

@@ -5,7 +5,7 @@
 
 namespace Rina::Core {
 
-ThemeController &ThemeController::instance() {
+auto ThemeController::instance() -> ThemeController & {
     static ThemeController inst;
     return inst;
 }
@@ -15,11 +15,12 @@ ThemeController::ThemeController() {
     applyTheme();
 }
 
-QString ThemeController::theme() const { return m_theme; }
+auto ThemeController::theme() const -> QString { return m_theme; }
 
 void ThemeController::setTheme(const QString &theme) {
-    if (m_theme == theme)
+    if (m_theme == theme) {
         return;
+    }
 
     m_theme = theme;
     SettingsManager::instance().setValue("theme", theme);

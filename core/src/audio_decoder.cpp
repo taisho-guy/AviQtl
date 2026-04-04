@@ -1,6 +1,7 @@
 #include "audio_decoder.hpp"
 #include <QDebug>
 #include <QtConcurrent>
+#include <algorithm>
 
 namespace Rina::Core {
 
@@ -18,13 +19,14 @@ AudioDecoder::~AudioDecoder() {
 
 void AudioDecoder::startDecoding() {
     // UIスレッドをブロックしないようバックグラウンドで全デコード
-    m_decodeFuture = QtConcurrent::run([this] {
+    m_decodeFuture = QtConcurrent::run([this] -> void {
         closeFFmpeg();
         m_isReady = false;
 
         QString path = m_source.toLocalFile();
-        if (path.isEmpty())
+        if (path.isEmpty()) {
             path = m_source.toString();
+        }
 
         if (avformat_open_input(&m_fmtCtx, path.toStdString().c_str(), nullptr, nullptr) < 0) {
             qWarning() << "[AudioDecoder] avformat_open_input failed:" << path;
@@ -100,7 +102,7 @@ void AudioDecoder::startDecoding() {
 
                 // Float32 ステレオ = 1サンプル × 2ch
                 convertBuf.resize(static_cast<size_t>(outSamples) * 2);
-                uint8_t *outPtr = reinterpret_cast<uint8_t *>(convertBuf.data());
+                auto *outPtr = reinterpret_cast<uint8_t *>(convertBuf.data());
 
                 int converted = swr_convert(m_swrCtx, &outPtr, outSamples, const_cast<const uint8_t **>(m_frame->data), m_frame->nb_samples);
 
@@ -117,7 +119,7 @@ void AudioDecoder::startDecoding() {
         while (avcodec_receive_frame(m_decCtx, m_frame) == 0) {
             int outSamples = static_cast<int>(av_rescale_rnd(m_frame->nb_samples, m_sampleRate, m_decCtx->sample_rate, AV_ROUND_UP));
             convertBuf.resize(static_cast<size_t>(outSamples) * 2);
-            uint8_t *outPtr = reinterpret_cast<uint8_t *>(convertBuf.data());
+            auto *outPtr = reinterpret_cast<uint8_t *>(convertBuf.data());
             int converted = swr_convert(m_swrCtx, &outPtr, outSamples, const_cast<const uint8_t **>(m_frame->data), m_frame->nb_samples);
             if (converted > 0) {
                 QMutexLocker locker(&m_mutex);
@@ -130,7 +132,7 @@ void AudioDecoder::startDecoding() {
         int remaining = static_cast<int>(swr_get_delay(m_swrCtx, m_sampleRate) + 1);
         if (remaining > 0) {
             convertBuf.resize(static_cast<size_t>(remaining) * 2);
-            uint8_t *outPtr = reinterpret_cast<uint8_t *>(convertBuf.data());
+            auto *outPtr = reinterpret_cast<uint8_t *>(convertBuf.data());
             int flushed = swr_convert(m_swrCtx, &outPtr, remaining, nullptr, 0);
             if (flushed > 0) {
                 QMutexLocker locker(&m_mutex);
@@ -147,23 +149,23 @@ void AudioDecoder::startDecoding() {
 }
 
 void AudioDecoder::closeFFmpeg() {
-    if (m_frame) {
+    if (m_frame != nullptr) {
         av_frame_free(&m_frame);
         m_frame = nullptr;
     }
-    if (m_pkt) {
+    if (m_pkt != nullptr) {
         av_packet_free(&m_pkt);
         m_pkt = nullptr;
     }
-    if (m_swrCtx) {
+    if (m_swrCtx != nullptr) {
         swr_free(&m_swrCtx);
         m_swrCtx = nullptr;
     }
-    if (m_decCtx) {
+    if (m_decCtx != nullptr) {
         avcodec_free_context(&m_decCtx);
         m_decCtx = nullptr;
     }
-    if (m_fmtCtx) {
+    if (m_fmtCtx != nullptr) {
         avformat_close_input(&m_fmtCtx);
         m_fmtCtx = nullptr;
     }
@@ -173,30 +175,32 @@ void AudioDecoder::closeFFmpeg() {
 }
 
 void AudioDecoder::setSampleRate(int sampleRate) {
-    if (m_sampleRate == sampleRate)
+    if (m_sampleRate == sampleRate) {
         return;
+    }
     m_sampleRate = sampleRate;
     scheduleStart(); // サンプルレート変更時は再デコード
 }
 
 void AudioDecoder::seek(qint64 ms) { emit seekRequested(ms); }
 
-std::vector<float> AudioDecoder::getSamples(double startTime, int count) {
+auto AudioDecoder::getSamples(double startTime, int count) -> std::vector<float> {
     QMutexLocker locker(&m_mutex);
 
     // startTimeが負数の場合のアンダーフローを防ぐ（size_tへのキャスト前にクランプ）
-    if (startTime < 0.0)
-        startTime = 0.0;
+    startTime = std::max(startTime, 0.0);
 
     // startTime (秒) × m_sampleRate (サンプル/秒) × 2 (ステレオ 2ch)
-    size_t startIdx = static_cast<size_t>(startTime * m_sampleRate * 2);
+    auto startIdx = static_cast<size_t>(startTime * m_sampleRate * 2);
 
     // 偶数アライメント（L/R がずれないように補正）
-    if (startIdx % 2 != 0 && startIdx > 0)
+    if (startIdx % 2 != 0 && startIdx > 0) {
         startIdx--;
+    }
 
-    if (startIdx >= m_fullAudioData.size())
-        return std::vector<float>(count, 0.0f);
+    if (startIdx >= m_fullAudioData.size()) {
+        return std::vector<float>(count, 0.0F);
+    }
 
     size_t available = m_fullAudioData.size() - startIdx;
     size_t actualCount = std::min(static_cast<size_t>(count), available);
@@ -204,8 +208,9 @@ std::vector<float> AudioDecoder::getSamples(double startTime, int count) {
     std::vector<float> result(m_fullAudioData.begin() + static_cast<ptrdiff_t>(startIdx), m_fullAudioData.begin() + static_cast<ptrdiff_t>(startIdx + actualCount));
 
     // 足りない分は無音で埋める
-    if (result.size() < static_cast<size_t>(count))
-        result.resize(count, 0.0f);
+    if (result.size() < static_cast<size_t>(count)) {
+        result.resize(count, 0.0F);
+    }
 
     return result;
 }
@@ -213,56 +218,62 @@ std::vector<float> AudioDecoder::getSamples(double startTime, int count) {
 void AudioDecoder::buildPeakCache() {
     QMutexLocker locker(&m_mutex);
     m_peakPyramid.clear();
-    if (m_fullAudioData.empty())
+    if (m_fullAudioData.empty()) {
         return;
+    }
 
     int numSamples = static_cast<int>(m_fullAudioData.size() / 2);
 
     // Level 0: 32サンプルごとの最小・最大値 (高精度)
     PeakLevel base;
     base.samplesPerEntry = 32;
-    base.peaks.reserve(numSamples / 32 + 1);
+    base.peaks.reserve((numSamples / 32) + 1);
 
     for (int i = 0; i < numSamples; i += 32) {
-        float pMin = 0.0f, pMax = 0.0f;
+        float pMin = 0.0F;
+        float pMax = 0.0F;
         for (int j = 0; j < 32 && (i + j) < numSamples; ++j) {
             float l = m_fullAudioData[(i + j) * 2];
-            float r = m_fullAudioData[(i + j) * 2 + 1];
+            float r = m_fullAudioData[((i + j) * 2) + 1];
             pMin = std::min({pMin, l, r});
             pMax = std::max({pMax, l, r});
         }
-        base.peaks.push_back({pMin, pMax});
+        base.peaks.push_back({.min = pMin, .max = pMax});
     }
     m_peakPyramid.push_back(std::move(base));
 
     // Level 1-5: 前のレベルの8要素(8倍速)から最大・最小を抽出
     for (int i = 0; i < 5; ++i) {
         const auto &prev = m_peakPyramid.back();
-        if (prev.peaks.size() < 8)
+        if (prev.peaks.size() < 8) {
             break;
+        }
 
         PeakLevel next;
         next.samplesPerEntry = prev.samplesPerEntry * 8;
-        next.peaks.reserve(prev.peaks.size() / 8 + 1);
+        next.peaks.reserve((prev.peaks.size() / 8) + 1);
 
         for (size_t j = 0; j < prev.peaks.size(); j += 8) {
-            float pMin = 0.0f, pMax = 0.0f;
+            float pMin = 0.0F;
+            float pMax = 0.0F;
             for (size_t k = 0; k < 8 && (j + k) < prev.peaks.size(); ++k) {
                 pMin = std::min(pMin, prev.peaks[j + k].min);
                 pMax = std::max(pMax, prev.peaks[j + k].max);
             }
-            next.peaks.push_back({pMin, pMax});
+            next.peaks.push_back({.min = pMin, .max = pMax});
         }
         m_peakPyramid.push_back(std::move(next));
     }
 }
 
-std::vector<float> AudioDecoder::getPeaks(double startSec, double durationSec, int pixelWidth) {
+auto AudioDecoder::getPeaks(double startSec, double durationSec, int pixelWidth) -> std::vector<float> {
     QMutexLocker locker(&m_mutex);
-    if (pixelWidth <= 0)
+    if (pixelWidth <= 0) {
         return {};
-    if (m_fullAudioData.empty())
-        return std::vector<float>(pixelWidth * 2, 0.0f);
+    }
+    if (m_fullAudioData.empty()) {
+        return std::vector<float>(pixelWidth * 2, 0.0F);
+    }
 
     double totalSamplesInView = durationSec * m_sampleRate;
     double samplesPerPixel = totalSamplesInView / pixelWidth;
@@ -276,10 +287,11 @@ std::vector<float> AudioDecoder::getPeaks(double startSec, double durationSec, i
         for (int i = 0; i < pixelWidth; ++i) {
             int idxStart = std::clamp(static_cast<int>((startSec + (durationSec * i / pixelWidth)) * m_sampleRate), 0, numSamples - 1);
             int idxEnd = std::clamp(static_cast<int>((startSec + (durationSec * (i + 1) / pixelWidth)) * m_sampleRate), idxStart + 1, numSamples);
-            float pMin = 0.0f, pMax = 0.0f;
+            float pMin = 0.0F;
+            float pMax = 0.0F;
             for (int j = idxStart; j < idxEnd; ++j) {
-                pMin = std::min({pMin, m_fullAudioData[j * 2], m_fullAudioData[j * 2 + 1]});
-                pMax = std::max({pMax, m_fullAudioData[j * 2], m_fullAudioData[j * 2 + 1]});
+                pMin = std::min({pMin, m_fullAudioData[j * 2], m_fullAudioData[(j * 2) + 1]});
+                pMax = std::max({pMax, m_fullAudioData[j * 2], m_fullAudioData[(j * 2) + 1]});
             }
             result.push_back(pMin);
             result.push_back(pMax);
@@ -288,30 +300,32 @@ std::vector<float> AudioDecoder::getPeaks(double startSec, double durationSec, i
         // 通常・広域表示: ピラミッドキャッシュを使用
         size_t levelIdx = 0;
         for (size_t i = 0; i < m_peakPyramid.size(); ++i) {
-            if (m_peakPyramid[i].samplesPerEntry <= samplesPerPixel)
+            if (m_peakPyramid[i].samplesPerEntry <= samplesPerPixel) {
                 levelIdx = i;
-            else
+            } else {
                 break;
+            }
         }
         const auto &level = m_peakPyramid[levelIdx];
         for (int i = 0; i < pixelWidth; ++i) {
-            size_t entryIdx = static_cast<size_t>(((startSec + (durationSec * i / pixelWidth)) * m_sampleRate) / level.samplesPerEntry);
+            auto entryIdx = static_cast<size_t>(((startSec + (durationSec * i / pixelWidth)) * m_sampleRate) / level.samplesPerEntry);
             if (entryIdx < level.peaks.size()) {
                 result.push_back(level.peaks[entryIdx].min);
                 result.push_back(level.peaks[entryIdx].max);
             } else {
-                result.push_back(0.0f);
-                result.push_back(0.0f);
+                result.push_back(0.0F);
+                result.push_back(0.0F);
             }
         }
     }
     return result;
 }
 
-double AudioDecoder::totalDurationSec() const {
+auto AudioDecoder::totalDurationSec() const -> double {
     QMutexLocker locker(&m_mutex);
-    if (m_sampleRate <= 0)
+    if (m_sampleRate <= 0) {
         return 0.0;
+    }
     const double frames = static_cast<double>(m_fullAudioData.size()) / 2.0;
     return frames / static_cast<double>(m_sampleRate);
 }

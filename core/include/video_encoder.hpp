@@ -51,8 +51,8 @@ class VideoEncoder : public QObject {
 
     bool open(const Config &config);
     Q_INVOKABLE bool open(const QVariantMap &config);
-    bool pushFrame(const QImage &img, int64_t pts);                // CPU -> HW Upload
-    bool pushTexture(const GpuTextureHandle &handle, int64_t pts); // GPU Texture -> HW Upload
+    bool pushFrame(const QImage &img, int64_t pts);                       // CPU -> HW Upload
+    static bool pushTexture(const GpuTextureHandle &handle, int64_t pts); // GPU Texture -> HW Upload
     bool addAudioStream(int sampleRate = 48000, int channels = 2);
     bool pushAudio(const float *samples, int sampleCount);
     void close();

@@ -9,7 +9,7 @@ namespace Rina::Core {
 class MediaDecoder : public QObject {
     Q_OBJECT
   public:
-    explicit MediaDecoder(int clipId, const QUrl &source, QObject *parent = nullptr);
+    explicit MediaDecoder(int clipId, QUrl source, QObject *parent = nullptr);
     virtual ~MediaDecoder() = default;
 
     // 共通 API

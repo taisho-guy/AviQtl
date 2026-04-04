@@ -18,8 +18,9 @@ namespace Rina::Core {
 ImageDecoder::ImageDecoder(int clipId, const QUrl &source, VideoFrameStore *store, QObject *parent) : MediaDecoder(clipId, source, parent), m_store(store) {}
 
 ImageDecoder::~ImageDecoder() {
-    if (m_future.isRunning())
+    if (m_future.isRunning()) {
         m_future.waitForFinished();
+    }
 }
 
 void ImageDecoder::seek(qint64 ms) {
@@ -36,13 +37,16 @@ void ImageDecoder::startDecoding() { load(); }
 
 void ImageDecoder::load() {
     QString path = m_source.toLocalFile();
-    if (path.isEmpty())
+    if (path.isEmpty()) {
         path = m_source.toString();
-    if (path.isEmpty())
+    }
+    if (path.isEmpty()) {
         return;
-    if (m_future.isRunning())
+    }
+    if (m_future.isRunning()) {
         m_future.waitForFinished();
-    m_future = QtConcurrent::run([this, path]() { decodeImage(path); });
+    }
+    m_future = QtConcurrent::run([this, path]() -> void { decodeImage(path); });
 }
 
 void ImageDecoder::decodeImage(const QString &path) {
@@ -64,7 +68,7 @@ void ImageDecoder::decodeImage(const QString &path) {
 
     AVStream *stream = fmtCtx->streams[streamIdx];
     const AVCodec *codec = avcodec_find_decoder(stream->codecpar->codec_id);
-    if (!codec) {
+    if (codec == nullptr) {
         avformat_close_input(&fmtCtx);
         return;
     }
@@ -124,7 +128,7 @@ void ImageDecoder::decodeImage(const QString &path) {
         av_frame_free(&rgbaFrame);
 
         m_store->setVideoFrameSafe(QString::number(clipId()), m_cachedVideoFrame);
-        QMetaObject::invokeMethod(this, [this]() { emit ready(); }, Qt::QueuedConnection);
+        QMetaObject::invokeMethod(this, [this]() -> void { emit ready(); }, Qt::QueuedConnection);
     }
 
     av_frame_free(&srcFrame);

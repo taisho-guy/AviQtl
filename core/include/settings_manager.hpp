@@ -28,8 +28,8 @@ class SettingsManager : public QObject {
 
   private:
     explicit SettingsManager(QObject *parent = nullptr);
-    QString getSettingsFilePath() const;
-    QVariantMap defaultShortcutSettings() const;
+    static QString getSettingsFilePath();
+    static QVariantMap defaultShortcutSettings();
 
     QVariantMap m_settings;
 };

@@ -14,7 +14,7 @@ class LuaHost {
     // time: 現在の時間 (秒)
     // index: レイヤーインデックスまたはプロパティインデックス
     // currentValue: 現在のキーフレーム値
-    double evaluate(const std::string &expression, double time, int index, double currentValue);
+    static double evaluate(const std::string &expression, double time, int index, double currentValue);
 
   private:
     LuaHost();

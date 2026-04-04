@@ -97,7 +97,7 @@ class TimelineController : public QObject {
     Q_INVOKABLE void createObject(const QString &type, int startFrame, int layer);
     QString activeObjectType() const;
 
-    Q_INVOKABLE void log(const QString &msg);
+    Q_INVOKABLE static void log(const QString &msg);
     QVariantList clips() const;
     ClipModel *clipModel() const { return m_engineSync->clipModel(); }
     ClipModel *renderModel() const { return m_engineSync->renderModel(); }
@@ -118,10 +118,10 @@ class TimelineController : public QObject {
     Q_INVOKABLE void updateClipEffectParam(int clipId, int effectIndex, const QString &paramName, const QVariant &value);
 
     // エフェクト・オブジェクトの利用可能リスト取得
-    Q_INVOKABLE QVariantList getAvailableEffects() const;
-    Q_INVOKABLE QVariantList getAvailableObjects() const;
-    Q_INVOKABLE QString getClipTypeColor(const QString &type) const;
-    Q_INVOKABLE QVariantList getAvailableObjects(const QString &category) const;
+    Q_INVOKABLE static QVariantList getAvailableEffects();
+    Q_INVOKABLE static QVariantList getAvailableObjects();
+    Q_INVOKABLE static QString getClipTypeColor(const QString &type);
+    Q_INVOKABLE static QVariantList getAvailableObjects(const QString &category);
     Q_INVOKABLE void addEffect(int clipId, const QString &effectId);
     Q_INVOKABLE void removeEffect(int clipId, int effectIndex);
     Q_INVOKABLE void copyEffect(int clipId, int effectIndex);
@@ -136,13 +136,13 @@ class TimelineController : public QObject {
     Q_INVOKABLE void setLayerState(int layer, bool value, int type) { m_timeline->setLayerState(layer, value, type); }
 
     // オーディオプラグイン操作
-    Q_INVOKABLE QVariantList getAvailableAudioPlugins() const;
+    Q_INVOKABLE static QVariantList getAvailableAudioPlugins();
     Q_INVOKABLE void addAudioPlugin(int clipId, const QString &pluginId);
     Q_INVOKABLE void removeAudioPlugin(int clipId, int index);
     Q_INVOKABLE void setAudioPluginEnabled(int clipId, int index, bool enabled);
     Q_INVOKABLE void reorderAudioPlugins(int clipId, int oldIndex, int newIndex);
-    Q_INVOKABLE QVariantList getPluginCategories() const;
-    Q_INVOKABLE QVariantList getPluginsByCategory(const QString &category) const;
+    Q_INVOKABLE static QVariantList getPluginCategories();
+    Q_INVOKABLE static QVariantList getPluginsByCategory(const QString &category);
     Q_INVOKABLE bool isAudioClip(int clipId) const;
     Q_INVOKABLE QVariantList getWaveformPeaks(int clipId, int pixelWidth, int displayDurationFrames) const;
 
@@ -168,13 +168,13 @@ class TimelineController : public QObject {
     Q_INVOKABLE void requestVideoFrame(int clipId, int relFrame);
     Q_INVOKABLE void requestImageLoad(int clipId, const QString &path);
 
-    Q_INVOKABLE void updateViewport(double x, double y);
+    Q_INVOKABLE static void updateViewport(double x, double y);
     Q_INVOKABLE QPoint resolveDragPosition(int clipId, int targetLayer, int proposedStartFrame, const QVariantList &batchIds = QVariantList());
 
     // プロジェクトI/O
     Q_INVOKABLE bool saveProject(const QString &fileUrl);
     Q_INVOKABLE bool loadProject(const QString &fileUrl);
-    Q_INVOKABLE QVariantMap getProjectInfo(const QString &fileUrl) const;
+    Q_INVOKABLE static QVariantMap getProjectInfo(const QString &fileUrl);
     // 旧インターフェース互換
     Q_INVOKABLE bool exportMedia(const QString &fileUrl, const QString &format, int quality);
     // 新非同期インターフェース
@@ -263,14 +263,14 @@ class TimelineController : public QObject {
     QString m_currentProjectUrl;
 
     // 各機能を担当するサービス群
-    ProjectService *m_project;
-    TransportService *m_transport;
-    SelectionService *m_selection;
-    TimelineService *m_timeline;
+    ProjectService *m_project{};
+    TransportService *m_transport{};
+    SelectionService *m_selection{};
+    TimelineService *m_timeline{};
 
-    TimelineMediaManager *m_mediaManager;
-    TimelineEngineSynchronizer *m_engineSync;
-    TimelineExportManager *m_exportManager;
+    TimelineMediaManager *m_mediaManager{};
+    TimelineEngineSynchronizer *m_engineSync{};
+    TimelineExportManager *m_exportManager{};
 
     QVariantList m_previewSelectionIds;
 

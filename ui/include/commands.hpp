@@ -6,7 +6,7 @@ namespace Rina::UI {
 
 class AddClipCommand : public QUndoCommand {
   public:
-    AddClipCommand(TimelineService *service, int clipId, const QString &type, int startFrame, int layer, const QString &clipName);
+    AddClipCommand(TimelineService *service, int clipId, QString type, int startFrame, int layer, const QString &clipName);
     void undo() override;
     void redo() override;
 
@@ -35,7 +35,7 @@ class MoveClipCommand : public QUndoCommand {
 
 class UpdateEffectParamCommand : public QUndoCommand {
   public:
-    UpdateEffectParamCommand(TimelineService *service, int clipId, int effectIndex, const QString &paramName, const QVariant &newValue, const QVariant &oldValue, const QString &effectName);
+    UpdateEffectParamCommand(TimelineService *service, int clipId, int effectIndex, const QString &paramName, QVariant newValue, QVariant oldValue, const QString &effectName);
     void undo() override;
     void redo() override;
     int id() const override;
@@ -53,7 +53,7 @@ class UpdateEffectParamCommand : public QUndoCommand {
 
 class AddEffectCommand : public QUndoCommand {
   public:
-    AddEffectCommand(TimelineService *service, int clipId, const QString &effectId, const QString &effectName);
+    AddEffectCommand(TimelineService *service, int clipId, QString effectId, const QString &effectName);
     void undo() override;
     void redo() override;
 
@@ -204,7 +204,7 @@ class CutClipCommand : public QUndoCommand {
 
 class SetKeyframeCommand : public QUndoCommand {
   public:
-    SetKeyframeCommand(TimelineService *service, int clipId, int effectIndex, const QString &paramName, int frame, const QVariant &newValue, const QVariantMap &options, const QVariant &oldValue, const QVariantMap &oldOptions, bool wasExisting);
+    SetKeyframeCommand(TimelineService *service, int clipId, int effectIndex, const QString &paramName, int frame, QVariant newValue, QVariantMap options, QVariant oldValue, QVariantMap oldOptions, bool wasExisting);
     void undo() override;
     void redo() override;
     int id() const override;
@@ -221,7 +221,7 @@ class SetKeyframeCommand : public QUndoCommand {
 
 class RemoveKeyframeCommand : public QUndoCommand {
   public:
-    RemoveKeyframeCommand(TimelineService *service, int clipId, int effectIndex, const QString &paramName, int frame, const QVariant &savedValue, const QVariantMap &savedOptions);
+    RemoveKeyframeCommand(TimelineService *service, int clipId, int effectIndex, const QString &paramName, int frame, QVariant savedValue, QVariantMap savedOptions);
     void undo() override;
     void redo() override;
 
@@ -259,7 +259,7 @@ class RemoveSceneCommand : public QUndoCommand {
 
 class UpdateSceneSettingsCommand : public QUndoCommand {
   public:
-    UpdateSceneSettingsCommand(TimelineService *service, int sceneId, const SceneData &oldData, const SceneData &newData);
+    UpdateSceneSettingsCommand(TimelineService *service, int sceneId, SceneData oldData, const SceneData &newData);
     void undo() override;
     void redo() override;
 

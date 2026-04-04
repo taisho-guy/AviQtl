@@ -167,7 +167,7 @@ class ECS {
     // 各バッファが次に編集対象となったとき、同期が必要なClipIDリスト
     std::array<QSet<int>, 3> m_dirtyForBuffer;
     // 構造変更（追加・削除）があったため、フルコピーが必要かどうか
-    std::array<bool, 3> m_fullSyncRequired;
+    std::array<bool, 3> m_fullSyncRequired{};
 };
 
 } // namespace Rina::Engine::Timeline

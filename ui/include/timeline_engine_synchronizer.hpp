@@ -47,7 +47,7 @@ class TimelineEngineSynchronizer : public QObject {
 
     TimelineController *m_controller;
     ClipModel *m_clipModel;
-    ClipModel *m_renderModel;
+    ClipModel *m_renderModel{};
 
     QList<ClipData *> m_sortedClips;
     int m_maxDuration = 0;

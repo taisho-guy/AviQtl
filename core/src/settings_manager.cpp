@@ -10,7 +10,7 @@
 
 namespace Rina::Core {
 
-SettingsManager &SettingsManager::instance() {
+auto SettingsManager::instance() -> SettingsManager & {
     static SettingsManager instance;
     return instance;
 }
@@ -93,7 +93,7 @@ SettingsManager::SettingsManager(QObject *parent) : QObject(parent) {
     load();
 }
 
-QVariantMap SettingsManager::defaultShortcutSettings() const {
+auto SettingsManager::defaultShortcutSettings() -> QVariantMap {
     return {// Project
             {"project.new", "Ctrl+N"},
             {"project.save", "Ctrl+S"},
@@ -129,7 +129,7 @@ QVariantMap SettingsManager::defaultShortcutSettings() const {
             {"timeline.nudgeRight", "Alt+Right"}};
 }
 
-QString SettingsManager::getSettingsFilePath() const {
+auto SettingsManager::getSettingsFilePath() -> QString {
     // 1. 実行ファイルディレクトリを試す (ポータブルモード)
     QString exeDir = QCoreApplication::applicationDirPath();
     QString portablePath = exeDir + "/rina_settings.json";
@@ -179,8 +179,9 @@ void SettingsManager::load() {
             if (it.key() == "shortcuts" && it.value().canConvert<QVariantMap>()) {
                 QVariantMap mergedShortcuts = m_settings.value("shortcuts").toMap();
                 QVariantMap loadedShortcuts = it.value().toMap();
-                for (auto shortcutIt = loadedShortcuts.begin(); shortcutIt != loadedShortcuts.end(); ++shortcutIt)
+                for (auto shortcutIt = loadedShortcuts.begin(); shortcutIt != loadedShortcuts.end(); ++shortcutIt) {
                     mergedShortcuts[shortcutIt.key()] = shortcutIt.value();
+                }
                 m_settings[it.key()] = mergedShortcuts;
                 continue;
             }
@@ -216,11 +217,11 @@ void SettingsManager::setValue(const QString &key, const QVariant &value) {
     }
 }
 
-QVariant SettingsManager::value(const QString &key, const QVariant &defaultValue) const { return m_settings.value(key, defaultValue); }
+auto SettingsManager::value(const QString &key, const QVariant &defaultValue) const -> QVariant { return m_settings.value(key, defaultValue); }
 
-QVariantMap SettingsManager::shortcuts() const { return m_settings.value("shortcuts").toMap(); }
+auto SettingsManager::shortcuts() const -> QVariantMap { return m_settings.value("shortcuts").toMap(); }
 
-QString SettingsManager::shortcut(const QString &actionId, const QString &fallbackValue) const {
+auto SettingsManager::shortcut(const QString &actionId, const QString &fallbackValue) const -> QString {
     const QVariantMap shortcutMap = shortcuts();
     const QString value = shortcutMap.value(actionId, fallbackValue).toString();
     return value.isEmpty() ? fallbackValue : value;

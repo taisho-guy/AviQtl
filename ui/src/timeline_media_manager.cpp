@@ -12,7 +12,7 @@
 
 namespace Rina::UI {
 
-TimelineMediaManager::TimelineMediaManager(TimelineController *controller, QObject *parent) : QObject(parent), m_controller(controller) { m_audioMixer = new Rina::Engine::AudioMixer(this); }
+TimelineMediaManager::TimelineMediaManager(TimelineController *controller, QObject *parent) : QObject(parent), m_controller(controller), m_audioMixer(new Rina::Engine::AudioMixer(this)) {}
 
 void TimelineMediaManager::setVideoFrameStore(Rina::Core::VideoFrameStore *store) {
     m_videoFrameStore = store;
@@ -21,9 +21,10 @@ void TimelineMediaManager::setVideoFrameStore(Rina::Core::VideoFrameStore *store
 
 void TimelineMediaManager::onPlayingChanged() {
     bool playing = m_controller->transport()->isPlaying();
-    for (auto decoder : m_decoders) {
-        if (!decoder)
+    for (const auto &decoder : m_decoders) {
+        if (!decoder) {
             continue;
+        }
         decoder->setPlaying(playing);
     }
 }
@@ -39,8 +40,9 @@ void TimelineMediaManager::onCurrentFrameChanged() {
 
     for (auto it = m_decoders.begin(); it != m_decoders.end(); ++it) {
         const auto *clip = m_controller->timeline()->findClipById(it.key());
-        if (!clip || nextFrame < clip->startFrame || nextFrame >= clip->startFrame + clip->durationFrames)
+        if ((clip == nullptr) || nextFrame < clip->startFrame || nextFrame >= clip->startFrame + clip->durationFrames) {
             continue;
+        }
 
         if (auto *vid = qobject_cast<Rina::Core::VideoDecoder *>(it.value())) {
             updateVideoClipFrame(vid, clip, nextFrame - clip->startFrame);
@@ -56,8 +58,9 @@ void TimelineMediaManager::onCurrentFrameChanged() {
             double audioTime = 0.0;
 
             for (const auto *eff : clip->effects) {
-                if (eff->id() != "audio")
+                if (eff->id() != "audio") {
                     continue;
+                }
 
                 const QString playMode = eff->params().value("playMode", "開始時間＋再生速度").toString();
 
@@ -66,7 +69,7 @@ void TimelineMediaManager::onCurrentFrameChanged() {
                 } else {
                     const double startTime = eff->params().value("startTime", 0.0).toDouble();
                     const double speed = eff->params().value("speed", 100.0).toDouble();
-                    audioTime = relTime * (speed / 100.0) + startTime;
+                    audioTime = (relTime * (speed / 100.0)) + startTime;
                 }
                 break;
             }
@@ -77,27 +80,31 @@ void TimelineMediaManager::onCurrentFrameChanged() {
 
 void TimelineMediaManager::syncPlaybackSpeed() {
     double speed = m_controller->transport()->playbackSpeed();
-    for (auto decoder : m_decoders) {
-        if (!decoder)
+    for (const auto &decoder : m_decoders) {
+        if (!decoder) {
             continue;
+        }
         decoder->setPlaybackRate(speed);
     }
-    if (m_audioMixer)
+    if (m_audioMixer) {
         m_audioMixer->setPlaybackSpeed(speed);
+    }
 }
 
 void TimelineMediaManager::updateAudioSampleRate() {
     int rate = m_controller->project()->sampleRate();
-    if (m_audioMixer)
+    if (m_audioMixer) {
         m_audioMixer->setSampleRate(rate);
-    for (auto decoder : m_decoders) {
-        if (!decoder)
+    }
+    for (const auto &decoder : m_decoders) {
+        if (!decoder) {
             continue;
+        }
         decoder->setSampleRate(rate);
     }
 }
 
-QUrl TimelineMediaManager::getClipSourceUrl(const ClipData &clip) const {
+auto TimelineMediaManager::getClipSourceUrl(const ClipData &clip) -> QUrl {
     const EffectModel *effModel = nullptr;
     for (const auto *eff : clip.effects) {
         if (eff->id() == clip.type) {
@@ -105,8 +112,9 @@ QUrl TimelineMediaManager::getClipSourceUrl(const ClipData &clip) const {
             break;
         }
     }
-    if (!effModel)
-        return QUrl();
+    if (effModel == nullptr) {
+        return {};
+    }
     // 音声以外は通常 "path" パラメータにファイルパスが入っている
     QString path = effModel->params().value(clip.type == "audio" ? "source" : "path").toString();
     return QUrl::fromLocalFile(path);
@@ -120,8 +128,9 @@ void TimelineMediaManager::updateMediaDecoders() {
 
     for (const auto &scene : scenes) {
         for (const auto &clip : scene.clips) {
-            if (clip.type != "video" && clip.type != "audio" && clip.type != "image")
+            if (clip.type != "video" && clip.type != "audio" && clip.type != "image") {
                 continue;
+            }
 
             currentClipIds.insert(clip.id);
             clipToScene.insert(clip.id, scene.id);
@@ -129,10 +138,12 @@ void TimelineMediaManager::updateMediaDecoders() {
             QUrl sourceUrl = getClipSourceUrl(clip);
             if (!sourceUrl.isValid() || sourceUrl.isEmpty()) {
                 if (m_decoders.contains(clip.id)) {
-                    if (qobject_cast<Rina::Core::AudioDecoder *>(m_decoders[clip.id]))
+                    if (qobject_cast<Rina::Core::AudioDecoder *>(m_decoders[clip.id]) != nullptr) {
                         m_audioMixer->unregisterDecoder(clip.id);
-                    if (m_decoders[clip.id])
+                    }
+                    if (m_decoders[clip.id]) {
                         m_decoders[clip.id]->deleteLater();
+                    }
                     m_decoders.remove(clip.id);
                 }
                 continue;
@@ -142,10 +153,12 @@ void TimelineMediaManager::updateMediaDecoders() {
                 Rina::Core::MediaDecoder *existingDecoder = m_decoders[clip.id];
                 // If the source has changed, we must recreate the decoder
                 if (existingDecoder->source() != sourceUrl) {
-                    if (qobject_cast<Rina::Core::AudioDecoder *>(existingDecoder))
+                    if (qobject_cast<Rina::Core::AudioDecoder *>(existingDecoder) != nullptr) {
                         m_audioMixer->unregisterDecoder(clip.id);
-                    if (existingDecoder)
+                    }
+                    if (existingDecoder != nullptr) {
                         existingDecoder->deleteLater();
+                    }
                     m_decoders.remove(clip.id);
                 } else {
                     continue;
@@ -154,54 +167,62 @@ void TimelineMediaManager::updateMediaDecoders() {
 
             Rina::Core::MediaDecoder *decoder = nullptr;
             if (clip.type == "video") {
-                if (!m_videoFrameStore)
+                if (m_videoFrameStore == nullptr) {
                     continue;
+                }
                 decoder = new Rina::Core::VideoDecoder(clip.id, sourceUrl, m_videoFrameStore, this);
             } else if (clip.type == "image") {
-                if (!m_videoFrameStore)
+                if (m_videoFrameStore == nullptr) {
                     continue;
+                }
                 decoder = new Rina::Core::ImageDecoder(clip.id, sourceUrl, m_videoFrameStore, this);
             } else if (clip.type == "audio") {
                 decoder = new Rina::Core::AudioDecoder(clip.id, sourceUrl, this);
-                if (auto *audioDecoder = qobject_cast<Rina::Core::AudioDecoder *>(decoder))
+                if (auto *audioDecoder = qobject_cast<Rina::Core::AudioDecoder *>(decoder)) {
                     m_audioMixer->registerDecoder(clip.id, audioDecoder);
+                }
             }
 
-            if (decoder) {
+            if (decoder != nullptr) {
                 m_decoders.insert(clip.id, decoder);
                 int cid = clip.id;
                 // 画像や動画のデコード準備ができたらUIへ通知する
-                connect(decoder, &Rina::Core::MediaDecoder::ready, this, [this, cid]() { emit frameUpdated(cid); });
+                connect(decoder, &Rina::Core::MediaDecoder::ready, this, [this, cid]() -> void { emit frameUpdated(cid); });
 
                 if (auto *vid = qobject_cast<Rina::Core::VideoDecoder *>(decoder)) {
-                    connect(decoder, &Rina::Core::MediaDecoder::frameReady, this, [this, cid](int) { emit frameUpdated(cid); });
+                    connect(decoder, &Rina::Core::MediaDecoder::frameReady, this, [this, cid](int) -> void { emit frameUpdated(cid); });
                     // 動画メタ情報が揃った時点でクリップの最大長をクランプする
-                    connect(vid, &Rina::Core::VideoDecoder::videoMetaReady, this, [this, cid](int totalFrameCount, double sourceFps) {
+                    connect(vid, &Rina::Core::VideoDecoder::videoMetaReady, this, [this, cid](int totalFrameCount, double sourceFps) -> void {
                         const auto *clip = m_controller->timeline()->findClipById(cid);
-                        if (!clip || clip->type != "video")
+                        if (!clip || clip->type != "video") {
                             return;
+                        }
 
                         int startVideoFrame = 0;
                         double speed = 100.0;
                         for (const auto *eff : clip->effects) {
-                            if (eff->id() != "video")
+                            if (eff->id() != "video") {
                                 continue;
+                            }
                             const QString playMode = eff->params().value("playMode", "開始フレーム＋再生速度").toString();
-                            if (playMode == "フレーム直接指定")
+                            if (playMode == "フレーム直接指定") {
                                 return;
+                            }
                             startVideoFrame = eff->params().value("startFrame", 0).toInt();
                             speed = eff->params().value("speed", 100.0).toDouble();
                             break;
                         }
 
-                        if (speed <= 0.0 || sourceFps <= 0.0)
+                        if (speed <= 0.0 || sourceFps <= 0.0) {
                             return;
+                        }
 
                         const int projectFps = m_controller->project()->fps();
                         const double startSec = static_cast<double>(startVideoFrame) / sourceFps;
-                        const double remainingSec = static_cast<double>(totalFrameCount) / sourceFps - startSec;
-                        if (remainingSec <= 0.0)
+                        const double remainingSec = (static_cast<double>(totalFrameCount) / sourceFps) - startSec;
+                        if (remainingSec <= 0.0) {
                             return;
+                        }
 
                         const int maxDuration = static_cast<int>(remainingSec / (speed / 100.0) * projectFps);
                         if (maxDuration > 0 && clip->durationFrames > maxDuration) {
@@ -216,14 +237,16 @@ void TimelineMediaManager::updateMediaDecoders() {
 
     for (auto it = m_decoders.begin(); it != m_decoders.end();) {
         if (!currentClipIds.contains(it.key())) {
-            if (qobject_cast<Rina::Core::AudioDecoder *>(it.value()))
+            if (qobject_cast<Rina::Core::AudioDecoder *>(it.value()) != nullptr) {
                 m_audioMixer->unregisterDecoder(it.key());
-            if (m_videoFrameStore) {
+            }
+            if (m_videoFrameStore != nullptr) {
                 // キー形式を ImageDecoder 等と統一 (clipId のみを使用)
                 m_videoFrameStore->invalidateFrame(QString::number(it.key()));
             }
-            if (it.value())
+            if (it.value()) {
                 it.value()->deleteLater();
+            }
             it = m_decoders.erase(it);
         } else {
             ++it;
@@ -232,19 +255,21 @@ void TimelineMediaManager::updateMediaDecoders() {
 }
 
 void TimelineMediaManager::updateVideoClipFrame(Rina::Core::VideoDecoder *vid, const ClipData *clip, int relFrame) {
-    if (!vid || !clip || !m_controller || !m_controller->project())
+    if ((vid == nullptr) || (clip == nullptr) || (m_controller == nullptr) || (m_controller->project() == nullptr)) {
         return;
+    }
 
     relFrame = std::max(relFrame, 0);
-    const double fps = [&]() {
+    const double fps = [&]() -> double {
         const double f = m_controller->project()->fps();
         return f > 0.0 ? f : 30.0;
     }();
     const double relTime = static_cast<double>(relFrame) / fps;
 
     for (const auto *eff : clip->effects) {
-        if (!eff || eff->id() != "video")
+        if ((eff == nullptr) || eff->id() != "video") {
             continue;
+        }
 
         const QString playMode = eff->params().value("playMode", "開始フレーム＋再生速度").toString();
 
@@ -256,30 +281,33 @@ void TimelineMediaManager::updateVideoClipFrame(Rina::Core::VideoDecoder *vid, c
             const double speed = eff->evaluatedParam("speed", 100, fps).toDouble();
 
             double vfps = vid->sourceFps();
-            if (vfps <= 0.0)
+            if (vfps <= 0.0) {
                 vfps = fps;
+            }
 
             const double startSec = static_cast<double>(startFrame) / vfps;
-            const double targetSec = startSec + relTime * (speed / 100.0);
+            const double targetSec = startSec + (relTime * (speed / 100.0));
             vid->seekToTime(targetSec);
         }
         return;
     }
 }
 
-int TimelineMediaManager::sceneIdForClip(int clipId) const {
+auto TimelineMediaManager::sceneIdForClip(int clipId) const -> int {
     for (const auto &scene : m_controller->timeline()->getAllScenes()) {
         for (const auto &clip : scene.clips) {
-            if (clip.id == clipId)
+            if (clip.id == clipId) {
                 return scene.id;
+            }
         }
     }
     return -1;
 }
 
 void TimelineMediaManager::requestVideoFrame(int clipId, int relFrame) {
-    if (!m_controller || !m_controller->timeline())
+    if ((m_controller == nullptr) || (m_controller->timeline() == nullptr)) {
         return;
+    }
 
     const ClipData *targetClip = nullptr;
     const auto &scenes = m_controller->timeline()->getAllScenes();
@@ -290,34 +318,39 @@ void TimelineMediaManager::requestVideoFrame(int clipId, int relFrame) {
                 break;
             }
         }
-        if (targetClip)
+        if (targetClip != nullptr) {
             break;
+        }
     }
 
-    if (!targetClip)
+    if (targetClip == nullptr) {
         return;
+    }
 
     auto *vid = qobject_cast<Rina::Core::VideoDecoder *>(decoderForClip(clipId));
-    if (!vid)
+    if (vid == nullptr) {
         return;
+    }
 
     updateVideoClipFrame(vid, targetClip, relFrame);
 }
 
 void TimelineMediaManager::requestImageLoad(int clipId, const QString &path) {
-    if (!m_videoFrameStore || path.isEmpty() || clipId <= 0)
+    if ((m_videoFrameStore == nullptr) || path.isEmpty() || clipId <= 0) {
         return;
+    }
 
     const QUrl url = QUrl::fromLocalFile(path);
 
     if (m_imageDecoders.contains(clipId)) {
         auto existing = m_imageDecoders.value(clipId);
-        if (existing && existing->source() == url)
+        if (existing && existing->source() == url) {
             return;
+        }
     }
 
     auto *decoder = new Rina::Core::ImageDecoder(clipId, url, m_videoFrameStore, this);
-    connect(decoder, &Rina::Core::MediaDecoder::ready, this, [this, clipId]() { emit frameUpdated(clipId); });
+    connect(decoder, &Rina::Core::MediaDecoder::ready, this, [this, clipId]() -> void { emit frameUpdated(clipId); });
     m_imageDecoders.insert(clipId, decoder);
     decoder->load();
 }

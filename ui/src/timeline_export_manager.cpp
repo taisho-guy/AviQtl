@@ -20,34 +20,38 @@ TimelineExportManager::~TimelineExportManager() {
     }
 }
 
-bool TimelineExportManager::exportMedia(const QString &fileUrl, const QString &format, int quality) {
+auto TimelineExportManager::exportMedia(const QString &fileUrl, const QString &format, int quality) -> bool {
     QString localPath = QUrl(fileUrl).toLocalFile();
-    if (localPath.isEmpty())
+    if (localPath.isEmpty()) {
         localPath = fileUrl;
+    }
 
-    if (format == "image_sequence")
+    if (format == "image_sequence") {
         return exportImageSequence(localPath, quality);
+    }
     return false;
 }
 
-bool TimelineExportManager::exportImageSequence(const QString &dir, int quality) {
+auto TimelineExportManager::exportImageSequence(const QString &dir, int quality) -> bool {
     int totalFrames = m_controller->timelineDuration();
     QString baseName = dir;
-    if (baseName.endsWith(".png"))
+    if (baseName.endsWith(".png")) {
         baseName.chop(4);
+    }
     const int sequencePadding = Rina::Core::SettingsManager::instance().value("exportSequencePadding", 6).toInt();
     const int timeoutMs = Rina::Core::SettingsManager::instance().value("exportFrameGrabTimeoutMs", 2000).toInt();
     const int progressInterval = Rina::Core::SettingsManager::instance().value("exportProgressInterval", 5).toInt();
 
     QQuickItem *view = m_controller->compositeView();
-    if (view)
+    if (view != nullptr) {
         view->setProperty("exportMode", true);
-    QQuickItem *targetItem = view ? (view->property("view3D").value<QQuickItem *>() ? view->property("view3D").value<QQuickItem *>() : view) : nullptr;
+    }
+    QQuickItem *targetItem = (view != nullptr) ? ((view->property("view3D").value<QQuickItem *>() != nullptr) ? view->property("view3D").value<QQuickItem *>() : view) : nullptr;
 
     for (int frame = 0; frame < totalFrames; ++frame) {
         m_controller->transport()->setCurrentFrame(frame);
         QImage renderedFrame;
-        if (targetItem) {
+        if (targetItem != nullptr) {
             auto grabResult = targetItem->grabToImage(QSize(m_controller->project()->width(), m_controller->project()->height()));
             if (grabResult) {
                 QEventLoop loop;
@@ -63,18 +67,20 @@ bool TimelineExportManager::exportImageSequence(const QString &dir, int quality)
             emit m_controller->exportProgressChanged((frame * 100) / totalFrames, frame + 1, totalFrames);
         }
     }
-    if (view)
+    if (view != nullptr) {
         view->setProperty("exportMode", false);
+    }
     emit m_controller->exportProgressChanged(100, totalFrames, totalFrames);
     return true;
 }
 
 void TimelineExportManager::exportVideoAsync(const Rina::Core::VideoEncoder::Config &config) {
-    if (m_exporting.load())
+    if (m_exporting.load()) {
         return;
+    }
     m_cancelRequested = false;
 
-    m_exportThread = QThread::create([this, config]() { runExport(config); });
+    m_exportThread = QThread::create([this, config]() -> void { runExport(config); });
     connect(m_exportThread, &QThread::finished, m_exportThread, &QObject::deleteLater);
     m_exportThread->start();
 }
@@ -102,10 +108,11 @@ void TimelineExportManager::runExport(const Rina::Core::VideoEncoder::Config &co
     emit exportStarted(totalFrames);
 
     QQuickItem *view = m_controller->compositeView();
-    QQuickItem *targetItem = view ? (view->property("view3D").value<QQuickItem *>() ? view->property("view3D").value<QQuickItem *>() : view) : nullptr;
+    QQuickItem *targetItem = (view != nullptr) ? ((view->property("view3D").value<QQuickItem *>() != nullptr) ? view->property("view3D").value<QQuickItem *>() : view) : nullptr;
 
-    if (view)
-        QMetaObject::invokeMethod(view, [view] { view->setProperty("exportMode", true); }, Qt::BlockingQueuedConnection);
+    if (view != nullptr) {
+        QMetaObject::invokeMethod(view, [view] -> void { view->setProperty("exportMode", true); }, Qt::BlockingQueuedConnection);
+    }
 
     for (int frame = startFrame; frame < endFrame; ++frame) {
         if (m_cancelRequested.load()) {
@@ -113,12 +120,12 @@ void TimelineExportManager::runExport(const Rina::Core::VideoEncoder::Config &co
             goto cleanup;
         }
 
-        QMetaObject::invokeMethod(m_controller->transport(), [this, frame] { m_controller->transport()->setCurrentFrame(frame); }, Qt::BlockingQueuedConnection);
+        QMetaObject::invokeMethod(m_controller->transport(), [this, frame] -> void { m_controller->transport()->setCurrentFrame(frame); }, Qt::BlockingQueuedConnection);
 
         QImage img;
-        if (targetItem) {
+        if (targetItem != nullptr) {
             QSharedPointer<QQuickItemGrabResult> grab;
-            QMetaObject::invokeMethod(targetItem, [&] { grab = targetItem->grabToImage(QSize(config.width, config.height)); }, Qt::BlockingQueuedConnection);
+            QMetaObject::invokeMethod(targetItem, [&] -> void { grab = targetItem->grabToImage(QSize(config.width, config.height)); }, Qt::BlockingQueuedConnection);
             if (grab) {
                 QEventLoop loop;
                 connect(grab.get(), &QQuickItemGrabResult::ready, &loop, &QEventLoop::quit);
@@ -137,16 +144,18 @@ void TimelineExportManager::runExport(const Rina::Core::VideoEncoder::Config &co
 
         const int done = frame - startFrame + 1;
         const int progInterval = Rina::Core::SettingsManager::instance().value("exportProgressInterval", 5).toInt();
-        if (done % progInterval == 0 || done == totalFrames)
+        if (done % progInterval == 0 || done == totalFrames) {
             emit exportProgressChanged(done * 100 / totalFrames, done, totalFrames);
+        }
     }
 
     encoder.close();
     emit exportFinished(true, tr("書き出し完了"));
 
 cleanup:
-    if (view)
-        QMetaObject::invokeMethod(view, [view] { view->setProperty("exportMode", false); }, Qt::BlockingQueuedConnection);
+    if (view != nullptr) {
+        QMetaObject::invokeMethod(view, [view] -> void { view->setProperty("exportMode", false); }, Qt::BlockingQueuedConnection);
+    }
     m_exporting = false;
 }
 

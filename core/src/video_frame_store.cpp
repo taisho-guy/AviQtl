@@ -20,8 +20,8 @@ void VideoFrameStore::setFrameSafe(const QString &key, const QImage &frame) {
 
 void VideoFrameStore::setVideoFrameSafe(const QString &key, const QVideoFrame &frame) {
     if (QThread::currentThread() != thread()) {
-        QVideoFrame copy(frame);
-        QMetaObject::invokeMethod(this, [this, key, copy]() mutable { setVideoFrameSafe(key, copy); }, Qt::QueuedConnection);
+        const QVideoFrame &copy(frame);
+        QMetaObject::invokeMethod(this, [this, key, copy]() mutable -> void { setVideoFrameSafe(key, copy); }, Qt::QueuedConnection);
         return;
     }
 
@@ -41,7 +41,7 @@ void VideoFrameStore::setVideoFrameSafe(const QString &key, const QVideoFrame &f
     emit frameUpdated(key);
 }
 
-QVideoSink *VideoFrameStore::sink(const QString &key) {
+auto VideoFrameStore::sink(const QString &key) -> QVideoSink * {
     QMutexLocker locker(&m_mutex);
     if (!m_sinks.contains(key) || m_sinks.value(key).isNull()) {
         auto *s = new QVideoSink(this);
@@ -52,7 +52,7 @@ QVideoSink *VideoFrameStore::sink(const QString &key) {
 
 void VideoFrameStore::registerSink(const QString &key, QVideoSink *sink) {
     if (QThread::currentThread() != thread()) {
-        QMetaObject::invokeMethod(this, [this, key, sink]() { registerSink(key, sink); }, Qt::QueuedConnection);
+        QMetaObject::invokeMethod(this, [this, key, sink]() -> void { registerSink(key, sink); }, Qt::QueuedConnection);
         return;
     }
 
@@ -66,8 +66,8 @@ void VideoFrameStore::registerSink(const QString &key, QVideoSink *sink) {
 
         m_sinks.insert(key, sink);
 
-        if (sink) {
-            QObject::connect(sink, &QObject::destroyed, this, [this, key, rawSink = sink]() {
+        if (sink != nullptr) {
+            QObject::connect(sink, &QObject::destroyed, this, [this, key, rawSink = sink]() -> void {
                 QMutexLocker locker(&m_mutex);
                 if (m_sinks.contains(key)) {
                     QVideoSink *current = m_sinks.value(key).data();
@@ -83,20 +83,20 @@ void VideoFrameStore::registerSink(const QString &key, QVideoSink *sink) {
         }
     }
 
-    if (sink && last.isValid()) {
+    if ((sink != nullptr) && last.isValid()) {
         sink->setVideoFrame(last);
         emit frameUpdated(key);
     }
 }
 
-bool VideoFrameStore::hasFrame(const QString &key) const {
+auto VideoFrameStore::hasFrame(const QString &key) const -> bool {
     QMutexLocker locker(&m_mutex);
     return m_frames.contains(key) || m_sinks.contains(key);
 }
 
 void VideoFrameStore::invalidateFrame(const QString &key) {
     if (QThread::currentThread() != thread()) {
-        QMetaObject::invokeMethod(this, [this, key]() { invalidateFrame(key); }, Qt::QueuedConnection);
+        QMetaObject::invokeMethod(this, [this, key]() -> void { invalidateFrame(key); }, Qt::QueuedConnection);
         return;
     }
     QMutexLocker locker(&m_mutex);
@@ -107,7 +107,7 @@ void VideoFrameStore::invalidateFrame(const QString &key) {
 
 void VideoFrameStore::invalidateScene(int sceneId) {
     if (QThread::currentThread() != thread()) {
-        QMetaObject::invokeMethod(this, [this, sceneId]() { invalidateScene(sceneId); }, Qt::QueuedConnection);
+        QMetaObject::invokeMethod(this, [this, sceneId]() -> void { invalidateScene(sceneId); }, Qt::QueuedConnection);
         return;
     }
 
@@ -133,7 +133,7 @@ void VideoFrameStore::invalidateScene(int sceneId) {
 
 void VideoFrameStore::clear() {
     if (QThread::currentThread() != thread()) {
-        QMetaObject::invokeMethod(this, [this]() { clear(); }, Qt::QueuedConnection);
+        QMetaObject::invokeMethod(this, [this]() -> void { clear(); }, Qt::QueuedConnection);
         return;
     }
     QMutexLocker locker(&m_mutex);
@@ -141,7 +141,7 @@ void VideoFrameStore::clear() {
     m_lastVideoFrames.clear();
 }
 
-QImage VideoFrameStore::frame(const QString &key) const {
+auto VideoFrameStore::frame(const QString &key) const -> QImage {
     QMutexLocker locker(&m_mutex);
     return m_frames.value(key);
 }

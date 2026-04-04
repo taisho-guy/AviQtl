@@ -9,13 +9,15 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QUrl>
+#include <algorithm>
 
 namespace Rina::Core {
 
-bool ProjectSerializer::save(const QString &fileUrl, const UI::TimelineService *timeline, const UI::ProjectService *project, QString *errorMessage) {
+auto ProjectSerializer::save(const QString &fileUrl, const UI::TimelineService *timeline, const UI::ProjectService *project, QString *errorMessage) -> bool {
     QString path = QUrl(fileUrl).toLocalFile();
-    if (path.isEmpty())
+    if (path.isEmpty()) {
         path = fileUrl;
+    }
 
     QJsonObject root;
     QJsonObject settings;
@@ -81,35 +83,40 @@ bool ProjectSerializer::save(const QString &fileUrl, const UI::TimelineService *
 
     QFile file(path);
     if (!file.open(QIODevice::WriteOnly)) {
-        if (errorMessage)
+        if (errorMessage != nullptr) {
             *errorMessage = "書き込み用にファイルを開けませんでした: " + file.errorString();
+        }
         return false;
     }
     if (file.write(QJsonDocument(root).toJson()) == -1) {
-        if (errorMessage)
+        if (errorMessage != nullptr) {
             *errorMessage = "ファイルへの書き込みに失敗しました: " + file.errorString();
+        }
         return false;
     }
     return true;
 }
 
-bool ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeline, UI::ProjectService *project, QString *errorMessage) {
+auto ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeline, UI::ProjectService *project, QString *errorMessage) -> bool {
     QString path = QUrl(fileUrl).toLocalFile();
-    if (path.isEmpty())
+    if (path.isEmpty()) {
         path = fileUrl;
+    }
 
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly)) {
-        if (errorMessage)
+        if (errorMessage != nullptr) {
             *errorMessage = "読み込み用にファイルを開けませんでした: " + file.errorString();
+        }
         return false;
     }
 
     QJsonParseError error;
     QJsonDocument doc = QJsonDocument::fromJson(file.readAll(), &error);
     if (doc.isNull()) {
-        if (errorMessage)
+        if (errorMessage != nullptr) {
             *errorMessage = "JSONの解析に失敗しました: " + error.errorString();
+        }
         return false;
     }
     QJsonObject root = doc.object();
@@ -149,8 +156,7 @@ bool ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
             scene.startFrame = s["start"].toInt(0);
             scene.durationFrames = s["duration"].toInt(0);
             tempScenes.append(scene);
-            if (scene.id > maxSceneId)
-                maxSceneId = scene.id;
+            maxSceneId = std::max(scene.id, maxSceneId);
         }
     } else {
         // 旧形式互換: デフォルトシーンを作成
@@ -171,8 +177,7 @@ bool ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
             UI::ClipData clip;
             clip.id = c["id"].toInt();
             clip.sceneId = c["sceneId"].toInt(0); // デフォルトは0
-            if (clip.id > tempMaxId)
-                tempMaxId = clip.id;
+            tempMaxId = std::max(clip.id, tempMaxId);
             clip.type = c["type"].toString();
             clip.startFrame = c["start"].toInt();
             clip.durationFrames = c["duration"].toInt();
@@ -201,8 +206,9 @@ bool ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
                     // メタデータからUI定義を取得、なければ空
                     auto *eff = new UI::EffectModel(effId, eObj["name"].toString(), meta.category, eObj["params"].toObject().toVariantMap(), meta.qmlSource, meta.uiDefinition, nullptr);
                     eff->setEnabled(eObj["enabled"].toBool(true));
-                    if (eObj.contains("keyframes"))
+                    if (eObj.contains("keyframes")) {
                         eff->setKeyframeTracks(eObj["keyframes"].toObject().toVariantMap());
+                    }
 
                     clip.effects.append(eff);
                 }

@@ -8,7 +8,7 @@
 
 namespace Rina::Scripting {
 
-LuaHost &LuaHost::instance() {
+auto LuaHost::instance() -> LuaHost & {
     static LuaHost inst;
     return inst;
 }
@@ -20,7 +20,7 @@ LuaHost::LuaHost() : L(nullptr) {
 }
 
 LuaHost::~LuaHost() {
-    if (L) {
+    if (L != nullptr) {
         lua_close(L);
         L = nullptr;
     }
@@ -46,8 +46,9 @@ static void setupLuaState(lua_State *L) {
 }
 
 void LuaHost::initialize() {
-    if (L)
+    if (L != nullptr) {
         lua_close(L);
+    }
     L = luaL_newstate();
     setupLuaState(L);
     qDebug() << "[LuaHost] LuaJITエンジンを初期化しました (Main Thread)";
@@ -58,33 +59,34 @@ struct ThreadLocalLua {
     lua_State *state = nullptr;
     std::unordered_map<std::string, int> compiledRegistry; // スクリプト文字列 -> Registry Index
 
-    ThreadLocalLua() {
-        state = luaL_newstate();
-        if (state) {
+    ThreadLocalLua() : state(luaL_newstate()) {
+
+        if (state != nullptr) {
             setupLuaState(state);
         }
     }
 
     ~ThreadLocalLua() {
-        if (state) {
+        if (state != nullptr) {
             for (auto const &[expr, ref] : compiledRegistry) {
                 luaL_unref(state, LUA_REGISTRYINDEX, ref);
             }
         }
-        if (state) {
+        if (state != nullptr) {
             lua_close(state);
             state = nullptr;
         }
     }
 };
 
-double LuaHost::evaluate(const std::string &expression, double time, int index, double currentValue) {
+auto LuaHost::evaluate(const std::string &expression, double time, int index, double currentValue) -> double {
     // スレッドごとに独立したLuaステートを使用することでロックフリー化を実現
     thread_local ThreadLocalLua t_lua;
     lua_State *threadL = t_lua.state;
 
-    if (!threadL)
+    if (threadL == nullptr) {
         return currentValue;
+    }
 
     // Reset stack
     lua_settop(threadL, 0);
@@ -133,7 +135,7 @@ double LuaHost::evaluate(const std::string &expression, double time, int index, 
     }
 
     // 4. 結果を取得
-    if (!lua_isnumber(threadL, -1)) {
+    if (lua_isnumber(threadL, -1) == 0) {
         lua_pop(threadL, 1);
         return currentValue;
     }

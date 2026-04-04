@@ -35,20 +35,20 @@ static void rina_ffmpeg_log_callback(void *ptr, int level, const char *fmt, va_l
     va_copy(vl_copy, vl);
     vsnprintf(line, sizeof(line), fmt, vl_copy);
     va_end(vl_copy);
-    if (strstr(line, "Late SEI is not implemented")) {
+    if (strstr(line, "Late SEI is not implemented") != nullptr) {
         return;
     }
     av_log_default_callback(ptr, level, fmt, vl);
 }
 
-int main(int argc, char *argv[]) {
+auto main(int argc, char *argv[]) -> int {
     qputenv("QSG_RHI_BACKEND", "vulkan");
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 #endif
     QApplication app(argc, argv);
-    app.setApplicationName("Rina");
+    QApplication::setApplicationName("Rina");
 
     QString appDir = QCoreApplication::applicationDirPath();
 
@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
         const QString baseName = "Rina_" + QLocale(locale).name();
         if (translator.load(baseName, appDir + "/i18n")) {
             qDebug() << "[Main] 翻訳ファイルをロードしました:" << baseName;
-            app.installTranslator(&translator);
+            QApplication::installTranslator(&translator);
             break;
         }
     }
@@ -69,18 +69,18 @@ int main(int argc, char *argv[]) {
     Rina::Core::ThemeController::instance();
 
     av_log_set_callback(rina_ffmpeg_log_callback);
-    app.setWindowIcon(QIcon(":/assets/icon.svg"));
+    QApplication::setWindowIcon(QIcon(":/assets/icon.svg"));
 
     // スプラッシュ画面をヒープ領域に確保する
     int splashSize = settings.value("splashSize", 128).toInt();
     QPixmap splashPixmap = QIcon(":/assets/splash.svg").pixmap(splashSize, splashSize);
     auto *splash = new QSplashScreen(splashPixmap);
     splash->show();
-    app.processEvents();
+    QApplication::processEvents();
 
     QTimer luaHookTimer;
     auto &modEngine = Rina::Scripting::ModEngine::instance();
-    QObject::connect(&luaHookTimer, &QTimer::timeout, [&modEngine]() { modEngine.onUpdate(); });
+    QObject::connect(&luaHookTimer, &QTimer::timeout, [&modEngine]() -> void { modEngine.onUpdate(); });
     luaHookTimer.start(Rina::Core::SettingsManager::instance().value("luaHookIntervalMs", 16).toInt());
 
     QQuickStyle::setFallbackStyle("Fusion");
@@ -102,7 +102,7 @@ int main(int argc, char *argv[]) {
     engine.rootContext()->setContextProperty("WindowManager", static_cast<QObject *>(&Rina::UI::WindowManager::instance()));
 
     // 遅延初期化処理を実行する
-    QTimer::singleShot(10, [&engine, timelineController, &modEngine, splash]() {
+    QTimer::singleShot(10, [&engine, timelineController, &modEngine, splash]() -> void {
         Rina::Core::initializeStandardEffects();
         modEngine.initialize(nullptr);
         modEngine.registerController(timelineController);
@@ -113,7 +113,7 @@ int main(int argc, char *argv[]) {
         Rina::Core::EffectRegistry::instance().loadEffectsFromDirectory(appDir + "/objects");
 
         // 音声プラグインの読み込み完了時にスプラッシュ画面を消去する
-        QObject::connect(&Rina::Engine::Plugin::AudioPluginManager::instance(), &Rina::Engine::Plugin::AudioPluginManager::pluginsReady, splash, [&engine, splash](int) {
+        QObject::connect(&Rina::Engine::Plugin::AudioPluginManager::instance(), &Rina::Engine::Plugin::AudioPluginManager::pluginsReady, splash, [&engine, splash](int) -> void {
             Rina::UI::WindowManager::instance().spawnInitialWindows(&engine);
             splash->finish(nullptr);
             splash->deleteLater();
@@ -123,5 +123,5 @@ int main(int argc, char *argv[]) {
         Rina::Engine::Plugin::AudioPluginManager::instance().initialize();
     });
 
-    return app.exec();
+    return QApplication::exec();
 }

@@ -11,7 +11,7 @@ namespace Rina::UI {
 
 WindowManager::WindowManager(QObject *parent) : QObject(parent) {}
 
-WindowManager &WindowManager::instance() {
+auto WindowManager::instance() -> WindowManager & {
     static WindowManager inst(nullptr);
     return inst;
 }
@@ -22,8 +22,8 @@ void WindowManager::spawnInitialWindows(QQmlEngine *engine) {
     QQmlComponent component(engine, QUrl("qrc:/qt/qml/Rina/ui/qml/ProjectLauncherWindow.qml"));
     QObject *obj = component.create();
 
-    QQuickWindow *launcher = qobject_cast<QQuickWindow *>(obj);
-    if (launcher) {
+    auto *launcher = qobject_cast<QQuickWindow *>(obj);
+    if (launcher != nullptr) {
         // プロジェクトが選択されたらメインウィンドウを開く
         QObject::connect(launcher, SIGNAL(projectSelected(QString, int, int, double)), this, SLOT(onProjectSelected(QString, int, int, double)));
         registerWindow("launcher", launcher);
@@ -57,13 +57,13 @@ void WindowManager::onProjectSelected(const QString &path, int w, int h, double 
     spawnWindow(m_engine, "easingConfig", "qrc:/qt/qml/Rina/ui/qml/common/EasingConfigWindow.qml", tr("補間設定"), 820, 540, 420, 180, false);
 
     // 設定の反映
-    QObject *bridge = m_engine->rootContext()->contextProperty("TimelineBridge").value<QObject *>();
-    if (bridge) {
+    auto *bridge = m_engine->rootContext()->contextProperty("TimelineBridge").value<QObject *>();
+    if (bridge != nullptr) {
         if (!path.isEmpty()) {
             QMetaObject::invokeMethod(bridge, "loadProject", Q_ARG(QString, path));
         } else {
-            QObject *project = bridge->property("project").value<QObject *>();
-            if (project) {
+            auto *project = bridge->property("project").value<QObject *>();
+            if (project != nullptr) {
                 project->setProperty("width", w);
                 project->setProperty("height", h);
                 project->setProperty("fps", fps);
@@ -73,7 +73,7 @@ void WindowManager::onProjectSelected(const QString &path, int w, int h, double 
 }
 
 void WindowManager::spawnWindow(QQmlEngine *engine, const QString &id, const QString &urlStr, const QString &title, int w, int h, int x, int y, bool visible) {
-    if (!engine) {
+    if (engine == nullptr) {
         qWarning() << "WindowManager: QMLエンジンがnullです！";
         return;
     }
@@ -85,33 +85,35 @@ void WindowManager::spawnWindow(QQmlEngine *engine, const QString &id, const QSt
     }
 
     QObject *obj = comp.create();
-    if (auto win = qobject_cast<QQuickWindow *>(obj)) {
+    if (auto *win = qobject_cast<QQuickWindow *>(obj)) {
         win->setTitle(title);
         win->resize(w, h);
         win->setX(x);
         win->setY(y);
         registerWindow(id, win);
-        if (visible)
+        if (visible) {
             win->show();
-        else
+        } else {
             win->hide();
+        }
     } else {
         // QQuickWindowではなかった場合
-        auto window = new QQuickWindow();
+        auto *window = new QQuickWindow();
         window->setTitle(title);
         window->resize(w, h);
         window->setX(x);
         window->setY(y);
 
-        auto item = qobject_cast<QQuickItem *>(obj);
-        if (item) {
+        auto *item = qobject_cast<QQuickItem *>(obj);
+        if (item != nullptr) {
             item->setParentItem(window->contentItem());
         }
         registerWindow(id, window);
-        if (visible)
+        if (visible) {
             window->show();
-        else
+        } else {
             window->hide();
+        }
     }
 }
 
@@ -119,15 +121,15 @@ void WindowManager::registerWindow(const QString &id, QQuickWindow *win) {
     m_windows[id] = win;
 
     // hide/showした場合の同期
-    connect(win, &QQuickWindow::visibleChanged, this, [this, id]() { emitVisibilityChanged(id); });
-    connect(win, &QObject::destroyed, this, [this, id]() {
+    connect(win, &QQuickWindow::visibleChanged, this, [this, id]() -> void { emitVisibilityChanged(id); });
+    connect(win, &QObject::destroyed, this, [this, id]() -> void {
         m_windows.remove(id);
         emitVisibilityChanged(id);
     });
 
     // メインが閉じられたら全終了
     if (id == "main") {
-        connect(win, &QQuickWindow::closing, this, [this](QQuickCloseEvent *e) {
+        connect(win, &QQuickWindow::closing, this, [this](QQuickCloseEvent *e) -> void {
             Q_UNUSED(e);
             requestQuit();
         });
@@ -137,28 +139,34 @@ void WindowManager::registerWindow(const QString &id, QQuickWindow *win) {
 }
 
 void WindowManager::emitVisibilityChanged(const QString &id) {
-    if (id == "timeline")
+    if (id == "timeline") {
         emit timelineVisibleChanged();
-    if (id == "projectSettings")
+    }
+    if (id == "projectSettings") {
         emit projectSettingsVisibleChanged();
-    if (id == "objectSettings")
+    }
+    if (id == "objectSettings") {
         emit objectSettingsVisibleChanged();
-    if (id == "systemSettings")
+    }
+    if (id == "systemSettings") {
         emit systemSettingsVisibleChanged();
+    }
 }
 
-bool WindowManager::isVisible(const QString &id) const {
+auto WindowManager::isVisible(const QString &id) const -> bool {
     QPointer<QQuickWindow> w = m_windows.value(id);
     return w ? w->isVisible() : false;
 }
 void WindowManager::setVisible(const QString &id, bool visible) {
     QPointer<QQuickWindow> w = m_windows.value(id);
-    if (!w)
+    if (!w) {
         return;
-    if (visible)
+    }
+    if (visible) {
         w->show();
-    else
+    } else {
         w->hide();
+    }
     if (visible) {
         w->raise();
         w->requestActivate();
@@ -167,30 +175,32 @@ void WindowManager::setVisible(const QString &id, bool visible) {
 void WindowManager::toggleVisible(const QString &id) { setVisible(id, !isVisible(id)); }
 void WindowManager::raiseWindow(const QString &id) {
     QPointer<QQuickWindow> w = m_windows.value(id);
-    if (!w)
+    if (!w) {
         return;
+    }
     w->show();
     w->raise();
     w->requestActivate();
 }
 
-QObject *WindowManager::getWindow(const QString &id) const { return m_windows.value(id); }
+auto WindowManager::getWindow(const QString &id) const -> QObject * { return m_windows.value(id); }
 
 void WindowManager::requestQuit() {
     // 全Windowを閉じる
     for (auto it = m_windows.begin(); it != m_windows.end(); ++it) {
-        if (it.value())
+        if (it.value()) {
             it.value()->close();
+        }
     }
     QCoreApplication::quit();
 }
 
-bool WindowManager::timelineVisible() const { return isVisible("timeline"); }
+auto WindowManager::timelineVisible() const -> bool { return isVisible("timeline"); }
 void WindowManager::setTimelineVisible(bool v) { setVisible("timeline", v); }
-bool WindowManager::projectSettingsVisible() const { return isVisible("projectSettings"); }
+auto WindowManager::projectSettingsVisible() const -> bool { return isVisible("projectSettings"); }
 void WindowManager::setProjectSettingsVisible(bool v) { setVisible("projectSettings", v); }
-bool WindowManager::objectSettingsVisible() const { return isVisible("objectSettings"); }
+auto WindowManager::objectSettingsVisible() const -> bool { return isVisible("objectSettings"); }
 void WindowManager::setObjectSettingsVisible(bool v) { setVisible("objectSettings", v); }
-bool WindowManager::systemSettingsVisible() const { return isVisible("systemSettings"); }
+auto WindowManager::systemSettingsVisible() const -> bool { return isVisible("systemSettings"); }
 void WindowManager::setSystemSettingsVisible(bool v) { setVisible("systemSettings", v); }
 } // namespace Rina::UI

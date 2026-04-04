@@ -12,6 +12,7 @@
 #include <QtConcurrent/QtConcurrent>
 #include <algorithm>
 #include <cstring>
+#include <utility>
 #include <vector>
 
 #include <CarlaNativePlugin.h>
@@ -20,7 +21,7 @@ namespace Rina::Engine::Plugin {
 
 namespace {
 
-static bool mapFormatToCarlaType(const QString &format, CarlaBackend::PluginType &ptype) {
+auto mapFormatToCarlaType(const QString &format, CarlaBackend::PluginType &ptype) -> bool {
     if (format == "LADSPA") {
         ptype = CarlaBackend::PLUGIN_LADSPA;
         return true;
@@ -44,63 +45,66 @@ static bool mapFormatToCarlaType(const QString &format, CarlaBackend::PluginType
     return false;
 }
 
-static QString safeQString(const char *s) { return s ? QString::fromUtf8(s) : QString(); }
+auto safeQString(const char *s) -> QString { return (s != nullptr) ? QString::fromUtf8(s) : QString(); }
 
-static float clamp01(float v) {
-    if (v < 0.0f)
-        return 0.0f;
-    if (v > 1.0f)
-        return 1.0f;
+auto clamp01(float v) -> float {
+    if (v < 0.0F) {
+        return 0.0F;
+    }
+    if (v > 1.0F) {
+        return 1.0F;
+    }
     return v;
 }
 
 class CarlaHostedPlugin final : public IAudioPlugin {
   public:
-    CarlaHostedPlugin(const PluginInfo &info) : m_info(info) {}
+    CarlaHostedPlugin(PluginInfo info) : m_info(std::move(info)) {}
 
     ~CarlaHostedPlugin() override { release(); }
 
     void ensureBuffers(int frames) {
-        if (frames <= 0)
+        if (frames <= 0) {
             return;
-        if ((int)m_inL.size() < frames) {
-            m_inL.resize(frames, 0.0f);
-            m_inR.resize(frames, 0.0f);
-            m_outL.resize(frames, 0.0f);
-            m_outR.resize(frames, 0.0f);
+        }
+        if (std::cmp_less(m_inL.size(), frames)) {
+            m_inL.resize(frames, 0.0F);
+            m_inR.resize(frames, 0.0F);
+            m_outL.resize(frames, 0.0F);
+            m_outR.resize(frames, 0.0F);
         }
     }
 
     void deinterleave(const float *src, int frames) {
         ensureBuffers(frames);
         for (int i = 0; i < frames; ++i) {
-            m_inL[i] = src[i * 2 + 0];
-            m_inR[i] = src[i * 2 + 1];
+            m_inL[i] = src[(i * 2) + 0];
+            m_inR[i] = src[(i * 2) + 1];
         }
     }
 
     void interleave(float *dst, int frames) const {
         for (int i = 0; i < frames; ++i) {
-            dst[i * 2 + 0] = m_outL[i];
-            dst[i * 2 + 1] = m_outR[i];
+            dst[(i * 2) + 0] = m_outL[i];
+            dst[(i * 2) + 1] = m_outR[i];
         }
     }
 
     // NativeHostDescriptor コールバック (static)
-    static uint32_t s_getBufferSize(NativeHostHandle h) { return static_cast<uint32_t>(static_cast<CarlaHostedPlugin *>(h)->m_maxBlockSize); }
-    static double s_getSampleRate(NativeHostHandle h) { return static_cast<CarlaHostedPlugin *>(h)->m_sampleRate; }
-    static bool s_isOffline(NativeHostHandle) { return false; }
-    static const NativeTimeInfo *s_getTimeInfo(NativeHostHandle h) { return &static_cast<CarlaHostedPlugin *>(h)->m_timeInfo; }
-    static bool s_writeMidiEvent(NativeHostHandle, const NativeMidiEvent *) { return false; }
-    static void s_uiParameterChanged(NativeHostHandle, uint32_t, float) {}
-    static void s_uiMidiProgramChanged(NativeHostHandle, uint8_t, uint32_t, uint32_t) {}
-    static void s_uiCustomDataChanged(NativeHostHandle, const char *, const char *) {}
-    static void s_uiClosed(NativeHostHandle) {}
-    static const char *s_uiOpenFile(NativeHostHandle, bool, const char *, const char *) { return nullptr; }
-    static const char *s_uiSaveFile(NativeHostHandle, bool, const char *, const char *) { return nullptr; }
-    static intptr_t s_dispatcher(NativeHostHandle, NativeHostDispatcherOpcode, int32_t, intptr_t, void *, float) { return 0; }
+    static auto s_getBufferSize(NativeHostHandle h) -> uint32_t { return static_cast<uint32_t>(static_cast<CarlaHostedPlugin *>(h)->m_maxBlockSize); }
+    static auto s_getSampleRate(NativeHostHandle h) -> double { return static_cast<CarlaHostedPlugin *>(h)->m_sampleRate; }
+    static auto s_isOffline(NativeHostHandle /*unused*/) -> bool { return false; }
+    static auto s_getTimeInfo(NativeHostHandle h) -> const NativeTimeInfo * { return &static_cast<CarlaHostedPlugin *>(h)->m_timeInfo; }
+    static auto s_writeMidiEvent(NativeHostHandle /*unused*/, const NativeMidiEvent * /*unused*/) -> bool { return false; }
+    static void s_uiParameterChanged(NativeHostHandle /*unused*/, uint32_t /*unused*/, float /*unused*/) {}
+    static void s_uiMidiProgramChanged(NativeHostHandle /*unused*/, uint8_t /*unused*/, uint32_t /*unused*/, uint32_t /*unused*/) {}
+    static void s_uiCustomDataChanged(NativeHostHandle /*unused*/, const char * /*unused*/, const char * /*unused*/) {}
+    static void s_uiClosed(NativeHostHandle /*unused*/) {}
+    static auto s_uiOpenFile(NativeHostHandle /*unused*/, bool /*unused*/, const char * /*unused*/, const char * /*unused*/) -> const char * { return nullptr; }
+    static auto s_uiSaveFile(NativeHostHandle /*unused*/, bool /*unused*/, const char * /*unused*/, const char * /*unused*/) -> const char * { return nullptr; }
+    static auto s_dispatcher(NativeHostHandle /*unused*/, NativeHostDispatcherOpcode /*unused*/, int32_t /*unused*/, intptr_t /*unused*/, void * /*unused*/, float /*unused*/) -> intptr_t { return 0; }
 
-    bool load(const QString &path, int index = 0) override {
+    auto load(const QString &path, int index = 0) -> bool override {
         Q_UNUSED(index)
 
         CarlaBackend::PluginType ptype = CarlaBackend::PLUGIN_NONE;
@@ -110,10 +114,12 @@ class CarlaHostedPlugin final : public IAudioPlugin {
         }
 
         const auto &sm = Rina::Core::SettingsManager::instance();
-        if (m_sampleRate <= 1.0)
+        if (m_sampleRate <= 1.0) {
             m_sampleRate = sm.value("defaultProjectSampleRate", 48000).toDouble();
-        if (m_maxBlockSize <= 0)
+        }
+        if (m_maxBlockSize <= 0) {
             m_maxBlockSize = sm.value("audioPluginMaxBlockSize", 512).toInt();
+        }
 
         m_uiNameBuf = m_info.name.toUtf8();
 
@@ -165,8 +171,9 @@ class CarlaHostedPlugin final : public IAudioPlugin {
         QString lv2UriStr = m_info.label;
         if (ptype == CarlaBackend::PLUGIN_LV2) {
             const int dotLv2 = lv2UriStr.indexOf(QLatin1String(".lv2/"));
-            if (dotLv2 >= 0)
+            if (dotLv2 >= 0) {
                 lv2UriStr = lv2UriStr.mid(dotLv2 + 5);
+            }
         }
         const QByteArray label = lv2UriStr.toUtf8();
 
@@ -198,13 +205,14 @@ class CarlaHostedPlugin final : public IAudioPlugin {
     }
 
     void process(float *buf, int frameCount) override {
-        if (!m_loaded || m_descriptor == nullptr || m_nativeHandle == nullptr || buf == nullptr || frameCount <= 0)
+        if (!m_loaded || m_descriptor == nullptr || m_nativeHandle == nullptr || buf == nullptr || frameCount <= 0) {
             return;
+        }
 
         deinterleave(buf, frameCount);
 
-        std::fill(m_outL.begin(), m_outL.begin() + frameCount, 0.0f);
-        std::fill(m_outR.begin(), m_outR.begin() + frameCount, 0.0f);
+        std::fill(m_outL.begin(), m_outL.begin() + frameCount, 0.0F);
+        std::fill(m_outR.begin(), m_outR.begin() + frameCount, 0.0F);
 
         float *inBufs[2] = {m_inL.data(), m_inR.data()};
         float *outBufs[2] = {m_outL.data(), m_outR.data()};
@@ -214,11 +222,12 @@ class CarlaHostedPlugin final : public IAudioPlugin {
         interleave(buf, frameCount);
     }
 
-    bool active() const override { return m_loaded; }
+    [[nodiscard]] auto active() const -> bool override { return m_loaded; }
 
     void release() override {
-        if (m_descriptor != nullptr && m_nativeHandle != nullptr)
+        if (m_descriptor != nullptr && m_nativeHandle != nullptr) {
             m_descriptor->deactivate(m_nativeHandle);
+        }
 
         if (m_hostHandle != nullptr) {
             carla_host_handle_free(m_hostHandle);
@@ -238,45 +247,51 @@ class CarlaHostedPlugin final : public IAudioPlugin {
         m_outR.clear();
     }
 
-    QString name() const override { return m_info.name; }
-    QString format() const override { return m_info.format; }
+    [[nodiscard]] auto name() const -> QString override { return m_info.name; }
+    [[nodiscard]] auto format() const -> QString override { return m_info.format; }
 
-    int paramCount() const override {
-        if (!m_loaded || m_hostHandle == nullptr)
+    [[nodiscard]] auto paramCount() const -> int override {
+        if (!m_loaded || m_hostHandle == nullptr) {
             return 0;
+        }
         return static_cast<int>(carla_get_parameter_count(m_hostHandle, m_pluginId));
     }
 
-    QString paramName(int i) const override {
-        if (!m_loaded || m_hostHandle == nullptr || i < 0)
+    [[nodiscard]] auto paramName(int i) const -> QString override {
+        if (!m_loaded || m_hostHandle == nullptr || i < 0) {
             return {};
+        }
         const CarlaParameterInfo *info = carla_get_parameter_info(m_hostHandle, m_pluginId, static_cast<uint32_t>(i));
-        return info ? safeQString(info->name) : QString{};
+        return (info != nullptr) ? safeQString(info->name) : QString{};
     }
 
-    float getParam(int i) const override {
-        if (!m_loaded || m_hostHandle == nullptr || i < 0)
-            return 0.0f;
+    [[nodiscard]] auto getParam(int i) const -> float override {
+        if (!m_loaded || m_hostHandle == nullptr || i < 0) {
+            return 0.0F;
+        }
         return carla_get_current_parameter_value(m_hostHandle, m_pluginId, static_cast<uint32_t>(i));
     }
 
     void setParam(int i, float v) override {
-        if (!m_loaded || m_hostHandle == nullptr || i < 0)
+        if (!m_loaded || m_hostHandle == nullptr || i < 0) {
             return;
+        }
         carla_set_parameter_value(m_hostHandle, m_pluginId, static_cast<uint32_t>(i), clamp01(v));
     }
 
-    ParamInfo getParamInfo(int i) const override {
+    [[nodiscard]] auto getParamInfo(int i) const -> ParamInfo override {
         ParamInfo out;
-        if (!m_loaded || m_hostHandle == nullptr || i < 0)
+        if (!m_loaded || m_hostHandle == nullptr || i < 0) {
             return out;
-        const uint32_t pid = static_cast<uint32_t>(i);
+        }
+        const auto pid = static_cast<uint32_t>(i);
         const CarlaParameterInfo *info = carla_get_parameter_info(m_hostHandle, m_pluginId, pid);
-        if (info)
+        if (info != nullptr) {
             out.name = safeQString(info->name);
+        }
         out.defaultValue = carla_get_default_parameter_value(m_hostHandle, m_pluginId, pid);
-        out.min = 0.0f;
-        out.max = 1.0f;
+        out.min = 0.0F;
+        out.max = 1.0F;
         return out;
     }
 
@@ -311,17 +326,17 @@ struct FormatConfig {
     bool bundleDir;
 };
 
-const QList<FormatConfig> kFormats = {{"ladspa", "LADSPA", {"LADSPA_PATH"}, {"/usr/lib/ladspa", "/usr/local/lib/ladspa"}, "*.so", false},
-                                      {"lv2", "LV2", {"LV2_PATH"}, {"/usr/lib/lv2", "/usr/local/lib/lv2"}, "*.lv2", true},
-                                      {"vst2", "VST2", {"VST_PATH"}, {"/usr/lib/vst", "/usr/lib/vst2", "/usr/local/lib/vst", "/usr/local/lib/vst2"}, "*.so", false},
-                                      {"vst3", "VST3", {"VST3_PATH"}, {"/usr/lib/vst3", "/usr/local/lib/vst3"}, "*.vst3", true},
-                                      {"clap", "CLAP", {"CLAP_PATH"}, {"/usr/lib/clap", "/usr/local/lib/clap"}, "*.clap", false},
-                                      {"dssi", "DSSI", {"DSSI_PATH"}, {"/usr/lib/dssi", "/usr/local/lib/dssi"}, "*.so", false},
-                                      {"sf2", "SF2", {"SF2_PATH"}, {"/usr/share/soundfonts", "/usr/share/sounds/sf2"}, "*.sf2", false},
-                                      {"sfz", "SFZ", {"SFZ_PATH"}, {"/usr/share/sounds/sfz"}, "*.sfz", false},
-                                      {"jsfx", "JSFX", {"JSFX_PATH"}, {"/opt/REAPER/Plugins/FX", "~/.config/REAPER/Effects"}, "*.jsfx", false}};
+const QList<FormatConfig> kFormats = {{.type = "ladspa", .format = "LADSPA", .envVars = {"LADSPA_PATH"}, .defaultPaths = {"/usr/lib/ladspa", "/usr/local/lib/ladspa"}, .fileFilter = "*.so", .bundleDir = false},
+                                      {.type = "lv2", .format = "LV2", .envVars = {"LV2_PATH"}, .defaultPaths = {"/usr/lib/lv2", "/usr/local/lib/lv2"}, .fileFilter = "*.lv2", .bundleDir = true},
+                                      {.type = "vst2", .format = "VST2", .envVars = {"VST_PATH"}, .defaultPaths = {"/usr/lib/vst", "/usr/lib/vst2", "/usr/local/lib/vst", "/usr/local/lib/vst2"}, .fileFilter = "*.so", .bundleDir = false},
+                                      {.type = "vst3", .format = "VST3", .envVars = {"VST3_PATH"}, .defaultPaths = {"/usr/lib/vst3", "/usr/local/lib/vst3"}, .fileFilter = "*.vst3", .bundleDir = true},
+                                      {.type = "clap", .format = "CLAP", .envVars = {"CLAP_PATH"}, .defaultPaths = {"/usr/lib/clap", "/usr/local/lib/clap"}, .fileFilter = "*.clap", .bundleDir = false},
+                                      {.type = "dssi", .format = "DSSI", .envVars = {"DSSI_PATH"}, .defaultPaths = {"/usr/lib/dssi", "/usr/local/lib/dssi"}, .fileFilter = "*.so", .bundleDir = false},
+                                      {.type = "sf2", .format = "SF2", .envVars = {"SF2_PATH"}, .defaultPaths = {"/usr/share/soundfonts", "/usr/share/sounds/sf2"}, .fileFilter = "*.sf2", .bundleDir = false},
+                                      {.type = "sfz", .format = "SFZ", .envVars = {"SFZ_PATH"}, .defaultPaths = {"/usr/share/sounds/sfz"}, .fileFilter = "*.sfz", .bundleDir = false},
+                                      {.type = "jsfx", .format = "JSFX", .envVars = {"JSFX_PATH"}, .defaultPaths = {"/opt/REAPER/Plugins/FX", "~/.config/REAPER/Effects"}, .fileFilter = "*.jsfx", .bundleDir = false}};
 
-QString toCategoryStr(int cat) {
+auto toCategoryStr(int cat) -> QString {
     switch (static_cast<CarlaBackend::PluginCategory>(cat)) {
     case CarlaBackend::PLUGIN_CATEGORY_SYNTH:
         return "Synth";
@@ -346,80 +361,102 @@ QString toCategoryStr(int cat) {
     }
 }
 
-QString normalizeCategoryTitle(QString category) {
+auto normalizeCategoryTitle(QString category) -> QString {
     category = category.trimmed();
-    if (category.isEmpty())
+    if (category.isEmpty()) {
         return "Other";
+    }
     const QString lower = category.toLower();
-    if (lower == "synth" || lower == "instrument")
+    if (lower == "synth" || lower == "instrument") {
         return "Synth";
-    if (lower == "delay" || lower == "reverb")
+    }
+    if (lower == "delay" || lower == "reverb") {
         return "Delay";
-    if (lower == "eq")
+    }
+    if (lower == "eq") {
         return "EQ";
-    if (lower == "filter")
+    }
+    if (lower == "filter") {
         return "Filter";
-    if (lower == "distortion")
+    }
+    if (lower == "distortion") {
         return "Distortion";
-    if (lower == "dynamics")
+    }
+    if (lower == "dynamics") {
         return "Dynamics";
-    if (lower == "modulator" || lower == "modulation")
+    }
+    if (lower == "modulator" || lower == "modulation") {
         return "Modulator";
-    if (lower == "utility" || lower == "tools" || lower == "tool")
+    }
+    if (lower == "utility" || lower == "tools" || lower == "tool") {
         return "Utility";
-    if (lower == "other" || lower == "unknown" || lower == "misc" || lower == "none" || lower == "null")
+    }
+    if (lower == "other" || lower == "unknown" || lower == "misc" || lower == "none" || lower == "null") {
         return "Other";
+    }
     return category;
 }
 
-QString normalizePluginName(QString name, const QString &label, const QString &filePath) {
+auto normalizePluginName(QString name, const QString &label, const QString &filePath) -> QString {
     name = name.trimmed();
-    if (!name.isEmpty())
+    if (!name.isEmpty()) {
         return name;
+    }
     const QString l = label.trimmed();
-    if (!l.isEmpty())
+    if (!l.isEmpty()) {
         return l;
+    }
     return QFileInfo(filePath).completeBaseName().trimmed();
 }
 
-QString normalizePluginLabel(QString label, const QString &name) {
+auto normalizePluginLabel(QString label, const QString &name) -> QString {
     label = label.trimmed();
     return label.isEmpty() ? name.trimmed() : label;
 }
 
-int categoryRank(const QString &category) {
+auto categoryRank(const QString &category) -> int {
     const QString c = normalizeCategoryTitle(category);
-    if (c == "Filter")
+    if (c == "Filter") {
         return 0;
-    if (c == "EQ")
+    }
+    if (c == "EQ") {
         return 1;
-    if (c == "Dynamics")
+    }
+    if (c == "Dynamics") {
         return 2;
-    if (c == "Delay")
+    }
+    if (c == "Delay") {
         return 3;
-    if (c == "Distortion")
+    }
+    if (c == "Distortion") {
         return 4;
-    if (c == "Modulator")
+    }
+    if (c == "Modulator") {
         return 5;
-    if (c == "Utility")
+    }
+    if (c == "Utility") {
         return 6;
-    if (c == "Synth")
+    }
+    if (c == "Synth") {
         return 7;
+    }
     return 100;
 }
 
-QList<PluginInfo> parseDiscoveryOutput(const QString &output, const QString &format, const QString &filePath) {
+auto parseDiscoveryOutput(const QString &output, const QString &format, const QString &filePath) -> QList<PluginInfo> {
     QList<PluginInfo> results;
     PluginInfo current;
     bool inBlock = false;
 
     for (const QString &rawLine : output.split('\n')) {
         const QString line = rawLine.trimmed();
-        if (!line.startsWith("carla-discovery::"))
+        if (!line.startsWith("carla-discovery::")) {
             continue;
+        }
         const QStringList parts = line.split("::");
-        if (parts.size() < 2)
+        if (parts.size() < 2) {
             continue;
+        }
         const QString &key = parts.at(1);
         const QString val = parts.size() >= 3 ? parts.mid(2).join("::") : "";
 
@@ -464,9 +501,10 @@ QList<PluginInfo> parseDiscoveryOutput(const QString &output, const QString &for
 // 1ファイルに対してディスカバリを実行
 // stdout の逐次読み出しでバッファ詰まりデッドロックを回避
 // stdin を /dev/null に向けて子プロセスによる端末状態の汚染を防ぐ
-QList<PluginInfo> runDiscovery(const QString &tool, const QString &type, const QString &format, const QString &target, std::atomic<bool> &stopFlag) {
-    if (stopFlag)
+auto runDiscovery(const QString &tool, const QString &type, const QString &format, const QString &target, std::atomic<bool> &stopFlag) -> QList<PluginInfo> {
+    if (stopFlag) {
         return {};
+    }
 
     QProcess proc;
     proc.setStandardInputFile(QProcess::nullDevice());
@@ -486,8 +524,9 @@ QList<PluginInfo> runDiscovery(const QString &tool, const QString &type, const Q
     while (!stopFlag) {
         proc.waitForReadyRead(Rina::Core::SettingsManager::instance().value("pluginDiscoveryWaitReadyReadMs", 200).toInt());
         output += proc.readAllStandardOutput();
-        if (proc.state() == QProcess::NotRunning)
+        if (proc.state() == QProcess::NotRunning) {
             break;
+        }
         if (timer.elapsed() > kTimeoutMs) {
             qWarning() << "[Discovery] タイムアウト:" << target;
             proc.kill();
@@ -506,29 +545,31 @@ QList<PluginInfo> runDiscovery(const QString &tool, const QString &type, const Q
     return parseDiscoveryOutput(QString::fromUtf8(output), format, target);
 }
 
-QStringList collectSearchPaths(const FormatConfig &cfg) {
+auto collectSearchPaths(const FormatConfig &cfg) -> QStringList {
     QStringList paths;
     for (const QString &envKey : cfg.envVars) {
         const QByteArray val = qgetenv(envKey.toUtf8().constData());
-        if (!val.isEmpty())
+        if (!val.isEmpty()) {
             paths << QString::fromLocal8Bit(val).split(':');
+        }
     }
     paths << (QDir::homePath() + "/." + cfg.type);
     paths << cfg.defaultPaths;
     return paths;
 }
 
-bool isDiscoveryTypeSupported(const QString &tool, const QString &type) {
+auto isDiscoveryTypeSupported(const QString &tool, const QString &type) -> bool {
     QProcess probe;
     probe.setStandardInputFile(QProcess::nullDevice());
     probe.setProcessChannelMode(QProcess::SeparateChannels);
     probe.start(tool, {type, "__probe__"});
-    if (!probe.waitForFinished(3000))
+    if (!probe.waitForFinished(3000)) {
         probe.kill();
+    }
     return !probe.readAllStandardError().contains("invalid string type");
 }
 
-QList<PluginInfo> discoverFormat(const QString &tool, const FormatConfig &cfg, std::atomic<bool> &stopFlag) {
+auto discoverFormat(const QString &tool, const FormatConfig &cfg, std::atomic<bool> &stopFlag) -> QList<PluginInfo> {
     if (!isDiscoveryTypeSupported(tool, cfg.type)) {
         qWarning() << "[AudioPluginManager]" << cfg.format << "はインストール済みCarlaバージョンで未対応のためスキップ";
         return {};
@@ -538,14 +579,16 @@ QList<PluginInfo> discoverFormat(const QString &tool, const FormatConfig &cfg, s
     if (cfg.type == "lv2") {
         QStringList lv2SearchPaths;
         const QByteArray lv2PathEnv = qgetenv("LV2_PATH");
-        if (!lv2PathEnv.isEmpty())
+        if (!lv2PathEnv.isEmpty()) {
             lv2SearchPaths << QString::fromLocal8Bit(lv2PathEnv).split(':', Qt::SkipEmptyParts);
+        }
         lv2SearchPaths << QDir::homePath() + "/.lv2" << "/usr/lib/lv2" << "/usr/local/lib/lv2";
         QSet<QString> visited;
         for (const QString &searchPath : lv2SearchPaths) {
             QDir dir(searchPath);
-            if (!dir.exists())
+            if (!dir.exists()) {
                 continue;
+            }
             for (const QFileInfo &fi : dir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot)) {
                 const QString bundlePath = fi.absoluteFilePath();
                 if (fi.suffix() == "lv2" && !visited.contains(bundlePath)) {
@@ -566,15 +609,18 @@ QList<PluginInfo> discoverFormat(const QString &tool, const FormatConfig &cfg, s
         QSet<QString> visited;
 
         for (const QString &dirPath : searchPaths) {
-            if (stopFlag)
+            if (stopFlag) {
                 break;
+            }
             QDir d(dirPath);
-            if (!d.exists())
+            if (!d.exists()) {
                 continue;
+            }
 
             const QString canonical = d.canonicalPath();
-            if (visited.contains(canonical))
+            if (visited.contains(canonical)) {
                 continue;
+            }
             visited.insert(canonical);
 
             if (cfg.bundleDir) {
@@ -598,9 +644,10 @@ QList<PluginInfo> discoverFormat(const QString &tool, const FormatConfig &cfg, s
     QThreadPool pool;
     pool.setMaxThreadCount(Rina::Core::SettingsManager::instance().value("pluginDiscoveryThreads", std::max(2, QThread::idealThreadCount() - 1)).toInt());
 
-    QtConcurrent::blockingMap(&pool, targets, [&](const QString &target) {
-        if (stopFlag)
+    QtConcurrent::blockingMap(&pool, targets, [&](const QString &target) -> void {
+        if (stopFlag) {
             return;
+        }
         QList<PluginInfo> res = runDiscovery(tool, cfg.type, cfg.format, target, stopFlag);
         if (!res.isEmpty()) {
             QMutexLocker lock(&mutex);
@@ -613,23 +660,24 @@ QList<PluginInfo> discoverFormat(const QString &tool, const FormatConfig &cfg, s
 
 } // namespace
 
-AudioPluginManager &AudioPluginManager::instance() {
+auto AudioPluginManager::instance() -> AudioPluginManager & {
     static AudioPluginManager inst;
     return inst;
 }
 
-AudioPluginManager::AudioPluginManager() {}
+AudioPluginManager::AudioPluginManager() = default;
 
 AudioPluginManager::~AudioPluginManager() { stopScan(); }
 
 void AudioPluginManager::stopScan() { m_stopRequested = true; }
 
 void AudioPluginManager::initialize() {
-    if (m_initialized)
+    if (m_initialized) {
         return;
+    }
     m_initialized = true;
 
-    auto future = QtConcurrent::run([this] {
+    auto future = QtConcurrent::run([this] -> void {
         scanPlugins();
         emit pluginsReady(m_plugins.size());
     });
@@ -651,8 +699,9 @@ void AudioPluginManager::scanPlugins() {
             break;
         }
     }
-    if (tool.isEmpty())
+    if (tool.isEmpty()) {
         tool = QStandardPaths::findExecutable("carla-discovery-native");
+    }
     if (tool.isEmpty()) {
         qWarning() << "[AudioPluginManager] carla-discovery-native が見つかりません";
         qWarning() << "[AudioPluginManager] 検索パス:" << kDiscoverySearchPaths;
@@ -665,11 +714,13 @@ void AudioPluginManager::scanPlugins() {
     QHash<QString, PluginInfo> newMap;
 
     for (const FormatConfig &cfg : kFormats) {
-        if (m_stopRequested)
+        if (m_stopRequested) {
             break;
+        }
         bool isEnabled = Rina::Core::SettingsManager::instance().value("pluginEnable" + cfg.format, true).toBool();
-        if (!isEnabled)
+        if (!isEnabled) {
             continue;
+        }
 
         qDebug() << "[AudioPluginManager] スキャン中:" << cfg.format;
         const QList<PluginInfo> found = discoverFormat(tool, cfg, m_stopRequested);
@@ -691,7 +742,7 @@ void AudioPluginManager::scanPlugins() {
     m_scanning = false;
 }
 
-QVariantList AudioPluginManager::getPluginList() const {
+auto AudioPluginManager::getPluginList() const -> QVariantList {
     QMutexLocker lock(&m_pluginsMutex);
     QVariantList list;
     list.reserve(m_plugins.size());
@@ -709,33 +760,37 @@ QVariantList AudioPluginManager::getPluginList() const {
     return list;
 }
 
-QVariantList AudioPluginManager::getCategories() const {
+auto AudioPluginManager::getCategories() const -> QVariantList {
     QMutexLocker lock(&m_pluginsMutex);
     QStringList cats;
     for (const auto &info : m_plugins) {
         const QString c = normalizeCategoryTitle(info.category);
-        if (!cats.contains(c))
+        if (!cats.contains(c)) {
             cats.append(c);
+        }
     }
-    std::sort(cats.begin(), cats.end(), [](const QString &a, const QString &b) {
-        const int ra = categoryRank(a), rb = categoryRank(b);
+    std::ranges::sort(cats, [](const QString &a, const QString &b) -> bool {
+        const int ra = categoryRank(a);
+        const int rb = categoryRank(b);
         return ra != rb ? ra < rb : a.toLower() < b.toLower();
     });
     QVariantList list;
-    for (const auto &c : cats)
+    for (const auto &c : cats) {
         list.append(c);
+    }
     return list;
 }
 
-QVariantList AudioPluginManager::getPluginsInCategory(const QString &category) const {
+auto AudioPluginManager::getPluginsInCategory(const QString &category) const -> QVariantList {
     QMutexLocker lock(&m_pluginsMutex);
     const QString wanted = normalizeCategoryTitle(category);
     QList<PluginInfo> matched;
     for (const auto &info : m_plugins) {
-        if (normalizeCategoryTitle(info.category) == wanted)
+        if (normalizeCategoryTitle(info.category) == wanted) {
             matched.append(info);
+        }
     }
-    std::sort(matched.begin(), matched.end(), [](const PluginInfo &a, const PluginInfo &b) { return a.name.toLower() < b.name.toLower(); });
+    std::ranges::sort(matched, [](const PluginInfo &a, const PluginInfo &b) -> bool { return a.name.toLower() < b.name.toLower(); });
     QVariantList list;
     for (const auto &info : matched) {
         QVariantMap map;
@@ -749,9 +804,9 @@ QVariantList AudioPluginManager::getPluginsInCategory(const QString &category) c
     return list;
 }
 
-std::unique_ptr<IAudioPlugin> AudioPluginManager::createPlugin(const QString &id) {
+auto AudioPluginManager::createPlugin(const QString &id) -> std::unique_ptr<IAudioPlugin> {
     QMutexLocker lock(&m_pluginsMutex);
-    auto it = std::find_if(m_plugins.begin(), m_plugins.end(), [&](const PluginInfo &info) { return info.id == id; });
+    auto it = std::ranges::find_if(m_plugins, [&](const PluginInfo &info) -> bool { return info.id == id; });
 
     if (it == m_plugins.end()) {
         qWarning() << "[AudioPluginManager] Plugin not found:" << id;

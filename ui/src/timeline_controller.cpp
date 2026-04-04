@@ -43,7 +43,7 @@ void TimelineController::initializeServices() {
 void TimelineController::setupConnections() {
     connect(
         m_timeline, &TimelineService::clipsChanged, this,
-        [this]() {
+        [this]() -> void {
             m_engineSync->rebuildClipIndex();
             emit clipsChanged();
             m_mediaManager->updateMediaDecoders();
@@ -53,7 +53,7 @@ void TimelineController::setupConnections() {
         },
         Qt::QueuedConnection);
 
-    connect(m_selection, &SelectionService::selectedClipDataChanged, this, [this]() {
+    connect(m_selection, &SelectionService::selectedClipDataChanged, this, [this]() -> void {
         emit clipStartFrameChanged();
         emit clipDurationFramesChanged();
         emit layerChanged();
@@ -61,19 +61,19 @@ void TimelineController::setupConnections() {
         updateClipActiveState();
     });
 
-    connect(m_timeline, &TimelineService::scenesChanged, this, [this]() {
+    connect(m_timeline, &TimelineService::scenesChanged, this, [this]() -> void {
         m_mediaManager->updateMediaDecoders();
         m_mediaManager->onCurrentFrameChanged();
         updateActiveClipsList();
         emit scenesChanged();
     });
     connect(m_timeline, &TimelineService::currentSceneIdChanged, this, &TimelineController::currentSceneIdChanged);
-    connect(m_timeline, &TimelineService::clipEffectsChanged, this, [this](int id) {
+    connect(m_timeline, &TimelineService::clipEffectsChanged, this, [this](int id) -> void {
         m_mediaManager->onCurrentFrameChanged();
         updateActiveClipsList();
         emit clipEffectsChanged(id);
     });
-    connect(m_timeline, &TimelineService::effectParamChanged, this, [this]() {
+    connect(m_timeline, &TimelineService::effectParamChanged, this, [this]() -> void {
         m_mediaManager->onCurrentFrameChanged();
         updateActiveClipsList();
     });
@@ -86,7 +86,7 @@ void TimelineController::setupConnections() {
     connect(m_exportManager, &TimelineExportManager::exportFinished, this, &TimelineController::exportFinished);
 
     // FPSが変更されたら再生タイマーの間隔を更新
-    connect(m_project, &ProjectService::fpsChanged, [this]() { m_transport->updateTimerInterval(m_project->fps()); });
+    connect(m_project, &ProjectService::fpsChanged, [this]() -> void { m_transport->updateTimerInterval(m_project->fps()); });
     m_transport->updateTimerInterval(m_project->fps());
 
     // 再生状態の変化をデコーダーに伝播
@@ -109,8 +109,8 @@ void TimelineController::onCurrentFrameChanged() {
 }
 
 void TimelineController::handleClipClick(int clipId, int modifiers) {
-    if (modifiers & Qt::ControlModifier) {
-        m_timeline->toggleSelection(clipId, m_timeline->findClipById(clipId) ? QVariantMap() : QVariantMap());
+    if ((modifiers & Qt::ControlModifier) != 0U) {
+        m_timeline->toggleSelection(clipId, (m_timeline->findClipById(clipId) != nullptr) ? QVariantMap() : QVariantMap());
     } else {
         m_timeline->applySelectionIds({clipId});
     }
@@ -118,7 +118,7 @@ void TimelineController::handleClipClick(int clipId, int modifiers) {
 
 void TimelineController::updateSelectionPreview(int frameA, int frameB, int layerA, int layerB, bool additive) {
     QVariantList ids;
-    if (additive && m_selection) {
+    if (additive && (m_selection != nullptr)) {
         ids = m_selection->selectedClipIds();
     }
 
@@ -140,8 +140,9 @@ void TimelineController::updateSelectionPreview(int frameA, int frameB, int laye
 
         int clipEnd = clip.startFrame + clip.durationFrames;
         if (clip.startFrame < maxF && minF < clipEnd && clipMaxL >= minL && clip.layer <= maxL) {
-            if (!ids.contains(clip.id))
+            if (!ids.contains(clip.id)) {
                 ids.append(clip.id);
+            }
         }
     }
 
@@ -163,7 +164,7 @@ void TimelineController::clearSelectionPreview() {
     }
 }
 
-QVariantList TimelineController::previewSelectionIds() const { return m_previewSelectionIds; }
+auto TimelineController::previewSelectionIds() const -> QVariantList { return m_previewSelectionIds; }
 
 void TimelineController::setVideoFrameStore(Rina::Core::VideoFrameStore *store) {
     qDebug() << "TimelineController: VideoFrameStore set. Updating decoders...";
@@ -171,14 +172,15 @@ void TimelineController::setVideoFrameStore(Rina::Core::VideoFrameStore *store) 
 }
 
 void TimelineController::togglePlay() {
-    if (m_transport)
+    if (m_transport != nullptr) {
         m_transport->togglePlay();
+    }
 }
 
 void TimelineController::undo() { m_timeline->undo(); }
 void TimelineController::redo() { m_timeline->redo(); }
 
-double TimelineController::timelineScale() const { return m_timelineScale; }
+auto TimelineController::timelineScale() const -> double { return m_timelineScale; }
 void TimelineController::setTimelineScale(double scale) {
     if (qAbs(m_timelineScale - scale) > 0.001) {
         m_timelineScale = scale;
@@ -189,16 +191,18 @@ void TimelineController::setTimelineScale(double scale) {
 // プロパティアクセサ
 void TimelineController::setClipProperty(const QString &name, const QVariant &value) {
     const QVariantList ids = m_selection->selectedClipIds();
-    if (ids.isEmpty())
+    if (ids.isEmpty()) {
         return;
+    }
 
     m_timeline->undoStack()->beginMacro(tr("プロパティ変更: %1").arg(name));
 
     for (const QVariant &vId : ids) {
         int id = vId.toInt();
         const ClipData *clip = m_timeline->findClipById(id);
-        if (!clip)
+        if (clip == nullptr) {
             continue;
+        }
 
         int targetEffectIndex = -1;
         for (int i = 0; i < clip->effects.size(); ++i) {
@@ -224,49 +228,55 @@ void TimelineController::setClipProperty(const QString &name, const QVariant &va
     m_timeline->undoStack()->endMacro();
 }
 
-QVariant TimelineController::getClipProperty(const QString &name) const { return m_selection->selectedClipData().value(name); }
+auto TimelineController::getClipProperty(const QString &name) const -> QVariant { return m_selection->selectedClipData().value(name); }
 
-int TimelineController::clipStartFrame() const { return m_selection->selectedClipData().value("startFrame", 0).toInt(); }
+auto TimelineController::clipStartFrame() const -> int { return m_selection->selectedClipData().value("startFrame", 0).toInt(); }
 void TimelineController::setClipStartFrame(int frame) {
     const QVariantList ids = m_selection->selectedClipIds();
-    if (ids.isEmpty())
+    if (ids.isEmpty()) {
         return;
+    }
 
     m_timeline->undoStack()->beginMacro(tr("開始フレーム変更"));
     for (const QVariant &vId : ids) {
         int id = vId.toInt();
-        if (const auto *c = m_timeline->findClipById(id))
+        if (const auto *c = m_timeline->findClipById(id)) {
             m_timeline->updateClip(id, c->layer, frame, c->durationFrames);
+        }
     }
     m_timeline->undoStack()->endMacro();
 }
 
-int TimelineController::clipDurationFrames() const { return m_selection->selectedClipData().value("durationFrames", 100).toInt(); }
+auto TimelineController::clipDurationFrames() const -> int { return m_selection->selectedClipData().value("durationFrames", 100).toInt(); }
 void TimelineController::setClipDurationFrames(int frames) {
     const QVariantList ids = m_selection->selectedClipIds();
-    if (ids.isEmpty())
+    if (ids.isEmpty()) {
         return;
+    }
 
     m_timeline->undoStack()->beginMacro(tr("長さ変更"));
     for (const QVariant &vId : ids) {
         int id = vId.toInt();
-        if (const auto *c = m_timeline->findClipById(id))
+        if (const auto *c = m_timeline->findClipById(id)) {
             m_timeline->updateClip(id, c->layer, c->startFrame, frames);
+        }
     }
     m_timeline->undoStack()->endMacro();
 }
 
-int TimelineController::layer() const { return m_selection->selectedClipData().value("layer", 0).toInt(); }
+auto TimelineController::layer() const -> int { return m_selection->selectedClipData().value("layer", 0).toInt(); }
 void TimelineController::setLayer(int layer) {
     const QVariantList ids = m_selection->selectedClipIds();
-    if (ids.isEmpty())
+    if (ids.isEmpty()) {
         return;
+    }
 
     m_timeline->undoStack()->beginMacro(tr("レイヤー変更"));
     for (const QVariant &vId : ids) {
         int id = vId.toInt();
-        if (const auto *c = m_timeline->findClipById(id))
+        if (const auto *c = m_timeline->findClipById(id)) {
             m_timeline->updateClip(id, layer, c->startFrame, c->durationFrames);
+        }
     }
     m_timeline->undoStack()->endMacro();
 }
@@ -278,7 +288,7 @@ void TimelineController::setSelectedLayer(int layer) {
     }
 }
 
-bool TimelineController::isClipActive() const { return m_isClipActive; }
+auto TimelineController::isClipActive() const -> bool { return m_isClipActive; }
 
 void TimelineController::updateClipActiveState() {
     int current = m_transport->currentFrame();
@@ -292,14 +302,15 @@ void TimelineController::updateClipActiveState() {
     }
 }
 
-QString TimelineController::activeObjectType() const { return m_selection->selectedClipData().value("type", "rect").toString(); }
+auto TimelineController::activeObjectType() const -> QString { return m_selection->selectedClipData().value("type", "rect").toString(); }
 
 void TimelineController::createObject(const QString &type, int startFrame, int layer) {
-    if (m_timeline)
+    if (m_timeline != nullptr) {
         m_timeline->createClip(type, startFrame, layer);
+    }
 }
 
-QList<QObject *> TimelineController::getClipEffectsModel(int clipId) const {
+auto TimelineController::getClipEffectsModel(int clipId) const -> QList<QObject *> {
     QList<QObject *> list;
     for (const auto &clip : m_timeline->clips()) {
         if (clip.id == clipId) {
@@ -314,7 +325,7 @@ QList<QObject *> TimelineController::getClipEffectsModel(int clipId) const {
 
 void TimelineController::updateClipEffectParam(int clipId, int effectIndex, const QString &paramName, const QVariant &value) { m_timeline->updateEffectParam(clipId, effectIndex, paramName, value); }
 
-QVariantList TimelineController::clips() const {
+auto TimelineController::clips() const -> QVariantList {
     QVariantList list;
     for (const auto &clip : m_timeline->clips()) {
         QVariantMap map;
@@ -366,36 +377,40 @@ void TimelineController::updateActiveClipsList() { m_engineSync->updateActiveCli
 void TimelineController::log(const QString &msg) { qDebug() << "[TimelineBridge] " << msg; }
 
 void TimelineController::moveSelectedClips(int deltaLayer, int deltaFrame) {
-    if (m_timeline)
+    if (m_timeline != nullptr) {
         m_timeline->moveSelectedClips(deltaLayer, deltaFrame);
+    }
 }
 
 void TimelineController::applyClipBatchMove(const QVariantList &moves) {
-    if (m_timeline)
+    if (m_timeline != nullptr) {
         m_timeline->applyClipBatchMove(moves);
+    }
 }
 
 void TimelineController::resizeSelectedClips(int deltaStartFrame, int deltaDuration) {
-    if (m_timeline)
+    if (m_timeline != nullptr) {
         m_timeline->resizeSelectedClips(deltaStartFrame, deltaDuration);
+    }
 }
 
 void TimelineController::updateClip(int id, int layer, int startFrame, int duration) {
     const auto *clip = m_timeline->findClipById(id);
 
-    if (clip) {
+    if (clip != nullptr) {
         const int projectFps = project()->fps();
 
         if (clip->type == "video") {
             auto *vid = qobject_cast<Rina::Core::VideoDecoder *>(m_mediaManager->decoderForClip(id));
-            if (vid && vid->isReady()) {
+            if ((vid != nullptr) && vid->isReady()) {
                 int startVideoFrame = 0;
                 double speed = 100.0;
                 bool isDirectMode = false;
 
                 for (const auto *eff : clip->effects) {
-                    if (eff->id() != "video")
+                    if (eff->id() != "video") {
                         continue;
+                    }
                     const QString playMode = eff->params().value("playMode", "開始フレーム＋再生速度").toString();
                     if (playMode == "フレーム直接指定") {
                         isDirectMode = true;
@@ -407,8 +422,9 @@ void TimelineController::updateClip(int id, int layer, int startFrame, int durat
                 }
 
                 double srcFps = vid->sourceFps();
-                if (srcFps <= 0.0)
+                if (srcFps <= 0.0) {
                     srcFps = projectFps;
+                }
                 int maxDuration = duration;
 
                 if (isDirectMode) {
@@ -417,7 +433,7 @@ void TimelineController::updateClip(int id, int layer, int startFrame, int durat
                     maxDuration = static_cast<int>(totalSec * projectFps);
                 } else if (speed > 0.0) {
                     const double startSec = static_cast<double>(startVideoFrame) / srcFps;
-                    const double remainingSec = static_cast<double>(vid->totalFrameCount()) / srcFps - startSec;
+                    const double remainingSec = (static_cast<double>(vid->totalFrameCount()) / srcFps) - startSec;
                     if (remainingSec > 0.0) {
                         maxDuration = static_cast<int>(remainingSec / (speed / 100.0) * projectFps);
                     }
@@ -429,14 +445,15 @@ void TimelineController::updateClip(int id, int layer, int startFrame, int durat
             }
         } else if (clip->type == "audio") {
             auto *aud = qobject_cast<Rina::Core::AudioDecoder *>(m_mediaManager->decoderForClip(id));
-            if (aud && aud->isReady()) {
+            if ((aud != nullptr) && aud->isReady()) {
                 double startTime = 0.0;
                 double speed = 100.0;
                 bool isDirectMode = false;
 
                 for (const auto *eff : clip->effects) {
-                    if (eff->id() != "audio")
+                    if (eff->id() != "audio") {
                         continue;
+                    }
                     const QString playMode = eff->params().value("playMode", "開始時間＋再生速度").toString();
                     if (playMode == "時間直接指定") {
                         isDirectMode = true;
@@ -471,8 +488,9 @@ void TimelineController::updateClip(int id, int layer, int startFrame, int durat
             [[maybe_unused]] bool isDirectMode = false;
 
             for (const auto *eff : clip->effects) {
-                if (eff->id() != "scene")
+                if (eff->id() != "scene") {
                     continue;
+                }
                 // ※ 現在Sceneには playMode パラメータは無いが、将来のために概念として考慮。
                 // 現状の仕様では「speed と offset」による計算。
                 targetSceneId = eff->params().value("targetSceneId", 0).toInt();
@@ -485,11 +503,8 @@ void TimelineController::updateClip(int id, int layer, int startFrame, int durat
             if (sceneDur > 0 && speed > 0.0) {
                 const double rhs = (static_cast<double>(sceneDur - 1 - offset)) / speed;
                 int maxDuration = static_cast<int>(rhs) + 1;
-                if (maxDuration < 1)
-                    maxDuration = 1;
-                if (duration > maxDuration) {
-                    duration = maxDuration;
-                }
+                maxDuration = std::max(maxDuration, 1);
+                duration = std::min(duration, maxDuration);
             }
         }
     }
@@ -499,15 +514,16 @@ void TimelineController::updateClip(int id, int layer, int startFrame, int durat
 
 void TimelineController::moveClipWithCollisionCheck(int clipId, int layer, int startFrame) {
     const ClipData *clip = m_timeline->findClipById(clipId);
-    if (!clip)
+    if (clip == nullptr) {
         return;
+    }
 
     int duration = clip->durationFrames;
     int fixedStart = m_timeline->findVacantFrame(layer, startFrame, duration, clipId);
     updateClip(clipId, layer, fixedStart, duration);
 }
 
-bool TimelineController::saveProject(const QString &fileUrl) {
+auto TimelineController::saveProject(const QString &fileUrl) -> bool {
     // 渡されたパスが空の場合は内部で保持しているパスを割り当てる
     QString targetUrl = fileUrl.isEmpty() ? m_currentProjectUrl : fileUrl;
 
@@ -530,7 +546,7 @@ bool TimelineController::saveProject(const QString &fileUrl) {
     return result;
 }
 
-bool TimelineController::loadProject(const QString &fileUrl) {
+auto TimelineController::loadProject(const QString &fileUrl) -> bool {
     QString error;
     bool result = Rina::Core::ProjectSerializer::load(fileUrl, m_timeline, m_project, &error);
 
@@ -544,11 +560,12 @@ bool TimelineController::loadProject(const QString &fileUrl) {
     return result;
 }
 
-QVariantMap TimelineController::getProjectInfo(const QString &fileUrl) const {
+auto TimelineController::getProjectInfo(const QString &fileUrl) -> QVariantMap {
     QVariantMap result;
     QString path = QUrl(fileUrl).toLocalFile();
-    if (path.isEmpty())
+    if (path.isEmpty()) {
         path = fileUrl;
+    }
 
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly)) {
@@ -571,7 +588,7 @@ QVariantMap TimelineController::getProjectInfo(const QString &fileUrl) const {
     return result;
 }
 
-bool TimelineController::exportMedia(const QString &fileUrl, const QString &format, int quality) { return m_exportManager->exportMedia(fileUrl, format, quality); }
+auto TimelineController::exportMedia(const QString &fileUrl, const QString &format, int quality) -> bool { return m_exportManager->exportMedia(fileUrl, format, quality); }
 
 void TimelineController::exportVideoAsync(const QVariantMap &cfg) {
     Rina::Core::VideoEncoder::Config c;
@@ -591,36 +608,41 @@ void TimelineController::exportVideoAsync(const QVariantMap &cfg) {
 }
 
 void TimelineController::cancelExport() { m_exportManager->cancelExport(); }
-bool TimelineController::isExporting() const { return m_exportManager->isExporting(); }
+auto TimelineController::isExporting() const -> bool { return m_exportManager->isExporting(); }
 
 void TimelineController::selectClip(int id) {
-    if (m_timeline)
+    if (m_timeline != nullptr) {
         m_timeline->applySelectionIds(QVariantList{id});
+    }
 }
 
 void TimelineController::selectClipsInRange(int frameA, int frameB, int layerA, int layerB, bool additive) {
-    if (m_timeline)
+    if (m_timeline != nullptr) {
         m_timeline->selectClipsInRange(frameA, frameB, layerA, layerB, additive);
+    }
 }
 
 void TimelineController::toggleSelection(int id, const QVariantMap &data) {
-    if (m_timeline)
+    if (m_timeline != nullptr) {
         m_timeline->toggleSelection(id, data);
+    }
 }
 
 void TimelineController::applySelectionIds(const QVariantList &ids) {
-    if (m_timeline)
+    if (m_timeline != nullptr) {
         m_timeline->applySelectionIds(ids);
+    }
 }
 
 // エフェクト・オブジェクト操作
 
-QVariantList TimelineController::getAvailableEffects() const {
+auto TimelineController::getAvailableEffects() -> QVariantList {
     QVariantList list;
     const auto effects = Rina::Core::EffectRegistry::instance().getAllEffects();
     for (const auto &meta : effects) {
-        if (meta.category != "filter")
+        if (meta.category != "filter") {
             continue;
+        }
         QVariantMap m;
         m["id"] = meta.id;
         m["name"] = meta.name;
@@ -629,12 +651,13 @@ QVariantList TimelineController::getAvailableEffects() const {
     return list;
 }
 
-QVariantList TimelineController::getAvailableObjects() const {
+auto TimelineController::getAvailableObjects() -> QVariantList {
     QVariantList list;
     const auto effects = Rina::Core::EffectRegistry::instance().getAllEffects();
     for (const auto &meta : effects) {
-        if (meta.category != "object")
+        if (meta.category != "object") {
             continue;
+        }
         QVariantMap m;
         m["id"] = meta.id;
         m["name"] = meta.name;
@@ -643,9 +666,9 @@ QVariantList TimelineController::getAvailableObjects() const {
     return list;
 }
 
-QString TimelineController::getClipTypeColor(const QString &type) const { return Rina::Core::EffectRegistry::instance().getEffect(type).color; }
+auto TimelineController::getClipTypeColor(const QString &type) -> QString { return Rina::Core::EffectRegistry::instance().getEffect(type).color; }
 
-QVariantList TimelineController::getAvailableObjects(const QString &category) const {
+auto TimelineController::getAvailableObjects(const QString &category) -> QVariantList {
     QVariantList list;
     const auto effects = Rina::Core::EffectRegistry::instance().getAllEffects();
 
@@ -671,13 +694,15 @@ void TimelineController::removeEffect(int clipId, int effectIndex) {
 }
 
 void TimelineController::setEffectEnabled(int clipId, int effectIndex, bool enabled) {
-    if (m_timeline)
+    if (m_timeline != nullptr) {
         m_timeline->setEffectEnabled(clipId, effectIndex, enabled);
+    }
 }
 
 void TimelineController::reorderEffects(int clipId, int oldIndex, int newIndex) {
-    if (m_timeline)
+    if (m_timeline != nullptr) {
         m_timeline->reorderEffects(clipId, oldIndex, newIndex);
+    }
 }
 
 void TimelineController::copyEffect(int clipId, int effectIndex) { m_timeline->copyEffect(clipId, effectIndex); }
@@ -689,7 +714,7 @@ void TimelineController::cutEffect(int clipId, int effectIndex) {
     m_timeline->removeEffect(clipId, effectIndex);
 }
 
-QVariantList TimelineController::getAvailableAudioPlugins() const { return Rina::Engine::Plugin::AudioPluginManager::instance().getPluginList(); }
+auto TimelineController::getAvailableAudioPlugins() -> QVariantList { return Rina::Engine::Plugin::AudioPluginManager::instance().getPluginList(); }
 
 void TimelineController::addAudioPlugin(int clipId, const QString &pluginId) {
     auto plugin = Rina::Engine::Plugin::AudioPluginManager::instance().createPlugin(pluginId);
@@ -708,48 +733,55 @@ void TimelineController::removeAudioPlugin(int clipId, int index) {
 }
 
 void TimelineController::setAudioPluginEnabled(int clipId, int index, bool enabled) {
-    if (m_timeline)
+    if (m_timeline != nullptr) {
         m_timeline->setAudioPluginEnabled(clipId, index, enabled);
+    }
 }
 
 void TimelineController::reorderAudioPlugins(int clipId, int oldIndex, int newIndex) {
-    if (m_timeline)
+    if (m_timeline != nullptr) {
         m_timeline->reorderAudioPlugins(clipId, oldIndex, newIndex);
+    }
 }
 
-QVariantList TimelineController::getPluginCategories() const {
+auto TimelineController::getPluginCategories() -> QVariantList {
     // AudioPluginManagerから重複のないカテゴリ名リストを抽出
     return Rina::Engine::Plugin::AudioPluginManager::instance().getCategories();
 }
 
-QVariantList TimelineController::getPluginsByCategory(const QString &category) const {
+auto TimelineController::getPluginsByCategory(const QString &category) -> QVariantList {
     // 特定カテゴリに属するプラグインのみを返す
     return Rina::Engine::Plugin::AudioPluginManager::instance().getPluginsInCategory(category);
 }
 
-bool TimelineController::isAudioClip(int clipId) const {
+auto TimelineController::isAudioClip(int clipId) const -> bool {
     const auto *clip = m_timeline->findClipById(clipId);
-    return clip && clip->type == "audio";
+    return (clip != nullptr) && clip->type == "audio";
 }
 
-QVariantList TimelineController::getWaveformPeaks(int clipId, int pixelWidth, int displayDurationFrames) const {
-    if (pixelWidth <= 0 || displayDurationFrames <= 0)
+auto TimelineController::getWaveformPeaks(int clipId, int pixelWidth, int displayDurationFrames) const -> QVariantList {
+    if (pixelWidth <= 0 || displayDurationFrames <= 0) {
         return {};
+    }
 
     const auto *clip = m_timeline->findClipById(clipId);
-    if (!clip || clip->type != "audio")
+    if ((clip == nullptr) || clip->type != "audio") {
         return {};
+    }
 
-    auto *decoder = qobject_cast<Rina::Core::AudioDecoder *>(m_mediaManager ? m_mediaManager->decoderForClip(clipId) : nullptr);
-    if (!decoder || !decoder->isReady())
+    auto *decoder = qobject_cast<Rina::Core::AudioDecoder *>((m_mediaManager != nullptr) ? m_mediaManager->decoderForClip(clipId) : nullptr);
+    if ((decoder == nullptr) || !decoder->isReady()) {
         return QVariantList(pixelWidth, 0.0);
+    }
 
     int fps = m_project->fps();
-    if (fps <= 0)
+    if (fps <= 0) {
         fps = 60;
+    }
     int sampleRate = m_project->sampleRate();
-    if (sampleRate <= 0)
+    if (sampleRate <= 0) {
         sampleRate = 48000;
+    }
 
     // 渡された displayDurationFrames で秒数を計算 (ドラフト値が来たらそれを使う)
     double displaySec = static_cast<double>(displayDurationFrames) / fps;
@@ -757,21 +789,23 @@ QVariantList TimelineController::getWaveformPeaks(int clipId, int pixelWidth, in
     std::vector<float> rawPeaks = decoder->getPeaks(0.0, displaySec, pixelWidth);
     QVariantList result;
     result.reserve(rawPeaks.size());
-    for (float p : rawPeaks)
+    for (float p : rawPeaks) {
         result.append(static_cast<double>(p));
+    }
 
     return result;
 }
 
-QVariantList TimelineController::getClipEffectStack(int clipId) const {
+auto TimelineController::getClipEffectStack(int clipId) const -> QVariantList {
     QVariantList list;
-    if (clipId < 0)
+    if (clipId < 0) {
         return list;
+    }
 
     auto &chain = m_mediaManager->audioMixer()->getChain(clipId);
     for (int i = 0; i < chain.count(); ++i) {
         auto *plugin = chain.get(i);
-        if (plugin) {
+        if (plugin != nullptr) {
             QVariantMap effectInfo;
             effectInfo["name"] = plugin->name();
             effectInfo["format"] = plugin->format();
@@ -781,14 +815,15 @@ QVariantList TimelineController::getClipEffectStack(int clipId) const {
     return list;
 }
 
-QVariantList TimelineController::getEffectParameters(int clipId, int effectIndex) const {
+auto TimelineController::getEffectParameters(int clipId, int effectIndex) const -> QVariantList {
     QVariantList list;
-    if (clipId < 0)
+    if (clipId < 0) {
         return list;
+    }
 
     auto &chain = m_mediaManager->audioMixer()->getChain(clipId);
     auto *plugin = chain.get(effectIndex);
-    if (plugin) {
+    if (plugin != nullptr) {
         for (int i = 0; i < plugin->paramCount(); ++i) {
             QVariantMap paramInfo;
             auto info = plugin->getParamInfo(i);
@@ -799,12 +834,13 @@ QVariantList TimelineController::getEffectParameters(int clipId, int effectIndex
             paramInfo["min"] = info.min;
             paramInfo["max"] = info.max;
 
-            if (info.isToggle)
+            if (info.isToggle) {
                 paramInfo["type"] = "bool";
-            else if (info.isInteger)
+            } else if (info.isInteger) {
                 paramInfo["type"] = "int";
-            else
+            } else {
                 paramInfo["type"] = "slider";
+            }
 
             list.append(paramInfo);
         }
@@ -813,11 +849,12 @@ QVariantList TimelineController::getEffectParameters(int clipId, int effectIndex
 }
 
 void TimelineController::setEffectParameter(int clipId, int effectIndex, int paramIndex, float value) {
-    if (clipId < 0)
+    if (clipId < 0) {
         return;
+    }
     auto &chain = m_mediaManager->audioMixer()->getChain(clipId);
     auto *plugin = chain.get(effectIndex);
-    if (plugin) {
+    if (plugin != nullptr) {
         plugin->setParam(paramIndex, value);
     }
 }
@@ -829,8 +866,9 @@ void TimelineController::removeKeyframe(int clipId, int effectIndex, const QStri
 void TimelineController::deleteClip(int clipId) { requestDelete(clipId); }
 
 void TimelineController::requestDelete(int targetClipId) {
-    if (!m_timeline || !m_selection)
+    if ((m_timeline == nullptr) || (m_selection == nullptr)) {
         return;
+    }
 
     QVariantList selected = m_selection->selectedClipIds();
 
@@ -852,16 +890,18 @@ void TimelineController::requestDelete(int targetClipId) {
 }
 
 void TimelineController::splitClip(int clipId, int frame) {
-    if (m_timeline)
+    if (m_timeline != nullptr) {
         m_timeline->splitClip(clipId, frame);
+    }
 }
 
 void TimelineController::splitSelectedClips(int frame) {
-    if (m_timeline)
+    if (m_timeline != nullptr) {
         m_timeline->splitSelectedClips(frame);
+    }
 }
 
-QVariantMap TimelineController::evaluateClipParams(int clipId, int relFrame) const {
+auto TimelineController::evaluateClipParams(int clipId, int relFrame) const -> QVariantMap {
     // relFrame は無視し、EngineSynchronizer が計算済みの最新キャッシュを返す。
     // これにより UI スレッドでの Lua 実行が完全に排除される。
     return m_engineSync->getCachedParams(clipId);
@@ -874,20 +914,22 @@ void TimelineController::cutClip(int clipId) { m_timeline->cutClip(clipId); }
 void TimelineController::pasteClip(int frame, int layer) { m_timeline->pasteClip(frame, layer); }
 
 void TimelineController::copySelectedClips() {
-    if (m_timeline)
+    if (m_timeline != nullptr) {
         m_timeline->copySelectedClips();
+    }
 }
 
 void TimelineController::cutSelectedClips() {
-    if (m_timeline)
+    if (m_timeline != nullptr) {
         m_timeline->cutSelectedClips();
+    }
 }
 
 void TimelineController::deleteSelectedClips() { requestDelete(-1); }
 
-QVariantList TimelineController::scenes() const { return m_timeline->scenes(); }
+auto TimelineController::scenes() const -> QVariantList { return m_timeline->scenes(); }
 
-int TimelineController::currentSceneId() const { return m_timeline->currentSceneId(); }
+auto TimelineController::currentSceneId() const -> int { return m_timeline->currentSceneId(); }
 
 void TimelineController::createScene(const QString &name) { m_timeline->createScene(name); }
 
@@ -900,7 +942,7 @@ void TimelineController::updateSceneSettings(int sceneId, const QString &name, i
     m_timeline->updateSceneSettings(sceneId, name, width, height, fps, totalFrames, gridMode, gridBpm, gridOffset, gridInterval, gridSubdivision, enableSnap, magneticSnapRange);
 }
 
-QVariantList TimelineController::getSceneClips(int sceneId) const {
+auto TimelineController::getSceneClips(int sceneId) const -> QVariantList {
     QVariantList list;
     const auto &clips = m_timeline->clips(sceneId);
 
@@ -927,13 +969,15 @@ QVariantList TimelineController::getSceneClips(int sceneId) const {
         params["id"] = clip.id;
 
         for (auto *eff : clip.effects) {
-            if (!eff->isEnabled())
+            if (!eff->isEnabled()) {
                 continue;
+            }
             // キーフレーム評価を行わず生パラメータまたはデフォルト値を渡す
             // SceneObject内で時間に応じて評価されるため
             QVariantMap p = eff->params();
-            for (auto it = p.begin(); it != p.end(); ++it)
+            for (auto it = p.begin(); it != p.end(); ++it) {
                 params.insert(it.key(), it.value());
+            }
         }
         map["params"] = params;
         list.append(map);
@@ -941,18 +985,21 @@ QVariantList TimelineController::getSceneClips(int sceneId) const {
     return list;
 }
 
-QVariantMap TimelineController::getSceneInfo(int sceneId) const {
+auto TimelineController::getSceneInfo(int sceneId) const -> QVariantMap {
     for (const auto &s : m_timeline->getAllScenes()) {
-        if (s.id == sceneId)
+        if (s.id == sceneId) {
             return {{"id", s.id}, {"name", s.name}, {"width", s.width}, {"height", s.height}, {"fps", s.fps}, {"totalFrames", s.totalFrames}};
+        }
     }
     return {};
 }
 
-int TimelineController::getSceneDuration(int sceneId) const {
-    for (const auto &s : m_timeline->getAllScenes())
-        if (s.id == sceneId)
+auto TimelineController::getSceneDuration(int sceneId) const -> int {
+    for (const auto &s : m_timeline->getAllScenes()) {
+        if (s.id == sceneId) {
             return s.totalFrames;
+        }
+    }
     return 0;
 }
 
@@ -963,12 +1010,13 @@ void TimelineController::updateViewport(double x, double y) {
     Q_UNUSED(y)
 }
 
-QPoint TimelineController::resolveDragPosition(int clipId, int targetLayer, int proposedStartFrame, const QVariantList &batchIds) { return m_timeline->resolveDragPosition(clipId, targetLayer, proposedStartFrame, batchIds); }
+auto TimelineController::resolveDragPosition(int clipId, int targetLayer, int proposedStartFrame, const QVariantList &batchIds) -> QPoint { return m_timeline->resolveDragPosition(clipId, targetLayer, proposedStartFrame, batchIds); }
 
-QPoint TimelineController::resolveDragDelta(int clipId, int deltaFrame, int deltaLayer, const QVariantList &batchIds, int minFrame, int minLayer, int maxLayer, int totalLayers) {
+auto TimelineController::resolveDragDelta(int clipId, int deltaFrame, int deltaLayer, const QVariantList &batchIds, int minFrame, int minLayer, int maxLayer, int totalLayers) -> QPoint {
     const auto *clip = m_timeline->findClipById(clipId);
-    if (!clip)
-        return QPoint(0, 0);
+    if (clip == nullptr) {
+        return {0, 0};
+    }
 
     // 1. 衝突判定を含めた座標解決
     QPoint resolved = m_timeline->resolveDragPosition(clipId, clip->layer + deltaLayer, clip->startFrame + deltaFrame, batchIds);
@@ -977,19 +1025,22 @@ QPoint TimelineController::resolveDragDelta(int clipId, int deltaFrame, int delt
     int dL = resolved.y() - clip->layer;
 
     // 2. タイムライン境界によるクランプ (QMLから移行)
-    if (minFrame + dF < 0)
+    if (minFrame + dF < 0) {
         dF = -minFrame;
-    if (minLayer + dL < 0)
+    }
+    if (minLayer + dL < 0) {
         dL = -minLayer;
-    if (maxLayer + dL >= totalLayers)
+    }
+    if (maxLayer + dL >= totalLayers) {
         dL = totalLayers - 1 - maxLayer;
+    }
 
-    return QPoint(dF, dL);
+    return {dF, dL};
 }
 
-QString TimelineController::debugRunLua(const QString &script) {
+auto TimelineController::debugRunLua(const QString &script) -> QString {
     // テスト用に time=currentFrame/fps, index=0, value=0 で実行
-    double time = m_transport ? m_transport->currentFrame() / m_project->fps() : 0.0;
+    double time = (m_transport != nullptr) ? m_transport->currentFrame() / m_project->fps() : 0.0;
     double result = Rina::Scripting::LuaHost::instance().evaluate(script.toStdString(), time, 0, 0.0);
     return QString::number(result);
 }

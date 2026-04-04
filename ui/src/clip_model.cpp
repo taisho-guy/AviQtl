@@ -7,13 +7,14 @@ namespace Rina::UI {
 
 ClipModel::ClipModel(TransportService *transport, QObject *parent) : QAbstractListModel(parent), m_transport(transport) {}
 
-int ClipModel::rowCount(const QModelIndex &parent) const {
-    if (parent.isValid())
+auto ClipModel::rowCount(const QModelIndex &parent) const -> int {
+    if (parent.isValid()) {
         return 0;
+    }
     return m_activeClips.size();
 }
 
-QHash<int, QByteArray> ClipModel::roleNames() const {
+auto ClipModel::roleNames() const -> QHash<int, QByteArray> {
     QHash<int, QByteArray> roles;
     roles[IdRole] = "id";
     roles[TypeRole] = "type";
@@ -27,9 +28,10 @@ QHash<int, QByteArray> ClipModel::roleNames() const {
     return roles;
 }
 
-QVariant ClipModel::data(const QModelIndex &index, int role) const {
-    if (!index.isValid() || index.row() >= m_activeClips.size())
-        return QVariant();
+auto ClipModel::data(const QModelIndex &index, int role) const -> QVariant {
+    if (!index.isValid() || index.row() >= m_activeClips.size()) {
+        return {};
+    }
     const ClipData *clip = m_activeClips[index.row()];
 
     switch (role) {
@@ -53,16 +55,17 @@ QVariant ClipModel::data(const QModelIndex &index, int role) const {
     }
     case EffectsRole: {
         QVariantList list;
-        for (auto *eff : clip->effects)
+        for (auto *eff : clip->effects) {
             list.append(QVariant::fromValue(eff));
+        }
         return list;
     }
     case ParamsRole: {
         auto *sync = qobject_cast<TimelineEngineSynchronizer *>(parent());
-        return sync ? sync->getCachedParams(clip->id) : QVariantMap();
+        return (sync != nullptr) ? sync->getCachedParams(clip->id) : QVariantMap();
     }
     default:
-        return QVariant();
+        return {};
     }
 }
 

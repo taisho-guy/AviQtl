@@ -42,7 +42,7 @@ class TimelineMediaManager : public QObject {
     void frameUpdated(int clipId);
 
   private:
-    QUrl getClipSourceUrl(const ClipData &clip) const;
+    static QUrl getClipSourceUrl(const ClipData &clip);
     void updateVideoClipFrame(Rina::Core::VideoDecoder *vid, const ClipData *clip, int relFrame);
     int sceneIdForClip(int clipId) const;
 
