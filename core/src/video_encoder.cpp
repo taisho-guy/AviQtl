@@ -86,7 +86,8 @@ auto VideoEncoder::initHardware(const QString &codecName) -> bool {
         return true; // SWエンコードまたはデバイス不要
     }
 
-    if ((err = av_hwdevice_ctx_create(&m_hwDeviceCtx, type, nullptr, nullptr, 0)) < 0) {
+    err = av_hwdevice_ctx_create(&m_hwDeviceCtx, type, nullptr, nullptr, 0);
+    if (err < 0) {
         qWarning() << "Failed to create HW device context for" << codecName << "Error:" << err;
         return false;
     }
@@ -243,7 +244,7 @@ auto VideoEncoder::open(const QVariantMap &configMap) -> bool {
     // codecName defaults to h264_vaapi if not present
     return open(config);
 }
-
+// NOLINT(bugprone-easily-swappable-parameters)
 auto VideoEncoder::addAudioStream(int sampleRate, int channels) -> bool {
     std::scoped_lock lock(m_mutex);
     if (m_fmtCtx == nullptr) {
@@ -525,8 +526,8 @@ auto VideoEncoder::processAudio(const std::vector<float> &samples) -> bool {
     av_audio_fifo_write(m_audioFifo, reinterpret_cast<void **>(convertedData), sampleCount);
 
     if (convertedData != nullptr) {
-        av_freep(&convertedData[0]);
-        free(convertedData);
+        av_freep(static_cast<void *>(&convertedData[0]));
+        free(static_cast<void *>(convertedData));
     }
 
     // 3. エンコーダーのフレームサイズ分溜まったらエンコード

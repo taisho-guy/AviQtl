@@ -235,7 +235,7 @@ void VideoDecoder::seekToTime(double seconds) {
     seekToFrame(frame, msourceFps);
 }
 
-void VideoDecoder::seekToFrame(int frame, double fps) {
+void VideoDecoder::seekToFrame(int frame, double fps) { // NOLINT(bugprone-easily-swappable-parameters)
     if (!m_isReady) {
         return;
     }
@@ -267,7 +267,7 @@ void VideoDecoder::seekToFrame(int frame, double fps) {
     });
 }
 
-void VideoDecoder::decodeTask(int targetFrame, double fps) {
+void VideoDecoder::decodeTask(int targetFrame, double fps) { // NOLINT(bugprone-easily-swappable-parameters)
     QMutexLocker locker(&m_mutex);
     if (mclosing.load(std::memory_order_acquire)) {
         return;
@@ -350,7 +350,7 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) {
             auto it = std::ranges::lower_bound(mindex, currentPts, std::ranges::less{}, &FrameIndexEntry::pts);
             int decodedFrameIndex = -1;
             if (it != mindex.end() && it->pts == currentPts) {
-                decodedFrameIndex = std::distance(mindex.begin(), it);
+                decodedFrameIndex = static_cast<int>(std::distance(mindex.begin(), it));
             }
 
             if (decodedFrameIndex != -1 && !mframeCache.contains(decodedFrameIndex)) {
@@ -468,7 +468,7 @@ void VideoDecoder::updateCacheSize() {
     int sizeMB = SettingsManager::instance().settings().value("cacheSize", 512).toInt();
     int minSizeMB = SettingsManager::instance().value("videoDecoderMinCacheMB", 64).toInt();
     sizeMB = std::max(sizeMB, minSizeMB);
-    mframeCache.setMaxCost(sizeMB * 1024 * 1024);
+    mframeCache.setMaxCost(static_cast<qsizetype>(sizeMB) * 1024 * 1024);
 }
 
 void VideoDecoder::setPlaying(bool playing) {

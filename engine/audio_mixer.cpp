@@ -49,14 +49,14 @@ AudioMixer::AudioMixer(QObject *parent) : QObject(parent) {
 
     m_audioSink = std::make_unique<QAudioSink>(device, m_format);
     // 低レイテンシを目指しつつ、音飛びしない程度のバッファサイズ (例: 100ms)
-    m_audioSink->setBufferSize(sampleRate * 2 * sizeof(float) / 10);
+    m_audioSink->setBufferSize(static_cast<qsizetype>(static_cast<std::size_t>(sampleRate) * 2 * sizeof(float) / 10));
     m_audioOutput = m_audioSink->start();
     if (m_audioOutput == nullptr) {
         qWarning() << "[AudioMixer] Failed to start audio output! Device:" << device.description();
     }
 }
 
-void AudioMixer::mix(float *output, const float *input, float volume, int samples) {
+void AudioMixer::mix(float *output, const float *input, float volume, int samples) { // NOLINT(bugprone-easily-swappable-parameters)
     for (int i = 0; i < samples; ++i) {
         output[i] += input[i] * volume;
     }
@@ -99,9 +99,9 @@ auto AudioMixer::isReady() const -> bool {
     return true;
 }
 
-auto AudioMixer::mix(int currentFrame, double fps, int samplesPerFrame) -> std::vector<float> {
+auto AudioMixer::mix(int currentFrame, double fps, int samplesPerFrame) -> std::vector<float> { // NOLINT(bugprone-easily-swappable-parameters)
     // 1. マスターバッファの初期化（無音）
-    std::vector<float> masterBuffer(samplesPerFrame * 2, 0.0F);
+    std::vector<float> masterBuffer(static_cast<std::size_t>(samplesPerFrame) * 2, 0.0F);
 
     // 2. ECSから現在の音声コンポーネントを取得
     const auto *state = Timeline::ECS::instance().getSnapshot();
@@ -142,7 +142,7 @@ auto AudioMixer::mix(int currentFrame, double fps, int samplesPerFrame) -> std::
             std::vector<float> rawSamples = decoder->getSamples(startTime, neededSamples * 2); // Stereo
 
             if (!rawSamples.empty()) {
-                clipSamples.resize(samplesPerFrame * 2);
+                clipSamples.resize(static_cast<std::size_t>(samplesPerFrame) * 2);
                 int availableSrcSamples = static_cast<int>(rawSamples.size() / 2);
 
                 for (int i = 0; i < samplesPerFrame; ++i) {
@@ -163,9 +163,9 @@ auto AudioMixer::mix(int currentFrame, double fps, int samplesPerFrame) -> std::
                     double t = srcIdx - idx0;
 
                     // L ch
-                    clipSamples[i * 2] = (rawSamples[idx0 * 2] * (1.0 - t)) + (rawSamples[idx1 * 2] * t);
+                    clipSamples[static_cast<std::size_t>(i) * 2] = static_cast<float>((rawSamples[static_cast<std::size_t>(idx0) * 2] * (1.0 - t)) + (rawSamples[static_cast<std::size_t>(idx1) * 2] * t));
                     // R ch
-                    clipSamples[(i * 2) + 1] = (rawSamples[(idx0 * 2) + 1] * (1.0 - t)) + (rawSamples[(idx1 * 2) + 1] * t);
+                    clipSamples[static_cast<std::size_t>(i) * 2 + 1] = static_cast<float>((rawSamples[static_cast<std::size_t>(idx0) * 2 + 1] * (1.0 - t)) + (rawSamples[static_cast<std::size_t>(idx1) * 2 + 1] * t));
                 }
             }
             // 次のフレームのための開始位置を進める（m_playbackSpeed 分の秒数）
@@ -195,7 +195,7 @@ auto AudioMixer::mix(int currentFrame, double fps, int samplesPerFrame) -> std::
     return masterBuffer;
 }
 
-void AudioMixer::processFrame(int currentFrame, double fps, int samplesPerFrame) {
+void AudioMixer::processFrame(int currentFrame, double fps, int samplesPerFrame) { // NOLINT(bugprone-easily-swappable-parameters)
     if (m_audioOutput == nullptr) {
         return;
     }
@@ -218,7 +218,7 @@ void AudioMixer::processFrame(int currentFrame, double fps, int samplesPerFrame)
     }
 
     std::vector<float> buffer = mix(currentFrame, fps, outputSamples);
-    m_audioOutput->write(reinterpret_cast<const char *>(buffer.data()), buffer.size() * sizeof(float));
+    m_audioOutput->write(reinterpret_cast<const char *>(buffer.data()), static_cast<qint64>(buffer.size() * sizeof(float)));
 }
 
 void AudioMixer::reset() {

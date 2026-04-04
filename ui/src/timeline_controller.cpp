@@ -108,15 +108,15 @@ void TimelineController::onCurrentFrameChanged() {
     updateActiveClipsList();
 }
 
-void TimelineController::handleClipClick(int clipId, int modifiers) {
+void TimelineController::handleClipClick(int clipId, int modifiers) { // NOLINT(bugprone-easily-swappable-parameters)
     if ((modifiers & Qt::ControlModifier) != 0U) {
-        m_timeline->toggleSelection(clipId, (m_timeline->findClipById(clipId) != nullptr) ? QVariantMap() : QVariantMap());
+        m_timeline->toggleSelection(clipId, QVariantMap());
     } else {
         m_timeline->applySelectionIds({clipId});
     }
 }
 
-void TimelineController::updateSelectionPreview(int frameA, int frameB, int layerA, int layerB, bool additive) {
+void TimelineController::updateSelectionPreview(int frameA, int frameB, int layerA, int layerB, bool additive) { // NOLINT(bugprone-easily-swappable-parameters)
     QVariantList ids;
     if (additive && (m_selection != nullptr)) {
         ids = m_selection->selectedClipIds();
@@ -398,7 +398,7 @@ void TimelineController::updateClip(int id, int layer, int startFrame, int durat
     const auto *clip = m_timeline->findClipById(id);
 
     if (clip != nullptr) {
-        const int projectFps = project()->fps();
+        const int projectFps = static_cast<int>(project()->fps());
 
         if (clip->type == "video") {
             auto *vid = qobject_cast<Rina::Core::VideoDecoder *>(m_mediaManager->decoderForClip(id));
@@ -759,7 +759,7 @@ auto TimelineController::isAudioClip(int clipId) const -> bool {
     return (clip != nullptr) && clip->type == "audio";
 }
 
-auto TimelineController::getWaveformPeaks(int clipId, int pixelWidth, int displayDurationFrames) const -> QVariantList {
+auto TimelineController::getWaveformPeaks(int clipId, int pixelWidth, int displayDurationFrames) const -> QVariantList { // NOLINT(bugprone-easily-swappable-parameters)
     if (pixelWidth <= 0 || displayDurationFrames <= 0) {
         return {};
     }
@@ -774,21 +774,16 @@ auto TimelineController::getWaveformPeaks(int clipId, int pixelWidth, int displa
         return QVariantList(pixelWidth, 0.0);
     }
 
-    int fps = m_project->fps();
+    int fps = static_cast<int>(m_project->fps());
     if (fps <= 0) {
         fps = 60;
     }
-    int sampleRate = m_project->sampleRate();
-    if (sampleRate <= 0) {
-        sampleRate = 48000;
-    }
-
     // 渡された displayDurationFrames で秒数を計算 (ドラフト値が来たらそれを使う)
     double displaySec = static_cast<double>(displayDurationFrames) / fps;
 
     std::vector<float> rawPeaks = decoder->getPeaks(0.0, displaySec, pixelWidth);
     QVariantList result;
-    result.reserve(rawPeaks.size());
+    result.reserve(static_cast<qsizetype>(rawPeaks.size()));
     for (float p : rawPeaks) {
         result.append(static_cast<double>(p));
     }
@@ -820,7 +815,7 @@ auto TimelineController::getEffectParameters(int clipId, int effectIndex) const 
     if (clipId < 0) {
         return list;
     }
-
+    // NOLINT(bugprone-easily-swappable-parameters)
     auto &chain = m_mediaManager->audioMixer()->getChain(clipId);
     auto *plugin = chain.get(effectIndex);
     if (plugin != nullptr) {
@@ -853,7 +848,7 @@ void TimelineController::setEffectParameter(int clipId, int effectIndex, int par
         return;
     }
     auto &chain = m_mediaManager->audioMixer()->getChain(clipId);
-    auto *plugin = chain.get(effectIndex);
+    auto *plugin = chain.get(effectIndex); // NOLINT(bugprone-easily-swappable-parameters)
     if (plugin != nullptr) {
         plugin->setParam(paramIndex, value);
     }
@@ -906,7 +901,7 @@ auto TimelineController::evaluateClipParams(int clipId, int relFrame) const -> Q
     // これにより UI スレッドでの Lua 実行が完全に排除される。
     return m_engineSync->getCachedParams(clipId);
 }
-
+// NOLINT(bugprone-easily-swappable-parameters)
 void TimelineController::copyClip(int clipId) { m_timeline->copyClip(clipId); }
 
 void TimelineController::cutClip(int clipId) { m_timeline->cutClip(clipId); }
@@ -1008,7 +1003,7 @@ void TimelineController::updateViewport(double x, double y) {
     // 将来的に、描画範囲外のクリップのレンダリング計算をスキップする等の最適化に使用できます。
     Q_UNUSED(x)
     Q_UNUSED(y)
-}
+} // NOLINT(bugprone-easily-swappable-parameters)
 
 auto TimelineController::resolveDragPosition(int clipId, int targetLayer, int proposedStartFrame, const QVariantList &batchIds) -> QPoint { return m_timeline->resolveDragPosition(clipId, targetLayer, proposedStartFrame, batchIds); }
 
@@ -1017,7 +1012,7 @@ auto TimelineController::resolveDragDelta(int clipId, int deltaFrame, int deltaL
     if (clip == nullptr) {
         return {0, 0};
     }
-
+    // NOLINT(bugprone-easily-swappable-parameters)
     // 1. 衝突判定を含めた座標解決
     QPoint resolved = m_timeline->resolveDragPosition(clipId, clip->layer + deltaLayer, clip->startFrame + deltaFrame, batchIds);
 

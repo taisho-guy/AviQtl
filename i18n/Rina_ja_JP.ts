@@ -910,149 +910,149 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="47"/>
+        <location filename="../ui/src/timeline_service.cpp" line="48"/>
         <source>エフェクト追加: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="53"/>
+        <location filename="../ui/src/timeline_service.cpp" line="55"/>
         <source>エフェクト削除: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="58"/>
+        <location filename="../ui/src/timeline_service.cpp" line="61"/>
         <source>エフェクト順序変更</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="63"/>
+        <location filename="../ui/src/timeline_service.cpp" line="67"/>
         <source>オーディオプラグイン順序変更</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="69"/>
+        <location filename="../ui/src/timeline_service.cpp" line="73"/>
         <source>エフェクト有効/無効切り替え</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="75"/>
+        <location filename="../ui/src/timeline_service.cpp" line="79"/>
         <source>オーディオプラグイン有効/無効切り替え</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="82"/>
+        <location filename="../ui/src/timeline_service.cpp" line="87"/>
         <source>エフェクト貼り付け</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="88"/>
+        <location filename="../ui/src/timeline_service.cpp" line="94"/>
         <source>レイヤーロック</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="88"/>
+        <location filename="../ui/src/timeline_service.cpp" line="94"/>
         <source>ロック解除</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="88"/>
+        <location filename="../ui/src/timeline_service.cpp" line="94"/>
         <source>レイヤー非表示</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="88"/>
+        <location filename="../ui/src/timeline_service.cpp" line="94"/>
         <source>レイヤー表示</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="89"/>
+        <location filename="../ui/src/timeline_service.cpp" line="95"/>
         <source>%1: レイヤー %2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="95"/>
+        <location filename="../ui/src/timeline_service.cpp" line="102"/>
         <source>クリップ分割: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="153"/>
+        <location filename="../ui/src/timeline_service.cpp" line="160"/>
         <source>クリップ削除: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="185"/>
+        <location filename="../ui/src/timeline_service.cpp" line="192"/>
         <source>切り取り: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="196"/>
+        <location filename="../ui/src/timeline_service.cpp" line="203"/>
         <source>貼り付け: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="207"/>
+        <location filename="../ui/src/timeline_service.cpp" line="215"/>
         <source>キーフレーム設定: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="233"/>
+        <location filename="../ui/src/timeline_service.cpp" line="241"/>
         <source>キーフレーム削除: %1 [%2]</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="238"/>
+        <location filename="../ui/src/timeline_service.cpp" line="246"/>
         <source>シーン追加: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="249"/>
+        <location filename="../ui/src/timeline_service.cpp" line="257"/>
         <source>シーン削除: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="255"/>
+        <location filename="../ui/src/timeline_service.cpp" line="264"/>
         <source>シーン設定変更: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="264"/>
-        <location filename="../ui/src/timeline_service.cpp" line="1365"/>
-        <location filename="../ui/src/timeline_service.cpp" line="1365"/>
+        <location filename="../ui/src/timeline_service.cpp" line="273"/>
+        <location filename="../ui/src/timeline_service.cpp" line="1374"/>
+        <location filename="../ui/src/timeline_service.cpp" line="1374"/>
         <source>ルート</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="410"/>
+        <location filename="../ui/src/timeline_service.cpp" line="419"/>
         <source>複数クリップ絶対移動: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="466"/>
+        <location filename="../ui/src/timeline_service.cpp" line="475"/>
         <source>複数クリップ移動: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="525"/>
+        <location filename="../ui/src/timeline_service.cpp" line="534"/>
         <source>複数クリップ変形: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="873"/>
+        <location filename="../ui/src/timeline_service.cpp" line="882"/>
         <source>クリップ削除</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="873"/>
+        <location filename="../ui/src/timeline_service.cpp" line="882"/>
         <source>複数クリップ削除: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="1224"/>
+        <location filename="../ui/src/timeline_service.cpp" line="1233"/>
         <source>複数クリップ分割: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="1277"/>
+        <location filename="../ui/src/timeline_service.cpp" line="1286"/>
         <source>複数クリップ貼り付け: %1</source>
         <translation type="unfinished"></translation>
     </message>

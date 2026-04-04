@@ -79,7 +79,7 @@ struct ThreadLocalLua {
             lua_close(state);
             state = nullptr;
         }
-    }
+    } // NOLINT(bugprone-easily-swappable-parameters)
 };
 
 auto LuaHost::evaluate(const std::string &expression, double time, int index, double currentValue) -> double {

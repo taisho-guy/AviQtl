@@ -35,7 +35,7 @@ void TimelineMediaManager::onCurrentFrameChanged() {
     double fps = m_controller->project()->fps();
     if (m_controller->transport()->isPlaying()) {
         int sampleRate = m_controller->project()->sampleRate();
-        m_audioMixer->processFrame(nextFrame, fps, std::round(static_cast<double>(sampleRate) / fps));
+        m_audioMixer->processFrame(nextFrame, fps, static_cast<int>(std::round(static_cast<double>(sampleRate) / fps)));
     }
 
     for (auto it = m_decoders.begin(); it != m_decoders.end(); ++it) {
@@ -217,7 +217,7 @@ void TimelineMediaManager::updateMediaDecoders() {
                             return;
                         }
 
-                        const int projectFps = m_controller->project()->fps();
+                        const int projectFps = static_cast<int>(m_controller->project()->fps());
                         const double startSec = static_cast<double>(startVideoFrame) / sourceFps;
                         const double remainingSec = (static_cast<double>(totalFrameCount) / sourceFps) - startSec;
                         if (remainingSec <= 0.0) {
@@ -304,7 +304,7 @@ auto TimelineMediaManager::sceneIdForClip(int clipId) const -> int {
     return -1;
 }
 
-void TimelineMediaManager::requestVideoFrame(int clipId, int relFrame) {
+void TimelineMediaManager::requestVideoFrame(int clipId, int relFrame) { // NOLINT(bugprone-easily-swappable-parameters)
     if ((m_controller == nullptr) || (m_controller->timeline() == nullptr)) {
         return;
     }

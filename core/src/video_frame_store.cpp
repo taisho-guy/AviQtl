@@ -67,12 +67,15 @@ void VideoFrameStore::registerSink(const QString &key, QVideoSink *sink) {
         m_sinks.insert(key, sink);
 
         if (sink != nullptr) {
-            QObject::connect(sink, &QObject::destroyed, this, [this, key, rawSink = sink]() -> void {
-                QMutexLocker locker(&m_mutex);
-                if (m_sinks.contains(key)) {
-                    QVideoSink *current = m_sinks.value(key).data();
+            QObject::connect(sink, &QObject::destroyed, this, [self = QPointer<VideoFrameStore>(this), key, rawSink = sink]() -> void {
+                if (!self) {
+                    return;
+                }
+                QMutexLocker locker(&self->m_mutex);
+                if (self->m_sinks.contains(key)) {
+                    QVideoSink *current = self->m_sinks.value(key).data();
                     if (current == nullptr || current == rawSink) {
-                        m_sinks.remove(key);
+                        self->m_sinks.remove(key);
                     }
                 }
             });

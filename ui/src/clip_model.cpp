@@ -11,7 +11,7 @@ auto ClipModel::rowCount(const QModelIndex &parent) const -> int {
     if (parent.isValid()) {
         return 0;
     }
-    return m_activeClips.size();
+    return static_cast<int>(m_activeClips.size());
 }
 
 auto ClipModel::roleNames() const -> QHash<int, QByteArray> {

@@ -20,7 +20,7 @@ TimelineExportManager::~TimelineExportManager() {
     }
 }
 
-auto TimelineExportManager::exportMedia(const QString &fileUrl, const QString &format, int quality) -> bool {
+auto TimelineExportManager::exportMedia(const QString &fileUrl, const QString &format, int quality) -> bool { // NOLINT(bugprone-easily-swappable-parameters)
     QString localPath = QUrl(fileUrl).toLocalFile();
     if (localPath.isEmpty()) {
         localPath = fileUrl;

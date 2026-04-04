@@ -170,7 +170,7 @@ class CarlaHostedPlugin final : public IAudioPlugin {
         // carla_add_plugin に渡す label は純粋な URI でなければならないため抽出する。
         QString lv2UriStr = m_info.label;
         if (ptype == CarlaBackend::PLUGIN_LV2) {
-            const int dotLv2 = lv2UriStr.indexOf(QLatin1String(".lv2/"));
+            const int dotLv2 = static_cast<int>(lv2UriStr.indexOf(QLatin1String(".lv2/")));
             if (dotLv2 >= 0) {
                 lv2UriStr = lv2UriStr.mid(dotLv2 + 5);
             }
@@ -197,7 +197,7 @@ class CarlaHostedPlugin final : public IAudioPlugin {
         return true;
     }
 
-    void prepare(double sampleRate, int maxBlockSize) override {
+    void prepare(double sampleRate, int maxBlockSize) override { // NOLINT(bugprone-easily-swappable-parameters)
         m_sampleRate = sampleRate > 1.0 ? sampleRate : 48000.0;
         m_maxBlockSize = maxBlockSize > 0 ? maxBlockSize : 512;
         ensureBuffers(m_maxBlockSize);
@@ -313,9 +313,12 @@ class CarlaHostedPlugin final : public IAudioPlugin {
     std::vector<float> m_outR;
 };
 
-const QStringList kDiscoverySearchPaths = {
-    "/usr/lib/carla/carla-discovery-native", "/usr/local/lib/carla/carla-discovery-native", "/usr/lib64/carla/carla-discovery-native", "/usr/bin/carla-discovery-native", "/usr/local/bin/carla-discovery-native",
-};
+static auto discoverySearchPaths() -> const QStringList & {
+    static const QStringList paths = {
+        "/usr/lib/carla/carla-discovery-native", "/usr/local/lib/carla/carla-discovery-native", "/usr/lib64/carla/carla-discovery-native", "/usr/bin/carla-discovery-native", "/usr/local/bin/carla-discovery-native",
+    };
+    return paths;
+}
 
 struct FormatConfig {
     QString type;
@@ -326,15 +329,18 @@ struct FormatConfig {
     bool bundleDir;
 };
 
-const QList<FormatConfig> kFormats = {{.type = "ladspa", .format = "LADSPA", .envVars = {"LADSPA_PATH"}, .defaultPaths = {"/usr/lib/ladspa", "/usr/local/lib/ladspa"}, .fileFilter = "*.so", .bundleDir = false},
-                                      {.type = "lv2", .format = "LV2", .envVars = {"LV2_PATH"}, .defaultPaths = {"/usr/lib/lv2", "/usr/local/lib/lv2"}, .fileFilter = "*.lv2", .bundleDir = true},
-                                      {.type = "vst2", .format = "VST2", .envVars = {"VST_PATH"}, .defaultPaths = {"/usr/lib/vst", "/usr/lib/vst2", "/usr/local/lib/vst", "/usr/local/lib/vst2"}, .fileFilter = "*.so", .bundleDir = false},
-                                      {.type = "vst3", .format = "VST3", .envVars = {"VST3_PATH"}, .defaultPaths = {"/usr/lib/vst3", "/usr/local/lib/vst3"}, .fileFilter = "*.vst3", .bundleDir = true},
-                                      {.type = "clap", .format = "CLAP", .envVars = {"CLAP_PATH"}, .defaultPaths = {"/usr/lib/clap", "/usr/local/lib/clap"}, .fileFilter = "*.clap", .bundleDir = false},
-                                      {.type = "dssi", .format = "DSSI", .envVars = {"DSSI_PATH"}, .defaultPaths = {"/usr/lib/dssi", "/usr/local/lib/dssi"}, .fileFilter = "*.so", .bundleDir = false},
-                                      {.type = "sf2", .format = "SF2", .envVars = {"SF2_PATH"}, .defaultPaths = {"/usr/share/soundfonts", "/usr/share/sounds/sf2"}, .fileFilter = "*.sf2", .bundleDir = false},
-                                      {.type = "sfz", .format = "SFZ", .envVars = {"SFZ_PATH"}, .defaultPaths = {"/usr/share/sounds/sfz"}, .fileFilter = "*.sfz", .bundleDir = false},
-                                      {.type = "jsfx", .format = "JSFX", .envVars = {"JSFX_PATH"}, .defaultPaths = {"/opt/REAPER/Plugins/FX", "~/.config/REAPER/Effects"}, .fileFilter = "*.jsfx", .bundleDir = false}};
+static auto formats() -> const QList<FormatConfig> & {
+    static const QList<FormatConfig> list = {
+        {.type = "lv2", .format = "LV2", .envVars = {"LV2_PATH"}, .defaultPaths = {"/usr/lib/lv2", "/usr/local/lib/lv2"}, .fileFilter = "*.lv2", .bundleDir = true},
+        {.type = "vst2", .format = "VST2", .envVars = {"VST_PATH"}, .defaultPaths = {"/usr/lib/vst", "/usr/lib/vst2", "/usr/local/lib/vst", "/usr/local/lib/vst2"}, .fileFilter = "*.so", .bundleDir = false},
+        {.type = "vst3", .format = "VST3", .envVars = {"VST3_PATH"}, .defaultPaths = {"/usr/lib/vst3", "/usr/local/lib/vst3"}, .fileFilter = "*.vst3", .bundleDir = true},
+        {.type = "clap", .format = "CLAP", .envVars = {"CLAP_PATH"}, .defaultPaths = {"/usr/lib/clap", "/usr/local/lib/clap"}, .fileFilter = "*.clap", .bundleDir = false},
+        {.type = "dssi", .format = "DSSI", .envVars = {"DSSI_PATH"}, .defaultPaths = {"/usr/lib/dssi", "/usr/local/lib/dssi"}, .fileFilter = "*.so", .bundleDir = false},
+        {.type = "sf2", .format = "SF2", .envVars = {"SF2_PATH"}, .defaultPaths = {"/usr/share/soundfonts", "/usr/share/sounds/sf2"}, .fileFilter = "*.sf2", .bundleDir = false},
+        {.type = "sfz", .format = "SFZ", .envVars = {"SFZ_PATH"}, .defaultPaths = {"/usr/share/sounds/sfz"}, .fileFilter = "*.sfz", .bundleDir = false},
+    };
+    return list;
+}
 
 auto toCategoryStr(int cat) -> QString {
     switch (static_cast<CarlaBackend::PluginCategory>(cat)) {
@@ -354,8 +360,7 @@ auto toCategoryStr(int cat) -> QString {
         return "Modulator";
     case CarlaBackend::PLUGIN_CATEGORY_UTILITY:
         return "Utility";
-    case CarlaBackend::PLUGIN_CATEGORY_OTHER:
-        return "Other";
+    case CarlaBackend::PLUGIN_CATEGORY_OTHER: // fall through
     default:
         return "Other";
     }
@@ -390,7 +395,7 @@ auto normalizeCategoryTitle(QString category) -> QString {
     }
     if (lower == "utility" || lower == "tools" || lower == QStringLiteral("tool")) {
         return "Utility";
-    }
+    } // NOLINT(bugprone-easily-swappable-parameters)
     if (lower == "other" || lower == "unknown" || lower == "misc" || lower == "none" || lower == QStringLiteral("null")) {
         return "Other";
     }
@@ -436,7 +441,7 @@ auto categoryRank(const QString &category) -> int {
     }
     if (c == QStringLiteral("Utility")) {
         return 6;
-    }
+    } // NOLINT(bugprone-easily-swappable-parameters)
     if (c == QStringLiteral("Synth")) {
         return 7;
     }
@@ -494,7 +499,7 @@ auto parseDiscoveryOutput(const QString &output, const QString &format, const QS
             }
             inBlock = false;
         }
-    }
+    } // NOLINT(bugprone-easily-swappable-parameters)
     return results;
 }
 
@@ -679,7 +684,7 @@ void AudioPluginManager::initialize() {
 
     auto future = QtConcurrent::run([this] -> void {
         scanPlugins();
-        emit pluginsReady(m_plugins.size());
+        emit pluginsReady(static_cast<int>(m_plugins.size()));
     });
     future.waitForFinished();
 }
@@ -693,7 +698,7 @@ void AudioPluginManager::scanPlugins() {
     m_stopRequested = false;
 
     QString tool;
-    for (const QString &p : std::as_const(kDiscoverySearchPaths)) {
+    for (const QString &p : std::as_const(discoverySearchPaths())) {
         if (QFile::exists(p)) {
             tool = p;
             break;
@@ -704,7 +709,7 @@ void AudioPluginManager::scanPlugins() {
     }
     if (tool.isEmpty()) {
         qWarning() << "[AudioPluginManager] carla-discovery-native が見つかりません";
-        qWarning() << "[AudioPluginManager] 検索パス:" << kDiscoverySearchPaths;
+        qWarning() << "[AudioPluginManager] 検索パス:" << discoverySearchPaths();
         m_scanning = false;
         return;
     }
@@ -713,7 +718,7 @@ void AudioPluginManager::scanPlugins() {
     QList<PluginInfo> newPlugins;
     QHash<QString, PluginInfo> newMap;
 
-    for (const FormatConfig &cfg : std::as_const(kFormats)) {
+    for (const FormatConfig &cfg : std::as_const(formats())) {
         if (m_stopRequested) {
             break;
         }

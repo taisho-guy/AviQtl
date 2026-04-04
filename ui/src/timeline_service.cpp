@@ -10,21 +10,21 @@
 
 namespace Rina::UI {
 
-AddClipCommand::AddClipCommand(TimelineService *service, int clipId, QString type, int startFrame, int layer, const QString &clipName)
+AddClipCommand::AddClipCommand(TimelineService *service, int clipId, QString type, int startFrame, int layer, const QString &clipName) // NOLINT(bugprone-easily-swappable-parameters)
     : m_service(service), m_clipId(clipId), m_type(std::move(type)), m_startFrame(startFrame), m_layer(layer), m_clipName(clipName) {
     setText(QObject::tr("クリップ追加: %1").arg(clipName));
 }
 void AddClipCommand::undo() { m_service->deleteClipInternal(m_clipId); }
 void AddClipCommand::redo() { m_service->createClipInternal(m_clipId, m_type, m_startFrame, m_layer); }
 
-MoveClipCommand::MoveClipCommand(TimelineService *service, int clipId, int oldLayer, int oldStart, int oldDuration, int newLayer, int newStart, int newDuration, const QString &clipName)
+MoveClipCommand::MoveClipCommand(TimelineService *service, int clipId, int oldLayer, int oldStart, int oldDuration, int newLayer, int newStart, int newDuration, const QString &clipName) // NOLINT(bugprone-easily-swappable-parameters)
     : m_service(service), m_clipId(clipId), m_oldLayer(oldLayer), m_oldStart(oldStart), m_oldDuration(oldDuration), m_newLayer(newLayer), m_newStart(newStart), m_newDuration(newDuration), m_clipName(clipName) {
     setText(QObject::tr("クリップ移動: %1").arg(clipName));
 }
 void MoveClipCommand::undo() { m_service->updateClipInternal(m_clipId, m_oldLayer, m_oldStart, m_oldDuration); }
 void MoveClipCommand::redo() { m_service->updateClipInternal(m_clipId, m_newLayer, m_newStart, m_newDuration); }
 
-UpdateEffectParamCommand::UpdateEffectParamCommand(TimelineService *service, int clipId, int effectIndex, const QString &paramName, QVariant newValue, QVariant oldValue, const QString &effectName)
+UpdateEffectParamCommand::UpdateEffectParamCommand(TimelineService *service, int clipId, int effectIndex, const QString &paramName, QVariant newValue, QVariant oldValue, const QString &effectName) // NOLINT(bugprone-easily-swappable-parameters)
     : m_service(service), m_clipId(clipId), m_effectIndex(effectIndex), m_paramName(paramName), m_newValue(std::move(newValue)), m_oldValue(std::move(oldValue)), m_effectName(effectName) {
     setText(QObject::tr("パラメータ変更: %1 - %2").arg(effectName).arg(paramName));
 }
@@ -43,55 +43,62 @@ auto UpdateEffectParamCommand::mergeWith(const QUndoCommand *other) -> bool {
     return true;
 }
 
-AddEffectCommand::AddEffectCommand(TimelineService *service, int clipId, QString effectId, const QString &effectName) : m_service(service), m_clipId(clipId), m_effectId(std::move(effectId)), m_effectName(effectName) {
+AddEffectCommand::AddEffectCommand(TimelineService *service, int clipId, QString effectId, const QString &effectName)
+    : m_service(service), m_clipId(clipId), m_effectId(std::move(effectId)), m_effectName(effectName) { // NOLINT(bugprone-easily-swappable-parameters)
     setText(QObject::tr("エフェクト追加: %1").arg(effectName));
 }
 void AddEffectCommand::undo() { m_service->removeEffectInternal(m_clipId, -1); }
 void AddEffectCommand::redo() { m_service->addEffectInternal(m_clipId, m_effectId); }
 
-RemoveEffectCommand::RemoveEffectCommand(TimelineService *service, int clipId, int effectIndex, const QString &effectName) : m_service(service), m_clipId(clipId), m_effectIndex(effectIndex), m_effectName(effectName) {
+RemoveEffectCommand::RemoveEffectCommand(TimelineService *service, int clipId, int effectIndex, const QString &effectName)
+    : m_service(service), m_clipId(clipId), m_effectIndex(effectIndex), m_effectName(effectName) { // NOLINT(bugprone-easily-swappable-parameters)
     setText(QObject::tr("エフェクト削除: %1").arg(effectName));
 }
 void RemoveEffectCommand::redo() { m_service->removeEffectInternal(m_clipId, m_effectIndex); }
 void RemoveEffectCommand::undo() { m_service->restoreEffectInternal(m_clipId, m_removedEffectData); }
 
-ReorderEffectCommand::ReorderEffectCommand(TimelineService *service, int clipId, int oldIndex, int newIndex) : m_service(service), m_clipId(clipId), m_oldIndex(oldIndex), m_newIndex(newIndex) { setText(QObject::tr("エフェクト順序変更")); }
+ReorderEffectCommand::ReorderEffectCommand(TimelineService *service, int clipId, int oldIndex, int newIndex) : m_service(service), m_clipId(clipId), m_oldIndex(oldIndex), m_newIndex(newIndex) {
+    setText(QObject::tr("エフェクト順序変更"));
+} // NOLINT(bugprone-easily-swappable-parameters)
 void ReorderEffectCommand::undo() { m_service->reorderEffectsInternal(m_clipId, m_newIndex, m_oldIndex); }
 void ReorderEffectCommand::redo() { m_service->reorderEffectsInternal(m_clipId, m_oldIndex, m_newIndex); }
 
-ReorderAudioPluginCommand::ReorderAudioPluginCommand(TimelineService *service, int clipId, int oldIndex, int newIndex) : m_service(service), m_clipId(clipId), m_oldIndex(oldIndex), m_newIndex(newIndex) {
+ReorderAudioPluginCommand::ReorderAudioPluginCommand(TimelineService *service, int clipId, int oldIndex, int newIndex) : m_service(service), m_clipId(clipId), m_oldIndex(oldIndex), m_newIndex(newIndex) { // NOLINT(bugprone-easily-swappable-parameters)
     setText(QObject::tr("オーディオプラグイン順序変更"));
 }
 void ReorderAudioPluginCommand::undo() { m_service->reorderAudioPluginsInternal(m_clipId, m_newIndex, m_oldIndex); }
 void ReorderAudioPluginCommand::redo() { m_service->reorderAudioPluginsInternal(m_clipId, m_oldIndex, m_newIndex); }
 
-SetEffectEnabledCommand::SetEffectEnabledCommand(TimelineService *service, int clipId, int effectIndex, bool enabled) : m_service(service), m_clipId(clipId), m_effectIndex(effectIndex), m_enabled(enabled) {
+SetEffectEnabledCommand::SetEffectEnabledCommand(TimelineService *service, int clipId, int effectIndex, bool enabled) : m_service(service), m_clipId(clipId), m_effectIndex(effectIndex), m_enabled(enabled) { // NOLINT(bugprone-easily-swappable-parameters)
     setText(QObject::tr("エフェクト有効/無効切り替え"));
 }
 void SetEffectEnabledCommand::undo() { m_service->setEffectEnabledInternal(m_clipId, m_effectIndex, !m_enabled); }
 void SetEffectEnabledCommand::redo() { m_service->setEffectEnabledInternal(m_clipId, m_effectIndex, m_enabled); }
 
-SetAudioPluginEnabledCommand::SetAudioPluginEnabledCommand(TimelineService *service, int clipId, int index, bool enabled) : m_service(service), m_clipId(clipId), m_index(index), m_enabled(enabled) {
+SetAudioPluginEnabledCommand::SetAudioPluginEnabledCommand(TimelineService *service, int clipId, int index, bool enabled) : m_service(service), m_clipId(clipId), m_index(index), m_enabled(enabled) { // NOLINT(bugprone-easily-swappable-parameters)
     setText(QObject::tr("オーディオプラグイン有効/無効切り替え"));
 }
 void SetAudioPluginEnabledCommand::undo() { m_service->setAudioPluginEnabledInternal(m_clipId, m_index, !m_enabled); }
 void SetAudioPluginEnabledCommand::redo() { m_service->setAudioPluginEnabledInternal(m_clipId, m_index, m_enabled); }
 
-PasteEffectCommand::PasteEffectCommand(TimelineService *service, int clipId, int targetIndex, EffectModel *templateEffect) : m_service(service), m_clipId(clipId), m_targetIndex(targetIndex), m_effect(templateEffect->clone()) {
+PasteEffectCommand::PasteEffectCommand(TimelineService *service, int clipId, int targetIndex, EffectModel *templateEffect)
+    : m_service(service), m_clipId(clipId), m_targetIndex(targetIndex), m_effect(templateEffect->clone()) { // NOLINT(bugprone-easily-swappable-parameters)
 
     setText(QObject::tr("エフェクト貼り付け"));
 }
 void PasteEffectCommand::undo() { m_service->removeEffectInternal(m_clipId, m_targetIndex); }
 void PasteEffectCommand::redo() { m_service->pasteEffectInternal(m_clipId, m_targetIndex, m_effect); }
 
-UpdateLayerStateCommand::UpdateLayerStateCommand(TimelineService *service, int sceneId, int layer, bool value, StateType type) : m_service(service), m_sceneId(sceneId), m_layer(layer), m_value(value), m_type(type) {
+UpdateLayerStateCommand::UpdateLayerStateCommand(TimelineService *service, int sceneId, int layer, bool value, StateType type)
+    : m_service(service), m_sceneId(sceneId), m_layer(layer), m_value(value), m_type(type) { // NOLINT(bugprone-easily-swappable-parameters)
     QString actionName = (type == Lock) ? (value ? QObject::tr("レイヤーロック") : QObject::tr("ロック解除")) : (value ? QObject::tr("レイヤー非表示") : QObject::tr("レイヤー表示"));
     setText(QObject::tr("%1: レイヤー %2").arg(actionName).arg(m_layer));
 }
 void UpdateLayerStateCommand::undo() { m_service->setLayerStateInternal(m_sceneId, m_layer, !m_value, m_type); }
 void UpdateLayerStateCommand::redo() { m_service->setLayerStateInternal(m_sceneId, m_layer, m_value, m_type); }
 
-SplitClipCommand::SplitClipCommand(TimelineService *service, int clipId, int frame, const QString &clipName) : m_service(service), m_originalClipId(clipId), m_newClipId(-1), m_splitFrame(frame), m_originalDuration(0), m_clipName(clipName) {
+SplitClipCommand::SplitClipCommand(TimelineService *service, int clipId, int frame, const QString &clipName)
+    : m_service(service), m_originalClipId(clipId), m_newClipId(-1), m_splitFrame(frame), m_originalDuration(0), m_clipName(clipName) { // NOLINT(bugprone-easily-swappable-parameters)
     setText(QObject::tr("クリップ分割: %1").arg(clipName));
 }
 
@@ -201,7 +208,8 @@ void PasteClipCommand::redo() {
 }
 void PasteClipCommand::undo() { m_service->deleteClipInternal(m_newClipId); }
 
-SetKeyframeCommand::SetKeyframeCommand(TimelineService *service, int clipId, int effectIndex, const QString &paramName, int frame, QVariant newValue, QVariantMap options, QVariant oldValue, QVariantMap oldOptions, bool wasExisting)
+SetKeyframeCommand::SetKeyframeCommand(TimelineService *service, int clipId, int effectIndex, const QString &paramName, int frame, QVariant newValue, QVariantMap options, QVariant oldValue, QVariantMap oldOptions,
+                                       bool wasExisting) // NOLINT(bugprone-easily-swappable-parameters)
     : m_service(service), m_clipId(clipId), m_effectIndex(effectIndex), m_frame(frame), m_paramName(paramName), m_newValue(std::move(newValue)), m_oldValue(std::move(oldValue)), m_newOptions(std::move(options)), m_oldOptions(std::move(oldOptions)),
       m_wasExisting(wasExisting) {
     setText(QObject::tr("キーフレーム設定: %1").arg(paramName));
@@ -228,7 +236,7 @@ auto SetKeyframeCommand::mergeWith(const QUndoCommand *other) -> bool {
     return true;
 }
 
-RemoveKeyframeCommand::RemoveKeyframeCommand(TimelineService *service, int clipId, int effectIndex, const QString &paramName, int frame, QVariant savedValue, QVariantMap savedOptions)
+RemoveKeyframeCommand::RemoveKeyframeCommand(TimelineService *service, int clipId, int effectIndex, const QString &paramName, int frame, QVariant savedValue, QVariantMap savedOptions) // NOLINT(bugprone-easily-swappable-parameters)
     : m_service(service), m_clipId(clipId), m_effectIndex(effectIndex), m_frame(frame), m_paramName(paramName), m_savedValue(std::move(savedValue)), m_savedOptions(std::move(savedOptions)) {
     setText(QObject::tr("キーフレーム削除: %1 [%2]").arg(paramName).arg(frame));
 }
@@ -251,7 +259,8 @@ RemoveSceneCommand::RemoveSceneCommand(TimelineService *service, int sceneId, co
 void RemoveSceneCommand::redo() { m_service->removeSceneInternal(m_sceneId); }
 void RemoveSceneCommand::undo() { m_service->restoreSceneInternal(m_snapshot); }
 
-UpdateSceneSettingsCommand::UpdateSceneSettingsCommand(TimelineService *service, int sceneId, SceneData oldData, const SceneData &newData) : m_service(service), m_sceneId(sceneId), m_oldData(std::move(oldData)), m_newData(newData) {
+UpdateSceneSettingsCommand::UpdateSceneSettingsCommand(TimelineService *service, int sceneId, SceneData oldData, const SceneData &newData)
+    : m_service(service), m_sceneId(sceneId), m_oldData(std::move(oldData)), m_newData(newData) { // NOLINT(bugprone-easily-swappable-parameters)
     setText(QObject::tr("シーン設定変更: %1").arg(newData.name));
 }
 void UpdateSceneSettingsCommand::redo() { m_service->applySceneSettingsInternal(m_sceneId, m_newData); }
@@ -604,7 +613,7 @@ auto TimelineService::computeMagneticSnapPosition(int clipId, int targetLayer, i
     return finalStart;
 }
 
-auto TimelineService::resolveDragPosition(int clipId, int targetLayer, int proposedStartFrame, const QVariantList &batchIds) -> QPoint {
+auto TimelineService::resolveDragPosition(int clipId, int targetLayer, int proposedStartFrame, const QVariantList &batchIds) -> QPoint { // NOLINT(bugprone-easily-swappable-parameters)
     const auto *movingClip = findClipById(clipId);
     if (movingClip == nullptr) {
         return {proposedStartFrame, targetLayer};
@@ -792,7 +801,7 @@ void TimelineService::applySelectionIds(const QVariantList &ids) {
     m_selection->replaceSelection(newSelectedIds, primaryId, primaryData);
 }
 
-void TimelineService::selectClipsInRange(int frameA, int frameB, int layerA, int layerB, bool additive) {
+void TimelineService::selectClipsInRange(int frameA, int frameB, int layerA, int layerB, bool additive) { // NOLINT(bugprone-easily-swappable-parameters)
     const int minFrame = std::min(frameA, frameB);
     const int maxFrame = std::max(frameA, frameB);
     const int minLayer = std::min(layerA, layerB);
@@ -951,7 +960,7 @@ void TimelineService::removeEffect(int clipId, int effectIndex) {
         return;
     }
 
-    int idx = (effectIndex == -1) ? clip->effects.size() - 1 : effectIndex;
+    int idx = (effectIndex == -1) ? static_cast<int>(clip->effects.size()) - 1 : effectIndex;
     if (idx >= 0 && idx < clip->effects.size()) {
         auto *eff = clip->effects[idx];
         removedData[QStringLiteral("id")] = eff->id();
@@ -968,11 +977,11 @@ void TimelineService::removeEffect(int clipId, int effectIndex) {
     }
 }
 
-void TimelineService::removeEffectInternal(int clipId, int effectIndex) {
+void TimelineService::removeEffectInternal(int clipId, int effectIndex) { // NOLINT(bugprone-easily-swappable-parameters)
     for (auto &clip : clipsMutable()) {
         if (clip.id == clipId) {
             if (effectIndex == -1) {
-                effectIndex = clip.effects.size() - 1;
+                effectIndex = static_cast<int>(clip.effects.size()) - 1;
             }
             if (effectIndex >= 0 && effectIndex < clip.effects.size()) {
                 // Transformエフェクトは削除不可
@@ -1007,7 +1016,7 @@ void TimelineService::reorderAudioPlugins(int clipId, int oldIndex, int newIndex
     m_undoStack->push(new ReorderAudioPluginCommand(this, clipId, oldIndex, newIndex));
 }
 
-void TimelineService::reorderEffectsInternal(int clipId, int oldIndex, int newIndex) {
+void TimelineService::reorderEffectsInternal(int clipId, int oldIndex, int newIndex) { // NOLINT(bugprone-easily-swappable-parameters)
     auto *clip = findClipById(clipId);
     if ((clip == nullptr) || oldIndex < 0 || oldIndex >= static_cast<int>(clip->effects.size()) || newIndex < 0 || newIndex >= static_cast<int>(clip->effects.size())) {
         return;
@@ -1020,7 +1029,7 @@ void TimelineService::reorderEffectsInternal(int clipId, int oldIndex, int newIn
     emit clipsChanged();
 }
 
-void TimelineService::setEffectEnabledInternal(int clipId, int effectIndex, bool enabled) {
+void TimelineService::setEffectEnabledInternal(int clipId, int effectIndex, bool enabled) { // NOLINT(bugprone-easily-swappable-parameters)
     auto *clip = findClipById(clipId);
     if ((clip == nullptr) || effectIndex < 0 || effectIndex >= static_cast<int>(clip->effects.size())) {
         return;
@@ -1030,7 +1039,7 @@ void TimelineService::setEffectEnabledInternal(int clipId, int effectIndex, bool
     emit clipEffectsChanged(clipId);
 }
 
-void TimelineService::setAudioPluginEnabledInternal(int clipId, int index, bool enabled) {
+void TimelineService::setAudioPluginEnabledInternal(int clipId, int index, bool enabled) { // NOLINT(bugprone-easily-swappable-parameters)
     auto *clip = findClipById(clipId);
     if ((clip == nullptr) || index < 0 || index >= static_cast<int>(clip->audioPlugins.size())) {
         return;
@@ -1042,7 +1051,7 @@ void TimelineService::setAudioPluginEnabledInternal(int clipId, int index, bool 
     emit clipsChanged(); // エンジン側の同期を促す
 }
 
-void TimelineService::reorderAudioPluginsInternal(int clipId, int oldIndex, int newIndex) {
+void TimelineService::reorderAudioPluginsInternal(int clipId, int oldIndex, int newIndex) { // NOLINT(bugprone-easily-swappable-parameters)
     auto *clip = findClipById(clipId);
     if ((clip == nullptr) || oldIndex < 0 || oldIndex >= static_cast<int>(clip->audioPlugins.size()) || newIndex < 0 || newIndex >= static_cast<int>(clip->audioPlugins.size())) {
         return;
@@ -1055,7 +1064,7 @@ void TimelineService::reorderAudioPluginsInternal(int clipId, int oldIndex, int 
     emit clipsChanged();
 }
 
-void TimelineService::copyEffect(int clipId, int effectIndex) {
+void TimelineService::copyEffect(int clipId, int effectIndex) { // NOLINT(bugprone-easily-swappable-parameters)
     auto *clip = findClipById(clipId);
     if ((clip != nullptr) && effectIndex >= 0 && effectIndex < static_cast<int>(clip->effects.size())) {
         m_effectClipboard.reset(clip->effects[effectIndex]->clone());
@@ -1069,7 +1078,7 @@ void TimelineService::pasteEffect(int clipId, int targetIndex) {
     m_undoStack->push(new PasteEffectCommand(this, clipId, targetIndex, m_effectClipboard.get()));
 }
 
-void TimelineService::pasteEffectInternal(int clipId, int targetIndex, EffectModel *effect) {
+void TimelineService::pasteEffectInternal(int clipId, int targetIndex, EffectModel *effect) { // NOLINT(bugprone-easily-swappable-parameters)
     auto *clip = findClipById(clipId);
     if (clip != nullptr) {
         int idx = std::clamp(targetIndex, 0, static_cast<int>(clip->effects.size()));
@@ -1419,7 +1428,8 @@ void TimelineService::switchScene(int sceneId) {
     }
 }
 
-void TimelineService::updateSceneSettings(int sceneId, const QString &name, int width, int height, double fps, int totalFrames, const QString &gridMode, double gridBpm, double gridOffset, int gridInterval, int gridSubdivision, bool enableSnap,
+void TimelineService::updateSceneSettings(int sceneId, const QString &name, int width, int height, double fps, int totalFrames, const QString &gridMode, double gridBpm, double gridOffset, int gridInterval, int gridSubdivision,
+                                          bool enableSnap, // NOLINT(bugprone-easily-swappable-parameters)
                                           int magneticSnapRange) {
     SceneData newData;
     SceneData oldData;
@@ -1451,7 +1461,7 @@ auto TimelineService::isLayerHidden(int layer) const -> bool { return currentSce
 
 void TimelineService::setLayerState(int layer, bool value, int type) { m_undoStack->push(new UpdateLayerStateCommand(this, m_currentSceneId, layer, value, static_cast<UpdateLayerStateCommand::StateType>(type))); }
 
-void TimelineService::setLayerStateInternal(int sceneId, int layer, bool value, int type) {
+void TimelineService::setLayerStateInternal(int sceneId, int layer, bool value, int type) { // NOLINT(bugprone-easily-swappable-parameters)
     auto it = std::ranges::find_if(m_scenes, [sceneId](const SceneData &s) -> bool { return s.id == sceneId; });
     if (it == m_scenes.end()) {
         return;
@@ -1567,7 +1577,7 @@ auto TimelineService::resolvedActiveClipsAt(int frame) const -> QList<ClipData *
     return result;
 }
 
-auto TimelineService::findVacantFrame(int layer, int startFrame, int duration, int excludeClipId) const -> int {
+auto TimelineService::findVacantFrame(int layer, int startFrame, int duration, int excludeClipId) const -> int { // NOLINT(bugprone-easily-swappable-parameters)
     QList<const ClipData *> layerClips;
 
     // バッチ移動中は明示的に指定された集合を使い、そうでない場合は選択情報を使う
@@ -1729,14 +1739,14 @@ void TimelineService::removeKeyframe(int clipId, int effectIndex, const QString 
     m_undoStack->push(new RemoveKeyframeCommand(this, clipId, effectIndex, paramName, frame, savedValue, savedOptions));
 }
 
-void TimelineService::setKeyframeInternal(int clipId, int effectIndex, const QString &paramName, int frame, const QVariant &value, const QVariantMap &options) {
+void TimelineService::setKeyframeInternal(int clipId, int effectIndex, const QString &paramName, int frame, const QVariant &value, const QVariantMap &options) { // NOLINT(bugprone-easily-swappable-parameters)
     const auto *clip = findClipById(clipId);
     if ((clip != nullptr) && effectIndex < clip->effects.size()) {
         clip->effects[effectIndex]->setKeyframe(paramName, frame, value, options);
     }
 }
 
-void TimelineService::removeKeyframeInternal(int clipId, int effectIndex, const QString &paramName, int frame) {
+void TimelineService::removeKeyframeInternal(int clipId, int effectIndex, const QString &paramName, int frame) { // NOLINT(bugprone-easily-swappable-parameters)
     const auto *clip = findClipById(clipId);
     if ((clip != nullptr) && effectIndex < clip->effects.size()) {
         clip->effects[effectIndex]->removeKeyframe(paramName, frame);

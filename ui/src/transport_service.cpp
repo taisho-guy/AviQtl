@@ -53,7 +53,7 @@ void TransportService::onTick() {
     }
 
     qint64 elapsedNs = m_clock.nsecsElapsed() - m_playStartTime;
-    double elapsedSec = elapsedNs / 1'000'000'000.0;
+    double elapsedSec = static_cast<double>(elapsedNs) / 1'000'000'000.0;
 
     int targetFrame = m_playStartFrame + static_cast<int>(elapsedSec * m_fps * m_playbackSpeed);
 

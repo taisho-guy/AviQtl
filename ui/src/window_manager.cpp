@@ -33,7 +33,7 @@ void WindowManager::spawnInitialWindows(QQmlEngine *engine) {
     }
 }
 
-void WindowManager::onProjectSelected(const QString &path, int w, int h, double fps) {
+void WindowManager::onProjectSelected(const QString &path, int w, int h, double fps) { // NOLINT(bugprone-easily-swappable-parameters)
     if (!m_engine) {
         qWarning() << "onProjectSelectedでQMLエンジンが利用できません";
         return;
@@ -72,7 +72,7 @@ void WindowManager::onProjectSelected(const QString &path, int w, int h, double 
     }
 }
 
-void WindowManager::spawnWindow(QQmlEngine *engine, const QString &id, const QString &urlStr, const QString &title, int w, int h, int x, int y, bool visible) {
+void WindowManager::spawnWindow(QQmlEngine *engine, const QString &id, const QString &urlStr, const QString &title, int w, int h, int x, int y, bool visible) { // NOLINT(bugprone-easily-swappable-parameters)
     if (engine == nullptr) {
         qWarning() << "WindowManager: QMLエンジンがnullです！";
         return;

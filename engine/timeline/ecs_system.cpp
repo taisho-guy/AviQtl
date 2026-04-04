@@ -29,7 +29,7 @@ void ECS::syncClipIds(const QSet<int> &aliveIds) {
     }
 }
 
-void ECS::updateClipState(int clipId, int layer, double time) {
+void ECS::updateClipState(int clipId, int layer, double time) { // NOLINT(bugprone-easily-swappable-parameters)
     auto &editState = m_buffers[m_editIndex];
 
     if (!editState.transforms.contains(clipId)) {
@@ -53,7 +53,7 @@ void ECS::updateClipState(int clipId, int layer, double time) {
     }
 }
 
-void ECS::updateAudioClipState(int clipId, int startFrame, int durationFrames, float volume, float pan, bool mute) {
+void ECS::updateAudioClipState(int clipId, int startFrame, int durationFrames, float volume, float pan, bool mute) { // NOLINT(bugprone-easily-swappable-parameters)
     auto &editState = m_buffers[m_editIndex];
 
     if (!editState.audioStates.contains(clipId)) {

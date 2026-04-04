@@ -184,7 +184,7 @@ void AudioDecoder::setSampleRate(int sampleRate) {
 
 void AudioDecoder::seek(qint64 ms) { emit seekRequested(ms); }
 
-auto AudioDecoder::getSamples(double startTime, int count) -> std::vector<float> {
+auto AudioDecoder::getSamples(double startTime, int count) -> std::vector<float> { // NOLINT(bugprone-easily-swappable-parameters)
     QMutexLocker locker(&m_mutex);
 
     // startTimeが負数の場合のアンダーフローを防ぐ（size_tへのキャスト前にクランプ）
@@ -233,8 +233,8 @@ void AudioDecoder::buildPeakCache() {
         float pMin = 0.0F;
         float pMax = 0.0F;
         for (int j = 0; j < 32 && (i + j) < numSamples; ++j) {
-            float l = m_fullAudioData[(i + j) * 2];
-            float r = m_fullAudioData[((i + j) * 2) + 1];
+            float l = m_fullAudioData[static_cast<std::size_t>(i + j) * 2];
+            float r = m_fullAudioData[static_cast<std::size_t>(i + j) * 2 + 1];
             pMin = std::min({pMin, l, r});
             pMax = std::max({pMax, l, r});
         }
@@ -272,14 +272,14 @@ auto AudioDecoder::getPeaks(double startSec, double durationSec, int pixelWidth)
         return {};
     }
     if (m_fullAudioData.empty()) {
-        return std::vector<float>(pixelWidth * 2, 0.0F);
+        return std::vector<float>(static_cast<std::size_t>(pixelWidth) * 2, 0.0F);
     }
 
     double totalSamplesInView = durationSec * m_sampleRate;
     double samplesPerPixel = totalSamplesInView / pixelWidth;
 
     std::vector<float> result;
-    result.reserve(pixelWidth * 2);
+    result.reserve(static_cast<std::size_t>(pixelWidth) * 2);
 
     if (samplesPerPixel < 32.0) {
         // 超高精度: キャッシュレベルを超えたズーム時は生データを直接スキャン
@@ -290,8 +290,8 @@ auto AudioDecoder::getPeaks(double startSec, double durationSec, int pixelWidth)
             float pMin = 0.0F;
             float pMax = 0.0F;
             for (int j = idxStart; j < idxEnd; ++j) {
-                pMin = std::min({pMin, m_fullAudioData[j * 2], m_fullAudioData[(j * 2) + 1]});
-                pMax = std::max({pMax, m_fullAudioData[j * 2], m_fullAudioData[(j * 2) + 1]});
+                pMin = std::min({pMin, m_fullAudioData[static_cast<std::size_t>(j) * 2], m_fullAudioData[static_cast<std::size_t>(j) * 2 + 1]});
+                pMax = std::max({pMax, m_fullAudioData[static_cast<std::size_t>(j) * 2], m_fullAudioData[static_cast<std::size_t>(j) * 2 + 1]});
             }
             result.push_back(pMin);
             result.push_back(pMax);
