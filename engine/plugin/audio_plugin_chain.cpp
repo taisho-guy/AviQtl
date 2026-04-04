@@ -20,13 +20,13 @@ void AudioPluginChain::clear() { m_plugins.clear(); }
 void AudioPluginChain::prepare(double sr, int bs) {
     m_sampleRate = sr;
     m_maxBlockSize = bs;
-    for (auto &p : m_plugins) {
+    for (auto &p : std::as_const(m_plugins)) {
         p->prepare(sr, bs);
     }
 }
 
 void AudioPluginChain::process(float *buf, int frameCount) {
-    for (auto &p : m_plugins) {
+    for (auto &p : std::as_const(m_plugins)) {
         p->process(buf, frameCount);
     }
 }

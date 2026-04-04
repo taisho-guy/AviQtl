@@ -321,7 +321,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--clazy-level", type=int, choices=[1, 2], default=1,
-        help="Clazy のチェックレベル (1-3)"
+        help="Clazy のチェックレベル (1-2)"
     )
     parser.add_argument(
         "--import-path", action="append",
@@ -352,7 +352,7 @@ def main() -> int:
     # --full モード時のオーバーライド
     if args.full:
         args.level = "all"
-        args.clazy_level = 3
+        args.clazy_level = 2
         args.fix = True
 
     # cppcheck の存在確認

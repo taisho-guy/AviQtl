@@ -1016,8 +1016,8 @@
     </message>
     <message>
         <location filename="../ui/src/timeline_service.cpp" line="264"/>
-        <location filename="../ui/src/timeline_service.cpp" line="1364"/>
-        <location filename="../ui/src/timeline_service.cpp" line="1364"/>
+        <location filename="../ui/src/timeline_service.cpp" line="1365"/>
+        <location filename="../ui/src/timeline_service.cpp" line="1365"/>
         <source>ルート</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1047,12 +1047,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="1223"/>
+        <location filename="../ui/src/timeline_service.cpp" line="1224"/>
         <source>複数クリップ分割: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="1276"/>
+        <location filename="../ui/src/timeline_service.cpp" line="1277"/>
         <source>複数クリップ貼り付け: %1</source>
         <translation type="unfinished"></translation>
     </message>

@@ -8,7 +8,11 @@ Checks: '
   -modernize-use-trailing-return-type,
   -readability-magic-numbers,
   -readability-identifier-length,
-  -readability-function-cognitive-complexity
+  -readability-function-cognitive-complexity,
+  clazy-qstring-allocations,
+  clazy-range-loop-detach,
+  clazy-copyable-polymorphic,
+  clazy-ctor-missing-parent-argument
 '
 WarningsAsErrors: ''
 HeaderFilterRegex: ''

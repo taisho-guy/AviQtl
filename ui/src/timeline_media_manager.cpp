@@ -21,7 +21,7 @@ void TimelineMediaManager::setVideoFrameStore(Rina::Core::VideoFrameStore *store
 
 void TimelineMediaManager::onPlayingChanged() {
     bool playing = m_controller->transport()->isPlaying();
-    for (const auto &decoder : m_decoders) {
+    for (const auto &decoder : std::as_const(m_decoders)) {
         if (!decoder) {
             continue;
         }
@@ -58,17 +58,17 @@ void TimelineMediaManager::onCurrentFrameChanged() {
             double audioTime = 0.0;
 
             for (const auto *eff : clip->effects) {
-                if (eff->id() != "audio") {
+                if (eff->id() != QStringLiteral("audio")) {
                     continue;
                 }
 
-                const QString playMode = eff->params().value("playMode", "開始時間＋再生速度").toString();
+                const QString playMode = eff->params().value(QStringLiteral("playMode"), "開始時間＋再生速度").toString();
 
-                if (playMode == "時間直接指定") {
+                if (playMode == QStringLiteral("時間直接指定")) {
                     audioTime = eff->evaluatedParam("directTime", relFrame, fps).toDouble();
                 } else {
-                    const double startTime = eff->params().value("startTime", 0.0).toDouble();
-                    const double speed = eff->params().value("speed", 100.0).toDouble();
+                    const double startTime = eff->params().value(QStringLiteral("startTime"), 0.0).toDouble();
+                    const double speed = eff->params().value(QStringLiteral("speed"), 100.0).toDouble();
                     audioTime = (relTime * (speed / 100.0)) + startTime;
                 }
                 break;
@@ -80,7 +80,7 @@ void TimelineMediaManager::onCurrentFrameChanged() {
 
 void TimelineMediaManager::syncPlaybackSpeed() {
     double speed = m_controller->transport()->playbackSpeed();
-    for (const auto &decoder : m_decoders) {
+    for (const auto &decoder : std::as_const(m_decoders)) {
         if (!decoder) {
             continue;
         }
@@ -96,7 +96,7 @@ void TimelineMediaManager::updateAudioSampleRate() {
     if (m_audioMixer) {
         m_audioMixer->setSampleRate(rate);
     }
-    for (const auto &decoder : m_decoders) {
+    for (const auto &decoder : std::as_const(m_decoders)) {
         if (!decoder) {
             continue;
         }
@@ -106,7 +106,7 @@ void TimelineMediaManager::updateAudioSampleRate() {
 
 auto TimelineMediaManager::getClipSourceUrl(const ClipData &clip) -> QUrl {
     const EffectModel *effModel = nullptr;
-    for (const auto *eff : clip.effects) {
+    for (const auto *eff : std::as_const(clip.effects)) {
         if (eff->id() == clip.type) {
             effModel = eff;
             break;
@@ -126,9 +126,9 @@ void TimelineMediaManager::updateMediaDecoders() {
     QSet<int> currentClipIds;
     QHash<int, int> clipToScene;
 
-    for (const auto &scene : scenes) {
-        for (const auto &clip : scene.clips) {
-            if (clip.type != "video" && clip.type != "audio" && clip.type != "image") {
+    for (const auto &scene : std::as_const(scenes)) {
+        for (const auto &clip : std::as_const(scene.clips)) {
+            if (clip.type != "video" && clip.type != "audio" && clip.type != QStringLiteral("image")) {
                 continue;
             }
 
@@ -166,17 +166,17 @@ void TimelineMediaManager::updateMediaDecoders() {
             }
 
             Rina::Core::MediaDecoder *decoder = nullptr;
-            if (clip.type == "video") {
+            if (clip.type == QStringLiteral("video")) {
                 if (m_videoFrameStore == nullptr) {
                     continue;
                 }
                 decoder = new Rina::Core::VideoDecoder(clip.id, sourceUrl, m_videoFrameStore, this);
-            } else if (clip.type == "image") {
+            } else if (clip.type == QStringLiteral("image")) {
                 if (m_videoFrameStore == nullptr) {
                     continue;
                 }
                 decoder = new Rina::Core::ImageDecoder(clip.id, sourceUrl, m_videoFrameStore, this);
-            } else if (clip.type == "audio") {
+            } else if (clip.type == QStringLiteral("audio")) {
                 decoder = new Rina::Core::AudioDecoder(clip.id, sourceUrl, this);
                 if (auto *audioDecoder = qobject_cast<Rina::Core::AudioDecoder *>(decoder)) {
                     m_audioMixer->registerDecoder(clip.id, audioDecoder);
@@ -194,22 +194,22 @@ void TimelineMediaManager::updateMediaDecoders() {
                     // 動画メタ情報が揃った時点でクリップの最大長をクランプする
                     connect(vid, &Rina::Core::VideoDecoder::videoMetaReady, this, [this, cid](int totalFrameCount, double sourceFps) -> void {
                         const auto *clip = m_controller->timeline()->findClipById(cid);
-                        if (!clip || clip->type != "video") {
+                        if (!clip || clip->type != QStringLiteral("video")) {
                             return;
                         }
 
                         int startVideoFrame = 0;
                         double speed = 100.0;
                         for (const auto *eff : clip->effects) {
-                            if (eff->id() != "video") {
+                            if (eff->id() != QStringLiteral("video")) {
                                 continue;
                             }
-                            const QString playMode = eff->params().value("playMode", "開始フレーム＋再生速度").toString();
-                            if (playMode == "フレーム直接指定") {
+                            const QString playMode = eff->params().value(QStringLiteral("playMode"), "開始フレーム＋再生速度").toString();
+                            if (playMode == QStringLiteral("フレーム直接指定")) {
                                 return;
                             }
-                            startVideoFrame = eff->params().value("startFrame", 0).toInt();
-                            speed = eff->params().value("speed", 100.0).toDouble();
+                            startVideoFrame = eff->params().value(QStringLiteral("startFrame"), 0).toInt();
+                            speed = eff->params().value(QStringLiteral("speed"), 100.0).toDouble();
                             break;
                         }
 
@@ -267,13 +267,13 @@ void TimelineMediaManager::updateVideoClipFrame(Rina::Core::VideoDecoder *vid, c
     const double relTime = static_cast<double>(relFrame) / fps;
 
     for (const auto *eff : clip->effects) {
-        if ((eff == nullptr) || eff->id() != "video") {
+        if ((eff == nullptr) || eff->id() != QStringLiteral("video")) {
             continue;
         }
 
-        const QString playMode = eff->params().value("playMode", "開始フレーム＋再生速度").toString();
+        const QString playMode = eff->params().value(QStringLiteral("playMode"), "開始フレーム＋再生速度").toString();
 
-        if (playMode == "フレーム直接指定") {
+        if (playMode == QStringLiteral("フレーム直接指定")) {
             const int absFrame = eff->evaluatedParam("directFrame", relFrame, fps).toInt();
             vid->seekToFrame(absFrame, vid->sourceFps());
         } else {
@@ -295,7 +295,7 @@ void TimelineMediaManager::updateVideoClipFrame(Rina::Core::VideoDecoder *vid, c
 
 auto TimelineMediaManager::sceneIdForClip(int clipId) const -> int {
     for (const auto &scene : m_controller->timeline()->getAllScenes()) {
-        for (const auto &clip : scene.clips) {
+        for (const auto &clip : std::as_const(scene.clips)) {
             if (clip.id == clipId) {
                 return scene.id;
             }
@@ -311,8 +311,8 @@ void TimelineMediaManager::requestVideoFrame(int clipId, int relFrame) {
 
     const ClipData *targetClip = nullptr;
     const auto &scenes = m_controller->timeline()->getAllScenes();
-    for (const auto &scene : scenes) {
-        for (const auto &c : scene.clips) {
+    for (const auto &scene : std::as_const(scenes)) {
+        for (const auto &c : std::as_const(scene.clips)) {
             if (c.id == clipId) {
                 targetClip = &c;
                 break;

@@ -8,7 +8,7 @@ namespace Rina::Core {
 
 ColorSchemeController::ColorSchemeController(QObject *parent) : QObject(parent), m_manager(new KColorSchemeManager(this)) {
 
-    m_activeSchemeId = SettingsManager::instance().value("colorSchemeId", "").toString();
+    m_activeSchemeId = SettingsManager::instance().value(QStringLiteral("colorSchemeId"), "").toString();
     if (!m_activeSchemeId.isEmpty()) {
         m_manager->activateScheme(m_manager->indexForScheme(m_activeSchemeId));
     }

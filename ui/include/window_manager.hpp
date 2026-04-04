@@ -14,6 +14,12 @@ class WindowManager : public QObject {
     Q_PROPERTY(bool systemSettingsVisible READ systemSettingsVisible WRITE setSystemSettingsVisible NOTIFY systemSettingsVisibleChanged)
 
   public:
+    Q_INVOKABLE Q_INVOKABLE bool isVisible(const QString &id) const;
+    Q_INVOKABLE Q_INVOKABLE QObject *getWindow(const QString &id) const;
+    Q_INVOKABLE bool timelineVisible() const;
+    Q_INVOKABLE bool projectSettingsVisible() const;
+    Q_INVOKABLE bool objectSettingsVisible() const;
+    Q_INVOKABLE bool systemSettingsVisible() const;
     static WindowManager &instance();
     void spawnInitialWindows(QQmlEngine *engine);
     void spawnWindow(QQmlEngine *engine, const QString &id, const QString &urlStr, const QString &title, int w, int h, int x, int y, bool visible = true);
@@ -21,20 +27,20 @@ class WindowManager : public QObject {
   public slots:
     void onProjectSelected(const QString &path, int width, int height, double fps);
 
-    Q_INVOKABLE bool isVisible(const QString &id) const;
+    // moved to Q_INVOKABLE: Q_INVOKABLE bool isVisible(const QString &id) const;
     Q_INVOKABLE void setVisible(const QString &id, bool visible);
     Q_INVOKABLE void toggleVisible(const QString &id);
     Q_INVOKABLE void raiseWindow(const QString &id);
     Q_INVOKABLE void requestQuit();
-    Q_INVOKABLE QObject *getWindow(const QString &id) const;
+    // moved to Q_INVOKABLE: Q_INVOKABLE QObject *getWindow(const QString &id) const;
 
-    bool timelineVisible() const;
+    // moved to Q_INVOKABLE: bool timelineVisible() const;
     void setTimelineVisible(bool v);
-    bool projectSettingsVisible() const;
+    // moved to Q_INVOKABLE: bool projectSettingsVisible() const;
     void setProjectSettingsVisible(bool v);
-    bool objectSettingsVisible() const;
+    // moved to Q_INVOKABLE: bool objectSettingsVisible() const;
     void setObjectSettingsVisible(bool v);
-    bool systemSettingsVisible() const;
+    // moved to Q_INVOKABLE: bool systemSettingsVisible() const;
     void setSystemSettingsVisible(bool v);
 
   signals:

@@ -21,65 +21,65 @@ auto ProjectSerializer::save(const QString &fileUrl, const UI::TimelineService *
 
     QJsonObject root;
     QJsonObject settings;
-    settings["width"] = project->width();
-    settings["height"] = project->height();
-    settings["fps"] = project->fps();
-    settings["sampleRate"] = project->sampleRate();
-    root["settings"] = settings;
+    settings[QStringLiteral("width")] = project->width();
+    settings[QStringLiteral("height")] = project->height();
+    settings[QStringLiteral("fps")] = project->fps();
+    settings[QStringLiteral("sampleRate")] = project->sampleRate();
+    root[QStringLiteral("settings")] = settings;
 
     // --- シーン情報の保存 ---
     QJsonArray scenesArray;
     for (const auto &scene : timeline->getAllScenes()) {
         QJsonObject sObj;
-        sObj["id"] = scene.id;
-        sObj["name"] = scene.name;
-        sObj["width"] = scene.width;
-        sObj["height"] = scene.height;
-        sObj["fps"] = scene.fps;
-        sObj["totalFrames"] = scene.totalFrames;
-        sObj["start"] = scene.startFrame;
-        sObj["duration"] = scene.durationFrames;
+        sObj[QStringLiteral("id")] = scene.id;
+        sObj[QStringLiteral("name")] = scene.name;
+        sObj[QStringLiteral("width")] = scene.width;
+        sObj[QStringLiteral("height")] = scene.height;
+        sObj[QStringLiteral("fps")] = scene.fps;
+        sObj[QStringLiteral("totalFrames")] = scene.totalFrames;
+        sObj[QStringLiteral("start")] = scene.startFrame;
+        sObj[QStringLiteral("duration")] = scene.durationFrames;
         scenesArray.append(sObj);
     }
-    root["scenes"] = scenesArray;
+    root[QStringLiteral("scenes")] = scenesArray;
 
     // --- 全シーンのクリップをフラットに保存 ---
     QJsonArray clipsArray;
     for (const auto &scene : timeline->getAllScenes()) {
-        for (const auto &clip : scene.clips) {
+        for (const auto &clip : std::as_const(scene.clips)) {
             QJsonObject clipObj;
-            clipObj["id"] = clip.id;
-            clipObj["sceneId"] = clip.sceneId; // シーンIDを保存
-            clipObj["type"] = clip.type;
-            clipObj["start"] = clip.startFrame;
-            clipObj["duration"] = clip.durationFrames;
-            clipObj["layer"] = clip.layer;
+            clipObj[QStringLiteral("id")] = clip.id;
+            clipObj[QStringLiteral("sceneId")] = clip.sceneId; // シーンIDを保存
+            clipObj[QStringLiteral("type")] = clip.type;
+            clipObj[QStringLiteral("start")] = clip.startFrame;
+            clipObj[QStringLiteral("duration")] = clip.durationFrames;
+            clipObj[QStringLiteral("layer")] = clip.layer;
 
             QJsonArray audioPluginsArray;
-            for (const auto &plugin : clip.audioPlugins) {
+            for (const auto &plugin : std::as_const(clip.audioPlugins)) {
                 QJsonObject pObj;
-                pObj["id"] = plugin.id;
-                pObj["enabled"] = plugin.enabled;
-                pObj["params"] = QJsonObject::fromVariantMap(plugin.params);
+                pObj[QStringLiteral("id")] = plugin.id;
+                pObj[QStringLiteral("enabled")] = plugin.enabled;
+                pObj[QStringLiteral("params")] = QJsonObject::fromVariantMap(plugin.params);
                 audioPluginsArray.append(pObj);
             }
-            clipObj["audioPlugins"] = audioPluginsArray;
+            clipObj[QStringLiteral("audioPlugins")] = audioPluginsArray;
 
             QJsonArray effArray;
-            for (const auto *eff : clip.effects) {
+            for (const auto *eff : std::as_const(clip.effects)) {
                 QJsonObject eObj;
-                eObj["id"] = eff->id();
-                eObj["name"] = eff->name();
-                eObj["enabled"] = eff->isEnabled();
-                eObj["params"] = QJsonObject::fromVariantMap(eff->params());
-                eObj["keyframes"] = QJsonObject::fromVariantMap(eff->keyframeTracks());
+                eObj[QStringLiteral("id")] = eff->id();
+                eObj[QStringLiteral("name")] = eff->name();
+                eObj[QStringLiteral("enabled")] = eff->isEnabled();
+                eObj[QStringLiteral("params")] = QJsonObject::fromVariantMap(eff->params());
+                eObj[QStringLiteral("keyframes")] = QJsonObject::fromVariantMap(eff->keyframeTracks());
                 effArray.append(eObj);
             }
-            clipObj["effects"] = effArray;
+            clipObj[QStringLiteral("effects")] = effArray;
             clipsArray.append(clipObj);
         }
     }
-    root["clips"] = clipsArray;
+    root[QStringLiteral("clips")] = clipsArray;
 
     QFile file(path);
     if (!file.open(QIODevice::WriteOnly)) {
@@ -124,37 +124,37 @@ auto ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
     // --- 1. 一時的な構造体にパース (検証フェーズ) ---
 
     // Project Settings
-    bool hasSettings = root.contains("settings");
+    bool hasSettings = root.contains(QStringLiteral("settings"));
     auto defaults = Rina::Core::SettingsManager::instance().settings();
-    int pWidth = defaults.value("defaultProjectWidth", 1920).toInt();
-    int pHeight = defaults.value("defaultProjectHeight", 1080).toInt();
-    double pFps = defaults.value("defaultProjectFps", 60.0).toDouble();
-    int pSampleRate = defaults.value("defaultProjectSampleRate", 48000).toInt();
+    int pWidth = defaults.value(QStringLiteral("defaultProjectWidth"), 1920).toInt();
+    int pHeight = defaults.value(QStringLiteral("defaultProjectHeight"), 1080).toInt();
+    double pFps = defaults.value(QStringLiteral("defaultProjectFps"), 60.0).toDouble();
+    int pSampleRate = defaults.value(QStringLiteral("defaultProjectSampleRate"), 48000).toInt();
 
     if (hasSettings) {
-        QJsonObject s = root["settings"].toObject();
-        pWidth = s["width"].toInt(pWidth);
-        pHeight = s["height"].toInt(pHeight);
-        pFps = s["fps"].toDouble(pFps);
-        pSampleRate = s["sampleRate"].toInt(pSampleRate);
+        QJsonObject s = root[QStringLiteral("settings")].toObject();
+        pWidth = s[QStringLiteral("width")].toInt(pWidth);
+        pHeight = s[QStringLiteral("height")].toInt(pHeight);
+        pFps = s[QStringLiteral("fps")].toDouble(pFps);
+        pSampleRate = s[QStringLiteral("sampleRate")].toInt(pSampleRate);
     }
 
     // Scenes (読み込み)
     QList<UI::SceneData> tempScenes;
     int maxSceneId = 0;
-    if (root.contains("scenes")) {
-        QJsonArray scenesArray = root["scenes"].toArray();
-        for (const auto &val : scenesArray) {
+    if (root.contains(QStringLiteral("scenes"))) {
+        QJsonArray scenesArray = root[QStringLiteral("scenes")].toArray();
+        for (const auto &val : std::as_const(scenesArray)) {
             QJsonObject s = val.toObject();
             UI::SceneData scene;
-            scene.id = s["id"].toInt();
-            scene.name = s["name"].toString();
-            scene.width = s["width"].toInt(pWidth);
-            scene.height = s["height"].toInt(pHeight);
-            scene.fps = s["fps"].toDouble(pFps);
-            scene.totalFrames = s["totalFrames"].toInt(300); // SceneDataには残るがプロジェクト設定からは分離
-            scene.startFrame = s["start"].toInt(0);
-            scene.durationFrames = s["duration"].toInt(0);
+            scene.id = s[QStringLiteral("id")].toInt();
+            scene.name = s[QStringLiteral("name")].toString();
+            scene.width = s[QStringLiteral("width")].toInt(pWidth);
+            scene.height = s[QStringLiteral("height")].toInt(pHeight);
+            scene.fps = s[QStringLiteral("fps")].toDouble(pFps);
+            scene.totalFrames = s[QStringLiteral("totalFrames")].toInt(300); // SceneDataには残るがプロジェクト設定からは分離
+            scene.startFrame = s[QStringLiteral("start")].toInt(0);
+            scene.durationFrames = s[QStringLiteral("duration")].toInt(0);
             tempScenes.append(scene);
             maxSceneId = std::max(scene.id, maxSceneId);
         }
@@ -170,44 +170,44 @@ auto ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
     QList<UI::ClipData> tempClips;
     int tempMaxId = 0;
 
-    if (root.contains("clips")) {
-        QJsonArray clipsArray = root["clips"].toArray();
-        for (const auto &val : clipsArray) {
+    if (root.contains(QStringLiteral("clips"))) {
+        QJsonArray clipsArray = root[QStringLiteral("clips")].toArray();
+        for (const auto &val : std::as_const(clipsArray)) {
             QJsonObject c = val.toObject();
             UI::ClipData clip;
-            clip.id = c["id"].toInt();
-            clip.sceneId = c["sceneId"].toInt(0); // デフォルトは0
+            clip.id = c[QStringLiteral("id")].toInt();
+            clip.sceneId = c[QStringLiteral("sceneId")].toInt(0); // デフォルトは0
             tempMaxId = std::max(clip.id, tempMaxId);
-            clip.type = c["type"].toString();
-            clip.startFrame = c["start"].toInt();
-            clip.durationFrames = c["duration"].toInt();
-            clip.layer = c["layer"].toInt();
+            clip.type = c[QStringLiteral("type")].toString();
+            clip.startFrame = c[QStringLiteral("start")].toInt();
+            clip.durationFrames = c[QStringLiteral("duration")].toInt();
+            clip.layer = c[QStringLiteral("layer")].toInt();
 
-            if (c.contains("audioPlugins")) {
-                QJsonArray arr = c["audioPlugins"].toArray();
-                for (const auto &val : arr) {
+            if (c.contains(QStringLiteral("audioPlugins"))) {
+                QJsonArray arr = c[QStringLiteral("audioPlugins")].toArray();
+                for (const auto &val : std::as_const(arr)) {
                     QJsonObject pObj = val.toObject();
                     UI::AudioPluginState state;
-                    state.id = pObj["id"].toString();
-                    state.enabled = pObj["enabled"].toBool(true);
-                    state.params = pObj["params"].toObject().toVariantMap();
+                    state.id = pObj[QStringLiteral("id")].toString();
+                    state.enabled = pObj[QStringLiteral("enabled")].toBool(true);
+                    state.params = pObj[QStringLiteral("params")].toObject().toVariantMap();
                     clip.audioPlugins.append(state);
                 }
             }
 
-            if (c.contains("effects")) {
-                QJsonArray effArr = c["effects"].toArray();
-                for (const auto &ev : effArr) {
+            if (c.contains(QStringLiteral("effects"))) {
+                QJsonArray effArr = c[QStringLiteral("effects")].toArray();
+                for (const auto &ev : std::as_const(effArr)) {
                     QJsonObject eObj = ev.toObject();
-                    QString effId = eObj["id"].toString();
+                    QString effId = eObj[QStringLiteral("id")].toString();
                     EffectMetadata meta = EffectRegistry::instance().getEffect(effId);
 
                     // 中断した場合にタイムラインによって自動削除されるのを防ぐため、最初は親なしで作成
                     // メタデータからUI定義を取得、なければ空
-                    auto *eff = new UI::EffectModel(effId, eObj["name"].toString(), meta.category, eObj["params"].toObject().toVariantMap(), meta.qmlSource, meta.uiDefinition, nullptr);
-                    eff->setEnabled(eObj["enabled"].toBool(true));
-                    if (eObj.contains("keyframes")) {
-                        eff->setKeyframeTracks(eObj["keyframes"].toObject().toVariantMap());
+                    auto *eff = new UI::EffectModel(effId, eObj[QStringLiteral("name")].toString(), meta.category, eObj[QStringLiteral("params")].toObject().toVariantMap(), meta.qmlSource, meta.uiDefinition, nullptr);
+                    eff->setEnabled(eObj[QStringLiteral("enabled")].toBool(true));
+                    if (eObj.contains(QStringLiteral("keyframes"))) {
+                        eff->setKeyframeTracks(eObj[QStringLiteral("keyframes")].toObject().toVariantMap());
                     }
 
                     clip.effects.append(eff);
@@ -216,8 +216,8 @@ auto ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
 
             // 後方互換性: transform エフェクトがなければ追加
             bool hasTransform = false;
-            for (const auto *eff : clip.effects) {
-                if (eff->id() == "transform") {
+            for (const auto *eff : std::as_const(clip.effects)) {
+                if (eff->id() == QStringLiteral("transform")) {
                     hasTransform = true;
                     break;
                 }
@@ -243,15 +243,15 @@ auto ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
     }
 
     // クリップを各シーンに分配
-    for (auto &clip : tempClips) {
-        for (auto *eff : clip.effects) {
+    for (auto &clip : std::as_const(tempClips)) {
+        for (auto *eff : std::as_const(clip.effects)) {
             eff->setParent(timeline); // 所有権を移譲
             QObject::connect(eff, &UI::EffectModel::keyframeTracksChanged, timeline, &UI::TimelineService::clipsChanged);
         }
 
         // 対応するシーンを探して追加
         bool added = false;
-        for (auto &scene : tempScenes) {
+        for (auto &scene : std::as_const(tempScenes)) {
             if (scene.id == clip.sceneId) {
                 scene.clips.append(clip);
                 added = true;

@@ -26,27 +26,27 @@ class EffectModel : public QObject {
 
     static bool isStructuredTrack(const QVariant &raw) {
         const QVariantMap m = raw.toMap();
-        return m.contains("start") && m.contains("points");
+        return m.contains(QStringLiteral("start")) && m.contains(QStringLiteral("points"));
     }
     // end キーが存在し非空マップであれば明示的終了点あり
     static bool hasExplicitEnd(const QVariant &rawTrack) {
         if (!rawTrack.canConvert<QVariantMap>())
             return false;
         const QVariantMap m = rawTrack.toMap();
-        const QVariant ev = m.value("end");
+        const QVariant ev = m.value(QStringLiteral("end"));
         return ev.canConvert<QVariantMap>() && !ev.toMap().isEmpty();
     }
 
     static QVariantMap makePoint(int frame, const QVariant &value, const QString &interp = "none") {
         QVariantMap p;
-        p["frame"] = frame;
-        p["value"] = value;
-        p["interp"] = interp;
+        p[QStringLiteral("frame")] = frame;
+        p[QStringLiteral("value")] = value;
+        p[QStringLiteral("interp")] = interp;
         return p;
     }
 
     static QVariantList sortPoints(QVariantList points) {
-        std::sort(points.begin(), points.end(), [](const QVariant &a, const QVariant &b) { return a.toMap().value("frame").toInt() < b.toMap().value("frame").toInt(); });
+        std::sort(points.begin(), points.end(), [](const QVariant &a, const QVariant &b) { return a.toMap().value(QStringLiteral("frame")).toInt() < b.toMap().value(QStringLiteral("frame")).toInt(); });
         return points;
     }
 
@@ -54,33 +54,33 @@ class EffectModel : public QObject {
         if (isStructuredTrack(raw)) {
             // 明示的終了点があればその位置を、なければ中間点の最大フレームを使用
             if (hasExplicitEnd(raw)) {
-                const int endFrame = raw.toMap().value("end").toMap().value("frame").toInt();
+                const int endFrame = raw.toMap().value(QStringLiteral("end")).toMap().value(QStringLiteral("frame")).toInt();
                 return std::max(1, endFrame + 1);
             }
-            const QVariantList points = raw.toMap().value("points").toList();
+            const QVariantList points = raw.toMap().value(QStringLiteral("points")).toList();
             int maxFrame = 0;
-            for (const auto &v : points)
-                maxFrame = std::max(maxFrame, v.toMap().value("frame").toInt());
+            for (const auto &v : std::as_const(points))
+                maxFrame = std::max(maxFrame, v.toMap().value(QStringLiteral("frame")).toInt());
             return std::max(1, maxFrame + 1);
         }
         const QVariantList list = raw.toList();
         if (list.isEmpty())
             return 1;
         int maxFrame = 0;
-        for (const auto &v : list)
-            maxFrame = std::max(maxFrame, v.toMap().value("frame").toInt());
+        for (const auto &v : std::as_const(list))
+            maxFrame = std::max(maxFrame, v.toMap().value(QStringLiteral("frame")).toInt());
         return std::max(1, maxFrame + 1);
     }
 
     static QVariantList flattenStructuredTrack(const QVariantMap &track) {
         QVariantList out;
-        out.append(track.value("start"));
-        QVariantList points = track.value("points").toList();
+        out.append(track.value(QStringLiteral("start")));
+        QVariantList points = track.value(QStringLiteral("points")).toList();
         points = sortPoints(points);
-        for (const auto &v : points)
+        for (const auto &v : std::as_const(points))
             out.append(v);
         // end が明示的に存在する場合のみ追加（任意終了点の哲学）
-        const QVariant endVal = track.value("end");
+        const QVariant endVal = track.value(QStringLiteral("end"));
         if (endVal.canConvert<QVariantMap>() && !endVal.toMap().isEmpty())
             out.append(endVal);
         return out;
@@ -259,20 +259,20 @@ class EffectModel : public QObject {
     static QVariant evaluateTrack(const QVariantList &track, int frame, const QVariant &fallback) {
         if (track.isEmpty())
             return fallback;
-        auto getFrame = [](const QVariant &v) { return v.toMap().value("frame").toInt(); };
-        auto getValue = [](const QVariant &v) { return v.toMap().value("value"); };
-        auto getInterp = [](const QVariant &v) { return v.toMap().value("interp").toString(); };
-        auto getModeParams = [](const QVariant &v) { return v.toMap().value("modeParams").toMap(); };
+        auto getFrame = [](const QVariant &v) { return v.toMap().value(QStringLiteral("frame")).toInt(); };
+        auto getValue = [](const QVariant &v) { return v.toMap().value(QStringLiteral("value")); };
+        auto getInterp = [](const QVariant &v) { return v.toMap().value(QStringLiteral("interp")).toString(); };
+        auto getModeParams = [](const QVariant &v) { return v.toMap().value(QStringLiteral("modeParams")).toMap(); };
         auto getBezierParams = [](const QVariant &v) -> std::vector<double> {
             const auto map = v.toMap();
-            if (map.contains("points")) {
-                QVariantList lst = map.value("points").toList();
+            if (map.contains(QStringLiteral("points"))) {
+                QVariantList lst = map.value(QStringLiteral("points")).toList();
                 std::vector<double> pts;
-                for (const auto &val : lst)
+                for (const auto &val : std::as_const(lst))
                     pts.push_back(val.toDouble());
                 return pts;
             }
-            return {map.value("bzx1", 0.33).toDouble(), map.value("bzy1", 0.0).toDouble(), map.value("bzx2", 0.66).toDouble(), map.value("bzy2", 1.0).toDouble(), 1.0, 1.0};
+            return {map.value(QStringLiteral("bzx1"), 0.33).toDouble(), map.value(QStringLiteral("bzy1"), 0.0).toDouble(), map.value(QStringLiteral("bzx2"), 0.66).toDouble(), map.value(QStringLiteral("bzy2"), 1.0).toDouble(), 1.0, 1.0};
         };
 
         if (frame <= getFrame(track.front()))
@@ -290,13 +290,13 @@ class EffectModel : public QObject {
             QString type = getInterp(track[i]);
             const QVariantMap modeParams = getModeParams(track[i]);
 
-            if (type == "none")
+            if (type == QStringLiteral("none"))
                 return (frame < f1) ? v0 : v1;
             if (v0.typeId() == QMetaType::QString && v1.typeId() == QMetaType::QString) {
                 QColor c0(v0.toString()), c1(v1.typeId() == QMetaType::QString ? v1.toString() : v0.toString());
                 if (c0.isValid() && c1.isValid()) {
                     std::vector<double> params;
-                    if (type == "custom")
+                    if (type == QStringLiteral("custom"))
                         params = getBezierParams(track[i]);
                     if (!easingFunctions().contains(type))
                         type = "linear";
@@ -309,17 +309,17 @@ class EffectModel : public QObject {
             if (!numeric || !v0.canConvert<double>() || !v1.canConvert<double>())
                 return v0;
             const double a = v0.toDouble(), b = v1.toDouble();
-            if (type == "random") {
-                const int stepFrames = std::max(1, modeParams.value("stepFrames", 1).toInt()), stepIndex = (frame - f0) / stepFrames;
+            if (type == QStringLiteral("random")) {
+                const int stepFrames = std::max(1, modeParams.value(QStringLiteral("stepFrames"), 1).toInt()), stepIndex = (frame - f0) / stepFrames;
                 const quint32 seed = qHash(f0) ^ qHash(f1) ^ qHash(stepIndex) ^ qHash(static_cast<qint64>(a * 1000)) ^ qHash(static_cast<qint64>(b * 1000));
                 return std::min(a, b) + (std::max(a, b) - std::min(a, b)) * (double(seed % 1000000u) / 999999.0);
             }
-            if (type == "alternate") {
-                const int stepFrames = std::max(1, modeParams.value("stepFrames", 1).toInt());
+            if (type == QStringLiteral("alternate")) {
+                const int stepFrames = std::max(1, modeParams.value(QStringLiteral("stepFrames"), 1).toInt());
                 return ((frame - f0) / stepFrames % 2 == 0) ? a : b;
             }
             std::vector<double> params;
-            if (type == "custom")
+            if (type == QStringLiteral("custom"))
                 params = getBezierParams(track[i]);
             if (!easingFunctions().contains(type))
                 type = "linear";
@@ -331,35 +331,35 @@ class EffectModel : public QObject {
     static QVariantMap normalizeTrackForDuration(const QVariant &rawTrack, const QVariant &fallback, int durationFrames) {
         if (isStructuredTrack(rawTrack)) {
             QVariantMap raw = rawTrack.toMap();
-            QVariantMap start = raw.value("start").toMap();
-            QVariantList points = raw.value("points").toList(), nextPoints;
-            start["frame"] = 0;
-            if (!start.contains("value"))
-                start["value"] = fallback;
+            QVariantMap start = raw.value(QStringLiteral("start")).toMap();
+            QVariantList points = raw.value(QStringLiteral("points")).toList(), nextPoints;
+            start[QStringLiteral("frame")] = 0;
+            if (!start.contains(QStringLiteral("value")))
+                start[QStringLiteral("value")] = fallback;
 
             const int ceiling = durationFrames;
 
-            for (const auto &v : points) {
-                const int f = v.toMap().value("frame").toInt();
+            for (const auto &v : std::as_const(points)) {
+                const int f = v.toMap().value(QStringLiteral("frame")).toInt();
                 if (f > 0 && f <= ceiling)
                     nextPoints.append(v);
             }
             QVariantMap out;
-            out["start"] = start;
-            out["points"] = sortPoints(nextPoints); // フレーム位置はユーザー設定値のまま
+            out[QStringLiteral("start")] = start;
+            out[QStringLiteral("points")] = sortPoints(nextPoints); // フレーム位置はユーザー設定値のまま
             return out;
         }
         // レガシーリスト形式（end なし）
         QVariantList legacy = sortPoints(rawTrack.toList()), points;
         QVariantMap start = makePoint(0, legacy.isEmpty() ? fallback : evaluateTrack(legacy, 0, fallback), "linear");
-        for (const auto &v : legacy) {
-            const int f = v.toMap().value("frame").toInt();
+        for (const auto &v : std::as_const(legacy)) {
+            const int f = v.toMap().value(QStringLiteral("frame")).toInt();
             if (f > 0 && f < durationFrames)
                 points.append(v);
         }
         QVariantMap out;
-        out["start"] = start;
-        out["points"] = sortPoints(points);
+        out[QStringLiteral("start")] = start;
+        out[QStringLiteral("points")] = sortPoints(points);
         return out;
     }
 
@@ -378,12 +378,12 @@ class EffectModel : public QObject {
         for (auto it = m_params.begin(); it != m_params.end(); ++it) {
             QVariantMap track;
             QVariantMap start;
-            start["frame"] = 0;
-            start["value"] = it.value();
-            start["interp"] = "none";
-            track["start"] = start;
+            start[QStringLiteral("frame")] = 0;
+            start[QStringLiteral("value")] = it.value();
+            start[QStringLiteral("interp")] = "none";
+            track[QStringLiteral("start")] = start;
             // end は設定しない（任意終了点の哲学）
-            track["points"] = QVariantList();
+            track[QStringLiteral("points")] = QVariantList();
             m_keyframeTracks[it.key()] = track;
         }
     }
@@ -411,13 +411,13 @@ class EffectModel : public QObject {
         if (isStructuredTrack(raw))
             return flattenStructuredTrack(raw.toMap());
         QVariantList list = raw.toList();
-        std::sort(list.begin(), list.end(), [](const QVariant &a, const QVariant &b) { return a.toMap().value("frame").toInt() < b.toMap().value("frame").toInt(); });
+        std::sort(list.begin(), list.end(), [](const QVariant &a, const QVariant &b) { return a.toMap().value(QStringLiteral("frame")).toInt() < b.toMap().value(QStringLiteral("frame")).toInt(); });
         return list;
     }
 
     Q_INVOKABLE bool isEndpointFrame(const QString &paramName, int frame) const {
         const QVariant raw = m_keyframeTracks.value(paramName);
-        const int startFrame = isStructuredTrack(raw) ? raw.toMap().value("start").toMap().value("frame").toInt() : 0;
+        const int startFrame = isStructuredTrack(raw) ? raw.toMap().value(QStringLiteral("start")).toMap().value(QStringLiteral("frame")).toInt() : 0;
         return frame == startFrame;
     }
     Q_INVOKABLE bool hasExplicitEndPoint(const QString &paramName) const { return hasExplicitEnd(m_keyframeTracks.value(paramName)); }
@@ -430,12 +430,12 @@ class EffectModel : public QObject {
         for (auto it = m_params.begin(); it != m_params.end(); ++it) {
             if (!m_keyframeTracks.contains(it.key()) || !isStructuredTrack(m_keyframeTracks.value(it.key()))) {
                 QVariantMap start;
-                start["frame"] = 0;
-                start["value"] = it.value();
-                start["interp"] = "none";
+                start[QStringLiteral("frame")] = 0;
+                start[QStringLiteral("value")] = it.value();
+                start[QStringLiteral("interp")] = "none";
                 QVariantMap track;
-                track["start"] = start;
-                track["points"] = QVariantList();
+                track[QStringLiteral("start")] = start;
+                track[QStringLiteral("points")] = QVariantList();
                 m_keyframeTracks[it.key()] = track;
             }
         }
@@ -458,54 +458,54 @@ class EffectModel : public QObject {
             const QVariant fallback = it.value();
             QVariantMap track = normalizeTrackForDuration(currentTracks.value(key), fallback, originalDuration);
             QVariantList flat = flattenStructuredTrack(track);
-            QVariantMap start = track.value("start").toMap();
-            QVariantList points = track.value("points").toList();
+            QVariantMap start = track.value(QStringLiteral("start")).toMap();
+            QVariantList points = track.value(QStringLiteral("points")).toList();
             const bool originalHasEnd = hasExplicitEnd(m_keyframeTracks.value(key));
 
             // 前半トラック
             QVariantMap firstTrack;
             QVariantList firstPoints;
-            for (const auto &v : points) {
-                const int f = v.toMap().value("frame").toInt();
+            for (const auto &v : std::as_const(points)) {
+                const int f = v.toMap().value(QStringLiteral("frame")).toInt();
                 if (f > 0 && f < firstEndFrame)
                     firstPoints.append(v.toMap());
             }
-            firstTrack["start"] = start;
-            firstTrack["points"] = firstPoints;
+            firstTrack[QStringLiteral("start")] = start;
+            firstTrack[QStringLiteral("points")] = firstPoints;
             if (originalHasEnd) {
                 QVariantMap firstEnd;
-                firstEnd["frame"] = firstEndFrame;
-                firstEnd["value"] = evaluateTrack(flat, firstEndFrame, fallback);
-                firstEnd["interp"] = m_keyframeTracks.value(key).toMap().value("end").toMap().value("interp", "none");
-                firstTrack["end"] = firstEnd;
+                firstEnd[QStringLiteral("frame")] = firstEndFrame;
+                firstEnd[QStringLiteral("value")] = evaluateTrack(flat, firstEndFrame, fallback);
+                firstEnd[QStringLiteral("interp")] = m_keyframeTracks.value(key).toMap().value(QStringLiteral("end")).toMap().value(QStringLiteral("interp"), "none");
+                firstTrack[QStringLiteral("end")] = firstEnd;
             }
             currentTracks[key] = firstTrack;
 
             // 後半トラック
             QVariantMap secondTrack;
             QVariantMap secondStart;
-            secondStart["frame"] = 0;
-            secondStart["value"] = evaluateTrack(flat, firstHalfDuration, fallback);
-            secondStart["interp"] = start.value("interp", "none");
+            secondStart[QStringLiteral("frame")] = 0;
+            secondStart[QStringLiteral("value")] = evaluateTrack(flat, firstHalfDuration, fallback);
+            secondStart[QStringLiteral("interp")] = start.value(QStringLiteral("interp"), "none");
             QVariantList secondPoints;
-            for (const auto &v : points) {
+            for (const auto &v : std::as_const(points)) {
                 auto m = v.toMap();
-                const int f = m.value("frame").toInt();
+                const int f = m.value(QStringLiteral("frame")).toInt();
                 if (f > firstHalfDuration && f < std::max(0, originalDuration - 1)) {
-                    m["frame"] = f - firstHalfDuration;
-                    const int nf = m.value("frame").toInt();
+                    m[QStringLiteral("frame")] = f - firstHalfDuration;
+                    const int nf = m.value(QStringLiteral("frame")).toInt();
                     if (nf > 0 && nf < secondEndFrame)
                         secondPoints.append(m);
                 }
             }
-            secondTrack["start"] = secondStart;
-            secondTrack["points"] = secondPoints;
+            secondTrack[QStringLiteral("start")] = secondStart;
+            secondTrack[QStringLiteral("points")] = secondPoints;
             if (originalHasEnd) {
                 QVariantMap secondEnd;
-                secondEnd["frame"] = secondEndFrame;
-                secondEnd["value"] = evaluateTrack(flat, std::max(0, originalDuration - 1), fallback);
-                secondEnd["interp"] = m_keyframeTracks.value(key).toMap().value("end").toMap().value("interp", "none");
-                secondTrack["end"] = secondEnd;
+                secondEnd[QStringLiteral("frame")] = secondEndFrame;
+                secondEnd[QStringLiteral("value")] = evaluateTrack(flat, std::max(0, originalDuration - 1), fallback);
+                secondEnd[QStringLiteral("interp")] = m_keyframeTracks.value(key).toMap().value(QStringLiteral("end")).toMap().value(QStringLiteral("interp"), "none");
+                secondTrack[QStringLiteral("end")] = secondEnd;
             }
             secondHalfTracks[key] = secondTrack;
         }
@@ -547,18 +547,18 @@ class EffectModel : public QObject {
         const QVariant fallback = m_params.value(paramName);
         QVariantMap track = normalizeTrackForDuration(m_keyframeTracks.value(paramName), fallback, inferredDurationForTrack(m_keyframeTracks.value(paramName)));
 
-        QVariantMap start = track.value("start").toMap();
-        QVariantList points = track.value("points").toList();
-        const QString interp = options.value("interp", "none").toString();
+        QVariantMap start = track.value(QStringLiteral("start")).toMap();
+        QVariantList points = track.value(QStringLiteral("points")).toList();
+        const QString interp = options.value(QStringLiteral("interp"), "none").toString();
 
-        const int startFrame = start.value("frame").toInt();
+        const int startFrame = start.value(QStringLiteral("frame")).toInt();
         const bool trackHasEnd = hasExplicitEnd(m_keyframeTracks.value(paramName));
-        const int endFrame = trackHasEnd ? m_keyframeTracks.value(paramName).toMap().value("end").toMap().value("frame").toInt() : std::numeric_limits<int>::max();
+        const int endFrame = trackHasEnd ? m_keyframeTracks.value(paramName).toMap().value(QStringLiteral("end")).toMap().value(QStringLiteral("frame")).toInt() : std::numeric_limits<int>::max();
 
         if (frame <= startFrame) {
-            start["value"] = value;
-            start["interp"] = options.value("interp", start.value("interp", "none"));
-            track["start"] = start;
+            start[QStringLiteral("value")] = value;
+            start[QStringLiteral("interp")] = options.value(QStringLiteral("interp"), start.value(QStringLiteral("interp"), "none"));
+            track[QStringLiteral("start")] = start;
             m_keyframeTracks[paramName] = track;
             emit keyframeTracksChanged();
             return;
@@ -566,27 +566,27 @@ class EffectModel : public QObject {
 
         // 終了点が明示的に存在する場合のみ終了点への更新を行う
         if (trackHasEnd && frame >= endFrame) {
-            QVariantMap end = m_keyframeTracks.value(paramName).toMap().value("end").toMap();
-            end["value"] = value;
-            end["interp"] = options.value("interp", end.value("interp", "none"));
-            track["end"] = end;
+            QVariantMap end = m_keyframeTracks.value(paramName).toMap().value(QStringLiteral("end")).toMap();
+            end[QStringLiteral("value")] = value;
+            end[QStringLiteral("interp")] = options.value(QStringLiteral("interp"), end.value(QStringLiteral("interp"), "none"));
+            track[QStringLiteral("end")] = end;
             m_keyframeTracks[paramName] = track;
             emit keyframeTracksChanged();
             return;
         }
 
         QVariantMap kf;
-        kf["frame"] = frame;
-        kf["value"] = value;
-        kf["interp"] = interp;
-        if (options.contains("points"))
-            kf["points"] = options.value("points");
-        if (options.contains("modeParams"))
-            kf["modeParams"] = options.value("modeParams");
+        kf[QStringLiteral("frame")] = frame;
+        kf[QStringLiteral("value")] = value;
+        kf[QStringLiteral("interp")] = interp;
+        if (options.contains(QStringLiteral("points")))
+            kf[QStringLiteral("points")] = options.value(QStringLiteral("points"));
+        if (options.contains(QStringLiteral("modeParams")))
+            kf[QStringLiteral("modeParams")] = options.value(QStringLiteral("modeParams"));
 
         bool updated = false;
         for (int i = 0; i < points.size(); ++i) {
-            if (points[i].toMap().value("frame").toInt() == frame) {
+            if (points[i].toMap().value(QStringLiteral("frame")).toInt() == frame) {
                 points[i] = kf;
                 updated = true;
                 break;
@@ -595,7 +595,7 @@ class EffectModel : public QObject {
         if (!updated)
             points.append(kf);
 
-        track["points"] = sortPoints(points);
+        track[QStringLiteral("points")] = sortPoints(points);
         m_keyframeTracks[paramName] = track;
         emit keyframeTracksChanged();
     }
@@ -605,15 +605,15 @@ class EffectModel : public QObject {
         const QVariant fallback = m_params.value(paramName);
         QVariantMap track = normalizeTrackForDuration(m_keyframeTracks.value(paramName), fallback, inferredDurationForTrack(m_keyframeTracks.value(paramName)));
 
-        const int startFrame = track.value("start").toMap().value("frame").toInt();
+        const int startFrame = track.value(QStringLiteral("start")).toMap().value(QStringLiteral("frame")).toInt();
         // 開始点は削除不可（終了点は明示的な場合のみ保護）
         if (frame <= startFrame)
             return;
-        QVariantList points = track.value("points").toList(), next;
-        for (const auto &v : points)
-            if (v.toMap().value("frame").toInt() != frame)
+        QVariantList points = track.value(QStringLiteral("points")).toList(), next;
+        for (const auto &v : std::as_const(points))
+            if (v.toMap().value(QStringLiteral("frame")).toInt() != frame)
                 next.append(v);
-        track["points"] = next;
+        track[QStringLiteral("points")] = next;
         m_keyframeTracks[paramName] = track;
         emit keyframeTracksChanged();
     }
@@ -647,7 +647,7 @@ class EffectModel : public QObject {
 
         // 2. パラメータ自体がエクスプレッション定義かチェック（簡易実装）
         QString strVal = m_params.value(paramName).toString();
-        if (strVal.startsWith("=")) {
+        if (strVal.startsWith(QStringLiteral("="))) {
             // "=time*100" -> "time*100"
             std::string expr = strVal.mid(1).toStdString();
             double time = (fps > 0.0) ? frame / fps : 0.0;

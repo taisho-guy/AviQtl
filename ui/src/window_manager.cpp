@@ -40,7 +40,7 @@ void WindowManager::onProjectSelected(const QString &path, int w, int h, double 
     }
 
     // ランチャーを閉じる
-    QPointer<QQuickWindow> launcher = m_windows.value("launcher");
+    QPointer<QQuickWindow> launcher = m_windows.value(QStringLiteral("launcher"));
     if (launcher) {
         launcher->close();
     }
@@ -128,7 +128,7 @@ void WindowManager::registerWindow(const QString &id, QQuickWindow *win) {
     });
 
     // メインが閉じられたら全終了
-    if (id == "main") {
+    if (id == QStringLiteral("main")) {
         connect(win, &QQuickWindow::closing, this, [this](QQuickCloseEvent *e) -> void {
             Q_UNUSED(e);
             requestQuit();
@@ -139,16 +139,16 @@ void WindowManager::registerWindow(const QString &id, QQuickWindow *win) {
 }
 
 void WindowManager::emitVisibilityChanged(const QString &id) {
-    if (id == "timeline") {
+    if (id == QStringLiteral("timeline")) {
         emit timelineVisibleChanged();
     }
-    if (id == "projectSettings") {
+    if (id == QStringLiteral("projectSettings")) {
         emit projectSettingsVisibleChanged();
     }
-    if (id == "objectSettings") {
+    if (id == QStringLiteral("objectSettings")) {
         emit objectSettingsVisibleChanged();
     }
-    if (id == "systemSettings") {
+    if (id == QStringLiteral("systemSettings")) {
         emit systemSettingsVisibleChanged();
     }
 }

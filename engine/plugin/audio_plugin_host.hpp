@@ -17,6 +17,9 @@ struct ParamInfo {
 
 class IAudioPlugin {
   public:
+    IAudioPlugin() = default;
+    IAudioPlugin(const IAudioPlugin &) = delete;
+    IAudioPlugin &operator=(const IAudioPlugin &) = delete;
     virtual ~IAudioPlugin() = default;
 
     virtual bool load(const QString &path, int index = 0) = 0;

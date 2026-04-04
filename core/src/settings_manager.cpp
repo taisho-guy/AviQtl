@@ -177,7 +177,7 @@ void SettingsManager::load() {
         QVariantMap loaded = doc.object().toVariantMap();
         for (auto it = loaded.begin(); it != loaded.end(); ++it) {
             if (it.key() == "shortcuts" && it.value().canConvert<QVariantMap>()) {
-                QVariantMap mergedShortcuts = m_settings.value("shortcuts").toMap();
+                QVariantMap mergedShortcuts = m_settings.value(QStringLiteral("shortcuts")).toMap();
                 QVariantMap loadedShortcuts = it.value().toMap();
                 for (auto shortcutIt = loadedShortcuts.begin(); shortcutIt != loadedShortcuts.end(); ++shortcutIt) {
                     mergedShortcuts[shortcutIt.key()] = shortcutIt.value();
@@ -211,7 +211,7 @@ void SettingsManager::setValue(const QString &key, const QVariant &value) {
         m_settings[key] = value;
         emit settingsChanged();
         // Runtime keys starting with "_" are not saved to disk
-        if (!key.startsWith("_")) {
+        if (!key.startsWith(QStringLiteral("_"))) {
             save();
         }
     }
@@ -219,7 +219,7 @@ void SettingsManager::setValue(const QString &key, const QVariant &value) {
 
 auto SettingsManager::value(const QString &key, const QVariant &defaultValue) const -> QVariant { return m_settings.value(key, defaultValue); }
 
-auto SettingsManager::shortcuts() const -> QVariantMap { return m_settings.value("shortcuts").toMap(); }
+auto SettingsManager::shortcuts() const -> QVariantMap { return m_settings.value(QStringLiteral("shortcuts")).toMap(); }
 
 auto SettingsManager::shortcut(const QString &actionId, const QString &fallbackValue) const -> QString {
     const QVariantMap shortcutMap = shortcuts();

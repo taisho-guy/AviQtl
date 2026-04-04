@@ -11,6 +11,8 @@ namespace Rina::Core {
 
 class FFmpegVideoBuffer final : public QAbstractVideoBuffer {
   public:
+    FFmpegVideoBuffer(const FFmpegVideoBuffer &) = delete;
+    FFmpegVideoBuffer &operator=(const FFmpegVideoBuffer &) = delete;
     FFmpegVideoBuffer(AVFrame *frame, const QVideoFrameFormat &format) : m_frame(av_frame_alloc()), m_format(format) { av_frame_ref(m_frame, frame); }
 
     ~FFmpegVideoBuffer() override { av_frame_free(&m_frame); }
