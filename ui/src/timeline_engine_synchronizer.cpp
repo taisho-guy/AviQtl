@@ -50,7 +50,7 @@ void TimelineEngineSynchronizer::updateActiveClipsList() {
             }
         }
 
-        auto &batch = archetypeBatches.value(sig);
+        auto &batch = archetypeBatches[sig];
         if (batch.clips.isEmpty()) {
             for (int i = 0; i < clip->effects.size(); ++i) {
                 if (clip->effects.value(i)->isEnabled()) {
@@ -144,7 +144,7 @@ void TimelineEngineSynchronizer::handleResultsReady() {
                 // UIスレッド用に QVariantMap を復元
                 QVariantMap resMap;
                 for (int i = 0; i < static_cast<int>(res.propertyNames.size()); ++i) {
-                    resMap.insert(res.propertyNames.value(i), res.propertyValues.value(i));
+                    resMap.insert(res.propertyNames.value(i), res.propertyValues[static_cast<std::size_t>(i)]);
                 }
                 // 非数値（テキスト等）を復元
                 for (int i = 0; i < res.variantNames.size(); ++i) {

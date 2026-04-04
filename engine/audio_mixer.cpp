@@ -163,9 +163,9 @@ auto AudioMixer::mix(int currentFrame, double fps, int samplesPerFrame) -> std::
                     double t = srcIdx - idx0;
 
                     // L ch
-                    clipSamples.insert(static_cast<std::size_t>(i) * 2, static_cast<float>((rawSamples.value(static_cast<std::size_t>(idx0) * 2) * (1.0 - t)) + (rawSamples.value(static_cast<std::size_t>(idx1) * 2) * t)));
+                    clipSamples[static_cast<std::size_t>(i) * 2] = static_cast<float>((rawSamples[static_cast<std::size_t>(idx0) * 2] * (1.0 - t)) + (rawSamples[static_cast<std::size_t>(idx1) * 2] * t));
                     // R ch
-                    clipSamples.insert((static_cast<std::size_t>(i) * 2) + 1, static_cast<float>((rawSamples.at((static_cast<std::size_t>(idx0) * 2) + 1) * (1.0 - t)) + (rawSamples.at((static_cast<std::size_t>(idx1) * 2) + 1) * t)));
+                    clipSamples[(static_cast<std::size_t>(i) * 2) + 1] = static_cast<float>((rawSamples.at((static_cast<std::size_t>(idx0) * 2) + 1) * (1.0 - t)) + (rawSamples.at((static_cast<std::size_t>(idx1) * 2) + 1) * t));
                 }
             }
             // 次のフレームのための開始位置を進める（m_playbackSpeed 分の秒数）
@@ -186,9 +186,9 @@ auto AudioMixer::mix(int currentFrame, double fps, int samplesPerFrame) -> std::
         float rightVol = audio.volume * (audio.pan >= 0 ? 1.0F : 1.0F + audio.pan);
 
         for (size_t i = 0; i < clipSamples.size() && i < masterBuffer.size(); i += 2) {
-            masterBuffer.value(i) += clipSamples.value(i) * leftVol;
+            masterBuffer[i] += clipSamples[i] * leftVol;
             if (i + 1 < clipSamples.size()) {
-                masterBuffer.value(i + 1) += clipSamples.value(i + 1) * rightVol;
+                masterBuffer[i + 1] += clipSamples[i + 1] * rightVol;
             }
         }
     }

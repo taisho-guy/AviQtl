@@ -116,7 +116,7 @@ auto TimelineMediaManager::getClipSourceUrl(const ClipData &clip) -> QUrl {
         return {};
     }
     // 音声以外は通常 "path" パラメータにファイルパスが入っている
-    QString path = effModel->params().value(clip.type == QStringLiteral("audio") ? QLatin1String("source") : "path").toString();
+    QString path = effModel->params().value(clip.type == QStringLiteral("audio") ? QLatin1String("source") : QLatin1String("path")).toString();
     return QUrl::fromLocalFile(path);
 }
 

@@ -78,15 +78,15 @@ class CarlaHostedPlugin final : public IAudioPlugin {
     void deinterleave(const float *src, int frames) {
         ensureBuffers(frames);
         for (int i = 0; i < frames; ++i) {
-            m_inL.insert(i, src[(i * 2) + 0]);
-            m_inR.insert(i, src[(i * 2) + 1]);
+            m_inL[i] = src[(i * 2) + 0];
+            m_inR[i] = src[(i * 2) + 1];
         }
     }
 
     void interleave(float *dst, int frames) const {
         for (int i = 0; i < frames; ++i) {
-            dst[(i * 2) + 0] = m_outL.value(i);
-            dst[(i * 2) + 1] = m_outR.value(i);
+            dst[(i * 2) + 0] = m_outL[i];
+            dst[(i * 2) + 1] = m_outR[i];
         }
     }
 

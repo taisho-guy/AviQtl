@@ -221,8 +221,8 @@ auto VideoDecoder::frameIndexFromSeconds(double seconds) const -> int {
     if (std::cmp_greater_equal(idx, mindex.size())) {
         return static_cast<int>(mindex.size()) - 1;
     }
-    const int64_t a = mindex.value(idx - 1).pts;
-    const int64_t b = mindex.value(idx).pts;
+    const int64_t a = mindex[idx - 1].pts;
+    const int64_t b = mindex[idx].pts;
     return std::llabs(targetPts - a) <= std::llabs(b - targetPts) ? idx - 1 : idx;
 }
 
@@ -283,12 +283,12 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) { // NOLINT(bugprone-
     }
 
     if (mframeCache.contains(targetFrame)) {
-        mstore->setVideoFrameSafe(QString::number(clipId()), *mframeCache.value(targetFrame));
+        mstore->setVideoFrameSafe(QString::number(clipId()), *mframeCache.object(targetFrame));
         QMetaObject::invokeMethod(this, [this, targetFrame]() -> void { emit frameReady(targetFrame); }, Qt::QueuedConnection);
         return;
     }
 
-    const auto &targetEntry = mindex.value(targetFrame);
+    const auto &targetEntry = mindex[targetFrame];
     int64_t targetPts = targetEntry.pts;
     bool needSeek = true;
 
@@ -298,10 +298,10 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) { // NOLINT(bugprone-
 
     if (needSeek) {
         int keyIndex = targetFrame;
-        while (keyIndex > 0 && !mindex.value(keyIndex).isKeyframe) {
+        while (keyIndex > 0 && !mindex[keyIndex].isKeyframe) {
             --keyIndex;
         }
-        int64_t seekPts = mindex.value(keyIndex).pts;
+        int64_t seekPts = mindex[keyIndex].pts;
         int ret = av_seek_frame(mfmtCtx, mstreamIndex, seekPts, AVSEEK_FLAG_BACKWARD);
         if (ret < 0) {
             av_seek_frame(mfmtCtx, -1, seekPts, AVSEEK_FLAG_BACKWARD);
@@ -441,7 +441,7 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) { // NOLINT(bugprone-
     av_packet_free(&pkt);
 
     if (mframeCache.contains(targetFrame)) {
-        mstore->setVideoFrameSafe(QString::number(clipId()), *mframeCache.value(targetFrame));
+        mstore->setVideoFrameSafe(QString::number(clipId()), *mframeCache.object(targetFrame));
         QPointer<VideoDecoder> self(this);
         QMetaObject::invokeMethod(
             this,

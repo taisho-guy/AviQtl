@@ -1045,7 +1045,7 @@ void TimelineService::setAudioPluginEnabledInternal(int clipId, int index, bool 
         return;
     }
 
-    clip->audioPlugins.value(index).enabled = enabled;
+    clip->audioPlugins[index].enabled = enabled;
 
     emit clipEffectsChanged(clipId);
     emit clipsChanged(); // エンジン側の同期を促す
