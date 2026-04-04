@@ -10,8 +10,8 @@ class AudioPluginChain {
   public:
     AudioPluginChain() {
         const auto &sm = Rina::Core::SettingsManager::instance();
-        m_sampleRate = sm.value("defaultProjectSampleRate", 48000).toDouble();
-        m_maxBlockSize = sm.value("audioPluginMaxBlockSize", 4096).toInt();
+        m_sampleRate = sm.value(QStringLiteral("defaultProjectSampleRate"), 48000).toDouble();
+        m_maxBlockSize = sm.value(QStringLiteral("audioPluginMaxBlockSize"), 4096).toInt();
     }
 
     void add(std::unique_ptr<IAudioPlugin> plugin);

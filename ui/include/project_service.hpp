@@ -13,11 +13,11 @@ class ProjectService : public QObject {
   public:
     explicit ProjectService(QObject *parent = nullptr) : QObject(parent) {
         const auto &settings = Rina::Core::SettingsManager::instance().settings();
-        m_width = settings.value("defaultProjectWidth", 1920).toInt();
-        m_height = settings.value("defaultProjectHeight", 1080).toInt();
-        m_fps = settings.value("defaultProjectFps", 60.0).toDouble();
-        m_sampleRate = settings.value("defaultProjectSampleRate", 48000).toInt();
-        Rina::Core::SettingsManager::instance().setValue("_runtime_projectSampleRate", m_sampleRate);
+        m_width = settings.value(QStringLiteral("defaultProjectWidth"), 1920).toInt();
+        m_height = settings.value(QStringLiteral("defaultProjectHeight"), 1080).toInt();
+        m_fps = settings.value(QStringLiteral("defaultProjectFps"), 60.0).toDouble();
+        m_sampleRate = settings.value(QStringLiteral("defaultProjectSampleRate"), 48000).toInt();
+        Rina::Core::SettingsManager::instance().setValue(QStringLiteral("_runtime_projectSampleRate"), m_sampleRate);
     }
 
     int width() const { return m_width; }
@@ -49,7 +49,7 @@ class ProjectService : public QObject {
         if (m_sampleRate == r)
             return;
         m_sampleRate = r;
-        Rina::Core::SettingsManager::instance().setValue("_runtime_projectSampleRate", m_sampleRate);
+        Rina::Core::SettingsManager::instance().setValue(QStringLiteral("_runtime_projectSampleRate"), m_sampleRate);
         emit sampleRateChanged();
     }
 

@@ -62,7 +62,7 @@ struct SceneData {
     int durationFrames = 0;
 
     // Grid & Snap Settings (Moved from UI/System state to Scene state)
-    QString gridMode = "Auto"; // "Auto", "BPM", "Frame"
+    QString gridMode = QStringLiteral("Auto"); // QStringLiteral("Auto"), QStringLiteral("BPM"), QStringLiteral("Frame")
     double gridBpm = 120.0;
     double gridOffset = 0.0;
     int gridInterval = 10;

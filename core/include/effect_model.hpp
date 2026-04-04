@@ -37,7 +37,7 @@ class EffectModel : public QObject {
         return ev.canConvert<QVariantMap>() && !ev.toMap().isEmpty();
     }
 
-    static QVariantMap makePoint(int frame, const QVariant &value, const QString &interp = "none") {
+    static QVariantMap makePoint(int frame, const QVariant &value, const QString &interp = QStringLiteral("none")) {
         QVariantMap p;
         p[QStringLiteral("frame")] = frame;
         p[QStringLiteral("value")] = value;
@@ -123,30 +123,30 @@ class EffectModel : public QObject {
         };
 
         static const QHash<QString, EasingFunction> funcs = {
-            {"linear", [](double t, const auto &) { return t; }},
-            {"ease_in_sine", [](double t, const auto &) { return 1.0 - std::cos(t * M_PI / 2.0); }},
-            {"ease_out_sine", [](double t, const auto &) { return std::sin(t * M_PI / 2.0); }},
-            {"ease_in_out_sine", [](double t, const auto &) { return -(std::cos(M_PI * t) - 1.0) / 2.0; }},
-            {"ease_out_in_sine", [](double t, const auto &) { return t < 0.5 ? std::sin(t * M_PI) / 2.0 : (1.0 - std::cos((t * 2.0 - 1.0) * M_PI / 2.0)) / 2.0 + 0.5; }},
-            {"ease_in_quad", [](double t, const auto &) { return t * t; }},
-            {"ease_out_quad", [](double t, const auto &) { return 1.0 - (1.0 - t) * (1.0 - t); }},
-            {"ease_in_out_quad", [](double t, const auto &) { return t < 0.5 ? 2.0 * t * t : 1.0 - ((-2.0 * t + 2.0) * (-2.0 * t + 2.0)) / 2.0; }},
-            {"ease_out_in_quad", [](double t, const auto &) { return t < 0.5 ? (1.0 - (1.0 - 2.0 * t) * (1.0 - 2.0 * t)) / 2.0 : (2.0 * t - 1.0) * (2.0 * t - 1.0) / 2.0 + 0.5; }},
-            {"ease_in_cubic", [](double t, const auto &) { return t * t * t; }},
-            {"ease_out_cubic", [](double t, const auto &) { return 1.0 - (1.0 - t) * (1.0 - t) * (1.0 - t); }},
-            {"ease_in_out_cubic", [](double t, const auto &) { return t < 0.5 ? 4.0 * t * t * t : 1.0 - ((-2.0 * t + 2.0) * (-2.0 * t + 2.0) * (-2.0 * t + 2.0)) / 2.0; }},
-            {"ease_out_in_cubic", [](double t, const auto &) { return t < 0.5 ? (1.0 - std::pow(1.0 - 2.0 * t, 3.0)) / 2.0 : std::pow(2.0 * t - 1.0, 3.0) / 2.0 + 0.5; }},
-            {"ease_in_quart", [](double t, const auto &) { return t * t * t * t; }},
-            {"ease_out_quart", [](double t, const auto &) { return 1.0 - (1.0 - t) * (1.0 - t) * (1.0 - t) * (1.0 - t); }},
-            {"ease_in_out_quart", [](double t, const auto &) { return t < 0.5 ? 8.0 * t * t * t * t : 1.0 - ((-2.0 * t + 2.0) * (-2.0 * t + 2.0) * (-2.0 * t + 2.0) * (-2.0 * t + 2.0)) / 2.0; }},
-            {"ease_out_in_quart", [](double t, const auto &) { return t < 0.5 ? (1.0 - std::pow(1.0 - 2.0 * t, 4.0)) / 2.0 : std::pow(2.0 * t - 1.0, 4.0) / 2.0 + 0.5; }},
-            {"ease_in_quint", [](double t, const auto &) { return t * t * t * t * t; }},
-            {"ease_out_quint", [](double t, const auto &) { return 1.0 - (1.0 - t) * (1.0 - t) * (1.0 - t) * (1.0 - t) * (1.0 - t); }},
-            {"ease_in_out_quint", [](double t, const auto &) { return t < 0.5 ? 16.0 * t * t * t * t * t : 1.0 - ((-2.0 * t + 2.0) * (-2.0 * t + 2.0) * (-2.0 * t + 2.0) * (-2.0 * t + 2.0) * (-2.0 * t + 2.0)) / 2.0; }},
-            {"ease_out_in_quint", [](double t, const auto &) { return t < 0.5 ? (1.0 - std::pow(1.0 - 2.0 * t, 5.0)) / 2.0 : std::pow(2.0 * t - 1.0, 5.0) / 2.0 + 0.5; }},
-            {"ease_in_expo", [](double t, const auto &) { return t == 0.0 ? 0.0 : std::pow(2.0, 10.0 * t - 10.0); }},
-            {"ease_out_expo", [](double t, const auto &) { return t == 1.0 ? 1.0 : 1.0 - std::pow(2.0, -10.0 * t); }},
-            {"ease_in_out_expo",
+            {QStringLiteral("linear"), [](double t, const auto &) { return t; }},
+            {QStringLiteral("ease_in_sine"), [](double t, const auto &) { return 1.0 - std::cos(t * M_PI / 2.0); }},
+            {QStringLiteral("ease_out_sine"), [](double t, const auto &) { return std::sin(t * M_PI / 2.0); }},
+            {QStringLiteral("ease_in_out_sine"), [](double t, const auto &) { return -(std::cos(M_PI * t) - 1.0) / 2.0; }},
+            {QStringLiteral("ease_out_in_sine"), [](double t, const auto &) { return t < 0.5 ? std::sin(t * M_PI) / 2.0 : (1.0 - std::cos((t * 2.0 - 1.0) * M_PI / 2.0)) / 2.0 + 0.5; }},
+            {QStringLiteral("ease_in_quad"), [](double t, const auto &) { return t * t; }},
+            {QStringLiteral("ease_out_quad"), [](double t, const auto &) { return 1.0 - (1.0 - t) * (1.0 - t); }},
+            {QStringLiteral("ease_in_out_quad"), [](double t, const auto &) { return t < 0.5 ? 2.0 * t * t : 1.0 - ((-2.0 * t + 2.0) * (-2.0 * t + 2.0)) / 2.0; }},
+            {QStringLiteral("ease_out_in_quad"), [](double t, const auto &) { return t < 0.5 ? (1.0 - (1.0 - 2.0 * t) * (1.0 - 2.0 * t)) / 2.0 : (2.0 * t - 1.0) * (2.0 * t - 1.0) / 2.0 + 0.5; }},
+            {QStringLiteral("ease_in_cubic"), [](double t, const auto &) { return t * t * t; }},
+            {QStringLiteral("ease_out_cubic"), [](double t, const auto &) { return 1.0 - (1.0 - t) * (1.0 - t) * (1.0 - t); }},
+            {QStringLiteral("ease_in_out_cubic"), [](double t, const auto &) { return t < 0.5 ? 4.0 * t * t * t : 1.0 - ((-2.0 * t + 2.0) * (-2.0 * t + 2.0) * (-2.0 * t + 2.0)) / 2.0; }},
+            {QStringLiteral("ease_out_in_cubic"), [](double t, const auto &) { return t < 0.5 ? (1.0 - std::pow(1.0 - 2.0 * t, 3.0)) / 2.0 : std::pow(2.0 * t - 1.0, 3.0) / 2.0 + 0.5; }},
+            {QStringLiteral("ease_in_quart"), [](double t, const auto &) { return t * t * t * t; }},
+            {QStringLiteral("ease_out_quart"), [](double t, const auto &) { return 1.0 - (1.0 - t) * (1.0 - t) * (1.0 - t) * (1.0 - t); }},
+            {QStringLiteral("ease_in_out_quart"), [](double t, const auto &) { return t < 0.5 ? 8.0 * t * t * t * t : 1.0 - ((-2.0 * t + 2.0) * (-2.0 * t + 2.0) * (-2.0 * t + 2.0) * (-2.0 * t + 2.0)) / 2.0; }},
+            {QStringLiteral("ease_out_in_quart"), [](double t, const auto &) { return t < 0.5 ? (1.0 - std::pow(1.0 - 2.0 * t, 4.0)) / 2.0 : std::pow(2.0 * t - 1.0, 4.0) / 2.0 + 0.5; }},
+            {QStringLiteral("ease_in_quint"), [](double t, const auto &) { return t * t * t * t * t; }},
+            {QStringLiteral("ease_out_quint"), [](double t, const auto &) { return 1.0 - (1.0 - t) * (1.0 - t) * (1.0 - t) * (1.0 - t) * (1.0 - t); }},
+            {QStringLiteral("ease_in_out_quint"), [](double t, const auto &) { return t < 0.5 ? 16.0 * t * t * t * t * t : 1.0 - ((-2.0 * t + 2.0) * (-2.0 * t + 2.0) * (-2.0 * t + 2.0) * (-2.0 * t + 2.0) * (-2.0 * t + 2.0)) / 2.0; }},
+            {QStringLiteral("ease_out_in_quint"), [](double t, const auto &) { return t < 0.5 ? (1.0 - std::pow(1.0 - 2.0 * t, 5.0)) / 2.0 : std::pow(2.0 * t - 1.0, 5.0) / 2.0 + 0.5; }},
+            {QStringLiteral("ease_in_expo"), [](double t, const auto &) { return t == 0.0 ? 0.0 : std::pow(2.0, 10.0 * t - 10.0); }},
+            {QStringLiteral("ease_out_expo"), [](double t, const auto &) { return t == 1.0 ? 1.0 : 1.0 - std::pow(2.0, -10.0 * t); }},
+            {QStringLiteral("ease_in_out_expo"),
              [](double t, const auto &) {
                  if (t == 0.0)
                      return 0.0;
@@ -154,7 +154,7 @@ class EffectModel : public QObject {
                      return 1.0;
                  return t < 0.5 ? std::pow(2.0, 20.0 * t - 10.0) / 2.0 : (2.0 - std::pow(2.0, -20.0 * t + 10.0)) / 2.0;
              }},
-            {"ease_out_in_expo",
+            {QStringLiteral("ease_out_in_expo"),
              [](double t, const auto &) {
                  if (t == 0.0)
                      return 0.0;
@@ -162,33 +162,33 @@ class EffectModel : public QObject {
                      return 1.0;
                  return t < 0.5 ? (1.0 - std::pow(2.0, -20.0 * t)) / 2.0 : std::pow(2.0, 20.0 * t - 20.0) / 2.0 + 0.5;
              }},
-            {"ease_in_circ", [](double t, const auto &) { return 1.0 - std::sqrt(1.0 - t * t); }},
-            {"ease_out_circ", [](double t, const auto &) { return std::sqrt(1.0 - (t - 1.0) * (t - 1.0)); }},
-            {"ease_in_out_circ", [](double t, const auto &) { return t < 0.5 ? (1.0 - std::sqrt(1.0 - 4.0 * t * t)) / 2.0 : (std::sqrt(1.0 - (-2.0 * t + 2.0) * (-2.0 * t + 2.0)) + 1.0) / 2.0; }},
-            {"ease_out_in_circ", [](double t, const auto &) { return t < 0.5 ? std::sqrt(1.0 - (2.0 * t - 1.0) * (2.0 * t - 1.0)) / 2.0 : (1.0 - std::sqrt(1.0 - (2.0 * t - 1.0) * (2.0 * t - 1.0))) / 2.0 + 0.5; }},
-            {"ease_in_back",
+            {QStringLiteral("ease_in_circ"), [](double t, const auto &) { return 1.0 - std::sqrt(1.0 - t * t); }},
+            {QStringLiteral("ease_out_circ"), [](double t, const auto &) { return std::sqrt(1.0 - (t - 1.0) * (t - 1.0)); }},
+            {QStringLiteral("ease_in_out_circ"), [](double t, const auto &) { return t < 0.5 ? (1.0 - std::sqrt(1.0 - 4.0 * t * t)) / 2.0 : (std::sqrt(1.0 - (-2.0 * t + 2.0) * (-2.0 * t + 2.0)) + 1.0) / 2.0; }},
+            {QStringLiteral("ease_out_in_circ"), [](double t, const auto &) { return t < 0.5 ? std::sqrt(1.0 - (2.0 * t - 1.0) * (2.0 * t - 1.0)) / 2.0 : (1.0 - std::sqrt(1.0 - (2.0 * t - 1.0) * (2.0 * t - 1.0))) / 2.0 + 0.5; }},
+            {QStringLiteral("ease_in_back"),
              [](double t, const auto &) {
                  constexpr double c1 = 1.70158, c3 = 1.70158 + 1.0;
                  return c3 * t * t * t - c1 * t * t;
              }},
-            {"ease_out_back",
+            {QStringLiteral("ease_out_back"),
              [](double t, const auto &) {
                  constexpr double c1 = 1.70158, c3 = 1.70158 + 1.0;
                  return 1.0 + c3 * (t - 1.0) * (t - 1.0) * (t - 1.0) + c1 * (t - 1.0) * (t - 1.0);
              }},
-            {"ease_in_out_back",
+            {QStringLiteral("ease_in_out_back"),
              [](double t, const auto &) {
                  constexpr double c2 = 1.70158 * 1.525;
                  return t < 0.5 ? ((2.0 * t) * (2.0 * t) * ((c2 + 1.0) * 2.0 * t - c2)) / 2.0 : ((2.0 * t - 2.0) * (2.0 * t - 2.0) * ((c2 + 1.0) * (2.0 * t - 2.0) + c2) + 2.0) / 2.0;
              }},
-            {"ease_out_in_back",
+            {QStringLiteral("ease_out_in_back"),
              [](double t, const auto &) {
                  constexpr double c1 = 1.70158, c3 = c1 + 1.0;
                  auto eout = [&](double u) { return 1.0 + c3 * (u - 1.0) * (u - 1.0) * (u - 1.0) + c1 * (u - 1.0) * (u - 1.0); };
                  auto ein = [&](double u) { return c3 * u * u * u - c1 * u * u; };
                  return t < 0.5 ? eout(2.0 * t) / 2.0 : ein(2.0 * t - 1.0) / 2.0 + 0.5;
              }},
-            {"ease_in_elastic",
+            {QStringLiteral("ease_in_elastic"),
              [](double t, const auto &) {
                  constexpr double c4 = (2.0 * M_PI) / 3.0;
                  if (t == 0.0)
@@ -197,7 +197,7 @@ class EffectModel : public QObject {
                      return 1.0;
                  return -std::pow(2.0, 10.0 * t - 10.0) * std::sin((t * 10.0 - 10.75) * c4);
              }},
-            {"ease_out_elastic",
+            {QStringLiteral("ease_out_elastic"),
              [](double t, const auto &) {
                  constexpr double c4 = (2.0 * M_PI) / 3.0;
                  if (t == 0.0)
@@ -206,7 +206,7 @@ class EffectModel : public QObject {
                      return 1.0;
                  return std::pow(2.0, -10.0 * t) * std::sin((t * 10.0 - 0.75) * c4) + 1.0;
              }},
-            {"ease_in_out_elastic",
+            {QStringLiteral("ease_in_out_elastic"),
              [](double t, const auto &) {
                  constexpr double c5 = (2.0 * M_PI) / 4.5;
                  if (t == 0.0)
@@ -215,7 +215,7 @@ class EffectModel : public QObject {
                      return 1.0;
                  return t < 0.5 ? -(std::pow(2.0, 20.0 * t - 10.0) * std::sin((20.0 * t - 11.125) * c5)) / 2.0 : (std::pow(2.0, -20.0 * t + 10.0) * std::sin((20.0 * t - 11.125) * c5)) / 2.0 + 1.0;
              }},
-            {"ease_out_in_elastic",
+            {QStringLiteral("ease_out_in_elastic"),
              [](double t, const auto &) {
                  constexpr double c4 = (2.0 * M_PI) / 3.0;
                  if (t == 0.0)
@@ -232,11 +232,11 @@ class EffectModel : public QObject {
                  };
                  return t < 0.5 ? eout(2.0 * t) / 2.0 : ein(2.0 * t - 1.0) / 2.0 + 0.5;
              }},
-            {"ease_out_bounce", [](double t, const auto &) { return easeOutBounce(t); }},
-            {"ease_in_bounce", [](double t, const auto &) { return 1.0 - easeOutBounce(1.0 - t); }},
-            {"ease_in_out_bounce", [](double t, const auto &) { return t < 0.5 ? (1.0 - easeOutBounce(1.0 - 2.0 * t)) / 2.0 : (1.0 + easeOutBounce(2.0 * t - 1.0)) / 2.0; }},
-            {"ease_out_in_bounce", [](double t, const auto &) { return t < 0.5 ? easeOutBounce(2.0 * t) / 2.0 : (1.0 - easeOutBounce(1.0 - 2.0 * (t - 0.5))) / 2.0 + 0.5; }},
-            {"custom", [](double x, const auto &p) {
+            {QStringLiteral("ease_out_bounce"), [](double t, const auto &) { return easeOutBounce(t); }},
+            {QStringLiteral("ease_in_bounce"), [](double t, const auto &) { return 1.0 - easeOutBounce(1.0 - t); }},
+            {QStringLiteral("ease_in_out_bounce"), [](double t, const auto &) { return t < 0.5 ? (1.0 - easeOutBounce(1.0 - 2.0 * t)) / 2.0 : (1.0 + easeOutBounce(2.0 * t - 1.0)) / 2.0; }},
+            {QStringLiteral("ease_out_in_bounce"), [](double t, const auto &) { return t < 0.5 ? easeOutBounce(2.0 * t) / 2.0 : (1.0 - easeOutBounce(1.0 - 2.0 * (t - 0.5))) / 2.0 + 0.5; }},
+            {QStringLiteral("custom"), [](double x, const auto &p) {
                  double prevX = 0, prevY = 0;
                  for (size_t i = 0; i < p.size(); i += 6) {
                      double cp1x = p[i], cp1y = p[i + 1], cp2x = p[i + 2], cp2y = p[i + 3], endX = p[i + 4], endY = p[i + 5];
@@ -299,7 +299,7 @@ class EffectModel : public QObject {
                     if (type == QStringLiteral("custom"))
                         params = getBezierParams(track[i]);
                     if (!easingFunctions().contains(type))
-                        type = "linear";
+                        type = QStringLiteral("linear");
                     const double t = easingFunctions().value(type)(tRaw, params);
                     return QColor(static_cast<int>(c0.red() + (c1.red() - c0.red()) * t), static_cast<int>(c0.green() + (c1.green() - c0.green()) * t), static_cast<int>(c0.blue() + (c1.blue() - c0.blue()) * t),
                                   static_cast<int>(c0.alpha() + (c1.alpha() - c0.alpha()) * t))
@@ -322,7 +322,7 @@ class EffectModel : public QObject {
             if (type == QStringLiteral("custom"))
                 params = getBezierParams(track[i]);
             if (!easingFunctions().contains(type))
-                type = "linear";
+                type = QStringLiteral("linear");
             return a + (b - a) * easingFunctions().value(type)(tRaw, params);
         }
         return getValue(track.back());
@@ -351,7 +351,7 @@ class EffectModel : public QObject {
         }
         // レガシーリスト形式（end なし）
         QVariantList legacy = sortPoints(rawTrack.toList()), points;
-        QVariantMap start = makePoint(0, legacy.isEmpty() ? fallback : evaluateTrack(legacy, 0, fallback), "linear");
+        QVariantMap start = makePoint(0, legacy.isEmpty() ? fallback : evaluateTrack(legacy, 0, fallback), QStringLiteral("linear"));
         for (const auto &v : std::as_const(legacy)) {
             const int f = v.toMap().value(QStringLiteral("frame")).toInt();
             if (f > 0 && f < durationFrames)
@@ -373,14 +373,14 @@ class EffectModel : public QObject {
     Q_PROPERTY(QVariantMap keyframeTracks READ keyframeTracks NOTIFY keyframeTracksChanged)
     Q_PROPERTY(QVariantMap uiDefinition READ uiDefinition CONSTANT)
 
-    explicit EffectModel(const QString &id, const QString &name, const QString &category = "filter", const QVariantMap &params = {}, const QString &qmlSource = "", const QVariantMap &uiDef = {}, QObject *parent = nullptr)
+    explicit EffectModel(const QString &id, const QString &name, const QString &category = QStringLiteral("filter"), const QVariantMap &params = {}, const QString &qmlSource = "", const QVariantMap &uiDef = {}, QObject *parent = nullptr)
         : QObject(parent), m_id(id), m_name(name), m_category(category), m_enabled(true), m_params(params), m_qmlSource(qmlSource), m_uiDefinition(uiDef) {
         for (auto it = m_params.begin(); it != m_params.end(); ++it) {
             QVariantMap track;
             QVariantMap start;
             start[QStringLiteral("frame")] = 0;
             start[QStringLiteral("value")] = it.value();
-            start[QStringLiteral("interp")] = "none";
+            start[QStringLiteral("interp")] = QStringLiteral("none");
             track[QStringLiteral("start")] = start;
             // end は設定しない（任意終了点の哲学）
             track[QStringLiteral("points")] = QVariantList();
@@ -432,7 +432,7 @@ class EffectModel : public QObject {
                 QVariantMap start;
                 start[QStringLiteral("frame")] = 0;
                 start[QStringLiteral("value")] = it.value();
-                start[QStringLiteral("interp")] = "none";
+                start[QStringLiteral("interp")] = QStringLiteral("none");
                 QVariantMap track;
                 track[QStringLiteral("start")] = start;
                 track[QStringLiteral("points")] = QVariantList();
@@ -476,7 +476,7 @@ class EffectModel : public QObject {
                 QVariantMap firstEnd;
                 firstEnd[QStringLiteral("frame")] = firstEndFrame;
                 firstEnd[QStringLiteral("value")] = evaluateTrack(flat, firstEndFrame, fallback);
-                firstEnd[QStringLiteral("interp")] = m_keyframeTracks.value(key).toMap().value(QStringLiteral("end")).toMap().value(QStringLiteral("interp"), "none");
+                firstEnd[QStringLiteral("interp")] = m_keyframeTracks.value(key).toMap().value(QStringLiteral("end")).toMap().value(QStringLiteral("interp"), QStringLiteral("none"));
                 firstTrack[QStringLiteral("end")] = firstEnd;
             }
             currentTracks[key] = firstTrack;
@@ -486,7 +486,7 @@ class EffectModel : public QObject {
             QVariantMap secondStart;
             secondStart[QStringLiteral("frame")] = 0;
             secondStart[QStringLiteral("value")] = evaluateTrack(flat, firstHalfDuration, fallback);
-            secondStart[QStringLiteral("interp")] = start.value(QStringLiteral("interp"), "none");
+            secondStart[QStringLiteral("interp")] = start.value(QStringLiteral("interp"), QStringLiteral("none"));
             QVariantList secondPoints;
             for (const auto &v : std::as_const(points)) {
                 auto m = v.toMap();
@@ -504,7 +504,7 @@ class EffectModel : public QObject {
                 QVariantMap secondEnd;
                 secondEnd[QStringLiteral("frame")] = secondEndFrame;
                 secondEnd[QStringLiteral("value")] = evaluateTrack(flat, std::max(0, originalDuration - 1), fallback);
-                secondEnd[QStringLiteral("interp")] = m_keyframeTracks.value(key).toMap().value(QStringLiteral("end")).toMap().value(QStringLiteral("interp"), "none");
+                secondEnd[QStringLiteral("interp")] = m_keyframeTracks.value(key).toMap().value(QStringLiteral("end")).toMap().value(QStringLiteral("interp"), QStringLiteral("none"));
                 secondTrack[QStringLiteral("end")] = secondEnd;
             }
             secondHalfTracks[key] = secondTrack;
@@ -517,11 +517,11 @@ class EffectModel : public QObject {
     // Must be public to be invokable from QML
     Q_INVOKABLE QStringList availableEasings() const {
         QStringList keys;
-        keys << "none";
+        keys << QStringLiteral("none");
         auto funcs = easingFunctions();
         for (auto it = funcs.begin(); it != funcs.end(); ++it)
             keys << it.key();
-        keys << "random" << "alternate";
+        keys << QStringLiteral("random") << QStringLiteral("alternate");
         return keys;
     }
 
@@ -549,7 +549,7 @@ class EffectModel : public QObject {
 
         QVariantMap start = track.value(QStringLiteral("start")).toMap();
         QVariantList points = track.value(QStringLiteral("points")).toList();
-        const QString interp = options.value(QStringLiteral("interp"), "none").toString();
+        const QString interp = options.value(QStringLiteral("interp"), QStringLiteral("none")).toString();
 
         const int startFrame = start.value(QStringLiteral("frame")).toInt();
         const bool trackHasEnd = hasExplicitEnd(m_keyframeTracks.value(paramName));
@@ -557,7 +557,7 @@ class EffectModel : public QObject {
 
         if (frame <= startFrame) {
             start[QStringLiteral("value")] = value;
-            start[QStringLiteral("interp")] = options.value(QStringLiteral("interp"), start.value(QStringLiteral("interp"), "none"));
+            start[QStringLiteral("interp")] = options.value(QStringLiteral("interp"), start.value(QStringLiteral("interp"), QStringLiteral("none")));
             track[QStringLiteral("start")] = start;
             m_keyframeTracks[paramName] = track;
             emit keyframeTracksChanged();
@@ -568,7 +568,7 @@ class EffectModel : public QObject {
         if (trackHasEnd && frame >= endFrame) {
             QVariantMap end = m_keyframeTracks.value(paramName).toMap().value(QStringLiteral("end")).toMap();
             end[QStringLiteral("value")] = value;
-            end[QStringLiteral("interp")] = options.value(QStringLiteral("interp"), end.value(QStringLiteral("interp"), "none"));
+            end[QStringLiteral("interp")] = options.value(QStringLiteral("interp"), end.value(QStringLiteral("interp"), QStringLiteral("none")));
             track[QStringLiteral("end")] = end;
             m_keyframeTracks[paramName] = track;
             emit keyframeTracksChanged();

@@ -51,7 +51,7 @@ void ColorSchemeController::setActiveSchemeId(const QString &schemeId) {
 
     m_activeSchemeId = schemeId;
     m_manager->activateScheme(m_manager->indexForScheme(m_activeSchemeId));
-    SettingsManager::instance().setValue("colorSchemeId", m_activeSchemeId);
+    SettingsManager::instance().setValue(QStringLiteral("colorSchemeId"), m_activeSchemeId);
     emit activeSchemeIdChanged();
 }
 

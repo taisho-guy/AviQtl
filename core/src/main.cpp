@@ -48,7 +48,7 @@ auto main(int argc, char *argv[]) -> int {
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 #endif
     QApplication app(argc, argv);
-    QApplication::setApplicationName("Rina");
+    QApplication::setApplicationName(QStringLiteral("Rina"));
 
     QString appDir = QCoreApplication::applicationDirPath();
 
@@ -56,9 +56,9 @@ auto main(int argc, char *argv[]) -> int {
     QTranslator translator;
     const QStringList uiLanguages = QLocale::system().uiLanguages();
     for (const QString &locale : uiLanguages) {
-        const QString baseName = "Rina_" + QLocale(locale).name();
-        if (translator.load(baseName, appDir + "/i18n")) {
-            qDebug() << "[Main] 翻訳ファイルをロードしました:" << baseName;
+        const QString baseName = QStringLiteral("Rina_") + QLocale(locale).name();
+        if (translator.load(baseName, appDir + QStringLiteral("/i18n"))) {
+            qDebug() << QStringLiteral("[Main] 翻訳ファイルをロードしました:") << baseName;
             QApplication::installTranslator(&translator);
             break;
         }
@@ -69,11 +69,11 @@ auto main(int argc, char *argv[]) -> int {
     Rina::Core::ThemeController::instance();
 
     av_log_set_callback(rina_ffmpeg_log_callback);
-    QApplication::setWindowIcon(QIcon(":/assets/icon.svg"));
+    QApplication::setWindowIcon(QIcon(QStringLiteral(":/assets/icon.svg")));
 
     // スプラッシュ画面をヒープ領域に確保する
-    int splashSize = settings.value("splashSize", 128).toInt();
-    QPixmap splashPixmap = QIcon(":/assets/splash.svg").pixmap(splashSize, splashSize);
+    int splashSize = settings.value(QStringLiteral("splashSize"), 128).toInt();
+    QPixmap splashPixmap = QIcon(QStringLiteral(":/assets/splash.svg")).pixmap(splashSize, splashSize);
     auto *splash = new QSplashScreen(splashPixmap);
     splash->show();
     QApplication::processEvents();
@@ -81,25 +81,25 @@ auto main(int argc, char *argv[]) -> int {
     QTimer luaHookTimer;
     auto &modEngine = Rina::Scripting::ModEngine::instance();
     QObject::connect(&luaHookTimer, &QTimer::timeout, [&modEngine]() -> void { modEngine.onUpdate(); });
-    luaHookTimer.start(Rina::Core::SettingsManager::instance().value("luaHookIntervalMs", 16).toInt());
+    luaHookTimer.start(Rina::Core::SettingsManager::instance().value(QStringLiteral("luaHookIntervalMs"), 16).toInt());
 
-    QQuickStyle::setFallbackStyle("Fusion");
+    QQuickStyle::setFallbackStyle(QStringLiteral("Fusion"));
     auto *colorSchemeController = new Rina::Core::ColorSchemeController(&app);
     QQmlApplicationEngine engine;
 
     auto *videoFrameStore = new Rina::Core::VideoFrameStore(&app);
-    engine.addImageProvider("videoFrame", new Rina::Core::VideoFrameProvider(videoFrameStore));
-    engine.rootContext()->setContextProperty("videoFrameStore", videoFrameStore);
+    engine.addImageProvider(QStringLiteral("videoFrame"), new Rina::Core::VideoFrameProvider(videoFrameStore));
+    engine.rootContext()->setContextProperty(QStringLiteral("videoFrameStore"), videoFrameStore);
 
     qmlRegisterType<Rina::Core::VideoEncoder>("Rina.Core", 1, 0, "VideoEncoder");
-    engine.rootContext()->setContextProperty("SettingsManager", &Rina::Core::SettingsManager::instance());
-    engine.rootContext()->setContextProperty("ColorSchemeController", colorSchemeController);
+    engine.rootContext()->setContextProperty(QStringLiteral("SettingsManager"), &Rina::Core::SettingsManager::instance());
+    engine.rootContext()->setContextProperty(QStringLiteral("ColorSchemeController"), colorSchemeController);
 
     auto *timelineController = new Rina::UI::TimelineController(&app);
-    engine.rootContext()->setContextProperty("TimelineBridge", timelineController);
+    engine.rootContext()->setContextProperty(QStringLiteral("TimelineBridge"), timelineController);
     timelineController->setVideoFrameStore(videoFrameStore);
 
-    engine.rootContext()->setContextProperty("WindowManager", static_cast<QObject *>(&Rina::UI::WindowManager::instance()));
+    engine.rootContext()->setContextProperty(QStringLiteral("WindowManager"), static_cast<QObject *>(&Rina::UI::WindowManager::instance()));
 
     // 遅延初期化処理を実行する
     QTimer::singleShot(10, &engine, [&engine, timelineController, &modEngine, splash]() -> void {
@@ -109,8 +109,8 @@ auto main(int argc, char *argv[]) -> int {
         modEngine.loadPlugins();
 
         QString appDir = QCoreApplication::applicationDirPath();
-        Rina::Core::EffectRegistry::instance().loadEffectsFromDirectory(appDir + "/effects");
-        Rina::Core::EffectRegistry::instance().loadEffectsFromDirectory(appDir + "/objects");
+        Rina::Core::EffectRegistry::instance().loadEffectsFromDirectory(appDir + QStringLiteral("/effects"));
+        Rina::Core::EffectRegistry::instance().loadEffectsFromDirectory(appDir + QStringLiteral("/objects"));
 
         // 音声プラグインの読み込み完了時にスプラッシュ画面を消去する
         QObject::connect(&Rina::Engine::Plugin::AudioPluginManager::instance(), &Rina::Engine::Plugin::AudioPluginManager::pluginsReady, splash, [&engine, splash](int) -> void {

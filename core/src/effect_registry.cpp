@@ -18,12 +18,12 @@ void initializeStandardEffects() {
 void EffectRegistry::loadEffectsFromDirectory(const QString &path) {
     QDir dir(path);
     if (!dir.exists()) {
-        qWarning().noquote() << "Effect directory not found:" << path;
+        qWarning().noquote() << QStringLiteral("Effect directory not found:") << path;
         return;
     }
 
     // *.json ファイルをサブディレクトリを含めて検索
-    QDirIterator it(path, {"*.json"}, QDir::Files, QDirIterator::Subdirectories);
+    QDirIterator it(path, {QStringLiteral("*.json")}, QDir::Files, QDirIterator::Subdirectories);
 
     while (it.hasNext()) {
         QFile file(it.next());
@@ -37,30 +37,30 @@ void EffectRegistry::loadEffectsFromDirectory(const QString &path) {
         const auto doc = QJsonDocument::fromJson(data, &error);
 
         if (error.error != QJsonParseError::NoError || !doc.isObject()) {
-            qWarning().noquote() << "Invalid JSON in" << file.fileName() << ":" << error.errorString();
+            qWarning().noquote() << QStringLiteral("Invalid JSON in") << file.fileName() << QStringLiteral(":") << error.errorString();
             continue;
         }
 
         QJsonObject obj = doc.object();
         QString id = obj[QStringLiteral("id")].toString();
         QString name = obj[QStringLiteral("name")].toString();
-        QString category = obj[QStringLiteral("category")].toString("filter");
+        QString category = obj[QStringLiteral("category")].toString(QStringLiteral("filter"));
         QString qmlFileName = obj[QStringLiteral("qml")].toString();
         QVariantMap params = obj[QStringLiteral("params")].toObject().toVariantMap();
         QVariantMap uiDef = obj[QStringLiteral("ui")].toObject().toVariantMap();
 
         if (id.isEmpty() || name.isEmpty() || qmlFileName.isEmpty()) {
-            qWarning().noquote() << "不完全なエフェクト定義のためスキップ:" << file.fileName() << "。";
+            qWarning().noquote() << QStringLiteral("不完全なエフェクト定義のためスキップ:") << file.fileName() << QStringLiteral("。");
             if (id.isEmpty()) {
-                qWarning().noquote() << "  - 理由: 'id' フィールドが空または存在しません。";
+                qWarning().noquote() << QStringLiteral("  - 理由: 'id' フィールドが空または存在しません。");
             }
             if (name.isEmpty()) {
-                qWarning().noquote() << "  - 理由: 'name' フィールドが空または存在しません。";
+                qWarning().noquote() << QStringLiteral("  - 理由: 'name' フィールドが空または存在しません。");
             }
             if (qmlFileName.isEmpty()) {
-                qWarning().noquote() << "  - 理由: 'qml' フィールドが空または存在しません。";
+                qWarning().noquote() << QStringLiteral("  - 理由: 'qml' フィールドが空または存在しません。");
             }
-            qWarning().noquote() << "  - 解析されたJSON内容:" << doc.toJson(QJsonDocument::Compact);
+            qWarning().noquote() << QStringLiteral("  - 解析されたJSON内容:") << doc.toJson(QJsonDocument::Compact);
             continue;
         }
 
@@ -76,7 +76,7 @@ void EffectRegistry::loadEffectsFromDirectory(const QString &path) {
         if (qmlFileName.startsWith(QStringLiteral("qrc:"))) {
             meta.qmlSource = qmlFileName;
             registerEffect(meta);
-            qDebug().noquote() << "外部エフェクトをロード:" << name << "(" << id << ") from" << file.fileName();
+            qDebug().noquote() << QStringLiteral("外部エフェクトをロード:") << name << QStringLiteral("(") << id << QStringLiteral(") from") << file.fileName();
             continue;
         }
 
@@ -87,12 +87,12 @@ void EffectRegistry::loadEffectsFromDirectory(const QString &path) {
         if (QFile::exists(absoluteQmlPath)) {
             meta.qmlSource = QUrl::fromLocalFile(absoluteQmlPath).toString();
         } else {
-            qWarning() << "参照されているQMLファイルが見つかりません。エフェクト:" << id << "パス:" << absoluteQmlPath;
+            qWarning() << QStringLiteral("参照されているQMLファイルが見つかりません。エフェクト:") << id << QStringLiteral("パス:") << absoluteQmlPath;
             continue;
         }
 
         registerEffect(meta);
-        qDebug().noquote() << "外部エフェクトをロード:" << name << "(" << id << ") from" << file.fileName();
+        qDebug().noquote() << QStringLiteral("外部エフェクトをロード:") << name << QStringLiteral("(") << id << QStringLiteral(") from") << file.fileName();
     }
 }
 
