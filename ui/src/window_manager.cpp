@@ -1,4 +1,5 @@
 #include "window_manager.hpp"
+#include "update_checker.hpp"
 #include <QCoreApplication>
 #include <QDebug>
 #include <QQmlComponent>
@@ -55,6 +56,12 @@ void WindowManager::onProjectSelected(const QString &path, int w, int h, double 
     spawnWindow(m_engine, QStringLiteral("sceneSettings"), QStringLiteral("qrc:/qt/qml/Rina/ui/qml/SceneSettingsWindow.qml"), tr("シーン設定"), 450, 300, 300, 200, false);
     spawnWindow(m_engine, QStringLiteral("export"), QStringLiteral("qrc:/qt/qml/Rina/ui/qml/ExportDialog.qml"), tr("メディアの書き出し"), 620, 580, 240, 160, false);
     spawnWindow(m_engine, QStringLiteral("easingConfig"), QStringLiteral("qrc:/qt/qml/Rina/ui/qml/common/EasingConfigWindow.qml"), tr("補間設定"), 820, 540, 420, 180, false);
+
+    spawnWindow(m_engine, QStringLiteral("updateNotification"), QStringLiteral("qrc:/qt/qml/Rina/ui/qml/UpdateNotificationWindow.qml"), tr("新しいバージョンがあります"), 440, 260, 400, 300, false);
+
+    if (auto *checker = qobject_cast<Rina::Core::UpdateChecker *>(m_engine->rootContext()->contextProperty(QStringLiteral("UpdateChecker")).value<QObject *>())) {
+        connect(checker, &Rina::Core::UpdateChecker::updateAvailableChanged, this, [this]() { setVisible(QStringLiteral("updateNotification"), true); });
+    }
 
     // 設定の反映
     auto *bridge = m_engine->rootContext()->contextProperty(QStringLiteral("TimelineBridge")).value<QObject *>();
