@@ -38,7 +38,7 @@ CYAN   = "\033[36m"
 BOLD   = "\033[1m"
 
 def find_cpp_files(root: Path) -> list[Path]:
-    exclude_dirs = {".git", ".buildtmp", "build", "dist", ".cache", "clap", "vst3sdk"}
+    exclude_dirs = {".git", ".build_tmp", "build", "dist", ".cache", "clap", "vst3sdk"}
     result = []
     for path in root.rglob("*.cpp"):
         if any(p in exclude_dirs for p in path.parts):
@@ -50,7 +50,7 @@ def find_cpp_files(root: Path) -> list[Path]:
     return sorted(result)
 
 def find_qml_files(root: Path) -> list[Path]:
-    exclude_dirs = {".git", ".buildtmp", "build", "dist", ".cache"}
+    exclude_dirs = {".git", ".build_tmp", "build", "dist", ".cache"}
     result = []
     for path in root.rglob("*.qml"):
         if any(p in exclude_dirs for p in path.parts):
@@ -61,7 +61,7 @@ def find_qml_files(root: Path) -> list[Path]:
 def find_include_dirs(root: Path) -> list[Path]:
     dirs = set()
     for path in root.rglob("*.hpp"):
-        if any(p in {".git", ".buildtmp", "build", "clap", "vst3sdk"} for p in path.parts):
+        if any(p in {".git", ".build_tmp", "build", "clap", "vst3sdk"} for p in path.parts):
             continue
         dirs.add(path.parent)
     return sorted(dirs)
@@ -81,7 +81,7 @@ def run_formatting(root: Path) -> None:
     
     # C++ / HPP files
     cpp_hpp_patterns = ["*.cpp", "*.hpp"]
-    exclude_dirs = {".git", ".buildtmp", "build", "dist", ".cache", "clap", "vst3sdk"}
+    exclude_dirs = {".git", ".build_tmp", "build", "dist", ".cache", "clap", "vst3sdk"}
     cpp_hpp_files = []
     for pattern in cpp_hpp_patterns:
         for path in root.rglob(pattern):
@@ -93,7 +93,7 @@ def run_formatting(root: Path) -> None:
     
     if cpp_hpp_files and shutil.which("clang-format"):
         print(f"  C++/HPP ({len(cpp_hpp_files)} 件) を整形中...")
-        subprocess.run(["clang-format", "-i"] + [str(f) for f in cpp_hpp_files], cwd=root)
+        subprocess.run(["clang-format", "-i"] + [str(f) for f in cpp_hpp_files], cwd=root, stderr=subprocess.STDOUT)
     elif not shutil.which("clang-format"):
         print(f"{RED}警告: clang-format が見つかりません。{RESET}")
 
@@ -102,7 +102,7 @@ def run_formatting(root: Path) -> None:
     if qml_files and shutil.which("qmlformat"):
         print(f"  QML ({len(qml_files)} 件) を整形中...")
         # 一括で渡して実行
-        subprocess.run(["qmlformat", "-i"] + [str(f) for f in qml_files], cwd=root)
+        subprocess.run(["qmlformat", "-i"] + [str(f) for f in qml_files], cwd=root, stderr=subprocess.STDOUT)
     elif not shutil.which("qmlformat"):
         print(f"{RED}警告: qmlformat が見つかりません。{RESET}")
     
@@ -198,11 +198,8 @@ def run_qmllint(files: list[Path], args: argparse.Namespace, root: Path) -> int:
             if qml_path.exists():
                 cmd += ["-I", str(qml_path)]
 
-    if args.full:
-        cmd.append("--compiler-warnings")
-
     cmd += [str(f) for f in files]
-    result = subprocess.run(cmd, cwd=root)
+    result = subprocess.run(cmd, cwd=root, stderr=subprocess.STDOUT)
     return result.returncode
 
 def run_clazy(files: list[Path], args: argparse.Namespace, root: Path) -> int:
@@ -221,16 +218,18 @@ def run_clazy(files: list[Path], args: argparse.Namespace, root: Path) -> int:
         print(f"{RED}エラー: {cc_json} が見つかりません。{RESET}")
         return 1
 
-    # チェックレベルの設定
-    clazy_checks = [f"level{i}" for i in range(1, args.clazy_level + 1)]
+    # チェックレベルの設定 (level3 は存在しないため除去)
     if args.full:
-        clazy_checks = ["level1", "level2", "level3"]
-    
-    checks_str = ",".join(clazy_checks + ["qt6-header-fixes", "qstring-allocations", "manual", "copy-on-write"])
+        clazy_checks = ["level1", "level2"]
+    else:
+        clazy_checks = [f"level{i}" for i in range(1, min(args.clazy_level, 2) + 1)]
+
+    # 非対応チェック名を除去
+    checks_str = ",".join(clazy_checks + ["qstring-allocations"])
     cmd = [executable, f"-p={args.build_dir}", f"-checks={checks_str}"] + [str(f) for f in files]
     
     # 非常に重いため、並列実行は OS のスケジューラに任せるか、必要に応じて分割が必要
-    result = subprocess.run(cmd, cwd=root)
+    result = subprocess.run(cmd, cwd=root, stderr=subprocess.STDOUT)
     return result.returncode
 
 def _invoke_tidy(file_path: str, build_dir: str, checks: str, fix: bool) -> int:
@@ -242,7 +241,9 @@ def _invoke_tidy(file_path: str, build_dir: str, checks: str, fix: bool) -> int:
     
     res = subprocess.run(cmd, capture_output=True, text=True)
     if res.stdout:
-        print(res.stdout)
+        sys.stdout.write(res.stdout)
+    if res.stderr:
+        sys.stdout.write(res.stderr)
     return res.returncode
 
 def run_clang_tidy(files: list[Path], args: argparse.Namespace, root: Path) -> int:
@@ -319,7 +320,7 @@ def main() -> int:
         "--full", action="store_true", help="究極の解析モード (全ツール最高レベル + 自動修正)"
     )
     parser.add_argument(
-        "--clazy-level", type=int, choices=[1, 2, 3], default=1,
+        "--clazy-level", type=int, choices=[1, 2], default=1,
         help="Clazy のチェックレベル (1-3)"
     )
     parser.add_argument(

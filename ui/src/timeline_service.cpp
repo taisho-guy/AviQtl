@@ -257,7 +257,7 @@ UpdateSceneSettingsCommand::UpdateSceneSettingsCommand(TimelineService *service,
 void UpdateSceneSettingsCommand::redo() { m_service->applySceneSettingsInternal(m_sceneId, m_newData); }
 void UpdateSceneSettingsCommand::undo() { m_service->applySceneSettingsInternal(m_sceneId, m_oldData); }
 
-TimelineService::TimelineService(SelectionService *selection, QObject *parent) : QObject(parent), m_currentSceneId(0), m_undoStack(new QUndoStack(this)), m_selection(selection) {
+TimelineService::TimelineService(SelectionService *selection, QObject *parent) : QObject(parent), m_undoStack(new QUndoStack(this)), m_selection(selection) {
     // 初期シーンを作成
     SceneData rootScene;
     rootScene.id = 0;
