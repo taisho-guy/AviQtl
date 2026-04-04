@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rinaのお部屋</title>
+    <title>Rina is not AviUtl | AviUtlを踏襲し凌駕する次世代動画編集ソフト</title>
     <link rel="canonical" href="https://rina.taisho-guy.org/" />
-    <meta name="description" content="AviUtlを踏襲しつつ、AviUtlを超える性能を目指す動画編集ソフト。">
-    <meta name="keywords" content="Rina, AviUtl, AviUtl2, 動画編集, 動画編集ソフト, 無料, 自由, DTM, DAW, Linux, オープンソース, OSS, GPU, VST">
+    <meta name="description" content="AviUtlの操作感を継承し、GPU加速、VST3/LV2、クロスプラットフォームに対応。AviUtlの限界を超える次世代のオープンソース動画編集ソフト「Rina」公式サイト。">
+    <meta name="keywords" content="Rina, AviUtl, AviUtl2, 動画編集, 動画編集ソフト, 無料, 自由, DTM, DAW, Linux, オープンソース, OSS, GPU, VST, 公式">
     <meta name="google-site-verification" content="xmXYtl-62Vi0ktTxGecj5qIXhQ81q76_dCKlFycBDEY" />
 
-    <meta property="og:title" content="Rinaのお部屋">
-    <meta property="og:description" content="AviUtlを踏襲しつつ、AviUtlを超える性能を目指す動画編集ソフト。">
+    <meta property="og:title" content="Rina is not AviUtl | AviUtlを踏襲し凌駕する次世代動画編集ソフト">
+    <meta property="og:description" content="AviUtlの操作感を継承し、GPU加速、VST3/LV2、クロスプラットフォームに対応。性能の限界を超える次世代のオープンソース動画編集ソフト「Rina」公式サイト。">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://rina.taisho-guy.org">
     <meta property="og:image" content="https://rina.taisho-guy.org/assets/icon.svg">
@@ -28,226 +28,23 @@
       "name": "Rina",
       "operatingSystem": "Linux, Windows, macOS",
       "applicationCategory": "MultimediaApplication",
-      "description": "AviUtlを踏襲しつつ、AviUtlを超える性能を目指す動画編集ソフト。",
-      "image": "https://rina.taisho-guy.org/assets/icon.svg",
+      "description": "AviUtlの操作感を継承し、GPU加速、VST3/LV2、クロスプラットフォームに対応。性能の限界を超える次世代のオープンソース動画編集ソフト。",
+      "image": "https://rina.taisho-guy.org/assets/splash.svg",
       "offers": {
         "@type": "Offer",
         "price": "0"
       }
     }
     </script>
-    <style>
-        body {
-            background-color: #0d0b14;
-            color: #e0d7f0;
-            font-family: 'Lexend', 'Noto Sans JP', sans-serif;
-            font-weight: 400;
-            line-height: 1.6;
-            margin: 0;
-            padding: 20px;
-        }
-        a { color: #b366ff; text-decoration: underline; transition: color 0.2s; }
-        a:hover { color: #d199ff; }
-        a:visited { color: #9044d9; }
-        
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            text-align: left;
-        }
-
-        .hero, .section-header, th, .footer-table {
-            text-align: center;
-        }
-
-        hr {
-            border: 0;
-            border-top: 2px solid #524075;
-            margin: 20px 0;
-        }
-
-        h2.section-header {
-            width: 100%;
-            background-color: #1a1429;
-            color: #b366ff;
-            border-bottom: 2px solid #b366ff;
-            padding: 8px 0;
-            margin: 30px 0 15px 0;
-            font-size: 1.2em;
-            font-weight: bold;
-            text-shadow: 0 0 10px rgba(179, 102, 255, 0.3);
-        }
-        .section-header span { color: #b366ff; opacity: 0.6; }
-
-        table {
-            width: 100%;
-            border: 2px solid #524075;
-            border-collapse: separate;
-            border-spacing: 2px;
-            background-color: #0d0b14;
-            margin: 15px 0;
-        }
-        th {
-            color: #b366ff;
-            background-color: #1a1429;
-            padding: 8px;
-            border: 1px solid #524075;
-            vertical-align: middle;
-        }
-        td {
-            padding: 8px;
-            border: 1px solid #524075;
-            background-color: #0d0b14;
-            vertical-align: top;
-        }
-        #download-table td {
-            text-align: center;
-        }
-
-        .alert {
-            margin: 20px 0;
-            padding: 2px;
-            border: 2px solid #524075;
-            background-color: #0d0b14;
-        }
-        .alert-title {
-            font-weight: bold;
-            padding: 8px 15px;
-            background-color: #1a1429;
-            color: #b366ff;
-            border: 1px solid #524075;
-            margin: 0 0 2px 0;
-        }
-        .alert ul, .alert ol { 
-            padding: 10px 15px 10px 40px; 
-            margin: 0; 
-            border: 1px solid #524075;
-            background-color: #0d0b14;
-        }
-
-        details {
-            background-color: #0d0b14;
-            border: 2px solid #524075;
-            margin: 10px 0;
-            padding: 2px;
-            overflow-x: auto;
-        }
-        summary {
-            background-color: #1a1429;
-            border: 1px solid #524075;
-            padding: 10px;
-            cursor: pointer;
-            font-weight: bold;
-            color: #b366ff;
-        }
-        details[open] summary { margin-bottom: 2px; }
-
-        details > p, details > h3, details > h4, details > ul, details > ol {
-            background-color: #0d0b14;
-            border: 1px solid #524075;
-            padding: 10px;
-            margin: 0 0 2px 0;
-        }
-        details > *:last-child, .alert > *:last-child { margin-bottom: 0; }
-        details h3, details h4 { font-size: 1.1em; }
-        details ul, details ol { padding-left: 40px; }
-
-        details[open] summary + table, details[open] summary + p { margin-top: 0; }
-        details table { 
-            margin: 0; 
-            border: 2px solid #524075;
-            border-spacing: 2px;
-        }
-        details th, details td { border: 1px solid #524075; white-space: nowrap; }
-
-        .footer-info { font-size: 0.8em; margin-top: 20px; }
-        
-        code { background: linear-gradient(transparent 70%, rgba(179, 102, 255, 0.3) 70%); font-family: 'JetBrains Mono', monospace; color: #e0d7f0; padding: 0 2px; font-weight: bold; cursor: pointer; transition: background 0.2s, color 0.2s; }
-        code:hover { background: rgba(179, 102, 255, 0.4); }
-        code:active { background: #b366ff; color: #0d0b14; }
-
-        .hero {
-            margin: 20px 0;
-        }
-        .hero-title {
-            font-size: 2.5em;
-            margin: 10px 0;
-            display: flex;
-            justify-content: center;
-            font-weight: bold;
-            align-items: baseline;
-            cursor: pointer;
-            color: #e0d7f0;
-            user-select: none;
-            white-space: nowrap;
-        }
-        .hero-title .word-group {
-            display: inline-flex;
-            align-items: baseline;
-            white-space: nowrap;
-        }
-
-        .hero-title .letter {
-            display: inline-block;
-            position: relative;
-            background-color: #0d0b14;
-            transition: color 0.6s cubic-bezier(0.22, 1, 0.36, 1);
-        }
-        .hero-title .expand {
-            display: inline-block;
-            max-width: 0;
-            overflow: hidden;
-            vertical-align: baseline;
-            transition: max-width 0.6s cubic-bezier(0.33, 1, 0.68, 1);
-        }
-        .hero-title .expand-inner {
-            display: inline-block;
-            white-space: nowrap;
-            transform: translateX(-100%);
-            transition: transform 0.6s cubic-bezier(0.33, 1, 0.68, 1), color 0.6s cubic-bezier(0.33, 1, 0.68, 1);
-        }
-        .hero-title .a-letter-wrapper {
-            position: relative;
-        }
-        .hero-title .a-lower, .hero-title .a-upper {
-            transition: opacity 0.6s cubic-bezier(0.33, 1, 0.68, 1);
-        }
-        .hero-title .a-lower { color: #e0d7f0; }
-        .hero-title .a-upper { color: #b366ff; }
-        .hero-title .a-upper {
-            position: absolute;
-            left: 0;
-            top: 0;
-            opacity: 0;
-        }
-
-        .hero-title:hover .expand {
-            max-width: 6rem;
-        }
-        .hero-title:hover .expand-inner {
-            transform: translateX(0);
-        }
-        .hero-title:hover .a-lower { opacity: 0; }
-        .hero-title:hover .a-upper { opacity: 1; }
-
-        .hero-title a { display: contents; color: inherit; text-decoration: none; }
-        .hero-title:hover a .letter, .hero-title:hover a .expand-inner {
-            color: #b366ff;
-        }
-
-        @media (max-width: 600px) {
-            .hero-title {
-                font-size: clamp(1rem, 4.5vw, 1.5em);
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <div class="container">
+    <h1 class="visually-hidden">Rina is not AviUtl - AviUtlを踏襲し、性能を超える次世代の動画編集ソフト</h1>
     <hr>
     <div class="hero">
-        <h1 class="hero-title">
+        <div class="hero-title" aria-hidden="true">
             <span class="word-group" style="z-index:1">
                 <span class="letter">R</span>
                 <span class="expand"><span class="expand-inner">ina&nbsp;</span></span>
@@ -269,7 +66,7 @@
                 </span>
             </a>
             <span class="word-group" style="z-index:5"><span class="letter">のお部屋</span></span>
-        </h1>
+        </div>
     </div>
     <hr>
 
@@ -530,104 +327,6 @@
     <hr>
 </div>
 
-<script>
-    async function fetchReleases() {
-        const repo = 'taisho-guy/Rina';
-        const tagsUrl = `https://codeberg.org/api/v1/repos/${repo}/tags?limit=32`;
-        const releasesUrl = `https://codeberg.org/api/v1/repos/${repo}/releases?limit=32`;
-        const tbody = document.getElementById('release-list');
-
-        try {
-            const [tagsRes, releasesRes] = await Promise.all([
-                fetch(tagsUrl),
-                fetch(releasesUrl)
-            ]);
-
-            if (!tagsRes.ok) throw new Error('Tags API fetch failed');
-            const tags = await tagsRes.json();
-            
-            const releaseMap = {};
-            if (releasesRes.ok) {
-                const releases = await releasesRes.json();
-                releases.forEach(r => { releaseMap[r.tag_name] = r.assets; });
-            }
-
-            if (!tags || tags.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">公開されているリリースがありません。</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = '';
-            tags.forEach((tagObj, index) => {
-                const tag = tagObj.name;
-                const prevTag = tags[index + 1] ? tags[index + 1].name : null;
-                const assets = releaseMap[tag] || [];
-                
-                const tr = document.createElement('tr');
-
-                const tdTag = document.createElement('td');
-                tdTag.innerHTML = `<b>${tag}</b>`;
-
-                const tdCompare = document.createElement('td');
-                const aComp = document.createElement('a');
-                aComp.href = prevTag 
-                    ? `https://codeberg.org/taisho-guy/Rina/compare/${prevTag}...${tag}`
-                    : `https://codeberg.org/taisho-guy/Rina/releases/tag/${tag}`;
-                aComp.textContent = prevTag ? `${prevTag}...${tag}` : tag;
-                
-                tdCompare.appendChild(aComp);
-
-                const tdBinary = document.createElement('td');
-                if (assets.length > 0) {
-                    assets.forEach(asset => {
-                        const a = document.createElement('a');
-                        a.href = `https://codeberg.org/taisho-guy/Rina/releases/download/${tag}/${asset.name}`;
-                        a.textContent = asset.name;
-                        tdBinary.appendChild(a);
-                        tdBinary.appendChild(document.createElement('br'));
-                    });
-                } else {
-                    tdBinary.innerHTML = '<span style="color: #666; font-size: 0.8em;">(ビルドなし)</span>';
-                }
-
-                const tdSource = document.createElement('td');
-                const aSrc = document.createElement('a');
-                aSrc.href = `https://codeberg.org/taisho-guy/Rina/archive/${tag}.zip`;
-                aSrc.textContent = `Rina-${tag}.zip`;
-                tdSource.appendChild(aSrc);
-
-                const tdDate = document.createElement('td');
-                tdDate.textContent = new Date(tagObj.commit.created).toLocaleDateString('ja-JP');
-
-                tr.appendChild(tdTag);
-                tr.appendChild(tdCompare);
-                tr.appendChild(tdBinary);
-                tr.appendChild(tdSource);
-                tr.appendChild(tdDate);
-                tbody.appendChild(tr);
-            });
-        } catch (error) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #8C1D18;">リリースの取得に失敗しました。</td></tr>';
-            console.error(error);
-        }
-    }
-    document.addEventListener('DOMContentLoaded', fetchReleases);
-
-    (function() {
-        document.addEventListener('click', function(e) {
-            if (e.target.tagName === 'CODE') {
-                const text = e.target.textContent;
-                navigator.clipboard.writeText(text).then(() => {
-                    e.target.style.color = '#0d0b14';
-                    e.target.style.background = '#b366ff';
-                    setTimeout(() => {
-                        e.target.style.color = '';
-                        e.target.style.background = '';
-                    }, 200);
-                });
-            }
-        });
-    })();
-</script>
+<script src="script.js"></script>
 </body>
 </html>
