@@ -1464,32 +1464,32 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="607"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="604"/>
         <source> (直線)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="608"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="605"/>
         <source> (加速)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="609"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="606"/>
         <source> (減速)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="610"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="607"/>
         <source> (加減速)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="611"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="608"/>
         <source> (ベジェ)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="1001"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="998"/>
         <source>フィルタ</source>
         <translation type="unfinished"></translation>
     </message>

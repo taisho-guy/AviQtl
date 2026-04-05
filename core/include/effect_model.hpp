@@ -28,15 +28,6 @@ class EffectModel : public QObject {
         const QVariantMap m = raw.toMap();
         return m.contains(QStringLiteral("start")) && m.contains(QStringLiteral("points"));
     }
-    // end キーが存在し非空マップであれば明示的終了点あり
-    static bool hasExplicitEnd(const QVariant &rawTrack) {
-        if (!rawTrack.canConvert<QVariantMap>())
-            return false;
-        const QVariantMap m = rawTrack.toMap();
-        const QVariant ev = m.value(QStringLiteral("end"));
-        return ev.canConvert<QVariantMap>() && !ev.toMap().isEmpty();
-    }
-
     static QVariantMap makePoint(int frame, const QVariant &value, const QString &interp = QStringLiteral("none")) {
         QVariantMap p;
         p[QStringLiteral("frame")] = frame;
@@ -52,11 +43,6 @@ class EffectModel : public QObject {
 
     static int inferredDurationForTrack(const QVariant &raw) {
         if (isStructuredTrack(raw)) {
-            // 明示的終了点があればその位置を、なければ中間点の最大フレームを使用
-            if (hasExplicitEnd(raw)) {
-                const int endFrame = raw.toMap().value(QStringLiteral("end")).toMap().value(QStringLiteral("frame")).toInt();
-                return std::max(1, endFrame + 1);
-            }
             const QVariantList points = raw.toMap().value(QStringLiteral("points")).toList();
             int maxFrame = 0;
             for (const auto &v : std::as_const(points))
@@ -79,10 +65,6 @@ class EffectModel : public QObject {
         points = sortPoints(points);
         for (const auto &v : std::as_const(points))
             out.append(v);
-        // end が明示的に存在する場合のみ追加（任意終了点の哲学）
-        const QVariant endVal = track.value(QStringLiteral("end"));
-        if (endVal.canConvert<QVariantMap>() && !endVal.toMap().isEmpty())
-            out.append(endVal);
         return out;
     }
 
@@ -420,15 +402,15 @@ class EffectModel : public QObject {
         const int startFrame = isStructuredTrack(raw) ? raw.toMap().value(QStringLiteral("start")).toMap().value(QStringLiteral("frame")).toInt() : 0;
         return frame == startFrame;
     }
-    Q_INVOKABLE bool hasExplicitEndPoint(const QString &paramName) const { return hasExplicitEnd(m_keyframeTracks.value(paramName)); }
 
     Q_INVOKABLE void syncTrackEndpoints(int durationFrames) {
         m_resolvedCache.clear();
+        const int oldDuration = m_lastDuration;
         m_lastDuration = durationFrames;
-        // 未初期化パラメータのみ {start, points} で初期化する
-        // 既存トラックは変更しない（中間点の位置を保持）
+        // 未初期化トラックを初期化し、旧終端フレームにある中間点を新終端フレームへ追従させる
         for (auto it = m_params.begin(); it != m_params.end(); ++it) {
-            if (!m_keyframeTracks.contains(it.key()) || !isStructuredTrack(m_keyframeTracks.value(it.key()))) {
+            const QString &key = it.key();
+            if (!m_keyframeTracks.contains(key) || !isStructuredTrack(m_keyframeTracks.value(key))) {
                 QVariantMap start;
                 start[QStringLiteral("frame")] = 0;
                 start[QStringLiteral("value")] = it.value();
@@ -436,7 +418,25 @@ class EffectModel : public QObject {
                 QVariantMap track;
                 track[QStringLiteral("start")] = start;
                 track[QStringLiteral("points")] = QVariantList();
-                m_keyframeTracks[it.key()] = track;
+                m_keyframeTracks[key] = track;
+            } else if (oldDuration > 0 && oldDuration != durationFrames) {
+                // 旧終端フレームにある中間点を新終端フレームへ追従させる
+                QVariantMap track = m_keyframeTracks[key].toMap();
+                QVariantList points = track[QStringLiteral("points")].toList();
+                bool changed = false;
+                for (int i = 0; i < points.size(); ++i) {
+                    QVariantMap kf = points[i].toMap();
+                    if (kf[QStringLiteral("frame")].toInt() == oldDuration) {
+                        kf[QStringLiteral("frame")] = durationFrames;
+                        points[i] = kf;
+                        changed = true;
+                        break;
+                    }
+                }
+                if (changed) {
+                    track[QStringLiteral("points")] = sortPoints(points);
+                    m_keyframeTracks[key] = track;
+                }
             }
         }
         emit keyframeTracksChanged();
@@ -460,8 +460,6 @@ class EffectModel : public QObject {
             QVariantList flat = flattenStructuredTrack(track);
             QVariantMap start = track.value(QStringLiteral("start")).toMap();
             QVariantList points = track.value(QStringLiteral("points")).toList();
-            const bool originalHasEnd = hasExplicitEnd(m_keyframeTracks.value(key));
-
             // 前半トラック
             QVariantMap firstTrack;
             QVariantList firstPoints;
@@ -472,13 +470,6 @@ class EffectModel : public QObject {
             }
             firstTrack[QStringLiteral("start")] = start;
             firstTrack[QStringLiteral("points")] = firstPoints;
-            if (originalHasEnd) {
-                QVariantMap firstEnd;
-                firstEnd[QStringLiteral("frame")] = firstEndFrame;
-                firstEnd[QStringLiteral("value")] = evaluateTrack(flat, firstEndFrame, fallback);
-                firstEnd[QStringLiteral("interp")] = m_keyframeTracks.value(key).toMap().value(QStringLiteral("end")).toMap().value(QStringLiteral("interp"), QStringLiteral("none"));
-                firstTrack[QStringLiteral("end")] = firstEnd;
-            }
             currentTracks[key] = firstTrack;
 
             // 後半トラック
@@ -500,13 +491,6 @@ class EffectModel : public QObject {
             }
             secondTrack[QStringLiteral("start")] = secondStart;
             secondTrack[QStringLiteral("points")] = secondPoints;
-            if (originalHasEnd) {
-                QVariantMap secondEnd;
-                secondEnd[QStringLiteral("frame")] = secondEndFrame;
-                secondEnd[QStringLiteral("value")] = evaluateTrack(flat, std::max(0, originalDuration - 1), fallback);
-                secondEnd[QStringLiteral("interp")] = m_keyframeTracks.value(key).toMap().value(QStringLiteral("end")).toMap().value(QStringLiteral("interp"), QStringLiteral("none"));
-                secondTrack[QStringLiteral("end")] = secondEnd;
-            }
             secondHalfTracks[key] = secondTrack;
         }
         m_keyframeTracks = currentTracks;
@@ -552,24 +536,11 @@ class EffectModel : public QObject {
         const QString interp = options.value(QStringLiteral("interp"), QStringLiteral("none")).toString();
 
         const int startFrame = start.value(QStringLiteral("frame")).toInt();
-        const bool trackHasEnd = hasExplicitEnd(m_keyframeTracks.value(paramName));
-        const int endFrame = trackHasEnd ? m_keyframeTracks.value(paramName).toMap().value(QStringLiteral("end")).toMap().value(QStringLiteral("frame")).toInt() : std::numeric_limits<int>::max();
 
         if (frame <= startFrame) {
             start[QStringLiteral("value")] = value;
             start[QStringLiteral("interp")] = options.value(QStringLiteral("interp"), start.value(QStringLiteral("interp"), QStringLiteral("none")));
             track[QStringLiteral("start")] = start;
-            m_keyframeTracks[paramName] = track;
-            emit keyframeTracksChanged();
-            return;
-        }
-
-        // 終了点が明示的に存在する場合のみ終了点への更新を行う
-        if (trackHasEnd && frame >= endFrame) {
-            QVariantMap end = m_keyframeTracks.value(paramName).toMap().value(QStringLiteral("end")).toMap();
-            end[QStringLiteral("value")] = value;
-            end[QStringLiteral("interp")] = options.value(QStringLiteral("interp"), end.value(QStringLiteral("interp"), QStringLiteral("none")));
-            track[QStringLiteral("end")] = end;
             m_keyframeTracks[paramName] = track;
             emit keyframeTracksChanged();
             return;
@@ -606,7 +577,7 @@ class EffectModel : public QObject {
         QVariantMap track = normalizeTrackForDuration(m_keyframeTracks.value(paramName), fallback, inferredDurationForTrack(m_keyframeTracks.value(paramName)));
 
         const int startFrame = track.value(QStringLiteral("start")).toMap().value(QStringLiteral("frame")).toInt();
-        // 開始点は削除不可（終了点は明示的な場合のみ保護）
+        // 開始点は削除不可
         if (frame <= startFrame)
             return;
         QVariantList points = track.value(QStringLiteral("points")).toList(), next;
