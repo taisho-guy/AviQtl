@@ -96,12 +96,43 @@ Common.RinaWindow {
         reloading = true;
         var id = TimelineBridge.selection.selectedClipId;
         targetClipId = id;
+        // 選択状態をオブジェクト参照で保存（インデックスずれ防止）
+        var oldModel = sidebarList.model;
+        var oldSelectedObjects = [];
+        var oldCurrentObject = null;
+        if (oldModel && sidebarList.selectedIndices) {
+            for (var i = 0; i < sidebarList.selectedIndices.length; i++) {
+                var idx = sidebarList.selectedIndices[i];
+                if (idx >= 0 && idx < oldModel.length)
+                    oldSelectedObjects.push(oldModel[idx]);
+
+            }
+            if (sidebarList.currentIndex >= 0 && sidebarList.currentIndex < oldModel.length)
+                oldCurrentObject = oldModel[sidebarList.currentIndex];
+
+        }
         if (id >= 0) {
             effectsModel = TimelineBridge.getClipEffectsModel(id);
             audioEffectsModel = TimelineBridge.getClipEffectStack(id);
         } else {
             effectsModel = [];
             audioEffectsModel = [];
+        }
+        // 保存したオブジェクト参照から新インデックスを復元
+        var newModel = (TimelineBridge && TimelineBridge.isAudioClip(id)) ? audioEffectsModel : effectsModel;
+        if (newModel && oldSelectedObjects.length > 0) {
+            var newSel = [];
+            for (var j = 0; j < newModel.length; j++) {
+                if (oldSelectedObjects.indexOf(newModel[j]) !== -1)
+                    newSel.push(j);
+
+            }
+            sidebarList.selectedIndices = newSel;
+            var newCurrentIdx = newModel.indexOf(oldCurrentObject);
+            if (newCurrentIdx !== -1)
+                sidebarList.currentIndex = newCurrentIdx;
+            else if (newSel.length > 0)
+                sidebarList.currentIndex = newSel[newSel.length - 1];
         }
         reloading = false;
     }
@@ -395,6 +426,8 @@ Common.RinaWindow {
                                 opacity: 0.5
 
                                 MouseArea {
+                                    // 選択状態の追従は reload() 内のオブジェクト参照復元で行われます。
+
                                     id: dragArea
 
                                     anchors.fill: parent
@@ -429,34 +462,12 @@ Common.RinaWindow {
                                         var isAudio = TimelineBridge.isAudioClip(targetClipId);
                                         var sel = sidebarList.selectedIndices;
                                         // 複数選択中 かつ ドラッグ元が選択範囲内 → 一括移動
-                                        if (!isAudio && sel.length > 1 && sel.indexOf(index) >= 0) {
+                                        if (!isAudio && sel.length > 1 && sel.indexOf(index) >= 0)
                                             TimelineBridge.reorderMultipleEffects(targetClipId, sel, targetIndex);
-                                            // 順序変更後の新インデックスを計算して選択状態を維持
-                                            var countBefore = 0;
-                                            for (var k = 0; k < sel.length; k++) {
-                                                if (sel[k] < targetIndex)
-                                                    countBefore++;
-
-                                            }
-                                            var m_len = sidebarList.model.length;
-                                            var maxInsert = Math.max(1, m_len - sel.length);
-                                            var insertAt = Math.max(1, Math.min(targetIndex - countBefore, maxInsert));
-                                            var newSel = [];
-                                            for (var k = 0; k < sel.length; k++) {
-                                                newSel.push(insertAt + k);
-                                            }
-                                            sidebarList.selectedIndices = newSel;
-                                            sidebarList.currentIndex = newSel[newSel.length - 1];
-                                        } else if (isAudio) {
+                                        else if (isAudio)
                                             TimelineBridge.reorderAudioPlugins(targetClipId, index, targetIndex);
-                                            sidebarList.selectedIndices = [targetIndex];
-                                            sidebarList.currentIndex = targetIndex;
-                                        } else {
+                                        else
                                             TimelineBridge.reorderEffects(targetClipId, index, targetIndex);
-                                            // QList::move では移動先がそのまま新インデックスになる
-                                            sidebarList.selectedIndices = [Math.max(1, targetIndex)];
-                                            sidebarList.currentIndex = Math.max(1, targetIndex);
-                                        }
                                     }
                                 }
 
