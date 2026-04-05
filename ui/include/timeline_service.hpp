@@ -64,6 +64,7 @@ class TimelineService : public QObject {
     // エフェクト
     void addEffect(int clipId, const QString &effectId);
     void removeEffect(int clipId, int effectIndex);
+    void removeMultipleEffects(int clipId, const QList<int> &indices);
     void setEffectEnabled(int clipId, int effectIndex, bool enabled);
     void setAudioPluginEnabled(int clipId, int index, bool enabled);
     void reorderEffects(int clipId, int oldIndex, int newIndex);
@@ -92,6 +93,8 @@ class TimelineService : public QObject {
     void addClipDirectInternal(const ClipData &clip, bool emitSignal = true);
     void restoreEffectInternal(int clipId, const QVariantMap &data);
     void removeEffectInternal(int clipId, int effectIndex);
+    void removeMultipleEffectsInternal(int clipId, const QList<int> &sortedDescIndices, QList<QVariantMap> *outData);
+    void restoreMultipleEffectsInternal(int clipId, const QList<QVariantMap> &ascData);
     void setEffectEnabledInternal(int clipId, int effectIndex, bool enabled);
     void pasteEffectInternal(int clipId, int targetIndex, EffectModel *effect);
     void setAudioPluginEnabledInternal(int clipId, int index, bool enabled);

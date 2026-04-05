@@ -79,6 +79,20 @@ class RemoveEffectCommand : public QUndoCommand {
     QString m_effectName;
 };
 
+class RemoveMultipleEffectsCommand : public QUndoCommand {
+  public:
+    RemoveMultipleEffectsCommand(TimelineService *service, int clipId, const QList<int> &sortedDescIndices, const QString &macroText);
+    void undo() override;
+    void redo() override;
+    void setRemovedEffects(const QList<QVariantMap> &data) { m_removedEffectsData = data; }
+
+  private:
+    TimelineService *m_service;
+    int m_clipId;
+    QList<int> m_sortedDescIndices;
+    QList<QVariantMap> m_removedEffectsData;
+};
+
 class ReorderEffectCommand : public QUndoCommand {
   public:
     ReorderEffectCommand(TimelineService *service, int clipId, int oldIndex, int newIndex);

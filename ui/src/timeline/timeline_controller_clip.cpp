@@ -435,6 +435,11 @@ void TimelineController::removeEffect(int clipId, int effectIndex) {
     updateActiveClipsList();
 }
 
+void TimelineController::removeMultipleEffects(int clipId, const QList<int> &indices) {
+    m_timeline->removeMultipleEffects(clipId, indices);
+    updateActiveClipsList();
+}
+
 void TimelineController::setEffectEnabled(int clipId, int effectIndex, bool enabled) {
     if (m_timeline != nullptr) {
         m_timeline->setEffectEnabled(clipId, effectIndex, enabled);

@@ -46,8 +46,9 @@ void UpdateChecker::acknowledge() {
 }
 
 void UpdateChecker::doCheck() {
-    if (mChecking)
+    if (mChecking) {
         return;
+    }
     mChecking = true;
     emit checkingChanged();
 
@@ -60,8 +61,9 @@ void UpdateChecker::doCheck() {
     req.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
 
     // ETag キャッシュ：変化なければサーバーは 304 を返しボディ転送ゼロ
-    if (!savedEtag.isEmpty())
+    if (!savedEtag.isEmpty()) {
         req.setRawHeader("If-None-Match", savedEtag.toUtf8());
+    }
 
     mNam->get(req);
 }
@@ -85,18 +87,21 @@ void UpdateChecker::onReplyFinished(QNetworkReply *reply) {
     }
 
     const QJsonDocument doc = QJsonDocument::fromJson(reply->readAll());
-    if (doc.isNull() || !doc.isObject())
+    if (doc.isNull() || !doc.isObject()) {
         return;
+    }
 
     const QJsonObject obj = doc.object();
     const QString remoteTag = obj.value(QStringLiteral("tag_name")).toString().trimmed();
-    if (remoteTag.isEmpty())
+    if (remoteTag.isEmpty()) {
         return;
+    }
 
     // ETag と lastCheckTime を保存（次回の 304 活用のため）
     const QString newEtag = QString::fromUtf8(reply->rawHeader("ETag"));
-    if (!newEtag.isEmpty())
+    if (!newEtag.isEmpty()) {
         SettingsManager::instance().setValue(KEY_ETAG, newEtag);
+    }
     SettingsManager::instance().setValue(KEY_LAST_CHECK, QDateTime::currentDateTimeUtc());
 
     mLatestVersion = remoteTag;
@@ -125,17 +130,20 @@ auto UpdateChecker::isNewer(const QString &remote, const QString &stored) -> boo
         std::array<int, 3> r{0, 0, 0};
         // std::min の型不一致を避けるため明示的に size_t にキャストする
         const auto count = std::min(r.size(), static_cast<std::size_t>(parts.size()));
-        for (std::size_t i = 0; i < count; ++i)
+        for (std::size_t i = 0; i < count; ++i) {
             r[i] = parts[static_cast<int>(i)].toInt();
+        }
         return r;
     };
     const auto ra = parse(remote);
     const auto sa = parse(stored);
     for (std::size_t i = 0; i < 3; ++i) {
-        if (ra[i] > sa[i])
+        if (ra[i] > sa[i]) {
             return true;
-        if (ra[i] < sa[i])
+        }
+        if (ra[i] < sa[i]) {
             return false;
+        }
     }
     return false;
 }

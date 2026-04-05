@@ -14,6 +14,7 @@ Common.RinaWindow {
     property var audioEffectsModel: []
     property bool inputting: false // 入力中フラグ（reloadループ防止用）
     property bool reloading: false
+    property bool isDeleting: false // 複数エフェクト削除中フラグ（途中reload抑制用）
     property bool enableSnap: SettingsManager && SettingsManager.settings ? SettingsManager.settings.enableSnap : true
     property bool sidebarOnRight: (SettingsManager && SettingsManager.settings && SettingsManager.settings.settingDialogSidebarRight !== undefined) ? SettingsManager.settings.settingDialogSidebarRight : false
     readonly property real _projectFps: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.fps : 60
@@ -105,6 +106,48 @@ Common.RinaWindow {
         reloading = false;
     }
 
+    // 複数エフェクト一括削除（reload を削除完了後に1回だけ行う）
+    function executeEffectDelete(indices) {
+        if (!TimelineBridge)
+            return ;
+
+        var isAudio = TimelineBridge.isAudioClip(targetClipId);
+        // ① 削除対象を現在のモデルから事前に確定（途中のモデル更新に依存しない）
+        var m = sidebarList.model;
+        var toDelete = [];
+        for (var i = 0; i < indices.length; i++) {
+            var idx = indices[i];
+            if (idx >= 0 && m && idx < m.length) {
+                if (isAudio || (m[idx] && m[idx].category === "filter"))
+                    toDelete.push(idx);
+
+            }
+        }
+        if (toDelete.length === 0) {
+            sidebarList.clearSelection();
+            return ;
+        }
+        // 高インデックスから削除してインデックスずれを防ぐ
+        toDelete.sort(function(a, b) {
+            return b - a;
+        });
+        // ② C++ 側で一括削除（シグナルを1回だけ発火させて再帰的イテレーション競合を防ぐ）
+        if (isAudio) {
+            // AudioPlugin は clipsMutable ループ外で処理されるため従来方式
+            root.isDeleting = true;
+            for (var j = 0; j < toDelete.length; j++) {
+                TimelineBridge.removeAudioPlugin(targetClipId, toDelete[j]);
+            }
+            root.isDeleting = false;
+        } else {
+            // ビデオエフェクトは C++ removeMultipleEffects で一括削除
+            TimelineBridge.removeMultipleEffects(targetClipId, toDelete);
+        }
+        // ③ 全削除完了後に一回だけリロード
+        reload();
+        sidebarList.clearSelection();
+    }
+
     function scrollToEffect(index) {
         var isAudio = TimelineBridge && TimelineBridge.isAudioClip(targetClipId);
         var repeater = isAudio ? audioEffectsRepeater : videoEffectsRepeater;
@@ -185,7 +228,7 @@ Common.RinaWindow {
 
         // パラメータ変更時の反映用（入力中はリロードしない）
         function onSelectedClipDataChanged() {
-            if (!inputting)
+            if (!inputting && !root.isDeleting)
                 reload();
 
         }
@@ -195,7 +238,7 @@ Common.RinaWindow {
 
     Connections {
         function onClipEffectsChanged(clipId) {
-            if (clipId === targetClipId)
+            if (clipId === targetClipId && !root.isDeleting)
                 reload();
 
         }
@@ -446,23 +489,7 @@ Common.RinaWindow {
                         if (indices.length === 0)
                             return ;
 
-                        indices.sort(function(a, b) {
-                            return b - a;
-                        });
-                        var isAudio = TimelineBridge.isAudioClip(targetClipId);
-                        var m = sidebarList.model;
-                        for (var i = 0; i < indices.length; i++) {
-                            var idx = indices[i];
-                            if (idx >= 0 && m && idx < m.length) {
-                                if (isAudio || (m[idx] && m[idx].category === "filter")) {
-                                    if (isAudio)
-                                        TimelineBridge.removeAudioPlugin(targetClipId, idx);
-                                    else
-                                        TimelineBridge.removeEffect(targetClipId, idx);
-                                }
-                            }
-                        }
-                        sidebarList.clearSelection();
+                        root.executeEffectDelete(indices);
                     }
                 }
 
@@ -1116,24 +1143,7 @@ Common.RinaWindow {
             if (indices.length === 0)
                 return ;
 
-            // 高インデックスから削除してインデックスずれを防ぐ
-            indices.sort(function(a, b) {
-                return b - a;
-            });
-            var isAudio = TimelineBridge.isAudioClip(targetClipId);
-            var m = sidebarList.model;
-            for (var i = 0; i < indices.length; i++) {
-                var idx = indices[i];
-                if (idx >= 0 && m && idx < m.length) {
-                    if (isAudio || (m[idx] && m[idx].category === "filter")) {
-                        if (isAudio)
-                            TimelineBridge.removeAudioPlugin(targetClipId, idx);
-                        else
-                            TimelineBridge.removeEffect(targetClipId, idx);
-                    }
-                }
-            }
-            sidebarList.clearSelection();
+            root.executeEffectDelete(indices);
         }
     }
 

@@ -52,6 +52,14 @@ RemoveEffectCommand::RemoveEffectCommand(TimelineService *service, int clipId, i
 void RemoveEffectCommand::redo() { m_service->removeEffectInternal(m_clipId, m_effectIndex); }
 void RemoveEffectCommand::undo() { m_service->restoreEffectInternal(m_clipId, m_removedEffectData); }
 
+RemoveMultipleEffectsCommand::RemoveMultipleEffectsCommand(TimelineService *service, int clipId, const QList<int> &sortedDescIndices, const QString &macroText) : m_service(service), m_clipId(clipId), m_sortedDescIndices(sortedDescIndices) {
+    setText(macroText);
+}
+
+void RemoveMultipleEffectsCommand::redo() { m_service->removeMultipleEffectsInternal(m_clipId, m_sortedDescIndices, &m_removedEffectsData); }
+
+void RemoveMultipleEffectsCommand::undo() { m_service->restoreMultipleEffectsInternal(m_clipId, m_removedEffectsData); }
+
 ReorderEffectCommand::ReorderEffectCommand(TimelineService *service, int clipId, int oldIndex, int newIndex) : m_service(service), m_clipId(clipId), m_oldIndex(oldIndex), m_newIndex(newIndex) {
     setText(QObject::tr("エフェクト順序変更"));
 } // NOLINT(bugprone-easily-swappable-parameters)

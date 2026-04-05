@@ -92,6 +92,75 @@ void TimelineService::removeEffectInternal(int clipId, int effectIndex) { // NOL
     }
 }
 
+void TimelineService::removeMultipleEffects(int clipId, const QList<int> &indices) {
+    const auto *clip = findClipById(clipId);
+    if (clip == nullptr)
+        return;
+
+    QList<int> sorted;
+    for (int idx : indices) {
+        if (idx >= 0 && idx < static_cast<int>(clip->effects.size()))
+            sorted.append(idx);
+    }
+    if (sorted.isEmpty())
+        return;
+    std::sort(sorted.begin(), sorted.end(), std::greater<int>());
+    sorted.erase(std::unique(sorted.begin(), sorted.end()), sorted.end());
+
+    auto *cmd = new RemoveMultipleEffectsCommand(this, clipId, sorted, QObject::tr("エフェクト削除 (%1件)").arg(sorted.size()));
+    m_undoStack->push(cmd);
+}
+
+void TimelineService::removeMultipleEffectsInternal(int clipId, const QList<int> &sortedDescIndices, QList<QVariantMap> *outData) {
+    for (auto &clip : clipsMutable()) {
+        if (clip.id == clipId) {
+            if (outData)
+                outData->clear();
+            for (int idx : sortedDescIndices) {
+                if (idx < 0 || idx >= static_cast<int>(clip.effects.size()))
+                    continue;
+                if (idx == 0 && clip.effects.value(0)->id() == QStringLiteral("transform"))
+                    continue;
+                auto *eff = clip.effects.takeAt(idx);
+                if (outData) {
+                    QVariantMap d;
+                    d.insert(QStringLiteral("id"), eff->id());
+                    d.insert(QStringLiteral("name"), eff->name());
+                    d.insert(QStringLiteral("enabled"), eff->isEnabled());
+                    d.insert(QStringLiteral("params"), eff->params());
+                    d.insert(QStringLiteral("qmlSource"), eff->qmlSource());
+                    d.insert(QStringLiteral("uiDefinition"), eff->uiDefinition());
+                    d.insert(QStringLiteral("keyframes"), eff->keyframeTracks());
+                    outData->prepend(d);
+                }
+                eff->deleteLater();
+            }
+            emit clipsChanged();
+            emit clipEffectsChanged(clipId);
+            break;
+        }
+    }
+}
+
+void TimelineService::restoreMultipleEffectsInternal(int clipId, const QList<QVariantMap> &ascData) {
+    for (auto &clip : clipsMutable()) {
+        if (clip.id == clipId) {
+            for (const auto &d : ascData) {
+                auto meta = Rina::Core::EffectRegistry::instance().getEffect(d.value(QStringLiteral("id")).toString());
+                auto *model = new EffectModel(d.value(QStringLiteral("id")).toString(), d.value(QStringLiteral("name")).toString(), meta.category, d.value(QStringLiteral("params")).toMap(), d.value(QStringLiteral("qmlSource")).toString(),
+                                              d.value(QStringLiteral("uiDefinition")).toMap(), this);
+                model->setEnabled(d.value(QStringLiteral("enabled")).toBool());
+                model->setKeyframeTracks(d.value(QStringLiteral("keyframes")).toMap());
+                connect(model, &EffectModel::keyframeTracksChanged, this, &TimelineService::clipsChanged);
+                clip.effects.append(model);
+            }
+            emit clipsChanged();
+            emit clipEffectsChanged(clipId);
+            break;
+        }
+    }
+}
+
 void TimelineService::setEffectEnabled(int clipId, int effectIndex, bool enabled) { m_undoStack->push(new SetEffectEnabledCommand(this, clipId, effectIndex, enabled)); }
 
 void TimelineService::setAudioPluginEnabled(int clipId, int index, bool enabled) { m_undoStack->push(new SetAudioPluginEnabledCommand(this, clipId, index, enabled)); }

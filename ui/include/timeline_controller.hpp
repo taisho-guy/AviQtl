@@ -124,6 +124,7 @@ class TimelineController : public QObject {
     Q_INVOKABLE static QVariantList getAvailableObjects(const QString &category);
     Q_INVOKABLE void addEffect(int clipId, const QString &effectId);
     Q_INVOKABLE void removeEffect(int clipId, int effectIndex);
+    Q_INVOKABLE void removeMultipleEffects(int clipId, const QList<int> &indices);
     Q_INVOKABLE void copyEffect(int clipId, int effectIndex);
     Q_INVOKABLE void pasteEffect(int clipId, int targetIndex);
     Q_INVOKABLE void cutEffect(int clipId, int effectIndex);

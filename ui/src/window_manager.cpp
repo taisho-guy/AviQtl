@@ -60,7 +60,7 @@ void WindowManager::onProjectSelected(const QString &path, int w, int h, double 
     spawnWindow(m_engine, QStringLiteral("updateNotification"), QStringLiteral("qrc:/qt/qml/Rina/ui/qml/UpdateNotificationWindow.qml"), tr("新しいバージョンがあります"), 440, 260, 400, 300, false);
 
     if (auto *checker = qobject_cast<Rina::Core::UpdateChecker *>(m_engine->rootContext()->contextProperty(QStringLiteral("UpdateChecker")).value<QObject *>())) {
-        connect(checker, &Rina::Core::UpdateChecker::updateAvailableChanged, this, [this]() { setVisible(QStringLiteral("updateNotification"), true); });
+        connect(checker, &Rina::Core::UpdateChecker::updateAvailableChanged, this, [this]() -> void { setVisible(QStringLiteral("updateNotification"), true); });
     }
 
     // 設定の反映
