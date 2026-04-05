@@ -623,7 +623,7 @@ Common.RinaWindow {
                                         updateParam(startFrame, val);
                                         // 暗転状態（右側が非アクティブ）では左値変更を右側にも同期する
                                         var _rightActive = isMoving && hasKeyframeAt(endFrame) && interpType !== "" && interpType !== "constant";
-                                        if (!_rightActive && endFrame !== startFrame) {
+                                        if (!_rightActive && endFrame !== startFrame && !(endFrame === clipDur && !trackHasEnd)) {
                                             ensureKeyframeAt(endFrame);
                                             updateParam(endFrame, val);
                                         }
@@ -670,7 +670,7 @@ Common.RinaWindow {
                                         root.inputting = true;
                                         updateParam(startFrame, val);
                                         // 暗転状態（右側が非アクティブ）では左値変更を右側にも同期する
-                                        if (!rightInteractiveState && endFrame !== startFrame) {
+                                        if (!rightInteractiveState && endFrame !== startFrame && !(endFrame === clipDur && !trackHasEnd)) {
                                             ensureKeyframeAt(endFrame);
                                             updateParam(endFrame, val);
                                         }
