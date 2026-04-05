@@ -222,6 +222,35 @@ Common.RinaWindow {
 
                 property int dragTargetIndex: -1
                 property int dragSourceIndex: -1
+                property var selectedIndices: []
+
+                function toggleSelection(idx) {
+                    var s = selectedIndices.slice();
+                    var pos = s.indexOf(idx);
+                    if (pos >= 0)
+                        s.splice(pos, 1);
+                    else
+                        s.push(idx);
+                    selectedIndices = s;
+                    currentIndex = idx;
+                }
+
+                function rangeSelect(from, to) {
+                    var s = [];
+                    var lo = Math.min(from, to), hi = Math.max(from, to);
+                    for (var i = lo; i <= hi; i++) s.push(i)
+                    selectedIndices = s;
+                    currentIndex = to;
+                }
+
+                function isSelected(idx) {
+                    return selectedIndices.indexOf(idx) >= 0;
+                }
+
+                function clearSelection() {
+                    selectedIndices = [];
+                    currentIndex = -1;
+                }
 
                 anchors.fill: parent
                 LayoutMirroring.enabled: false
@@ -257,15 +286,32 @@ Common.RinaWindow {
 
                         Rectangle {
                             anchors.fill: parent
-                            color: (sidebarList.currentIndex === index) ? palette.highlight : (dragArea.drag.active ? palette.mid : "transparent")
-                            opacity: (sidebarList.currentIndex === index) ? 0.2 : (dragArea.drag.active ? 0.8 : 1)
+                            color: (sidebarList.isSelected(index) || sidebarList.currentIndex === index) ? palette.highlight : (dragArea.drag.active ? palette.mid : "transparent")
+                            opacity: (sidebarList.isSelected(index) || sidebarList.currentIndex === index) ? 0.2 : (dragArea.drag.active ? 0.8 : 1)
                         }
 
                         // 背景用クリック領域（他のコントロールの下敷きになるよう先に宣言）
                         MouseArea {
                             anchors.fill: parent
-                            onClicked: {
-                                sidebarList.currentIndex = index;
+                            acceptedButtons: Qt.LeftButton | Qt.RightButton
+                            onClicked: (mouse) => {
+                                if (mouse.button === Qt.RightButton) {
+                                    if (!sidebarList.isSelected(index)) {
+                                        sidebarList.selectedIndices = [index];
+                                        sidebarList.currentIndex = index;
+                                    }
+                                    effectContextMenu.effectIndex = index;
+                                    effectContextMenu.popup();
+                                    return ;
+                                }
+                                if (mouse.modifiers & Qt.ControlModifier) {
+                                    sidebarList.toggleSelection(index);
+                                } else if (mouse.modifiers & Qt.ShiftModifier) {
+                                    sidebarList.rangeSelect(sidebarList.currentIndex >= 0 ? sidebarList.currentIndex : 0, index);
+                                } else {
+                                    sidebarList.selectedIndices = [index];
+                                    sidebarList.currentIndex = index;
+                                }
                                 root.scrollToEffect(index);
                             }
                         }
@@ -330,11 +376,16 @@ Common.RinaWindow {
                                 Layout.preferredHeight: 20
                                 Layout.preferredWidth: 20
                                 onToggled: {
-                                    if (TimelineBridge) {
-                                        if (TimelineBridge.isAudioClip(targetClipId))
-                                            TimelineBridge.setAudioPluginEnabled(targetClipId, index, checked);
+                                    if (!TimelineBridge)
+                                        return ;
+
+                                    var targets = (sidebarList.isSelected(index) && sidebarList.selectedIndices.length > 1) ? sidebarList.selectedIndices : [index];
+                                    var isAudio = TimelineBridge.isAudioClip(targetClipId);
+                                    for (var i = 0; i < targets.length; i++) {
+                                        if (isAudio)
+                                            TimelineBridge.setAudioPluginEnabled(targetClipId, targets[i], checked);
                                         else
-                                            TimelineBridge.setEffectEnabled(targetClipId, index, checked);
+                                            TimelineBridge.setEffectEnabled(targetClipId, targets[i], checked);
                                     }
                                 }
                             }
@@ -351,6 +402,68 @@ Common.RinaWindow {
 
                     }
 
+                }
+
+            }
+
+            // 右クリックコンテキストメニュー
+            Menu {
+                id: effectContextMenu
+
+                property int effectIndex: -1
+
+                MenuItem {
+                    text: {
+                        var n = sidebarList.selectedIndices.length;
+                        return n > 1 ? qsTr("選択した %1 件を削除").arg(n) : qsTr("削除");
+                    }
+                    enabled: {
+                        var indices = sidebarList.selectedIndices.length > 0 ? sidebarList.selectedIndices : (effectContextMenu.effectIndex >= 0 ? [effectContextMenu.effectIndex] : []);
+                        if (indices.length === 0)
+                            return false;
+
+                        var m = sidebarList.model;
+                        if (!m)
+                            return false;
+
+                        var isAudio = TimelineBridge && TimelineBridge.isAudioClip(targetClipId);
+                        // 1件でも削除可能なものがあれば有効
+                        for (var i = 0; i < indices.length; i++) {
+                            var idx = indices[i];
+                            if (idx >= 0 && idx < m.length)
+                                if (isAudio || (m[idx] && m[idx].category === "filter"))
+                                return true;
+;
+
+                        }
+                        return false;
+                    }
+                    onTriggered: {
+                        if (!TimelineBridge)
+                            return ;
+
+                        var indices = sidebarList.selectedIndices.length > 0 ? sidebarList.selectedIndices.slice() : (effectContextMenu.effectIndex >= 0 ? [effectContextMenu.effectIndex] : []);
+                        if (indices.length === 0)
+                            return ;
+
+                        indices.sort(function(a, b) {
+                            return b - a;
+                        });
+                        var isAudio = TimelineBridge.isAudioClip(targetClipId);
+                        var m = sidebarList.model;
+                        for (var i = 0; i < indices.length; i++) {
+                            var idx = indices[i];
+                            if (idx >= 0 && m && idx < m.length) {
+                                if (isAudio || (m[idx] && m[idx].category === "filter")) {
+                                    if (isAudio)
+                                        TimelineBridge.removeAudioPlugin(targetClipId, idx);
+                                    else
+                                        TimelineBridge.removeEffect(targetClipId, idx);
+                                }
+                            }
+                        }
+                        sidebarList.clearSelection();
+                    }
                 }
 
             }
@@ -989,6 +1102,39 @@ Common.RinaWindow {
 
         }
 
+    }
+
+    // エフェクトサイドバー向け Delete ショートカット
+    Shortcut {
+        sequence: "Delete"
+        context: Qt.WindowShortcut
+        onActivated: {
+            if (!TimelineBridge)
+                return ;
+
+            var indices = sidebarList.selectedIndices.length > 0 ? sidebarList.selectedIndices.slice() : (sidebarList.currentIndex >= 0 ? [sidebarList.currentIndex] : []);
+            if (indices.length === 0)
+                return ;
+
+            // 高インデックスから削除してインデックスずれを防ぐ
+            indices.sort(function(a, b) {
+                return b - a;
+            });
+            var isAudio = TimelineBridge.isAudioClip(targetClipId);
+            var m = sidebarList.model;
+            for (var i = 0; i < indices.length; i++) {
+                var idx = indices[i];
+                if (idx >= 0 && m && idx < m.length) {
+                    if (isAudio || (m[idx] && m[idx].category === "filter")) {
+                        if (isAudio)
+                            TimelineBridge.removeAudioPlugin(targetClipId, idx);
+                        else
+                            TimelineBridge.removeEffect(targetClipId, idx);
+                    }
+                }
+            }
+            sidebarList.clearSelection();
+        }
     }
 
     menuBar: MenuBar {

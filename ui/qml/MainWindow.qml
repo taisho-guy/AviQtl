@@ -704,7 +704,7 @@ ApplicationWindow {
 
     Shortcut {
         sequence: deleteAction.shortcutText
-        context: Qt.ApplicationShortcut
+        context: Qt.WindowShortcut
         onActivated: deleteAction.trigger()
     }
 
