@@ -107,15 +107,16 @@ class ReorderEffectCommand : public QUndoCommand {
 
 class ReorderMultipleEffectsCommand : public QUndoCommand {
   public:
-    ReorderMultipleEffectsCommand(TimelineService *service, int clipId, QList<EffectModel *> oldOrder, QList<EffectModel *> newOrder, const QString &text);
+    // 生ポインタ保持によるダングリング回避: 置換順列インデックスだけ保持する
+    ReorderMultipleEffectsCommand(TimelineService *service, int clipId, QList<int> redoPerm, QList<int> undoPerm, const QString &text);
     void undo() override;
     void redo() override;
 
   private:
     TimelineService *m_service;
     int m_clipId;
-    QList<EffectModel *> m_oldOrder;
-    QList<EffectModel *> m_newOrder;
+    QList<int> m_redoPerm; // 旧順序→新順序を適用する置換
+    QList<int> m_undoPerm; // 新順序→旧順序を復元する置換
 };
 
 class ReorderAudioPluginCommand : public QUndoCommand {

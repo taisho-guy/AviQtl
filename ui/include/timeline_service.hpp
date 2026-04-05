@@ -100,7 +100,7 @@ class TimelineService : public QObject {
     void pasteEffectInternal(int clipId, int targetIndex, EffectModel *effect);
     void setAudioPluginEnabledInternal(int clipId, int index, bool enabled);
     void reorderEffectsInternal(int clipId, int oldIndex, int newIndex);
-    void applyEffectOrderInternal(int clipId, const QList<EffectModel *> &order);
+    void applyPermutationInternal(int clipId, const QList<int> &perm);
     void reorderAudioPluginsInternal(int clipId, int oldIndex, int newIndex);
     void updateEffectParamInternal(int clipId, int effectIndex, const QString &paramName, const QVariant &value);
     void setClipboard(const ClipData &clip);

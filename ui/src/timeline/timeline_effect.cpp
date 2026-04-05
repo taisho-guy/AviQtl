@@ -3,6 +3,7 @@
 #include "selection_service.hpp"
 #include "timeline_service.hpp"
 #include <QDebug>
+#include <algorithm>
 
 namespace Rina::UI {
 
@@ -94,16 +95,19 @@ void TimelineService::removeEffectInternal(int clipId, int effectIndex) { // NOL
 
 void TimelineService::removeMultipleEffects(int clipId, const QList<int> &indices) {
     const auto *clip = findClipById(clipId);
-    if (clip == nullptr)
+    if (clip == nullptr) {
         return;
+    }
 
     QList<int> sorted;
     for (int idx : indices) {
-        if (idx >= 0 && idx < static_cast<int>(clip->effects.size()))
+        if (idx >= 0 && idx < static_cast<int>(clip->effects.size())) {
             sorted.append(idx);
+        }
     }
-    if (sorted.isEmpty())
+    if (sorted.isEmpty()) {
         return;
+    }
     std::sort(sorted.begin(), sorted.end(), std::greater<int>());
     sorted.erase(std::unique(sorted.begin(), sorted.end()), sorted.end());
 
@@ -114,15 +118,18 @@ void TimelineService::removeMultipleEffects(int clipId, const QList<int> &indice
 void TimelineService::removeMultipleEffectsInternal(int clipId, const QList<int> &sortedDescIndices, QList<QVariantMap> *outData) {
     for (auto &clip : clipsMutable()) {
         if (clip.id == clipId) {
-            if (outData)
+            if (outData != nullptr) {
                 outData->clear();
+            }
             for (int idx : sortedDescIndices) {
-                if (idx < 0 || idx >= static_cast<int>(clip.effects.size()))
+                if (idx < 0 || idx >= static_cast<int>(clip.effects.size())) {
                     continue;
-                if (idx == 0 && clip.effects.value(0)->id() == QStringLiteral("transform"))
+                }
+                if (idx == 0 && clip.effects.value(0)->id() == QStringLiteral("transform")) {
                     continue;
+                }
                 auto *eff = clip.effects.takeAt(idx);
-                if (outData) {
+                if (outData != nullptr) {
                     QVariantMap d;
                     d.insert(QStringLiteral("id"), eff->id());
                     d.insert(QStringLiteral("name"), eff->name());
@@ -174,28 +181,32 @@ void TimelineService::reorderEffects(int clipId, int oldIndex, int newIndex) {
 
 void TimelineService::reorderMultipleEffects(int clipId, const QVariantList &indicesList, int targetIndex) {
     const auto *clip = findClipById(clipId);
-    if (clip == nullptr)
+    if (clip == nullptr) {
         return;
+    }
 
     const int n = static_cast<int>(clip->effects.size());
 
     // QVariantList を int に変換
     QList<int> indices;
     for (const QVariant &v : indicesList) {
-        bool ok;
+        bool ok = false;
         int val = v.toInt(&ok);
-        if (ok)
+        if (ok) {
             indices.append(val);
+        }
     }
 
     // Transform (index 0) は移動不可として除外し、重複も除去して昇順ソート
     QList<int> valid;
     for (int idx : indices) {
-        if (idx > 0 && idx < n)
+        if (idx > 0 && idx < n) {
             valid.append(idx);
+        }
     }
-    if (valid.isEmpty())
+    if (valid.isEmpty()) {
         return;
+    }
     std::sort(valid.begin(), valid.end());
     valid.erase(std::unique(valid.begin(), valid.end()), valid.end());
 
@@ -205,22 +216,25 @@ void TimelineService::reorderMultipleEffects(int clipId, const QVariantList &ind
     // 選択アイテムを昇順で収集
     QList<EffectModel *> selected;
     selected.reserve(valid.size());
-    for (int idx : valid)
+    for (int idx : valid) {
         selected.append(clip->effects.at(idx));
+    }
 
     // 非選択アイテムを収集（Transform を含む）
     QList<EffectModel *> remaining;
     remaining.reserve(n - valid.size());
     for (int i = 0; i < n; i++) {
-        if (!selectedSet.contains(i))
+        if (!selectedSet.contains(i)) {
             remaining.append(clip->effects.at(i));
+        }
     }
 
     // targetIndex より前にある選択アイテムの数を計算し、挿入位置を調整
     int countBefore = 0;
     for (int idx : valid) {
-        if (idx < targetIndex)
+        if (idx < targetIndex) {
             countBefore++;
+        }
     }
     // Transform より前への挿入を禁止（insertAt >= 1）
     const int insertAt = std::clamp(targetIndex - countBefore, 1, static_cast<int>(remaining.size()));
@@ -228,24 +242,45 @@ void TimelineService::reorderMultipleEffects(int clipId, const QVariantList &ind
     // 新順序を構築
     QList<EffectModel *> newOrder;
     newOrder.reserve(n);
-    for (int i = 0; i < insertAt; i++)
+    for (int i = 0; i < insertAt; i++) {
         newOrder.append(remaining.at(i));
-    for (auto *eff : std::as_const(selected))
+    }
+    for (auto *eff : std::as_const(selected)) {
         newOrder.append(eff);
-    for (int i = insertAt; i < static_cast<int>(remaining.size()); i++)
+    }
+    for (int i = insertAt; i < static_cast<int>(remaining.size()); i++) {
         newOrder.append(remaining.at(i));
+    }
 
-    if (newOrder == clip->effects)
+    if (newOrder == clip->effects) {
         return;
+    }
 
-    const QList<EffectModel *> oldOrder = clip->effects;
-    m_undoStack->push(new ReorderMultipleEffectsCommand(this, clipId, oldOrder, newOrder, QObject::tr("エフェクト順序変更 (%1件)").arg(valid.size())));
+    // 置換インデックスを計算してコマンドに渡す（生ポインタをコマンドに持ち込まない）
+    //   redoPerm[i] = 現在の clip->effects のうち newOrder[i] に相当する要素の添字
+    //   undoPerm[i] = redo 後の状態のうち clip->effects[i] に相当する要素の添字
+    const QList<EffectModel *> &oldOrder = clip->effects;
+    QList<int> redoPerm, undoPerm;
+    redoPerm.resize(n);
+    undoPerm.resize(n);
+    for (int i = 0; i < n; i++) {
+        redoPerm[i] = static_cast<int>(oldOrder.indexOf(newOrder.at(i)));
+        undoPerm[i] = static_cast<int>(newOrder.indexOf(oldOrder.at(i)));
+    }
+    m_undoStack->push(new ReorderMultipleEffectsCommand(this, clipId, std::move(redoPerm), std::move(undoPerm), QObject::tr("エフェクト順序変更 (%1件)").arg(valid.size())));
 }
 
-void TimelineService::applyEffectOrderInternal(int clipId, const QList<EffectModel *> &order) {
+void TimelineService::applyPermutationInternal(int clipId, const QList<int> &perm) {
     for (auto &clip : clipsMutable()) {
         if (clip.id == clipId) {
-            clip.effects = order;
+            // サイズ不一致は Undo スタックと実際のエフェクト数が乖離した状態 → 安全のため無視
+            if (perm.size() != clip.effects.size())
+                break;
+            QList<EffectModel *> reordered;
+            reordered.reserve(perm.size());
+            for (int idx : perm)
+                reordered.append(clip.effects.at(idx));
+            clip.effects = std::move(reordered);
             emit clipEffectsChanged(clipId);
             emit clipsChanged();
             break;

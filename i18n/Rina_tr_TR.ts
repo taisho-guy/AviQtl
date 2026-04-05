@@ -1357,12 +1357,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_effect.cpp" line="110"/>
+        <location filename="../ui/src/timeline/timeline_effect.cpp" line="114"/>
         <source>エフェクト削除 (%1件)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_effect.cpp" line="242"/>
+        <location filename="../ui/src/timeline/timeline_effect.cpp" line="270"/>
         <source>エフェクト順序変更 (%1件)</source>
         <translation type="unfinished"></translation>
     </message>
