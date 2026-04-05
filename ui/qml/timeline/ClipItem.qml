@@ -58,11 +58,11 @@ Item {
             if (c !== "")
                 return isSelected ? Qt.lighter(c, 1.3) : c;
 
-            return isSelected ? palette.highlight : palette.mid;
+            return isSelected ? palette.highlight : Qt.darker(palette.highlight, 1.6);
         }
         border.color: isSelected ? palette.highlight : palette.midlight
         border.width: isSelected ? 2 : 1
-        opacity: 0.8
+        opacity: 1
         radius: 4
 
         Text {
