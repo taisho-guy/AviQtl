@@ -17,6 +17,29 @@
     </message>
 </context>
 <context>
+    <name>AppearanceSettingsPage</name>
+    <message>
+        <location filename="../ui/qml/settings/AppearanceSettingsPage.qml" line="35"/>
+        <source>表示</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/AppearanceSettingsPage.qml" line="45"/>
+        <source>テーマ</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/AppearanceSettingsPage.qml" line="69"/>
+        <source>文字余白係数</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/AppearanceSettingsPage.qml" line="91"/>
+        <source>テーマ変更は再起動後に完全反映される場合があります</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>BaseObject</name>
     <message>
         <location filename="../ui/qml/common/BaseObject.qml" line="47"/>
@@ -101,6 +124,54 @@
     <message>
         <location filename="../ui/qml/common/ControlLoader.qml" line="626"/>
         <source>デフォルト</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>DecodeAudioSettingsPage</name>
+    <message>
+        <location filename="../ui/qml/settings/DecodeAudioSettingsPage.qml" line="38"/>
+        <source>映像デコード</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/DecodeAudioSettingsPage.qml" line="48"/>
+        <source>インデックス予約数</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/DecodeAudioSettingsPage.qml" line="60"/>
+        <source>最小キャッシュ量</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/DecodeAudioSettingsPage.qml" line="72"/>
+        <source>ハードウェアフレームプール数</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/DecodeAudioSettingsPage.qml" line="87"/>
+        <source>音声</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/DecodeAudioSettingsPage.qml" line="97"/>
+        <source>音声チャンネル数</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/DecodeAudioSettingsPage.qml" line="107"/>
+        <source>プラグイン最大ブロックサイズ</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/DecodeAudioSettingsPage.qml" line="117"/>
+        <source>Lua フック間隔</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/DecodeAudioSettingsPage.qml" line="133"/>
+        <source>デコードと音声関連の設定は再起動後に反映されます</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -427,6 +498,137 @@
     <message>
         <location filename="../ui/qml/ExportDialog.qml" line="531"/>
         <source>保存先を指定</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>ExportSettingsPage</name>
+    <message>
+        <location filename="../ui/qml/settings/ExportSettingsPage.qml" line="42"/>
+        <source>映像</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/ExportSettingsPage.qml" line="52"/>
+        <source>既定の映像コーデック</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/ExportSettingsPage.qml" line="62"/>
+        <source>既定ビットレート</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/ExportSettingsPage.qml" line="73"/>
+        <source>既定CRF</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/ExportSettingsPage.qml" line="84"/>
+        <source>静止画品質</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/ExportSettingsPage.qml" line="95"/>
+        <source>連番桁数</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/ExportSettingsPage.qml" line="110"/>
+        <source>音声と進行表示</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/ExportSettingsPage.qml" line="120"/>
+        <source>既定の音声コーデック</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/ExportSettingsPage.qml" line="130"/>
+        <source>音声ビットレート</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/ExportSettingsPage.qml" line="142"/>
+        <source>フレーム取得待ち時間</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/ExportSettingsPage.qml" line="154"/>
+        <source>進捗更新間隔</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>GeneralSettingsPage</name>
+    <message>
+        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="35"/>
+        <source>ファイル</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="42"/>
+        <source>終了時に確認ダイアログを表示する</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="48"/>
+        <source>自動バックアップを有効にする</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="57"/>
+        <source>バックアップ間隔</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="68"/>
+        <source>分</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="75"/>
+        <source>最近使ったプロジェクトの保持数</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="86"/>
+        <source>件</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="96"/>
+        <source>編集</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="104"/>
+        <source>元に戻す回数</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="117"/>
+        <source>回数を増やすとメモリ使用量が増えます</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="127"/>
+        <source>起動</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="137"/>
+        <source>スプラッシュ表示時間</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="149"/>
+        <source>スプラッシュ画像サイズ</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="161"/>
+        <source>起動後の遅延時間</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -762,6 +964,67 @@
     </message>
 </context>
 <context>
+    <name>PerformanceSettingsPage</name>
+    <message>
+        <location filename="../ui/qml/settings/PerformanceSettingsPage.qml" line="37"/>
+        <source>メモリとキャッシュ</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/PerformanceSettingsPage.qml" line="47"/>
+        <source>最大画像サイズ</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/PerformanceSettingsPage.qml" line="57"/>
+        <source>キャッシュ容量</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/PerformanceSettingsPage.qml" line="69"/>
+        <source>描画スレッド数</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/PerformanceSettingsPage.qml" line="83"/>
+        <source>補足</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/PerformanceSettingsPage.qml" line="90"/>
+        <source>描画スレッド数が自動のときは実行環境に応じて決定します</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/PerformanceSettingsPage.qml" line="96"/>
+        <source>ご使用の実行環境に合わせて、まずは自動設定で動作を確認してください</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>PluginSettingsPage</name>
+    <message>
+        <location filename="../ui/qml/settings/PluginSettingsPage.qml" line="43"/>
+        <source>各形式ごとに有効化と検索パスを設定できます</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/PluginSettingsPage.qml" line="62"/>
+        <source>%1 を読み込む</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/PluginSettingsPage.qml" line="68"/>
+        <source>検索パス</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/PluginSettingsPage.qml" line="93"/>
+        <source>1行に1パスを入力します</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>ProjectLauncherWindow</name>
     <message>
         <location filename="../ui/qml/ProjectLauncherWindow.qml" line="15"/>
@@ -851,6 +1114,44 @@
     <message>
         <location filename="../ui/qml/ProjectLauncherWindow.qml" line="308"/>
         <source>プロジェクトファイルを開く</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>ProjectSettingsPage</name>
+    <message>
+        <location filename="../ui/qml/settings/ProjectSettingsPage.qml" line="35"/>
+        <source>既定値</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/ProjectSettingsPage.qml" line="45"/>
+        <source>幅</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/ProjectSettingsPage.qml" line="56"/>
+        <source>高さ</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/ProjectSettingsPage.qml" line="67"/>
+        <source>フレームレート</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/ProjectSettingsPage.qml" line="85"/>
+        <source>総フレーム数</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/ProjectSettingsPage.qml" line="96"/>
+        <source>サンプリング周波数</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/ProjectSettingsPage.qml" line="108"/>
+        <source>既定クリップ長</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -1194,6 +1495,24 @@
     </message>
 </context>
 <context>
+    <name>ShortcutSettingsPage</name>
+    <message>
+        <location filename="../ui/qml/settings/ShortcutSettingsPage.qml" line="42"/>
+        <source>キーボードショートカット</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/ShortcutSettingsPage.qml" line="48"/>
+        <source>「Ctrl+S」や「Alt+Shift+N」の形式で入力してください</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/ShortcutSettingsPage.qml" line="75"/>
+        <source>未設定</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>SplashWindow</name>
     <message>
         <location filename="../ui/qml/SplashWindow.qml" line="7"/>
@@ -1204,635 +1523,343 @@
 <context>
     <name>SystemSettingsWindow</name>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="14"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="15"/>
         <source>ダーク</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="14"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="15"/>
         <source>ライト</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="14"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="15"/>
         <source>システムに従う</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="16"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="17"/>
         <source>フレーム</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="16"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="17"/>
         <source>秒</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="18"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="19"/>
         <source>自動</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="20"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="21"/>
         <source>モノラル</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="20"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="21"/>
         <source>ステレオ</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="23"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="24"/>
         <source>H.264 (VAAPI)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="23"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="24"/>
         <source>HEVC (VAAPI)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="23"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="24"/>
         <source>H.264 (CPU)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="28"/>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="218"/>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="218"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="29"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="219"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="219"/>
         <source>新規プロジェクト</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="31"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="32"/>
         <source>プロジェクトを開く</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="34"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="35"/>
         <source>上書き保存</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="37"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="38"/>
         <source>名前を付けて保存</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="40"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="41"/>
         <source>終了</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="43"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="44"/>
         <source>元に戻す</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="46"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="47"/>
         <source>やり直す</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="49"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="50"/>
         <source>カット</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="52"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="53"/>
         <source>コピー</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="55"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="56"/>
         <source>貼り付け</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="58"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="59"/>
         <source>削除</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="61"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="62"/>
         <source>複製</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="64"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="65"/>
         <source>再生 / 一時停止</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="67"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="68"/>
         <source>1フレーム進む</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="70"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="71"/>
         <source>1フレーム戻る</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="73"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="74"/>
         <source>先頭へ移動</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="76"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="77"/>
         <source>末尾へ移動</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="79"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="80"/>
         <source>ズームイン</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="82"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="83"/>
         <source>ズームアウト</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="85"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="86"/>
         <source>クリップを分割</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="88"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="89"/>
         <source>レイヤーを上へ移動</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="91"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="92"/>
         <source>レイヤーを下へ移動</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="94"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="95"/>
         <source>1フレーム左へ移動</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="97"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="98"/>
         <source>1フレーム右へ移動</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="183"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="184"/>
         <source>システム設定</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="202"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="203"/>
         <source>一般</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="206"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="207"/>
         <source>性能</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="210"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="211"/>
         <source>タイムライン</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="214"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="215"/>
         <source>外観</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="222"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="223"/>
         <source>書き出し</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="226"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="227"/>
         <source>デコードと音声</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="230"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="231"/>
         <source>プラグイン</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="234"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="235"/>
         <source>ショートカット</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="257"/>
-        <source>ファイル</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="264"/>
-        <source>終了時に確認ダイアログを表示する</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="270"/>
-        <source>自動バックアップを有効にする</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="279"/>
-        <source>バックアップ間隔</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="290"/>
-        <source>分</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="297"/>
-        <source>最近使ったプロジェクトの保持数</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="308"/>
-        <source>件</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="318"/>
-        <source>編集</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="326"/>
-        <source>元に戻す回数</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="339"/>
-        <source>回数を増やすとメモリ使用量が増えます</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="349"/>
-        <source>起動</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="359"/>
-        <source>スプラッシュ表示時間</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="371"/>
-        <source>スプラッシュ画像サイズ</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="383"/>
-        <source>起動後の遅延時間</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="419"/>
-        <source>メモリとキャッシュ</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="429"/>
-        <source>最大画像サイズ</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="439"/>
-        <source>キャッシュ容量</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="451"/>
-        <source>描画スレッド数</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="465"/>
-        <source>補足</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="472"/>
-        <source>描画スレッド数が自動のときは実行環境に応じて決定します</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="478"/>
-        <source>ご使用の実行環境に合わせて、まずは自動設定で動作を確認してください</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="508"/>
-        <source>操作</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="516"/>
-        <source>時間表示</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="528"/>
-        <source>分割時にカーソル位置を使う</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="534"/>
-        <source>レイヤー範囲を表示する</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="544"/>
-        <source>見た目と寸法</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="554"/>
-        <source>トラックの高さ</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="565"/>
-        <source>ヘッダーの高さ</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="576"/>
-        <source>設定サイドバーを右に配置</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="585"/>
-        <source>ルーラーの高さ</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="596"/>
-        <source>最大レイヤー数</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="607"/>
-        <source>レイヤーヘッダー幅</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="618"/>
-        <source>時間表示欄の幅</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="629"/>
-        <source>クリップ端のつかみ幅</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="644"/>
-        <source>編集制約とズーム</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="654"/>
-        <source>最小クリップ長</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="665"/>
-        <source>ズーム最小値</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="676"/>
-        <source>ズーム最大値</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="687"/>
-        <source>ズーム刻み</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="722"/>
-        <source>表示</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="732"/>
-        <source>テーマ</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="756"/>
-        <source>文字余白係数</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="778"/>
-        <source>テーマ変更は再起動後に完全反映される場合があります</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="804"/>
-        <source>既定値</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="814"/>
-        <source>幅</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="825"/>
-        <source>高さ</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="836"/>
-        <source>フレームレート</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="854"/>
-        <source>総フレーム数</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="865"/>
-        <source>サンプリング周波数</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="877"/>
-        <source>既定クリップ長</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="912"/>
-        <source>映像</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="922"/>
-        <source>既定の映像コーデック</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="932"/>
-        <source>既定ビットレート</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="943"/>
-        <source>既定CRF</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="954"/>
-        <source>静止画品質</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="965"/>
-        <source>連番桁数</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="980"/>
-        <source>音声と進行表示</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="990"/>
-        <source>既定の音声コーデック</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="1000"/>
-        <source>音声ビットレート</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="1012"/>
-        <source>フレーム取得待ち時間</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="1024"/>
-        <source>進捗更新間隔</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="1059"/>
-        <source>映像デコード</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="1069"/>
-        <source>インデックス予約数</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="1081"/>
-        <source>最小キャッシュ量</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="1093"/>
-        <source>ハードウェアフレームプール数</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="1108"/>
-        <source>音声</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="1118"/>
-        <source>音声チャンネル数</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="1128"/>
-        <source>プラグイン最大ブロックサイズ</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="1138"/>
-        <source>Lua フック間隔</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="1154"/>
-        <source>デコードと音声関連の設定は再起動後に反映されます</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="1180"/>
-        <source>各形式ごとに有効化と検索パスを設定できます</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="1199"/>
-        <source>%1 を読み込む</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="1205"/>
-        <source>検索パス</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="1230"/>
-        <source>1行に1パスを入力します</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="1262"/>
-        <source>キーボードショートカット</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="1268"/>
-        <source>「Ctrl+S」や「Alt+Shift+N」の形式で入力してください</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="1295"/>
-        <source>未設定</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="1327"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="342"/>
         <source>設定は「適用」または「OK」で保存されます</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="1333"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="348"/>
         <source>再読込</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="1338"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="353"/>
         <source>適用</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="1343"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="358"/>
         <source>OK</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SystemSettingsWindow.qml" line="1352"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="367"/>
         <source>閉じる</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>TimelineSettingsPage</name>
+    <message>
+        <location filename="../ui/qml/settings/TimelineSettingsPage.qml" line="37"/>
+        <source>操作</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/TimelineSettingsPage.qml" line="45"/>
+        <source>時間表示</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/TimelineSettingsPage.qml" line="57"/>
+        <source>分割時にカーソル位置を使う</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/TimelineSettingsPage.qml" line="63"/>
+        <source>レイヤー範囲を表示する</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/TimelineSettingsPage.qml" line="73"/>
+        <source>見た目と寸法</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/TimelineSettingsPage.qml" line="83"/>
+        <source>トラックの高さ</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/TimelineSettingsPage.qml" line="94"/>
+        <source>ヘッダーの高さ</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/TimelineSettingsPage.qml" line="105"/>
+        <source>設定サイドバーを右に配置</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/TimelineSettingsPage.qml" line="114"/>
+        <source>ルーラーの高さ</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/TimelineSettingsPage.qml" line="125"/>
+        <source>最大レイヤー数</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/TimelineSettingsPage.qml" line="136"/>
+        <source>レイヤーヘッダー幅</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/TimelineSettingsPage.qml" line="147"/>
+        <source>時間表示欄の幅</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/TimelineSettingsPage.qml" line="158"/>
+        <source>クリップ端のつかみ幅</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/TimelineSettingsPage.qml" line="173"/>
+        <source>編集制約とズーム</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/TimelineSettingsPage.qml" line="183"/>
+        <source>最小クリップ長</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/TimelineSettingsPage.qml" line="194"/>
+        <source>ズーム最小値</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/TimelineSettingsPage.qml" line="205"/>
+        <source>ズーム最大値</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/TimelineSettingsPage.qml" line="216"/>
+        <source>ズーム刻み</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

@@ -12,12 +12,12 @@ EXCLUDE_DIRS = {
 }
 
 EXCLUDE_FILES = {
-    ".DS_Store", "Thumbs.db", "package-lock.json", "yarn.lock"
+    ".DS_Store", "Thumbs.db", "package-lock.json", "yarn.lock", "Icons.js"
 }
 
 INCLUDE_EXTENSIONS = {
     # C/C++
-    ".cpp", ".hpp", ".c", ".h", ".cc", ".hh", ".cxx", ".hxx",
+    ".cpp", ".hpp", ".c", ".h"
     # Qt/QML
     ".qml", ".qrc", ".ui", ".pro", ".pri", ".js",
     # Build Systems
@@ -25,11 +25,12 @@ INCLUDE_EXTENSIONS = {
     # Scripts
     ".sh", ".bash", ".py", ".lua", ".fish",
     # Config/Data
-    ".json", ".xml", ".yaml", ".yml", ".toml", ".ini", ".conf",
+    ".json", ".xml", ".yaml", ".yml", ".toml", ".ini", ".conf", ".clang-format", ".clang-tidy", ".gitignore"
     # Documentation
     ".md", ".txt", ".rst"
     # GLSL
     ".glsl", ".frag", ".vert"
+    
 }
 
 INCLUDE_FILENAMES = {

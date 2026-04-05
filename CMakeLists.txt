@@ -141,6 +141,15 @@ qt_add_qml_module(Rina
         ui/qml/ProjectSettingsWindow.qml
         ui/qml/SettingDialog.qml
         ui/qml/SystemSettingsWindow.qml
+        ui/qml/settings/GeneralSettingsPage.qml
+        ui/qml/settings/PerformanceSettingsPage.qml
+        ui/qml/settings/TimelineSettingsPage.qml
+        ui/qml/settings/AppearanceSettingsPage.qml
+        ui/qml/settings/ProjectSettingsPage.qml
+        ui/qml/settings/ExportSettingsPage.qml
+        ui/qml/settings/DecodeAudioSettingsPage.qml
+        ui/qml/settings/PluginSettingsPage.qml
+        ui/qml/settings/ShortcutSettingsPage.qml
         ui/qml/SceneSettingsWindow.qml
         ui/qml/CompositeView.qml
         ui/qml/ExportDialog.qml
