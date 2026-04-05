@@ -1226,92 +1226,92 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="70"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="77"/>
         <source>オーディオプラグイン順序変更</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="76"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="83"/>
         <source>エフェクト有効/無効切り替え</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="82"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="89"/>
         <source>オーディオプラグイン有効/無効切り替え</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="90"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="97"/>
         <source>エフェクト貼り付け</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="97"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="104"/>
         <source>レイヤーロック</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="97"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="104"/>
         <source>ロック解除</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="97"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="104"/>
         <source>レイヤー非表示</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="97"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="104"/>
         <source>レイヤー表示</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="98"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="105"/>
         <source>%1: レイヤー %2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="105"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="112"/>
         <source>クリップ分割: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="163"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="170"/>
         <source>クリップ削除: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="195"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="202"/>
         <source>切り取り: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="206"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="213"/>
         <source>貼り付け: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="218"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="225"/>
         <source>キーフレーム設定: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="244"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="251"/>
         <source>キーフレーム削除: %1 [%2]</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="249"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="256"/>
         <source>シーン追加: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="260"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="267"/>
         <source>シーン削除: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="267"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="274"/>
         <source>シーン設定変更: %1</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1359,6 +1359,11 @@
     <message>
         <location filename="../ui/src/timeline/timeline_effect.cpp" line="110"/>
         <source>エフェクト削除 (%1件)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/src/timeline/timeline_effect.cpp" line="242"/>
+        <source>エフェクト順序変更 (%1件)</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -1469,42 +1474,42 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="461"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="510"/>
         <source>削除</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="461"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="510"/>
         <source>選択した %1 件を削除</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="744"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="793"/>
         <source> (直線)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="745"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="794"/>
         <source> (加速)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="746"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="795"/>
         <source> (減速)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="747"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="796"/>
         <source> (加減速)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="748"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="797"/>
         <source> (ベジェ)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="1154"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="1203"/>
         <source>フィルタ</source>
         <translation type="unfinished"></translation>
     </message>

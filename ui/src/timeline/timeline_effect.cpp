@@ -172,6 +172,87 @@ void TimelineService::reorderEffects(int clipId, int oldIndex, int newIndex) {
     m_undoStack->push(new ReorderEffectCommand(this, clipId, oldIndex, newIndex));
 }
 
+void TimelineService::reorderMultipleEffects(int clipId, const QVariantList &indicesList, int targetIndex) {
+    const auto *clip = findClipById(clipId);
+    if (clip == nullptr)
+        return;
+
+    const int n = static_cast<int>(clip->effects.size());
+
+    // QVariantList を int に変換
+    QList<int> indices;
+    for (const QVariant &v : indicesList) {
+        bool ok;
+        int val = v.toInt(&ok);
+        if (ok)
+            indices.append(val);
+    }
+
+    // Transform (index 0) は移動不可として除外し、重複も除去して昇順ソート
+    QList<int> valid;
+    for (int idx : indices) {
+        if (idx > 0 && idx < n)
+            valid.append(idx);
+    }
+    if (valid.isEmpty())
+        return;
+    std::sort(valid.begin(), valid.end());
+    valid.erase(std::unique(valid.begin(), valid.end()), valid.end());
+
+    // 選択アイテムのセット（O(1) 検索用）
+    const QSet<int> selectedSet(valid.begin(), valid.end());
+
+    // 選択アイテムを昇順で収集
+    QList<EffectModel *> selected;
+    selected.reserve(valid.size());
+    for (int idx : valid)
+        selected.append(clip->effects.at(idx));
+
+    // 非選択アイテムを収集（Transform を含む）
+    QList<EffectModel *> remaining;
+    remaining.reserve(n - valid.size());
+    for (int i = 0; i < n; i++) {
+        if (!selectedSet.contains(i))
+            remaining.append(clip->effects.at(i));
+    }
+
+    // targetIndex より前にある選択アイテムの数を計算し、挿入位置を調整
+    int countBefore = 0;
+    for (int idx : valid) {
+        if (idx < targetIndex)
+            countBefore++;
+    }
+    // Transform より前への挿入を禁止（insertAt >= 1）
+    const int insertAt = std::clamp(targetIndex - countBefore, 1, static_cast<int>(remaining.size()));
+
+    // 新順序を構築
+    QList<EffectModel *> newOrder;
+    newOrder.reserve(n);
+    for (int i = 0; i < insertAt; i++)
+        newOrder.append(remaining.at(i));
+    for (auto *eff : std::as_const(selected))
+        newOrder.append(eff);
+    for (int i = insertAt; i < static_cast<int>(remaining.size()); i++)
+        newOrder.append(remaining.at(i));
+
+    if (newOrder == clip->effects)
+        return;
+
+    const QList<EffectModel *> oldOrder = clip->effects;
+    m_undoStack->push(new ReorderMultipleEffectsCommand(this, clipId, oldOrder, newOrder, QObject::tr("エフェクト順序変更 (%1件)").arg(valid.size())));
+}
+
+void TimelineService::applyEffectOrderInternal(int clipId, const QList<EffectModel *> &order) {
+    for (auto &clip : clipsMutable()) {
+        if (clip.id == clipId) {
+            clip.effects = order;
+            emit clipEffectsChanged(clipId);
+            emit clipsChanged();
+            break;
+        }
+    }
+}
+
 void TimelineService::reorderAudioPlugins(int clipId, int oldIndex, int newIndex) {
     if (oldIndex == newIndex) {
         return;

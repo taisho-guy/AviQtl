@@ -105,6 +105,19 @@ class ReorderEffectCommand : public QUndoCommand {
     int m_oldIndex, m_newIndex;
 };
 
+class ReorderMultipleEffectsCommand : public QUndoCommand {
+  public:
+    ReorderMultipleEffectsCommand(TimelineService *service, int clipId, QList<EffectModel *> oldOrder, QList<EffectModel *> newOrder, const QString &text);
+    void undo() override;
+    void redo() override;
+
+  private:
+    TimelineService *m_service;
+    int m_clipId;
+    QList<EffectModel *> m_oldOrder;
+    QList<EffectModel *> m_newOrder;
+};
+
 class ReorderAudioPluginCommand : public QUndoCommand {
   public:
     ReorderAudioPluginCommand(TimelineService *service, int clipId, int oldIndex, int newIndex);

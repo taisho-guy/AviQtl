@@ -130,6 +130,7 @@ class TimelineController : public QObject {
     Q_INVOKABLE void cutEffect(int clipId, int effectIndex);
     Q_INVOKABLE void setEffectEnabled(int clipId, int effectIndex, bool enabled);
     Q_INVOKABLE void reorderEffects(int clipId, int oldIndex, int newIndex);
+    Q_INVOKABLE void reorderMultipleEffects(int clipId, const QVariantList &indicesList, int targetIndex);
 
     // レイヤー操作
     Q_INVOKABLE bool isLayerLocked(int layer) const { return m_timeline->isLayerLocked(layer); }

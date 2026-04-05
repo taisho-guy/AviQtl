@@ -66,6 +66,13 @@ ReorderEffectCommand::ReorderEffectCommand(TimelineService *service, int clipId,
 void ReorderEffectCommand::undo() { m_service->reorderEffectsInternal(m_clipId, m_newIndex, m_oldIndex); }
 void ReorderEffectCommand::redo() { m_service->reorderEffectsInternal(m_clipId, m_oldIndex, m_newIndex); }
 
+ReorderMultipleEffectsCommand::ReorderMultipleEffectsCommand(TimelineService *service, int clipId, QList<EffectModel *> oldOrder, QList<EffectModel *> newOrder, const QString &text)
+    : m_service(service), m_clipId(clipId), m_oldOrder(std::move(oldOrder)), m_newOrder(std::move(newOrder)) {
+    setText(text);
+}
+void ReorderMultipleEffectsCommand::undo() { m_service->applyEffectOrderInternal(m_clipId, m_oldOrder); }
+void ReorderMultipleEffectsCommand::redo() { m_service->applyEffectOrderInternal(m_clipId, m_newOrder); }
+
 ReorderAudioPluginCommand::ReorderAudioPluginCommand(TimelineService *service, int clipId, int oldIndex, int newIndex) : m_service(service), m_clipId(clipId), m_oldIndex(oldIndex), m_newIndex(newIndex) { // NOLINT(bugprone-easily-swappable-parameters)
     setText(QObject::tr("オーディオプラグイン順序変更"));
 }

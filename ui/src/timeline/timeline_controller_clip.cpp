@@ -452,6 +452,12 @@ void TimelineController::reorderEffects(int clipId, int oldIndex, int newIndex) 
     }
 }
 
+void TimelineController::reorderMultipleEffects(int clipId, const QVariantList &indicesList, int targetIndex) {
+    if (m_timeline != nullptr) {
+        m_timeline->reorderMultipleEffects(clipId, indicesList, targetIndex);
+    }
+}
+
 void TimelineController::copyEffect(int clipId, int effectIndex) { m_timeline->copyEffect(clipId, effectIndex); }
 
 void TimelineController::pasteEffect(int clipId, int targetIndex) { m_timeline->pasteEffect(clipId, targetIndex); }

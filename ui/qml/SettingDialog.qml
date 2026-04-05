@@ -333,6 +333,28 @@ Common.RinaWindow {
                             opacity: (sidebarList.isSelected(index) || sidebarList.currentIndex === index) ? 0.2 : (dragArea.drag.active ? 0.8 : 1)
                         }
 
+                        // 複数選択ドラッグ時のカウントバッジ
+                        Rectangle {
+                            visible: dragArea.drag.active && sidebarList.selectedIndices.length > 1 && sidebarList.isSelected(index)
+                            width: 18
+                            height: 18
+                            radius: 9
+                            color: palette.highlight
+                            anchors.right: parent.right
+                            anchors.top: parent.top
+                            anchors.margins: 4
+                            z: 10
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: sidebarList.selectedIndices.length
+                                color: palette.highlightedText || "#ffffff"
+                                font.pixelSize: 11
+                                font.bold: true
+                            }
+
+                        }
+
                         // 背景用クリック領域（他のコントロールの下敷きになるよう先に宣言）
                         MouseArea {
                             anchors.fill: parent
@@ -398,15 +420,42 @@ Common.RinaWindow {
                                     onReleased: (mouse) => {
                                         sidebarList.interactive = true;
                                         var targetIndex = sidebarList.dragTargetIndex;
-                                        sidebarList.dragTargetIndex = -1; // reset indicator
-                                        // Reset visual position
+                                        sidebarList.dragTargetIndex = -1;
                                         dragContainer.x = 0;
                                         dragContainer.y = 0;
-                                        if (targetIndex !== -1 && targetIndex !== index) {
-                                            if (TimelineBridge.isAudioClip(targetClipId))
-                                                TimelineBridge.reorderAudioPlugins(targetClipId, index, targetIndex);
-                                            else
-                                                TimelineBridge.reorderEffects(targetClipId, index, targetIndex);
+                                        if (targetIndex === -1 || targetIndex === index)
+                                            return ;
+
+                                        var isAudio = TimelineBridge.isAudioClip(targetClipId);
+                                        var sel = sidebarList.selectedIndices;
+                                        // 複数選択中 かつ ドラッグ元が選択範囲内 → 一括移動
+                                        if (!isAudio && sel.length > 1 && sel.indexOf(index) >= 0) {
+                                            TimelineBridge.reorderMultipleEffects(targetClipId, sel, targetIndex);
+                                            // 順序変更後の新インデックスを計算して選択状態を維持
+                                            var countBefore = 0;
+                                            for (var k = 0; k < sel.length; k++) {
+                                                if (sel[k] < targetIndex)
+                                                    countBefore++;
+
+                                            }
+                                            var m_len = sidebarList.model.length;
+                                            var maxInsert = Math.max(1, m_len - sel.length);
+                                            var insertAt = Math.max(1, Math.min(targetIndex - countBefore, maxInsert));
+                                            var newSel = [];
+                                            for (var k = 0; k < sel.length; k++) {
+                                                newSel.push(insertAt + k);
+                                            }
+                                            sidebarList.selectedIndices = newSel;
+                                            sidebarList.currentIndex = newSel[newSel.length - 1];
+                                        } else if (isAudio) {
+                                            TimelineBridge.reorderAudioPlugins(targetClipId, index, targetIndex);
+                                            sidebarList.selectedIndices = [targetIndex];
+                                            sidebarList.currentIndex = targetIndex;
+                                        } else {
+                                            TimelineBridge.reorderEffects(targetClipId, index, targetIndex);
+                                            // QList::move では移動先がそのまま新インデックスになる
+                                            sidebarList.selectedIndices = [Math.max(1, targetIndex)];
+                                            sidebarList.currentIndex = Math.max(1, targetIndex);
                                         }
                                     }
                                 }
