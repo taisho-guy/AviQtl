@@ -1,8 +1,8 @@
 #include "timeline_export_manager.hpp"
-#include "../../core/include/settings_manager.hpp"
-#include "../../core/include/video_encoder.hpp"
-#include "../../engine/audio_mixer.hpp"
+#include "engine/audio_mixer.hpp"
+#include "settings_manager.hpp"
 #include "timeline_controller.hpp"
+#include "video_encoder.hpp"
 #include <QCoreApplication>
 #include <QEventLoop>
 #include <QQuickItem>

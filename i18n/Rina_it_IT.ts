@@ -895,164 +895,164 @@
 <context>
     <name>QObject</name>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="15"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="10"/>
         <source>クリップ追加: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="22"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="17"/>
         <source>クリップ移動: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="29"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="24"/>
         <source>パラメータ変更: %1 - %2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="48"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="43"/>
         <source>エフェクト追加: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="55"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="50"/>
         <source>エフェクト削除: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="61"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="56"/>
         <source>エフェクト順序変更</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="67"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="62"/>
         <source>オーディオプラグイン順序変更</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="73"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="68"/>
         <source>エフェクト有効/無効切り替え</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="79"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="74"/>
         <source>オーディオプラグイン有効/無効切り替え</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="87"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="82"/>
         <source>エフェクト貼り付け</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="94"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="89"/>
         <source>レイヤーロック</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="94"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="89"/>
         <source>ロック解除</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="94"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="89"/>
         <source>レイヤー非表示</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="94"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="89"/>
         <source>レイヤー表示</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="95"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="90"/>
         <source>%1: レイヤー %2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="102"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="97"/>
         <source>クリップ分割: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="160"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="155"/>
         <source>クリップ削除: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="192"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="187"/>
         <source>切り取り: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="203"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="198"/>
         <source>貼り付け: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="215"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="210"/>
         <source>キーフレーム設定: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="241"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="236"/>
         <source>キーフレーム削除: %1 [%2]</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="246"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="241"/>
         <source>シーン追加: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="257"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="252"/>
         <source>シーン削除: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="264"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="259"/>
         <source>シーン設定変更: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="273"/>
-        <location filename="../ui/src/timeline_service.cpp" line="1374"/>
-        <location filename="../ui/src/timeline_service.cpp" line="1374"/>
+        <location filename="../ui/src/timeline/timeline_scene.cpp" line="60"/>
+        <location filename="../ui/src/timeline_service.cpp" line="17"/>
+        <location filename="../ui/src/timeline_service.cpp" line="17"/>
         <source>ルート</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="419"/>
+        <location filename="../ui/src/timeline/timeline_clip.cpp" line="148"/>
         <source>複数クリップ絶対移動: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="475"/>
+        <location filename="../ui/src/timeline/timeline_clip.cpp" line="204"/>
         <source>複数クリップ移動: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="534"/>
+        <location filename="../ui/src/timeline/timeline_clip.cpp" line="263"/>
         <source>複数クリップ変形: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="882"/>
+        <location filename="../ui/src/timeline/timeline_clip.cpp" line="611"/>
         <source>クリップ削除</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="882"/>
+        <location filename="../ui/src/timeline/timeline_clip.cpp" line="611"/>
         <source>複数クリップ削除: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="1233"/>
+        <location filename="../ui/src/timeline/timeline_clip.cpp" line="746"/>
         <source>複数クリップ分割: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_service.cpp" line="1286"/>
+        <location filename="../ui/src/timeline/timeline_clip.cpp" line="799"/>
         <source>複数クリップ貼り付け: %1</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1088,17 +1088,17 @@
 <context>
     <name>Rina::UI::TimelineExportManager</name>
     <message>
-        <location filename="../ui/src/timeline_export_manager.cpp" line="95"/>
+        <location filename="../ui/src/timeline/timeline_export_manager.cpp" line="95"/>
         <source>エンコーダーの初期化に失敗しました</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_export_manager.cpp" line="119"/>
+        <location filename="../ui/src/timeline/timeline_export_manager.cpp" line="119"/>
         <source>キャンセルされました</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_export_manager.cpp" line="153"/>
+        <location filename="../ui/src/timeline/timeline_export_manager.cpp" line="153"/>
         <source>書き出し完了</source>
         <translation type="unfinished"></translation>
     </message>

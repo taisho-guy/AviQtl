@@ -135,9 +135,9 @@ qt_add_executable(Rina
     ui/src/selection_service.cpp
     ui/src/clip_model.cpp
     ui/src/timeline_service.cpp
-    ui/src/timeline_media_manager.cpp
-    ui/src/timeline_engine_synchronizer.cpp
-    ui/src/timeline_export_manager.cpp
+    ui/src/timeline/timeline_media_manager.cpp
+    ui/src/timeline/timeline_engine_synchronizer.cpp
+    ui/src/timeline/timeline_export_manager.cpp
     core/src/video_frame_store.cpp
     core/src/video_frame_provider.cpp
     core/src/video_decoder.cpp

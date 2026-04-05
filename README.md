@@ -1,12 +1,12 @@
 <div align="center">
     <img src="./assets/splash.svg" alt="" width="256"/>
     <h1>Rina is not AviUtl</h1>
-    <p>AviUtlのまま、AviUtlを超える。</p>
+    <p>AviUtlを踏襲し凌駕する次世代動画編集ソフト</p>
 </div>
 
 ## Rinaとは
 
-Rinaは、AviUtl 1.10 & ExEdit 0.92の操作感を踏襲しつつ、AviUtl以上の性能を持つ動画編集ソフトを実装するプロジェクトです。
+Rinaは、AviUtl 1.10 & ExEdit 0.92の操作感を踏襲しつつ、AviUtlを凌駕する性能を持つ動画編集ソフトを実装するプロジェクトです。
 
 **詳細は[Rinaのお部屋](https://rina.taisho-guy.org)をご確認ください。**
 

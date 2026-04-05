@@ -1,12 +1,12 @@
 #include "timeline_media_manager.hpp"
-#include "../../core/include/audio_decoder.hpp"
-#include "../../core/include/image_decoder.hpp"
-#include "../../core/include/media_decoder.hpp"
-#include "../../core/include/video_decoder.hpp"
-#include "../../core/include/video_frame_store.hpp"
-#include "../../engine/audio_mixer.hpp"
+#include "audio_decoder.hpp"
 #include "effect_registry.hpp"
+#include "engine/audio_mixer.hpp"
+#include "image_decoder.hpp"
+#include "media_decoder.hpp"
 #include "timeline_controller.hpp"
+#include "video_decoder.hpp"
+#include "video_frame_store.hpp"
 #include <algorithm>
 #include <cmath>
 

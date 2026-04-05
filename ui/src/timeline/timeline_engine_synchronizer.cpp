@@ -1,6 +1,6 @@
 #include "timeline_engine_synchronizer.hpp"
-#include "../../engine/timeline/ecs.hpp"
 #include "clip_model.hpp"
+#include "engine/timeline/ecs.hpp"
 #include "timeline_controller.hpp"
 #include <QThreadPool>
 #include <QtConcurrent>
