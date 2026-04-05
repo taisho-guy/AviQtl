@@ -1017,7 +1017,6 @@
     <message>
         <location filename="../ui/src/timeline/timeline_scene.cpp" line="60"/>
         <location filename="../ui/src/timeline_service.cpp" line="17"/>
-        <location filename="../ui/src/timeline_service.cpp" line="17"/>
         <source>ルート</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1060,27 +1059,27 @@
 <context>
     <name>Rina::UI::TimelineController</name>
     <message>
-        <location filename="../ui/src/timeline_controller.cpp" line="198"/>
+        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="80"/>
         <source>プロパティ変更: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_controller.cpp" line="240"/>
+        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="122"/>
         <source>開始フレーム変更</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_controller.cpp" line="257"/>
+        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="139"/>
         <source>長さ変更</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_controller.cpp" line="274"/>
+        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="156"/>
         <source>レイヤー変更</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline_controller.cpp" line="532"/>
+        <location filename="../ui/src/timeline/timeline_controller_project.cpp" line="19"/>
         <source>保存先のファイルパスが不明です</source>
         <translation type="unfinished"></translation>
     </message>

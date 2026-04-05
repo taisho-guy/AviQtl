@@ -1,47 +1,11 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 4.0)
 project(Rina LANGUAGES CXX C)
 
-set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Compiler Optimization
-if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
-    add_compile_options(
-        -Wall -Wextra -Wpedantic
-        -Wno-unused-parameter
-        -O3
-        -flto
-        -fno-semantic-interposition
-    )
-endif()
-
-if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-    add_compile_options(
-        -fcolor-diagnostics
-        -Wno-nullability-extension
-    )
-    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-        find_program(MOLD_LINKER mold)
-        find_program(LLD_LINKER NAMES ld.lld lld)
-        if(MOLD_LINKER)
-            add_link_options("-fuse-ld=${MOLD_LINKER}")
-            add_compile_options("-flto=thin")
-            add_link_options("-flto=thin")
-        elseif(LLD_LINKER)
-            add_link_options("-fuse-ld=${LLD_LINKER}")
-            add_compile_options("-flto=thin")
-            add_link_options("-flto=thin")
-        else()
-            message(WARNING "Mold or LLD linker not found. ThinLTO will be disabled to prevent link errors.")
-        endif()
-    else()
-        add_compile_options("-flto=thin")
-    endif()
-endif()
 
 # Qtの標準最適化を有効化
 set(QT_QML_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/qml)
@@ -59,7 +23,7 @@ find_package(KF6 REQUIRED COMPONENTS Kirigami ColorScheme)
 find_package(PkgConfig REQUIRED)
 
 # FFmpeg Integration for Hardware Encoding
-pkg_check_modules(FFMPEG REQUIRED libavcodec libavformat libavutil libswscale libswresample)
+pkg_check_modules(FFMPEG IMPORTED_TARGET REQUIRED libavcodec libavformat libavutil libswscale libswresample)
 
 
 # Carla Audio Plugin Backend
@@ -91,21 +55,16 @@ if(NOT CARLA_FOUND AND NOT CARLA_LIBRARIES) # Check both for robustness
     message(FATAL_ERROR "Carla not found. Ensure it's installed (e.g., via Homebrew on macOS, or CARLA_SDK_DIR is set on Windows).")
 endif()
 
-pkg_check_modules(LUAJIT REQUIRED luajit)
-
-# macOSでのLuaJITリンク問題の修正
-if(APPLE)
-    # pkg-configが返す-lluajit-5.1を-lluajitに変更、またはHomebrewの絶対パスを使用
-    string(REPLACE "-lluajit-5.1" "-lluajit" LUAJIT_LIBRARIES "${LUAJIT_LIBRARIES}")
-endif()
-
+pkg_check_modules(LUAJIT IMPORTED_TARGET REQUIRED luajit)
 # macOSでHomebrewのライブラリパスを明示的に追加
+
 if(APPLE)
     link_directories(/opt/homebrew/lib)
 endif()
 
 # C++ソースコードの収集
-file(GLOB_RECURSE CPP_SOURCES 
+file(GLOB_RECURSE CPP_SOURCES
+    CONFIGURE_DEPENDS
     "core/src/*.cpp"
     "core/include/*.hpp"
     "engine/*.cpp"
@@ -117,7 +76,8 @@ file(GLOB_RECURSE CPP_SOURCES
 )
 
 # QML/JSファイルの収集 (lupdateのスキャン対象にするため)
-file(GLOB_RECURSE QML_SOURCES 
+file(GLOB_RECURSE QML_SOURCES
+    CONFIGURE_DEPENDS
     "ui/qml/*.qml"
     "ui/qml/*.js"
 )
@@ -134,10 +94,6 @@ qt_add_executable(Rina
     ui/src/transport_service.cpp
     ui/src/selection_service.cpp
     ui/src/clip_model.cpp
-    ui/src/timeline_service.cpp
-    ui/src/timeline/timeline_media_manager.cpp
-    ui/src/timeline/timeline_engine_synchronizer.cpp
-    ui/src/timeline/timeline_export_manager.cpp
     core/src/video_frame_store.cpp
     core/src/video_frame_provider.cpp
     core/src/video_decoder.cpp
@@ -163,9 +119,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 endif()
 
 # Qt Policy設定: QMLモジュールのディレクトリ構造に関する警告を抑制・解決
-if(COMMAND qt_policy)
-    qt_policy(SET QTP0004 NEW)
-endif()
+qt_policy(SET QTP0004 NEW)
 
 # QMLモジュールの定義
 qt_add_qml_module(Rina
@@ -224,8 +178,8 @@ endif()
 # リンク設定
 target_link_libraries(
     Rina PRIVATE Qt6::Core Qt6::Gui Qt6::Quick Qt6::QuickControls2 Qt6::Quick3D Qt6::Widgets Qt6::Svg Qt6::Core5Compat Qt6::Multimedia Qt6::Concurrent Qt6::Network Vulkan::Vulkan
-                   ${LUAJIT_LIBRARIES}
-                   ${FFMPEG_LIBRARIES}
+                   PkgConfig::LUAJIT
+                   PkgConfig::FFMPEG
                    ${CARLA_LIBRARIES}
                    KF6::Kirigami KF6::ColorScheme)
 
@@ -240,16 +194,45 @@ endif()
 target_include_directories(Rina PRIVATE
     core/include
     ui/include
-    ${LUAJIT_INCLUDE_DIRS}
-    ${FFMPEG_INCLUDE_DIRS}
     ${CARLA_INCLUDE_DIRS}
 )
 
-if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-    target_compile_options(Rina PRIVATE
+# コンパイルオプション (ジェネレータ式で条件分岐を統合)
+target_compile_features(Rina PRIVATE cxx_std_23)
+target_compile_options(Rina PRIVATE
+    $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:GNU>>:
+        -Wall -Wextra -Wpedantic
+        -Wno-unused-parameter
+        -O3
+        -flto
+        -fno-semantic-interposition
+    >
+    $<$<CXX_COMPILER_ID:Clang>:
+        -fcolor-diagnostics
+        -Wno-nullability-extension
+        -flto=thin
         -Wno-deprecated-declarations
-        -Wno-non-virtual-dtor # TODO investigate this!
-    )
+        -Wno-non-virtual-dtor
+        -fno-direct-access-external-data
+    >
+)
+target_link_options(Rina PRIVATE
+    $<$<AND:$<CXX_COMPILER_ID:Clang>,$<PLATFORM_ID:Linux>>:
+        -flto=thin
+    >
+)
+
+# リンカ選択 (CMAKE_LINKER_TYPE: CMake 3.29+)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT DEFINED CMAKE_LINKER_TYPE)
+    find_program(MOLD_LINKER mold)
+    find_program(LLD_LINKER  NAMES ld.lld lld)
+    if(MOLD_LINKER)
+        set(CMAKE_LINKER_TYPE MOLD CACHE STRING "" FORCE)
+    elseif(LLD_LINKER)
+        set(CMAKE_LINKER_TYPE LLD  CACHE STRING "" FORCE)
+    else()
+        message(WARNING "mold/lld not found. ThinLTO may be disabled.")
+    endif()
 endif()
 
 # QMLオブジェクト/エフェクト/プラグインをビルド時に毎回コピー
