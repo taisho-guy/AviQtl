@@ -122,10 +122,9 @@ class CarlaHostedPlugin final : public IAudioPlugin {
         }
 
         m_uiNameBuf = m_info.name.toUtf8();
-        m_carlaDirBuf = Rina::Core::SettingsManager::instance().value(QStringLiteral("carlaResourceDir"), QStringLiteral("/usr/share/carla/resources")).toString().toUtf8();
 
         m_hostDesc.handle = static_cast<NativeHostHandle>(this);
-        m_hostDesc.resourceDir = m_carlaDirBuf.constData();
+        m_hostDesc.resourceDir = "/usr/share/carla/resources";
         m_hostDesc.uiName = m_uiNameBuf.constData();
         m_hostDesc.uiParentId = 0;
         m_hostDesc.get_buffer_size = s_getBufferSize;
@@ -303,7 +302,6 @@ class CarlaHostedPlugin final : public IAudioPlugin {
     NativeHostDescriptor m_hostDesc = {};
     NativeTimeInfo m_timeInfo = {};
     QByteArray m_uiNameBuf;
-    QByteArray m_carlaDirBuf;
     uint m_pluginId = 0;
     PluginInfo m_info;
     bool m_loaded = false;
@@ -315,32 +313,31 @@ class CarlaHostedPlugin final : public IAudioPlugin {
     std::vector<float> m_outR;
 };
 
-// SettingsManager の carlaDiscoverySearchPaths を参照し、存在する最初のパスを返す
-auto resolveDiscoveryToolPath() -> QString {
-    const QStringList paths = Rina::Core::SettingsManager::instance().value(QStringLiteral("carlaDiscoverySearchPaths"), QStringList()).toStringList();
-    for (const QString &p : paths) {
-        if (!p.trimmed().isEmpty() && QFile::exists(p.trimmed())) {
-            return p.trimmed();
-        }
-    }
-    return {};
+auto discoverySearchPaths() -> const QStringList & {
+    static const QStringList paths = {
+        "/usr/lib/carla/carla-discovery-native", "/usr/local/lib/carla/carla-discovery-native", "/usr/lib64/carla/carla-discovery-native", "/usr/bin/carla-discovery-native", "/usr/local/bin/carla-discovery-native",
+    };
+    return paths;
 }
 
 struct FormatConfig {
     QString type;
     QString format;
     QStringList envVars;
+    QStringList defaultPaths;
     QString fileFilter;
     bool bundleDir;
 };
 
 auto formats() -> const QList<FormatConfig> & {
-    // パスは SettingsManager の pluginPaths<Format> キーで管理する
     static const QList<FormatConfig> list = {
-        {.type = "lv2", .format = "LV2", .envVars = {"LV2_PATH"}, .fileFilter = "*.lv2", .bundleDir = true},     {.type = "vst2", .format = "VST2", .envVars = {"VST_PATH"}, .fileFilter = "*.so", .bundleDir = false},
-        {.type = "vst3", .format = "VST3", .envVars = {"VST3_PATH"}, .fileFilter = "*.vst3", .bundleDir = true}, {.type = "clap", .format = "CLAP", .envVars = {"CLAP_PATH"}, .fileFilter = "*.clap", .bundleDir = false},
-        {.type = "dssi", .format = "DSSI", .envVars = {"DSSI_PATH"}, .fileFilter = "*.so", .bundleDir = false},  {.type = "sf2", .format = "SF2", .envVars = {"SF2_PATH"}, .fileFilter = "*.sf2", .bundleDir = false},
-        {.type = "sfz", .format = "SFZ", .envVars = {"SFZ_PATH"}, .fileFilter = "*.sfz", .bundleDir = false},
+        {.type = "lv2", .format = "LV2", .envVars = {"LV2_PATH"}, .defaultPaths = {"/usr/lib/lv2", "/usr/local/lib/lv2"}, .fileFilter = "*.lv2", .bundleDir = true},
+        {.type = "vst2", .format = "VST2", .envVars = {"VST_PATH"}, .defaultPaths = {"/usr/lib/vst", "/usr/lib/vst2", "/usr/local/lib/vst", "/usr/local/lib/vst2"}, .fileFilter = "*.so", .bundleDir = false},
+        {.type = "vst3", .format = "VST3", .envVars = {"VST3_PATH"}, .defaultPaths = {"/usr/lib/vst3", "/usr/local/lib/vst3"}, .fileFilter = "*.vst3", .bundleDir = true},
+        {.type = "clap", .format = "CLAP", .envVars = {"CLAP_PATH"}, .defaultPaths = {"/usr/lib/clap", "/usr/local/lib/clap"}, .fileFilter = "*.clap", .bundleDir = false},
+        {.type = "dssi", .format = "DSSI", .envVars = {"DSSI_PATH"}, .defaultPaths = {"/usr/lib/dssi", "/usr/local/lib/dssi"}, .fileFilter = "*.so", .bundleDir = false},
+        {.type = "sf2", .format = "SF2", .envVars = {"SF2_PATH"}, .defaultPaths = {"/usr/share/soundfonts", "/usr/share/sounds/sf2"}, .fileFilter = "*.sf2", .bundleDir = false},
+        {.type = "sfz", .format = "SFZ", .envVars = {"SFZ_PATH"}, .defaultPaths = {"/usr/share/sounds/sfz"}, .fileFilter = "*.sfz", .bundleDir = false},
     };
     return list;
 }
@@ -562,13 +559,7 @@ auto collectSearchPaths(const FormatConfig &cfg) -> QStringList {
         }
     }
     paths << (QDir::homePath() + QLatin1String("/.") + cfg.type);
-    // SettingsManager の pluginPaths<Format> をデフォルトパスとして使用する
-    const QStringList smPaths = Rina::Core::SettingsManager::instance().value(QStringLiteral("pluginPaths") + cfg.format, QStringList()).toStringList();
-    for (const QString &p : smPaths) {
-        if (!p.trimmed().isEmpty() && !paths.contains(p.trimmed())) {
-            paths << p.trimmed();
-        }
-    }
+    paths << cfg.defaultPaths;
     return paths;
 }
 
@@ -596,14 +587,7 @@ auto discoverFormat(const QString &tool, const FormatConfig &cfg, std::atomic<bo
         if (!lv2PathEnv.isEmpty()) {
             lv2SearchPaths << QString::fromLocal8Bit(lv2PathEnv).split(':', Qt::SkipEmptyParts);
         }
-        // SettingsManager の pluginPathsLV2 をデフォルトパスとして使用する
-        const QStringList smLv2Paths = Rina::Core::SettingsManager::instance().value(QStringLiteral("pluginPathsLV2"), QStringList()).toStringList();
-        for (const QString &p : smLv2Paths) {
-            if (!p.trimmed().isEmpty() && !lv2SearchPaths.contains(p.trimmed())) {
-                lv2SearchPaths << p.trimmed();
-            }
-        }
-        lv2SearchPaths << QDir::homePath() + QLatin1String("/.lv2");
+        lv2SearchPaths << QDir::homePath() + QLatin1String("/.lv2") << QStringLiteral("/usr/lib/lv2") << QStringLiteral("/usr/local/lib/lv2");
         QSet<QString> visited;
         for (const QString &searchPath : std::as_const(lv2SearchPaths)) {
             QDir dir(searchPath);
@@ -620,8 +604,13 @@ auto discoverFormat(const QString &tool, const FormatConfig &cfg, std::atomic<bo
         }
         qDebug() << "[AudioPluginManager]" << cfg.format << "バンドル" << targets.size() << "個を検出";
     } else {
-        // collectSearchPaths が SettingsManager の pluginPaths<Format> を含むため重複取得不要
         QStringList searchPaths = collectSearchPaths(cfg);
+        QStringList customPaths = Rina::Core::SettingsManager::instance().value(QStringLiteral("pluginPaths") + cfg.format, QStringList()).toStringList();
+        for (const QString &cp : std::as_const(customPaths)) {
+            if (!cp.trimmed().isEmpty() && !searchPaths.contains(cp)) {
+                searchPaths.append(cp.trimmed());
+            }
+        }
         QSet<QString> visited;
 
         for (const QString &dirPath : std::as_const(searchPaths)) {
@@ -708,13 +697,19 @@ void AudioPluginManager::scanPlugins() {
     }
     m_stopRequested = false;
 
-    QString tool = resolveDiscoveryToolPath();
+    QString tool;
+    for (const QString &p : std::as_const(discoverySearchPaths())) {
+        if (QFile::exists(p)) {
+            tool = p;
+            break;
+        }
+    }
     if (tool.isEmpty()) {
         tool = QStandardPaths::findExecutable(QStringLiteral("carla-discovery-native"));
     }
     if (tool.isEmpty()) {
         qWarning() << "[AudioPluginManager] carla-discovery-native が見つかりません";
-        qWarning() << "[AudioPluginManager] 検索パス:" << Rina::Core::SettingsManager::instance().value(QStringLiteral("carlaDiscoverySearchPaths")).toStringList();
+        qWarning() << "[AudioPluginManager] 検索パス:" << discoverySearchPaths();
         m_scanning = false;
         return;
     }

@@ -41,23 +41,6 @@ ScrollView {
         pluginPathsChanged(formatName, textValue);
     }
 
-    function carlaDiscoveryPathsText() {
-        var vals = draftSettings["carlaDiscoverySearchPaths"];
-        return vals ? vals.join("\n") : "";
-    }
-
-    function setCarlaDiscoveryPathsFromText(textValue) {
-        var lines = textValue.split(/\r?\n/);
-        var paths = [];
-        for (var i = 0; i < lines.length; ++i) {
-            var p = lines[i].trim();
-            if (p.length > 0)
-                paths.push(p);
-
-        }
-        valueChanged("carlaDiscoverySearchPaths", paths);
-    }
-
     // --- ページ本体 ---
     Layout.fillWidth: true
     Layout.fillHeight: true
@@ -72,70 +55,6 @@ ScrollView {
             text: qsTr("各形式ごとに有効化と検索パスを設定できます")
             color: palette.mid
             wrapMode: Text.WordWrap
-        }
-
-        // --- Carla プラグインホスト設定 ---
-        GroupBox {
-            title: qsTr("Carla (プラグインホスト)")
-            Layout.fillWidth: true
-
-            ColumnLayout {
-                anchors.fill: parent
-                spacing: 8
-
-                Label {
-                    text: qsTr("リソースディレクトリ")
-                    color: palette.mid
-                }
-
-                TextField {
-                    Layout.fillWidth: true
-                    text: root.valueOr("carlaResourceDir", "/usr/share/carla/resources")
-                    onEditingFinished: root.valueChanged("carlaResourceDir", text)
-
-                    background: Rectangle {
-                        color: palette.base
-                        border.color: palette.mid
-                        radius: 4
-                    }
-
-                }
-
-                Label {
-                    text: qsTr("carla-discovery-native 検索パス")
-                    color: palette.mid
-                }
-
-                TextArea {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 100
-                    wrapMode: TextArea.NoWrap
-                    selectByMouse: true
-                    text: root.carlaDiscoveryPathsText()
-                    onActiveFocusChanged: {
-                        if (!activeFocus)
-                            root.setCarlaDiscoveryPathsFromText(text);
-
-                    }
-
-                    background: Rectangle {
-                        color: palette.base
-                        border.color: palette.mid
-                        radius: 4
-                    }
-
-                }
-
-                Label {
-                    text: qsTr("1行に1パスを入力します。先頭から順に検索し、存在するパスを使用します")
-                    color: palette.mid
-                    font.pixelSize: 11
-                    wrapMode: Text.WordWrap
-                    Layout.fillWidth: true
-                }
-
-            }
-
         }
 
         Repeater {

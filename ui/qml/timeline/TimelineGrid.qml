@@ -6,9 +6,7 @@ Canvas {
     property real contentX: 0
     property real contentY: 0
     property real gridInterval: 1
-    // 親コンポーネント (TimelineWindow → TimelineView) から必ずバインドされる。
-    // デフォルト値は SettingsManager の "timelineMaxLayers" と一致させること。
-    required property int layerCount
+    property int layerCount: 128
     property int layerHeight: 30
     property real scale: TimelineBridge ? TimelineBridge.timelineScale : 1
     property var gridSettings: ({

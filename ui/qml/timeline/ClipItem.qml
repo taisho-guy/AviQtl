@@ -6,9 +6,7 @@ Item {
     id: clipDelegate
 
     property int layerHeight: 30
-    // 親コンポーネント (TimelineWindow → TimelineView) から必ずバインドされる。
-    // デフォルト値は SettingsManager の "timelineMaxLayers" と一致させること。
-    required property int layerCount
+    property int layerCount: 128
     property int clipResizeHandleWidth: 6
     property Item flickableContentItem: null
     property var snapFrameFunc: function(f, ignoreSnap) {
