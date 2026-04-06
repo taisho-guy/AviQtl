@@ -323,21 +323,15 @@ auto discoverySearchPaths() -> const QStringList & {
 struct FormatConfig {
     QString type;
     QString format;
-    QStringList envVars;
-    QStringList defaultPaths;
     QString fileFilter;
     bool bundleDir;
 };
 
 auto formats() -> const QList<FormatConfig> & {
     static const QList<FormatConfig> list = {
-        {.type = "lv2", .format = "LV2", .envVars = {"LV2_PATH"}, .defaultPaths = {"/usr/lib/lv2", "/usr/local/lib/lv2"}, .fileFilter = "*.lv2", .bundleDir = true},
-        {.type = "vst2", .format = "VST2", .envVars = {"VST_PATH"}, .defaultPaths = {"/usr/lib/vst", "/usr/lib/vst2", "/usr/local/lib/vst", "/usr/local/lib/vst2"}, .fileFilter = "*.so", .bundleDir = false},
-        {.type = "vst3", .format = "VST3", .envVars = {"VST3_PATH"}, .defaultPaths = {"/usr/lib/vst3", "/usr/local/lib/vst3"}, .fileFilter = "*.vst3", .bundleDir = true},
-        {.type = "clap", .format = "CLAP", .envVars = {"CLAP_PATH"}, .defaultPaths = {"/usr/lib/clap", "/usr/local/lib/clap"}, .fileFilter = "*.clap", .bundleDir = false},
-        {.type = "dssi", .format = "DSSI", .envVars = {"DSSI_PATH"}, .defaultPaths = {"/usr/lib/dssi", "/usr/local/lib/dssi"}, .fileFilter = "*.so", .bundleDir = false},
-        {.type = "sf2", .format = "SF2", .envVars = {"SF2_PATH"}, .defaultPaths = {"/usr/share/soundfonts", "/usr/share/sounds/sf2"}, .fileFilter = "*.sf2", .bundleDir = false},
-        {.type = "sfz", .format = "SFZ", .envVars = {"SFZ_PATH"}, .defaultPaths = {"/usr/share/sounds/sfz"}, .fileFilter = "*.sfz", .bundleDir = false},
+        {.type = "lv2", .format = "LV2", .fileFilter = "*.lv2", .bundleDir = true},     {.type = "vst2", .format = "VST2", .fileFilter = "*.so", .bundleDir = false}, {.type = "vst3", .format = "VST3", .fileFilter = "*.vst3", .bundleDir = true},
+        {.type = "clap", .format = "CLAP", .fileFilter = "*.clap", .bundleDir = false}, {.type = "dssi", .format = "DSSI", .fileFilter = "*.so", .bundleDir = false}, {.type = "sf2", .format = "SF2", .fileFilter = "*.sf2", .bundleDir = false},
+        {.type = "sfz", .format = "SFZ", .fileFilter = "*.sfz", .bundleDir = false},
     };
     return list;
 }
@@ -550,19 +544,6 @@ auto runDiscovery(const QString &tool, const QString &type, const QString &forma
     return parseDiscoveryOutput(QString::fromUtf8(output), format, target);
 }
 
-auto collectSearchPaths(const FormatConfig &cfg) -> QStringList {
-    QStringList paths;
-    for (const QString &envKey : std::as_const(cfg.envVars)) {
-        const QByteArray val = qgetenv(envKey.toUtf8().constData());
-        if (!val.isEmpty()) {
-            paths << QString::fromLocal8Bit(val).split(':');
-        }
-    }
-    paths << (QDir::homePath() + QLatin1String("/.") + cfg.type);
-    paths << cfg.defaultPaths;
-    return paths;
-}
-
 auto isDiscoveryTypeSupported(const QString &tool, const QString &type) -> bool {
     QProcess probe;
     probe.setStandardInputFile(QProcess::nullDevice());
@@ -580,66 +561,40 @@ auto discoverFormat(const QString &tool, const FormatConfig &cfg, std::atomic<bo
         return {};
     }
     QStringList targets;
+    QStringList searchPaths = Rina::Core::SettingsManager::instance().value(QStringLiteral("pluginPaths") + cfg.format, QStringList()).toStringList();
+    QSet<QString> visited;
+
+    for (const QString &dirPath : std::as_const(searchPaths)) {
+        if (stopFlag) {
+            break;
+        }
+        QDir d(dirPath);
+        if (!d.exists()) {
+            continue;
+        }
+
+        const QString canonical = d.canonicalPath();
+        if (visited.contains(canonical)) {
+            continue;
+        }
+        visited.insert(canonical);
+
+        if (cfg.bundleDir) {
+            const QFileInfoList entries = d.entryInfoList({cfg.fileFilter}, QDir::Dirs | QDir::NoDotAndDotDot);
+            for (const QFileInfo &fi : std::as_const(entries)) {
+                targets << fi.absoluteFilePath();
+            }
+        } else {
+            QDirIterator it(dirPath, {cfg.fileFilter}, QDir::Files, QDirIterator::Subdirectories);
+            while (it.hasNext()) {
+                targets << it.next();
+            }
+        }
+    }
 
     if (cfg.type == QStringLiteral("lv2")) {
-        QStringList lv2SearchPaths;
-        const QByteArray lv2PathEnv = qgetenv("LV2_PATH");
-        if (!lv2PathEnv.isEmpty()) {
-            lv2SearchPaths << QString::fromLocal8Bit(lv2PathEnv).split(':', Qt::SkipEmptyParts);
-        }
-        lv2SearchPaths << QDir::homePath() + QLatin1String("/.lv2") << QStringLiteral("/usr/lib/lv2") << QStringLiteral("/usr/local/lib/lv2");
-        QSet<QString> visited;
-        for (const QString &searchPath : std::as_const(lv2SearchPaths)) {
-            QDir dir(searchPath);
-            if (!dir.exists()) {
-                continue;
-            }
-            for (const QFileInfo &fi : dir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot)) {
-                const QString bundlePath = fi.absoluteFilePath();
-                if (fi.suffix() == QLatin1String("lv2") && !visited.contains(bundlePath)) {
-                    visited.insert(bundlePath);
-                    targets.append(bundlePath);
-                }
-            }
-        }
         qDebug() << "[AudioPluginManager]" << cfg.format << "バンドル" << targets.size() << "個を検出";
     } else {
-        QStringList searchPaths = collectSearchPaths(cfg);
-        QStringList customPaths = Rina::Core::SettingsManager::instance().value(QStringLiteral("pluginPaths") + cfg.format, QStringList()).toStringList();
-        for (const QString &cp : std::as_const(customPaths)) {
-            if (!cp.trimmed().isEmpty() && !searchPaths.contains(cp)) {
-                searchPaths.append(cp.trimmed());
-            }
-        }
-        QSet<QString> visited;
-
-        for (const QString &dirPath : std::as_const(searchPaths)) {
-            if (stopFlag) {
-                break;
-            }
-            QDir d(dirPath);
-            if (!d.exists()) {
-                continue;
-            }
-
-            const QString canonical = d.canonicalPath();
-            if (visited.contains(canonical)) {
-                continue;
-            }
-            visited.insert(canonical);
-
-            if (cfg.bundleDir) {
-                const QFileInfoList entries = d.entryInfoList({cfg.fileFilter}, QDir::Dirs | QDir::NoDotAndDotDot);
-                for (const QFileInfo &fi : std::as_const(entries)) {
-                    targets << fi.absoluteFilePath();
-                }
-            } else {
-                QDirIterator it(dirPath, {cfg.fileFilter}, QDir::Files, QDirIterator::Subdirectories);
-                while (it.hasNext()) {
-                    targets << it.next();
-                }
-            }
-        }
         qDebug() << "[AudioPluginManager]" << cfg.format << "ファイル" << targets.size() << "個を検出";
     }
 
