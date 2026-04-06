@@ -31,6 +31,16 @@ ScrollView {
         return fallback;
     }
 
+    // シグナルを emit するブリッジ関数
+    // （CheckBox / TextArea から root.xxx() 形式で呼ばれるため実装が必要）
+    function setPluginEnabled(formatName, enabled) {
+        pluginEnabledChanged(formatName, enabled);
+    }
+
+    function setPluginPathsFromText(formatName, textValue) {
+        pluginPathsChanged(formatName, textValue);
+    }
+
     // --- ページ本体 ---
     Layout.fillWidth: true
     Layout.fillHeight: true

@@ -1004,22 +1004,22 @@
 <context>
     <name>PluginSettingsPage</name>
     <message>
-        <location filename="../ui/qml/settings/PluginSettingsPage.qml" line="45"/>
+        <location filename="../ui/qml/settings/PluginSettingsPage.qml" line="55"/>
         <source>各形式ごとに有効化と検索パスを設定できます</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/PluginSettingsPage.qml" line="64"/>
+        <location filename="../ui/qml/settings/PluginSettingsPage.qml" line="74"/>
         <source>%1 を読み込む</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/PluginSettingsPage.qml" line="70"/>
+        <location filename="../ui/qml/settings/PluginSettingsPage.qml" line="80"/>
         <source>検索パス</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/PluginSettingsPage.qml" line="95"/>
+        <location filename="../ui/qml/settings/PluginSettingsPage.qml" line="105"/>
         <source>1行に1パスを入力します</source>
         <translation type="unfinished"></translation>
     </message>
