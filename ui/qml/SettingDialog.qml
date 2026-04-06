@@ -149,7 +149,7 @@ Common.RinaWindow {
         for (var i = 0; i < indices.length; i++) {
             var idx = indices[i];
             if (idx >= 0 && m && idx < m.length) {
-                if (isAudio || (m[idx] && m[idx].category === "filter"))
+                if (isAudio || (m[idx] && m[idx].kind === "effect"))
                     toDelete.push(idx);
 
             }
@@ -505,7 +505,7 @@ Common.RinaWindow {
                         for (var i = 0; i < indices.length; i++) {
                             var idx = indices[i];
                             if (idx >= 0 && idx < m.length)
-                                if (isAudio || (m[idx] && m[idx].category === "filter"))
+                                if (isAudio || (m[idx] && m[idx].kind === "effect"))
                                 return true;
 ;
 

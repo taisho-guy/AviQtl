@@ -75,7 +75,7 @@ Node {
         var res = [];
         for (var i = 0; i < rawEffectModels.length; i++) {
             var eff = rawEffectModels[i];
-            if (eff.category === "filter")
+            if (eff.kind === "effect")
                 res.push(eff);
 
         }
