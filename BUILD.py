@@ -15,13 +15,14 @@ class BuildWorker(QtCore.QThread):
     finished_signal = QtCore.Signal(bool, str)
     dist_dir = None
 
-    def __init__(self, source_dir, temp_base, output_dir, is_debug=False, use_container=True):
+    def __init__(self, source_dir, temp_base, output_dir, is_debug=False, use_container=True, skip_install=False):
         super().__init__()
         self.source_dir = source_dir
         self.temp_base = temp_base
         self.output_dir = output_dir
         self.is_debug = is_debug
         self.use_container_opt = use_container
+        self.skip_install = skip_install
         self.dist_dir = self.source_dir / "dist"
         self.system = platform.system()
         self.container_name = "archlinux-rina"
@@ -100,6 +101,10 @@ class BuildWorker(QtCore.QThread):
             zip_path.unlink()
 
     def install_dependencies(self):
+        if self.skip_install:
+            self.log_signal.emit("依存関係のインストール/アップデートをスキップします (--noSyu)")
+            return
+
         self.log_signal.emit("依存関係を確認中...")
         
         if self.system == "Windows":
@@ -432,8 +437,9 @@ if __name__ == "__main__":
     
     # Host Native Release Build
     use_container = "--no-container" not in sys.argv
+    skip_install = "--noSyu" in sys.argv
     
-    worker = BuildWorker(source_dir, temp_base, output_dir, is_debug=False, use_container=use_container)
+    worker = BuildWorker(source_dir, temp_base, output_dir, is_debug=False, use_container=use_container, skip_install=skip_install)
     
     worker.log_signal.connect(print)
     worker.progress_signal.connect(lambda val, msg: print(f"[{val}%] {msg}"))
