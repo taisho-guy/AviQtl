@@ -417,6 +417,7 @@ ApplicationWindow {
         id: saveDialog
 
         title: qsTr("名前を付けて保存")
+        fileMode: Platform.FileDialog.SaveFile
         nameFilters: ["Rina Project files (*.rina)", "JSON files (*.json)"]
         defaultSuffix: "rina"
         onAccepted: {
