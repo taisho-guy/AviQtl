@@ -138,7 +138,7 @@ void TimelineExportManager::runExport(const Rina::Core::VideoEncoder::Config &co
 
         encoder.pushFrame(img, frame - startFrame);
 
-        const int samplesNeeded = static_cast<int>(48000 / fps);
+        const int samplesNeeded = static_cast<int>(sr / fps);
         auto audio = m_controller->mediaManager()->audioMixer()->mix(frame, fps, samplesNeeded);
         encoder.pushAudio(audio.data(), samplesNeeded);
 

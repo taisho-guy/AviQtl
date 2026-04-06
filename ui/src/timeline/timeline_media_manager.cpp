@@ -4,6 +4,7 @@
 #include "engine/audio_mixer.hpp"
 #include "image_decoder.hpp"
 #include "media_decoder.hpp"
+#include "settings_manager.hpp"
 #include "timeline_controller.hpp"
 #include "video_decoder.hpp"
 #include "video_frame_store.hpp"
@@ -262,7 +263,7 @@ void TimelineMediaManager::updateVideoClipFrame(Rina::Core::VideoDecoder *vid, c
     relFrame = std::max(relFrame, 0);
     const double fps = [&]() -> double {
         const double f = m_controller->project()->fps();
-        return f > 0.0 ? f : 30.0;
+        return f > 0.0 ? f : Rina::Core::SettingsManager::instance().value(QStringLiteral("defaultProjectFps"), 60.0).toDouble();
     }();
     const double relTime = static_cast<double>(relFrame) / fps;
 

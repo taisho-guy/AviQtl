@@ -206,7 +206,7 @@ auto VideoDecoder::frameIndexFromSeconds(double seconds) const -> int {
     }
     const double tb = av_q2d(mtimeBase);
     if (tb <= 0.0) {
-        double fps = msourceFps > 0.0 ? msourceFps : 30.0;
+        double fps = msourceFps > 0.0 ? msourceFps : SettingsManager::instance().value(QStringLiteral("defaultProjectFps"), 60.0).toDouble();
         int f = static_cast<int>(std::llround(seconds * fps));
         f = std::max(f, 0);
         f = std::min(f, static_cast<int>(mindex.size()) - 1);

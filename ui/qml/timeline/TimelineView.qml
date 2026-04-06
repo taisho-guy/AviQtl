@@ -10,7 +10,9 @@ ScrollView {
     property alias contentX: timelineFlickable.contentX
     property alias contentY: timelineFlickable.contentY
     property int layerHeight: 30
-    property int layerCount: 128
+    // 親コンポーネント (TimelineWindow → TimelineView) から必ずバインドされる。
+    // デフォルト値は SettingsManager の "timelineMaxLayers" と一致させること。
+    required property int layerCount
     property int clipResizeHandleWidth: 6
     property var getLayerLocked: function(layer) {
         return false;

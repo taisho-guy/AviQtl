@@ -8,7 +8,9 @@ Rectangle {
 
     property int headerWidth: 60
     property int layerHeight: 30
-    property int layerCount: 128
+    // 親コンポーネント (TimelineWindow → TimelineView) から必ずバインドされる。
+    // デフォルト値は SettingsManager の "timelineMaxLayers" と一致させること。
+    required property int layerCount
     property var syncFlickable: null // TimelineViewのFlickable
     // レイヤー状態管理 (内部保持)
     property var _layerStates: ({

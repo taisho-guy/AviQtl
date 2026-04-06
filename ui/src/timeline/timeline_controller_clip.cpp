@@ -517,7 +517,7 @@ auto TimelineController::getWaveformPeaks(int clipId, int pixelWidth, int displa
 
     int fps = static_cast<int>(m_project->fps());
     if (fps <= 0) {
-        fps = 60;
+        fps = static_cast<int>(Rina::Core::SettingsManager::instance().value(QStringLiteral("defaultProjectFps"), 60.0).toDouble());
     }
     // 渡された displayDurationFrames で秒数を計算 (ドラフト値が来たらそれを使う)
     double displaySec = static_cast<double>(displayDurationFrames) / fps;

@@ -698,27 +698,27 @@
 <context>
     <name>LayerHeader</name>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="178"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="180"/>
         <source>表示/非表示を切り替え</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="192"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="194"/>
         <source>ロックを解除</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="192"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="194"/>
         <source>ロック</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="205"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="207"/>
         <source>すべて表示</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="215"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="217"/>
         <source>すべて非表示</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1004,22 +1004,42 @@
 <context>
     <name>PluginSettingsPage</name>
     <message>
-        <location filename="../ui/qml/settings/PluginSettingsPage.qml" line="55"/>
+        <location filename="../ui/qml/settings/PluginSettingsPage.qml" line="72"/>
         <source>各形式ごとに有効化と検索パスを設定できます</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/PluginSettingsPage.qml" line="74"/>
-        <source>%1 を読み込む</source>
+        <location filename="../ui/qml/settings/PluginSettingsPage.qml" line="79"/>
+        <source>Carla (プラグインホスト)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/PluginSettingsPage.qml" line="80"/>
-        <source>検索パス</source>
+        <location filename="../ui/qml/settings/PluginSettingsPage.qml" line="87"/>
+        <source>リソースディレクトリ</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../ui/qml/settings/PluginSettingsPage.qml" line="105"/>
+        <source>carla-discovery-native 検索パス</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/PluginSettingsPage.qml" line="130"/>
+        <source>1行に1パスを入力します。先頭から順に検索し、存在するパスを使用します</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/PluginSettingsPage.qml" line="155"/>
+        <source>%1 を読み込む</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/PluginSettingsPage.qml" line="161"/>
+        <source>検索パス</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/settings/PluginSettingsPage.qml" line="186"/>
         <source>1行に1パスを入力します</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1886,47 +1906,47 @@
 <context>
     <name>TimelineView</name>
     <message>
-        <location filename="../ui/qml/timeline/TimelineView.qml" line="591"/>
+        <location filename="../ui/qml/timeline/TimelineView.qml" line="593"/>
         <source>オブジェクトを追加</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/TimelineView.qml" line="608"/>
+        <location filename="../ui/qml/timeline/TimelineView.qml" line="610"/>
         <source>元に戻す</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/TimelineView.qml" line="609"/>
+        <location filename="../ui/qml/timeline/TimelineView.qml" line="611"/>
         <source>やり直す</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/TimelineView.qml" line="610"/>
+        <location filename="../ui/qml/timeline/TimelineView.qml" line="612"/>
         <source>貼り付け</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/TimelineView.qml" line="612"/>
+        <location filename="../ui/qml/timeline/TimelineView.qml" line="614"/>
         <source>グリッド設定...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/TimelineView.qml" line="614"/>
+        <location filename="../ui/qml/timeline/TimelineView.qml" line="616"/>
         <source>削除</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/TimelineView.qml" line="615"/>
+        <location filename="../ui/qml/timeline/TimelineView.qml" line="617"/>
         <source>分割</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/TimelineView.qml" line="617"/>
+        <location filename="../ui/qml/timeline/TimelineView.qml" line="619"/>
         <source>切り取り</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/TimelineView.qml" line="618"/>
+        <location filename="../ui/qml/timeline/TimelineView.qml" line="620"/>
         <source>コピー</source>
         <translation type="unfinished"></translation>
     </message>
