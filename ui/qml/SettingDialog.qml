@@ -202,40 +202,11 @@ Common.RinaWindow {
             return [];
 
         var ui = effectModel.uiDefinition;
-        if (ui) {
-            // 1. 標準形式：{ controls: [...] } または { params: [...] }
-            if (ui.controls && typeof ui.controls.length === 'number')
-                return ui.controls;
+        if (ui && ui.controls && typeof ui.controls.length === 'number')
+            return ui.controls;
 
-            if (ui.params && typeof ui.params.length === 'number')
-                return ui.params;
-
-            // 2. マップ形式 (後方互換): { "param": { ... } }
-            var keys = Object.keys(ui);
-            if (keys.length > 0 && keys.indexOf("controls") === -1 && keys.indexOf("group") === -1) {
-                var list = [];
-                for (var i = 0; i < keys.length; i++) {
-                    var def = ui[keys[i]];
-                    if (typeof def === 'object') {
-                        def.param = keys[i];
-                        list.push(def);
-                    }
-                }
-                return list;
-            }
-        }
-        // 3. paramsから自動生成
-        var params = effectModel.params;
-        var pKeys = Object.keys(params).sort();
-        var autoList = [];
-        for (var j = 0; j < pKeys.length; j++) {
-            autoList.push({
-                "type": typeof params[pKeys[j]] === 'number' ? 'float' : 'string',
-                "param": pKeys[j],
-                "label": pKeys[j]
-            });
-        }
-        return autoList;
+        console.warn("Invalid effect uiDefinition: ui.controls is missing for", effectModel ? effectModel.name : "unknown");
+        return [];
     }
 
     width: 350

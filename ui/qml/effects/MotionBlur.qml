@@ -6,7 +6,7 @@ Common.BaseEffect {
 
     // AviUtl: 間隔(shutterSpeed), 分解能(quality), 残像(trail)
     // Rina追加: velX/velY でブラー方向を手動指定
-    property real interval: Math.max(0, Math.min(100, root.evalNumber("interval", 50)))
+    property real interval: Math.max(0, Math.min(100, root.evalNumber("shutterSpeed", 50)))
     property real quality: Math.max(1, Math.min(100, root.evalNumber("quality", 16)))
     property bool trail: root.evalParam("trail", false)
     property real velX: root.evalNumber("velX", 0)

@@ -5,12 +5,12 @@ Common.BaseEffect {
     id: root
 
     // AviUtl: 範囲 0-2000、X/Y -2000~2000、サイズ固定
-    property real range: Math.max(0, root.evalNumber("range", 50))
+    property real range: Math.max(0, root.evalNumber("strength", 0.1) * 2000)
     property real centerX: root.evalNumber("x", 0)
     property real centerY: root.evalNumber("y", 0)
     property bool fixedSize: root.evalParam("fixedSize", false)
     // samples: 品質 (内部計算: range が大きいほど多く)
-    readonly property real samples: Math.max(1, Math.min(64, Math.ceil(range / 8) + 4))
+    property real samples: root.evalNumber("samples", 10)
     readonly property real strength: range
 
     ShaderEffect {

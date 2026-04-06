@@ -49,6 +49,11 @@ void EffectRegistry::loadEffectsFromDirectory(const QString &path) {
         QVariantMap params = obj.value(QStringLiteral("params")).toObject().toVariantMap();
         QVariantMap uiDef = obj.value(QStringLiteral("ui")).toObject().toVariantMap();
 
+        if (!uiDef.contains(QStringLiteral("controls"))) {
+            qWarning().noquote() << QStringLiteral("旧仕様または不正なエフェクト定義のためスキップ (ui.controls なし):") << file.fileName();
+            continue;
+        }
+
         if (id.isEmpty() || name.isEmpty() || qmlFileName.isEmpty()) {
             qWarning().noquote() << QStringLiteral("不完全なエフェクト定義のためスキップ:") << file.fileName() << QStringLiteral("。");
             if (id.isEmpty()) {

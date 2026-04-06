@@ -5,7 +5,7 @@ Common.BaseEffect {
     id: root
 
     // AviUtl: 範囲 0-500、角度 0-360、サイズ固定
-    property real range: Math.max(0, root.evalNumber("range", 20))
+    property real range: Math.max(0, root.evalNumber("length", 10))
     property real angle: root.evalNumber("angle", 0)
     property bool fixedSize: root.evalParam("fixedSize", false)
 

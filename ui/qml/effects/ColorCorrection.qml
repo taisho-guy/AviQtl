@@ -4,12 +4,11 @@ import "qrc:/qt/qml/Rina/ui/qml/common" as Common
 Common.BaseEffect {
     id: root
 
-    // AviUtl: 明るさ/コントラスト/色相/輝度/彩度 各-100~100、飽和する bool
-    property real brightness: root.evalNumber("brightness", 0) / 100
-    property real contrast: root.evalNumber("contrast", 0) / 100
+    property real brightness: root.evalNumber("brightness", 100) / 100 - 1
+    property real contrast: root.evalNumber("contrast", 100) / 100 - 1
     property real hue: root.evalNumber("hue", 0)
-    property real luminance: root.evalNumber("luminance", 0) / 100
-    property real saturation: root.evalNumber("saturation", 0) / 100
+    property real luminance: root.evalNumber("lightness", 100) / 100 - 1
+    property real saturation: root.evalNumber("saturation", 100) / 100 - 1
     property bool saturate: root.evalParam("saturate", false)
 
     ShaderEffect {
