@@ -1,7 +1,6 @@
 {
     "id": "vibration",
     "name": "振動",
-    "category": "filter",
     "qml": "Vibration.qml",
     "params": {
         "x": 10,
@@ -11,10 +10,39 @@
     },
     "ui": {
         "controls": [
-            { "type": "float", "param": "x", "label": "Xの強さ", "min": 0, "max": 500 },
-            { "type": "float", "param": "y", "label": "Yの強さ", "min": 0, "max": 500 },
-            { "type": "float", "param": "speed", "label": "速度", "min": 0, "max": 100 },
-            { "type": "int", "param": "seed", "label": "ランダムシード", "min": 0, "max": 1000 }
+            {
+                "type": "float",
+                "param": "x",
+                "label": "Xの強さ",
+                "min": 0,
+                "max": 500
+            },
+            {
+                "type": "float",
+                "param": "y",
+                "label": "Yの強さ",
+                "min": 0,
+                "max": 500
+            },
+            {
+                "type": "float",
+                "param": "speed",
+                "label": "速度",
+                "min": 0,
+                "max": 100
+            },
+            {
+                "type": "int",
+                "param": "seed",
+                "label": "ランダムシード",
+                "min": 0,
+                "max": 1000
+            }
         ]
-    }
+    },
+    "version": "1.0.0",
+    "kind": "effect",
+    "categories": [
+        "基本エフェクト"
+    ]
 }

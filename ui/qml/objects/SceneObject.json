@@ -1,7 +1,6 @@
 {
     "id": "scene",
     "name": "シーンオブジェクト",
-    "category": "object",
     "qml": "SceneObject.qml",
     "params": {
         "targetSceneId": 0,
@@ -43,5 +42,10 @@
                 "step": 0.01
             }
         ]
-    }
+    },
+    "version": "1.0.0",
+    "kind": "object",
+    "categories": [
+        "基本"
+    ]
 }

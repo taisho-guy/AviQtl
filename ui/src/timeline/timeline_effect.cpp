@@ -20,7 +20,7 @@ void TimelineService::addEffectInternal(int clipId, const QString &effectId) {
     for (auto &clip : clipsMutable()) {
         if (clip.id == clipId) {
             auto meta = Rina::Core::EffectRegistry::instance().getEffect(effectId);
-            auto *model = new EffectModel(meta.id, meta.name, meta.category, meta.defaultParams, meta.qmlSource, meta.uiDefinition, this);
+            auto *model = new EffectModel(meta.id, meta.name, meta.kind, meta.categories, meta.defaultParams, meta.qmlSource, meta.uiDefinition, this);
             model->syncTrackEndpoints(clip.durationFrames);
             connect(model, &EffectModel::keyframeTracksChanged, this, &TimelineService::clipsChanged);
             clip.effects.append(model);
@@ -35,8 +35,8 @@ void TimelineService::restoreEffectInternal(int clipId, const QVariantMap &data)
     for (auto &clip : clipsMutable()) {
         if (clip.id == clipId) {
             auto meta = Rina::Core::EffectRegistry::instance().getEffect(data.value(QStringLiteral("id")).toString());
-            auto *model = new EffectModel(data.value(QStringLiteral("id")).toString(), data.value(QStringLiteral("name")).toString(), meta.category, data.value(QStringLiteral("params")).toMap(), data.value(QStringLiteral("qmlSource")).toString(),
-                                          data.value(QStringLiteral("uiDefinition")).toMap(), this);
+            auto *model = new EffectModel(data.value(QStringLiteral("id")).toString(), data.value(QStringLiteral("name")).toString(), meta.kind, meta.categories, data.value(QStringLiteral("params")).toMap(),
+                                          data.value(QStringLiteral("qmlSource")).toString(), data.value(QStringLiteral("uiDefinition")).toMap(), this);
             model->setEnabled(data.value(QStringLiteral("enabled")).toBool());
             model->setKeyframeTracks(data.value(QStringLiteral("keyframes")).toMap());
             connect(model, &EffectModel::keyframeTracksChanged, this, &TimelineService::clipsChanged);
@@ -154,7 +154,7 @@ void TimelineService::restoreMultipleEffectsInternal(int clipId, const QList<QVa
         if (clip.id == clipId) {
             for (const auto &d : ascData) {
                 auto meta = Rina::Core::EffectRegistry::instance().getEffect(d.value(QStringLiteral("id")).toString());
-                auto *model = new EffectModel(d.value(QStringLiteral("id")).toString(), d.value(QStringLiteral("name")).toString(), meta.category, d.value(QStringLiteral("params")).toMap(), d.value(QStringLiteral("qmlSource")).toString(),
+                auto *model = new EffectModel(d.value(QStringLiteral("id")).toString(), d.value(QStringLiteral("name")).toString(), meta.kind, meta.categories, d.value(QStringLiteral("params")).toMap(), d.value(QStringLiteral("qmlSource")).toString(),
                                               d.value(QStringLiteral("uiDefinition")).toMap(), this);
                 model->setEnabled(d.value(QStringLiteral("enabled")).toBool());
                 model->setKeyframeTracks(d.value(QStringLiteral("keyframes")).toMap());

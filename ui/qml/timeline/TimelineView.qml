@@ -493,7 +493,7 @@ ScrollView {
         }
 
         function createMenuItem(label, cmd, icon) {
-            var item = menuItemComp.createObject(null, {
+            var item = menuItemComp.createObject(timelineViewRoot, {
                 "text": label,
                 "iconName": icon || ""
             });
@@ -504,13 +504,13 @@ ScrollView {
         }
 
         function createSubMenu(label) {
-            return subMenuComp.createObject(null, {
+            return subMenuComp.createObject(timelineViewRoot, {
                 "title": label
             });
         }
 
         function addSeparator() {
-            contextMenu.addItem(menuSeparatorComp.createObject(null));
+            contextMenu.addItem(menuSeparatorComp.createObject(timelineViewRoot));
         }
 
         function shouldApplyToSelection() {
@@ -576,6 +576,32 @@ ScrollView {
         }
 
         function rebuildMenu() {
+            function buildObjMenu(parentMenu, items) {
+                for (var i = 0; i < items.length; ++i) {
+                    var node = items[i];
+                    if (node.isCategory) {
+                        // addMenu(string) はネイティブメニューハンドルが未確定の場合に
+                        // Qt内部でnullポインタ参照を起こすため、Component経由で生成する
+                        var subMenu = subMenuComp.createObject(timelineViewRoot, {
+                            "title": node.title
+                        });
+                        buildObjMenu(subMenu, node.children);
+                        parentMenu.addMenu(subMenu);
+                    } else {
+                        var objItem = menuItemComp.createObject(timelineViewRoot, {
+                            "text": node.name,
+                            "iconName": "shape_line"
+                        });
+                        (function(id) {
+                            objItem.triggered.connect(() => {
+                                return handleCommand("add." + id);
+                            });
+                        })(node.id);
+                        parentMenu.addItem(objItem);
+                    }
+                }
+            }
+
             // 非同期の destroy を避け、同期的にアイテムを削除・破棄することで
             // Kirigami/KDE Menuの実装におけるレイアウト計算のタイミング問題を回避する
             while (contextMenu.count > 0) {
@@ -590,19 +616,7 @@ ScrollView {
             if (targetType === "timeline") {
                 var objectMenu = createSubMenu(qsTr("オブジェクトを追加"));
                 var objects = TimelineBridge.getAvailableObjects();
-                for (var i = 0; i < objects.length; i++) {
-                    var obj = objects[i];
-                    var objItem = menuItemComp.createObject(null, {
-                        "text": obj.name,
-                        "iconName": "shape_line"
-                    });
-                    (function(id) {
-                        objItem.triggered.connect(() => {
-                            return handleCommand("add." + id);
-                        });
-                    })(obj.id);
-                    objectMenu.addItem(objItem);
-                }
+                buildObjMenu(objectMenu, objects);
                 contextMenu.addMenu(objectMenu);
                 addSeparator();
                 contextMenu.addItem(createMenuItem(qsTr("元に戻す"), "edit.undo", "arrow_go_back_line"));

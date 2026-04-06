@@ -574,7 +574,7 @@ Common.RinaWindow {
 
                             // 削除ボタン (Transform以外)
                             Button {
-                                visible: modelData.category === "filter"
+                                visible: modelData.kind === "effect"
                                 anchors.right: parent.right
                                 anchors.verticalCenter: parent.verticalCenter
                                 flat: true
@@ -1182,69 +1182,89 @@ Common.RinaWindow {
         Menu {
             id: filterMenu
 
-            title: qsTr("フィルタ")
-
-            Repeater {
-                model: (TimelineBridge && !TimelineBridge.isAudioClip(targetClipId)) ? TimelineBridge.getAvailableEffects() : []
-
-                Common.IconMenuItem {
-                    text: modelData.name
-                    iconName: "magic_line"
-                    onTriggered: {
-                        if (TimelineBridge)
-                            TimelineBridge.addEffect(targetClipId, modelData.id);
-
+            function buildMenu(parentMenu, items) {
+                for (var i = 0; i < items.length; ++i) {
+                    var node = items[i];
+                    if (node.isCategory) {
+                        var subMenu = subMenuComp.createObject(root.contentItem, {
+                            "title": node.title
+                        });
+                        buildMenu(subMenu, node.children);
+                        parentMenu.addMenu(subMenu);
+                    } else {
+                        var effItem = menuItemComp.createObject(root.contentItem, {
+                            "text": node.name,
+                            "iconName": "magic_line"
+                        });
+                        (function(id) {
+                            effItem.triggered.connect(() => {
+                                TimelineBridge.addEffect(targetClipId, id);
+                            });
+                        })(node.id);
+                        parentMenu.addItem(effItem);
                     }
+                }
+            }
+
+            title: qsTr("エフェクトを追加")
+            onAboutToShow: {
+                // 古いアイテムを破棄してクリア
+                while (count > 0) {
+                    var it = takeItem(0);
+                    if (it) {
+                        try {
+                            it.destroy();
+                        } catch (e) {
+                            console.log("SettingDialog Menu destroy exception:", e);
+                        }
+                    }
+                }
+                if (!TimelineBridge)
+                    return ;
+
+                if (targetClipId !== -1 && TimelineBridge.isAudioClip(targetClipId)) {
+                    // オーディオプラグイン (VST等)
+                    var categories = TimelineBridge.getPluginCategories();
+                    for (var c = 0; c < categories.length; c++) {
+                        var catName = categories[c];
+                        var subMenu = subMenuComp.createObject(root.contentItem, {
+                            "title": catName
+                        });
+                        var plugins = TimelineBridge.getPluginsByCategory(catName);
+                        for (var p = 0; p < plugins.length; p++) {
+                            var plug = plugins[p];
+                            var plugItem = menuItemComp.createObject(root.contentItem, {
+                                "text": plug.name,
+                                "iconName": "music_line"
+                            });
+                            (function(id) {
+                                plugItem.triggered.connect(() => {
+                                    TimelineBridge.addAudioPlugin(targetClipId, id);
+                                });
+                            })(plug.id);
+                            subMenu.addItem(plugItem);
+                        }
+                        filterMenu.addMenu(subMenu);
+                    }
+                } else {
+                    // 標準エフェクト (木構造)
+                    var effects = TimelineBridge.getAvailableEffects();
+                    buildMenu(filterMenu, effects);
+                }
+            }
+
+            Component {
+                id: subMenuComp
+
+                Menu {
                 }
 
             }
 
-            // カテゴリごとのサブメニューを生成
-            Instantiator {
-                model: (targetClipId !== -1 && TimelineBridge && TimelineBridge.isAudioClip(targetClipId)) ? TimelineBridge.getPluginCategories() : []
-                onObjectAdded: (index, object) => {
-                    return filterMenu.insertMenu(index, object);
-                }
-                onObjectRemoved: (index, object) => {
-                    return filterMenu.removeMenu(object);
-                }
+            Component {
+                id: menuItemComp
 
-                delegate: Menu {
-                    id: categoryMenu
-
-                    // プラグイン一覧をキャッシュするためのプロパティ
-                    property var cachedPlugins: []
-
-                    title: modelData // カテゴリ名
-                    // サブメニューが開かれる直前に一度だけモデルをロードする（遅延評価）
-                    onAboutToShow: {
-                        if (cachedPlugins.length === 0 && TimelineBridge)
-                            cachedPlugins = TimelineBridge.getPluginsByCategory(categoryMenu.title);
-
-                    }
-
-                    Instantiator {
-                        model: categoryMenu.cachedPlugins
-                        onObjectAdded: (index, subObj) => {
-                            // eslint-disable-line
-                            return categoryMenu.insertItem(index, subObj);
-                        }
-                        onObjectRemoved: (index, subObj) => {
-                            return categoryMenu.removeItem(subObj);
-                        }
-
-                        delegate: Common.IconMenuItem {
-                            text: modelData.name
-                            iconName: "music_line"
-                            onTriggered: {
-                                if (TimelineBridge)
-                                    TimelineBridge.addAudioPlugin(targetClipId, modelData.id);
-
-                            }
-                        }
-
-                    }
-
+                Common.IconMenuItem {
                 }
 
             }

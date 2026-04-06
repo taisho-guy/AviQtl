@@ -10,7 +10,9 @@ namespace Rina::Core {
 struct EffectMetadata {
     QString id;
     QString name;
-    QString category;
+    QString version;
+    QString kind;
+    QStringList categories;
     QString qmlSource; // QML実装へのパス
     QString color;     // ← 追加: JSON の "color" フィールド（省略可）
     QVariantMap defaultParams;

@@ -5,8 +5,10 @@
 #include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QRegularExpression>
 #include <QUrl>
 
 namespace Rina::Core {
@@ -44,35 +46,51 @@ void EffectRegistry::loadEffectsFromDirectory(const QString &path) {
         QJsonObject obj = doc.object();
         QString id = obj.value(QStringLiteral("id")).toString();
         QString name = obj.value(QStringLiteral("name")).toString();
-        QString category = obj.value(QStringLiteral("category")).toString(QStringLiteral("filter"));
         QString qmlFileName = obj.value(QStringLiteral("qml")).toString();
         QVariantMap params = obj.value(QStringLiteral("params")).toObject().toVariantMap();
         QVariantMap uiDef = obj.value(QStringLiteral("ui")).toObject().toVariantMap();
 
         if (!uiDef.contains(QStringLiteral("controls"))) {
-            qWarning().noquote() << QStringLiteral("旧仕様または不正なエフェクト定義のためスキップ (ui.controls なし):") << file.fileName();
+            qWarning().noquote() << QStringLiteral("不正な定義のためスキップ (ui.controls なし):") << file.fileName();
+            continue;
+        }
+
+        QString version = obj.value(QStringLiteral("version")).toString();
+        QRegularExpression versionRegex(QStringLiteral("^\\d+\\.\\d+\\.\\d+$"));
+        if (!versionRegex.match(version).hasMatch()) {
+            qWarning().noquote() << QStringLiteral("versionの形式が不正または存在しません (x.x.x必須):") << file.fileName();
+            continue;
+        }
+
+        QString kind = obj.value(QStringLiteral("kind")).toString();
+        if (kind != QStringLiteral("effect") && kind != QStringLiteral("object")) {
+            qWarning().noquote() << QStringLiteral("kindが不正です ('effect'または'object'必須):") << file.fileName();
+            continue;
+        }
+
+        QStringList categories;
+        QJsonArray catArray = obj.value(QStringLiteral("categories")).toArray();
+        for (const QJsonValue &val : catArray) {
+            if (val.isString()) {
+                categories.append(val.toString());
+            }
+        }
+        if (categories.isEmpty()) {
+            qWarning().noquote() << QStringLiteral("categoriesが空または存在しません (1つ以上のカテゴリ必須):") << file.fileName();
             continue;
         }
 
         if (id.isEmpty() || name.isEmpty() || qmlFileName.isEmpty()) {
-            qWarning().noquote() << QStringLiteral("不完全なエフェクト定義のためスキップ:") << file.fileName() << QStringLiteral("。");
-            if (id.isEmpty()) {
-                qWarning().noquote() << QStringLiteral("  - 理由: 'id' フィールドが空または存在しません。");
-            }
-            if (name.isEmpty()) {
-                qWarning().noquote() << QStringLiteral("  - 理由: 'name' フィールドが空または存在しません。");
-            }
-            if (qmlFileName.isEmpty()) {
-                qWarning().noquote() << QStringLiteral("  - 理由: 'qml' フィールドが空または存在しません。");
-            }
-            qWarning().noquote() << QStringLiteral("  - 解析されたJSON内容:") << doc.toJson(QJsonDocument::Compact);
+            qWarning().noquote() << QStringLiteral("不完全な定義のためスキップ:") << file.fileName();
             continue;
         }
 
         EffectMetadata meta;
+        meta.version = version;
         meta.id = id;
         meta.name = name;
-        meta.category = category;
+        meta.kind = kind;
+        meta.categories = categories;
         meta.defaultParams = params;
         meta.uiDefinition = uiDef;
         meta.color = obj.value(QStringLiteral("color")).toString();

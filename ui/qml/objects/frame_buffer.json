@@ -1,7 +1,6 @@
 {
     "id": "frame_buffer",
     "name": "フレームバッファ",
-    "category": "object",
     "qml": "FrameBufferObject.qml",
     "params": {
         "clearBelow": false
@@ -14,5 +13,10 @@
                 "type": "bool"
             }
         ]
-    }
+    },
+    "version": "1.0.0",
+    "kind": "object",
+    "categories": [
+        "基本"
+    ]
 }

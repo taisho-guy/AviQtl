@@ -1,7 +1,6 @@
 {
     "id": "chromatic_aberration",
     "name": "色ずれ",
-    "category": "filter",
     "qml": "ChromaticAberration.qml",
     "params": {
         "redX": 5,
@@ -13,12 +12,53 @@
     },
     "ui": {
         "controls": [
-            { "type": "float", "param": "redX", "label": "赤ずれX", "min": -100, "max": 100 },
-            { "type": "float", "param": "redY", "label": "赤ずれY", "min": -100, "max": 100 },
-            { "type": "float", "param": "greenX", "label": "緑ずれX", "min": -100, "max": 100 },
-            { "type": "float", "param": "greenY", "label": "緑ずれY", "min": -100, "max": 100 },
-            { "type": "float", "param": "blueX", "label": "青ずれX", "min": -100, "max": 100 },
-            { "type": "float", "param": "blueY", "label": "青ずれY", "min": -100, "max": 100 }
+            {
+                "type": "float",
+                "param": "redX",
+                "label": "赤ずれX",
+                "min": -100,
+                "max": 100
+            },
+            {
+                "type": "float",
+                "param": "redY",
+                "label": "赤ずれY",
+                "min": -100,
+                "max": 100
+            },
+            {
+                "type": "float",
+                "param": "greenX",
+                "label": "緑ずれX",
+                "min": -100,
+                "max": 100
+            },
+            {
+                "type": "float",
+                "param": "greenY",
+                "label": "緑ずれY",
+                "min": -100,
+                "max": 100
+            },
+            {
+                "type": "float",
+                "param": "blueX",
+                "label": "青ずれX",
+                "min": -100,
+                "max": 100
+            },
+            {
+                "type": "float",
+                "param": "blueY",
+                "label": "青ずれY",
+                "min": -100,
+                "max": 100
+            }
         ]
-    }
+    },
+    "version": "1.0.0",
+    "kind": "effect",
+    "categories": [
+        "基本エフェクト"
+    ]
 }

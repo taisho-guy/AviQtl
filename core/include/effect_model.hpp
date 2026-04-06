@@ -348,15 +348,16 @@ class EffectModel : public QObject {
   public:
     Q_PROPERTY(QString id READ id CONSTANT)
     Q_PROPERTY(QString name READ name CONSTANT)
-    Q_PROPERTY(QString category READ category CONSTANT)
+    Q_PROPERTY(QString kind READ kind CONSTANT)
+    Q_PROPERTY(QStringList categories READ categories CONSTANT)
     Q_PROPERTY(bool enabled READ isEnabled WRITE setEnabled NOTIFY enabledChanged)
     Q_PROPERTY(QVariantMap params READ params NOTIFY paramsChanged)
     Q_PROPERTY(QString qmlSource READ qmlSource CONSTANT)
     Q_PROPERTY(QVariantMap keyframeTracks READ keyframeTracks NOTIFY keyframeTracksChanged)
     Q_PROPERTY(QVariantMap uiDefinition READ uiDefinition CONSTANT)
 
-    explicit EffectModel(const QString &id, const QString &name, const QString &category = QStringLiteral("filter"), const QVariantMap &params = {}, const QString &qmlSource = "", const QVariantMap &uiDef = {}, QObject *parent = nullptr)
-        : QObject(parent), m_id(id), m_name(name), m_category(category), m_enabled(true), m_params(params), m_qmlSource(qmlSource), m_uiDefinition(uiDef) {
+    explicit EffectModel(const QString &id, const QString &name, const QString &kind, const QStringList &categories, const QVariantMap &params = {}, const QString &qmlSource = "", const QVariantMap &uiDef = {}, QObject *parent = nullptr)
+        : QObject(parent), m_id(id), m_name(name), m_kind(kind), m_categories(categories), m_enabled(true), m_params(params), m_qmlSource(qmlSource), m_uiDefinition(uiDef) {
         for (auto it = m_params.begin(); it != m_params.end(); ++it) {
             QVariantMap track;
             QVariantMap start;
@@ -372,7 +373,8 @@ class EffectModel : public QObject {
 
     QString id() const { return m_id; }
     QString name() const { return m_name; }
-    QString category() const { return m_category; }
+    QString kind() const { return m_kind; }
+    QStringList categories() const { return m_categories; }
     bool isEnabled() const { return m_enabled; }
     QVariantMap params() const { return m_params; }
     QString qmlSource() const { return m_qmlSource; }
@@ -380,7 +382,7 @@ class EffectModel : public QObject {
     QVariantMap uiDefinition() const { return m_uiDefinition; }
 
     EffectModel *clone() const {
-        auto *copy = new EffectModel(m_id, m_name, m_category, m_params, m_qmlSource, m_uiDefinition);
+        auto *copy = new EffectModel(m_id, m_name, m_kind, m_categories, m_params, m_qmlSource, m_uiDefinition);
         copy->m_enabled = m_enabled;
         copy->m_keyframeTracks = m_keyframeTracks;
         copy->m_lastDuration = m_lastDuration;
@@ -648,7 +650,8 @@ class EffectModel : public QObject {
   private:
     QString m_id;
     QString m_name;
-    QString m_category;
+    QString m_kind;
+    QStringList m_categories;
     bool m_enabled;
     QVariantMap m_params;
     QString m_qmlSource;

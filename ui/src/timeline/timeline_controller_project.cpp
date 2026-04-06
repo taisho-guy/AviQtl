@@ -75,17 +75,59 @@ auto TimelineController::getProjectInfo(const QString &fileUrl) -> QVariantMap {
     return result;
 }
 
+namespace {
+void insertIntoCategoryTree(QVariantList &list, const QStringList &path, const QVariantMap &item) {
+    if (path.isEmpty()) {
+        list.append(item);
+        return;
+    }
+
+    QString currentCategory = path.first();
+    int foundIdx = -1;
+    for (int i = 0; i < list.size(); ++i) {
+        QVariantMap node = list[i].toMap();
+        if (node.value(QStringLiteral("isCategory")).toBool() && node.value(QStringLiteral("title")).toString() == currentCategory) {
+            foundIdx = i;
+            break;
+        }
+    }
+
+    QVariantMap categoryNode;
+    QVariantList children;
+    if (foundIdx >= 0) {
+        categoryNode = list[foundIdx].toMap();
+        children = categoryNode.value(QStringLiteral("children")).toList();
+    } else {
+        categoryNode.insert(QStringLiteral("isCategory"), true);
+        categoryNode.insert(QStringLiteral("title"), currentCategory);
+    }
+
+    insertIntoCategoryTree(children, path.mid(1), item);
+    categoryNode.insert(QStringLiteral("children"), children);
+
+    if (foundIdx >= 0) {
+        list[foundIdx] = categoryNode;
+    } else {
+        list.append(categoryNode);
+    }
+}
+} // namespace
+
 auto TimelineController::getAvailableEffects() -> QVariantList {
     QVariantList list;
     const auto effects = Rina::Core::EffectRegistry::instance().getAllEffects();
     for (const auto &meta : effects) {
-        if (meta.category != "filter") {
+        if (meta.kind != "effect") {
             continue;
         }
         QVariantMap m;
         m.insert(QStringLiteral("id"), meta.id);
         m.insert(QStringLiteral("name"), meta.name);
-        list.append(m);
+
+        for (const QString &categoryPath : meta.categories) {
+            QStringList pathTokens = categoryPath.split(QStringLiteral("/"), Qt::SkipEmptyParts);
+            insertIntoCategoryTree(list, pathTokens, m);
+        }
     }
     return list;
 }
@@ -94,33 +136,22 @@ auto TimelineController::getAvailableObjects() -> QVariantList {
     QVariantList list;
     const auto effects = Rina::Core::EffectRegistry::instance().getAllEffects();
     for (const auto &meta : effects) {
-        if (meta.category != "object") {
+        if (meta.kind != "object") {
             continue;
         }
         QVariantMap m;
         m.insert(QStringLiteral("id"), meta.id);
         m.insert(QStringLiteral("name"), meta.name);
-        list.append(m);
+
+        for (const QString &categoryPath : meta.categories) {
+            QStringList pathTokens = categoryPath.split(QStringLiteral("/"), Qt::SkipEmptyParts);
+            insertIntoCategoryTree(list, pathTokens, m);
+        }
     }
     return list;
 }
 
 auto TimelineController::getClipTypeColor(const QString &type) -> QString { return Rina::Core::EffectRegistry::instance().getEffect(type).color; }
-
-auto TimelineController::getAvailableObjects(const QString &category) -> QVariantList {
-    QVariantList list;
-    const auto effects = Rina::Core::EffectRegistry::instance().getAllEffects();
-
-    for (const auto &meta : effects) {
-        if (meta.category == category) {
-            QVariantMap map;
-            map.insert(QStringLiteral("id"), meta.id);
-            map.insert(QStringLiteral("name"), meta.name);
-            list.append(map);
-        }
-    }
-    return list;
-}
 
 auto TimelineController::getAvailableAudioPlugins() -> QVariantList { return Rina::Engine::Plugin::AudioPluginManager::instance().getPluginList(); }
 

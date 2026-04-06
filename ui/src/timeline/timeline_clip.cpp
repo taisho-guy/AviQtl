@@ -662,7 +662,7 @@ auto TimelineService::deepCopyClip(const ClipData &source) -> ClipData {
     newClip.layer = source.layer;
 
     for (const auto *oldEffect : std::as_const(source.effects)) {
-        auto *newEffect = new EffectModel(oldEffect->id(), oldEffect->name(), oldEffect->category(), oldEffect->params(), oldEffect->qmlSource(), oldEffect->uiDefinition(), this);
+        auto *newEffect = new EffectModel(oldEffect->id(), oldEffect->name(), oldEffect->kind(), oldEffect->categories(), oldEffect->params(), oldEffect->qmlSource(), oldEffect->uiDefinition(), this);
         newEffect->setEnabled(oldEffect->isEnabled());
         newEffect->setKeyframeTracks(oldEffect->keyframeTracks());
         newEffect->syncTrackEndpoints(source.durationFrames);

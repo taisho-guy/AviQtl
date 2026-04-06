@@ -1509,8 +1509,8 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="1185"/>
-        <source>フィルタ</source>
+        <location filename="../ui/qml/SettingDialog.qml" line="1209"/>
+        <source>エフェクトを追加</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -1886,47 +1886,47 @@
 <context>
     <name>TimelineView</name>
     <message>
-        <location filename="../ui/qml/timeline/TimelineView.qml" line="591"/>
+        <location filename="../ui/qml/timeline/TimelineView.qml" line="617"/>
         <source>オブジェクトを追加</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/TimelineView.qml" line="608"/>
+        <location filename="../ui/qml/timeline/TimelineView.qml" line="622"/>
         <source>元に戻す</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/TimelineView.qml" line="609"/>
+        <location filename="../ui/qml/timeline/TimelineView.qml" line="623"/>
         <source>やり直す</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/TimelineView.qml" line="610"/>
+        <location filename="../ui/qml/timeline/TimelineView.qml" line="624"/>
         <source>貼り付け</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/TimelineView.qml" line="612"/>
+        <location filename="../ui/qml/timeline/TimelineView.qml" line="626"/>
         <source>グリッド設定...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/TimelineView.qml" line="614"/>
+        <location filename="../ui/qml/timeline/TimelineView.qml" line="628"/>
         <source>削除</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/TimelineView.qml" line="615"/>
+        <location filename="../ui/qml/timeline/TimelineView.qml" line="629"/>
         <source>分割</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/TimelineView.qml" line="617"/>
+        <location filename="../ui/qml/timeline/TimelineView.qml" line="631"/>
         <source>切り取り</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/TimelineView.qml" line="618"/>
+        <location filename="../ui/qml/timeline/TimelineView.qml" line="632"/>
         <source>コピー</source>
         <translation type="unfinished"></translation>
     </message>

@@ -1,7 +1,6 @@
 {
     "id": "directional_blur",
     "name": "方向ブラー",
-    "category": "filter",
     "qml": "DirectionalBlur.qml",
     "params": {
         "angle": 0,
@@ -9,8 +8,25 @@
     },
     "ui": {
         "controls": [
-            { "type": "float", "param": "angle", "label": "角度", "min": -360, "max": 360 },
-            { "type": "float", "param": "length", "label": "範囲", "min": 0, "max": 200 }
+            {
+                "type": "float",
+                "param": "angle",
+                "label": "角度",
+                "min": -360,
+                "max": 360
+            },
+            {
+                "type": "float",
+                "param": "length",
+                "label": "範囲",
+                "min": 0,
+                "max": 200
+            }
         ]
-    }
+    },
+    "version": "1.0.0",
+    "kind": "effect",
+    "categories": [
+        "ぼかし"
+    ]
 }

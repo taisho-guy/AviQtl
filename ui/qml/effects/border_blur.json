@@ -1,7 +1,6 @@
 {
     "id": "border_blur",
     "name": "境界ぼかし",
-    "category": "filter",
     "qml": "BorderBlur.qml",
     "params": {
         "size": 5,
@@ -10,9 +9,30 @@
     },
     "ui": {
         "controls": [
-            { "type": "float", "param": "size", "label": "範囲", "min": 0, "max": 200 },
-            { "type": "float", "param": "aspect", "label": "縦横比", "min": -100, "max": 100 },
-            { "type": "bool", "param": "blur_alpha", "label": "透明度の境界をぼかす" }
+            {
+                "type": "float",
+                "param": "size",
+                "label": "範囲",
+                "min": 0,
+                "max": 200
+            },
+            {
+                "type": "float",
+                "param": "aspect",
+                "label": "縦横比",
+                "min": -100,
+                "max": 100
+            },
+            {
+                "type": "bool",
+                "param": "blur_alpha",
+                "label": "透明度の境界をぼかす"
+            }
         ]
-    }
+    },
+    "version": "1.0.0",
+    "kind": "effect",
+    "categories": [
+        "ぼかし"
+    ]
 }
