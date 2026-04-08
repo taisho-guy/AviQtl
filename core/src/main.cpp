@@ -2,6 +2,7 @@
 #include "../../engine/timeline/ecs.hpp"
 #include "../../scripting/mod_engine.hpp"
 #include "color_scheme_controller.hpp"
+#include "compute_effect.hpp"
 #include "effect_registry.hpp"
 #include "rina_context.hpp"
 #include "settings_manager.hpp"
@@ -93,6 +94,7 @@ auto main(int argc, char *argv[]) -> int {
     engine.rootContext()->setContextProperty(QStringLiteral("videoFrameStore"), videoFrameStore);
 
     qmlRegisterType<Rina::Core::VideoEncoder>("Rina.Core", 1, 0, "VideoEncoder");
+    qmlRegisterType<Rina::UI::Effects::ComputeEffect>("Rina.Compute", 1, 0, "ComputeEffect");
     engine.rootContext()->setContextProperty(QStringLiteral("SettingsManager"), &Rina::Core::SettingsManager::instance());
     engine.rootContext()->setContextProperty(QStringLiteral("ColorSchemeController"), colorSchemeController);
 

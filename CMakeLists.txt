@@ -15,7 +15,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     list(APPEND EXTRA_QT_COMPONENTS WaylandClient)
 endif()
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick QuickControls2 Quick3D Widgets Core5Compat Sql Svg Multimedia Concurrent ShaderTools LinguistTools Network ${EXTRA_QT_COMPONENTS})
+find_package(Qt6 REQUIRED COMPONENTS Core Gui GuiPrivate Quick QuickControls2 Quick3D Widgets Core5Compat Sql Svg Multimedia Concurrent ShaderTools LinguistTools Network ${EXTRA_QT_COMPONENTS})
 find_package(Vulkan REQUIRED)
 find_package(ECM REQUIRED NO_MODULE)
 list(APPEND CMAKE_MODULE_PATH ${ECM_MODULE_PATH})
@@ -186,7 +186,7 @@ endif()
 
 # リンク設定
 target_link_libraries(
-    Rina PRIVATE Qt6::Core Qt6::Gui Qt6::Quick Qt6::QuickControls2 Qt6::Quick3D Qt6::Widgets Qt6::Svg Qt6::Core5Compat Qt6::Multimedia Qt6::Concurrent Qt6::Network Vulkan::Vulkan
+    Rina PRIVATE Qt6::Core Qt6::Gui Qt6::GuiPrivate Qt6::Quick Qt6::QuickControls2 Qt6::Quick3D Qt6::Widgets Qt6::Svg Qt6::Core5Compat Qt6::Multimedia Qt6::Concurrent Qt6::Network Vulkan::Vulkan
                    PkgConfig::LUAJIT
                    PkgConfig::FFMPEG
                    ${CARLA_LIBRARIES}
@@ -258,7 +258,7 @@ add_custom_target(copy_runtime_assets ALL
 
 # シェーダーのコンパイル (.frag -> .qsb)
 function(compile_shaders TARGET_SUFFIX SRC_DIR DEST_DIR)
-    file(GLOB SHADERS "${SRC_DIR}/*.frag" "${SRC_DIR}/*.vert")
+    file(GLOB SHADERS "${SRC_DIR}/*.frag" "${SRC_DIR}/*.vert" "${SRC_DIR}/*.comp")
     set(QSB_OUTPUTS "")
     foreach(SHADER ${SHADERS})
         get_filename_component(FILENAME ${SHADER} NAME)
@@ -266,7 +266,7 @@ function(compile_shaders TARGET_SUFFIX SRC_DIR DEST_DIR)
         
         add_custom_command(
             OUTPUT ${QSB_FILE}
-            COMMAND Qt6::qsb --glsl "100 es,120,150" --hlsl 50 --msl 12 ${SHADER} -o ${QSB_FILE}
+            COMMAND Qt6::qsb --glsl "100 es,120,150,310 es,430" --hlsl 50 --msl 12 ${SHADER} -o ${QSB_FILE}
             DEPENDS ${SHADER} ${COMMON_SHADERS}
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
             COMMENT "Compiling shader ${FILENAME} to .qsb"
