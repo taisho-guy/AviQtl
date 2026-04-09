@@ -6,22 +6,22 @@ import "qrc:/qt/qml/Rina/ui/qml/common" as Common
 Common.BaseObject {
     id: root
 
-    property real sizeW: evalParam("rect", "sizeW", 200)
-    property real sizeH: evalParam("rect", "sizeH", 200)
-    property int sides: Math.max(3, Math.round(Number(evalParam("rect", "sides", 4))))
-    property real cornerRadius: evalParam("rect", "cornerRadius", 0)
-    property real innerRadius: evalParam("rect", "innerRadius", 50) // % (0-100)
-    property real shapeRotDeg: evalParam("rect", "rotation", 0) // 初期回転(°)
-    property color fillColor: evalParam("rect", "color", "#66aa99")
-    property bool useGradient: evalParam("rect", "useGradient", false)
-    property color gradientColor2: evalParam("rect", "gradientColor2", "#ffffff")
-    property int gradientType: evalParam("rect", "gradientType", 0) // 0:Linear, 1:Radial
-    property color strokeColor: evalParam("rect", "strokeColor", "#ffffff")
-    property real strokeWidth: evalParam("rect", "strokeWidth", 0)
-    property real dashLength: evalParam("rect", "dashLength", 0)
-    property real dashSpace: evalParam("rect", "dashSpace", 0)
-    property real opacity: evalParam("rect", "opacity", 1)
-    property string shapeType: String(evalParam("rect", "shapeType", "polygon"))
+    property real sizeW: evalNumber("rect", "sizeW", 200)
+    property real sizeH: evalNumber("rect", "sizeH", 200)
+    property int sides: Math.max(3, Math.round(evalNumber("rect", "sides", 4)))
+    property real cornerRadius: evalNumber("rect", "cornerRadius", 0)
+    property real innerRadius: evalNumber("rect", "innerRadius", 50) // % (0-100)
+    property real shapeRotDeg: evalNumber("rect", "rotation", 0) // 初期回転(°)
+    property color fillColor: evalColor("rect", "color", "#66aa99")
+    property bool useGradient: evalBool("rect", "useGradient", false)
+    property color gradientColor2: evalColor("rect", "gradientColor2", "#ffffff")
+    property int gradientType: Math.round(evalNumber("rect", "gradientType", 0)) // 0:Linear, 1:Radial
+    property color strokeColor: evalColor("rect", "strokeColor", "#ffffff")
+    property real strokeWidth: evalNumber("rect", "strokeWidth", 0)
+    property real dashLength: evalNumber("rect", "dashLength", 0)
+    property real dashSpace: evalNumber("rect", "dashSpace", 0)
+    property real opacity: evalNumber("rect", "opacity", 1)
+    property string shapeType: evalString("rect", "shapeType", "polygon")
     // 縁取りが見切れないようにパディングを確保
     readonly property real padding: strokeWidth / 2 + 2
 

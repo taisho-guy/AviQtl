@@ -475,7 +475,7 @@ Loader {
                 TextArea {
                     id: textAreaItem
 
-                    text: String(controlLoader.value || "")
+                    text: String(controlLoader.value ?? "")
                     selectByMouse: true
                     wrapMode: TextArea.Wrap
                     onTextChanged: {
@@ -486,6 +486,12 @@ Loader {
                     onEditingFinished: {
                         controlLoader.valueModified(text);
                     }
+
+                    Binding on text {
+                        when: !textAreaItem.activeFocus
+                        value: String(controlLoader.value ?? "")
+                    }
+
                 }
 
             }

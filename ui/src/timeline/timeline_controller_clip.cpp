@@ -637,7 +637,19 @@ void TimelineController::splitSelectedClips(int frame) {
     }
 }
 
-auto TimelineController::evaluateClipParams(int clipId, int relFrame) const -> QVariantMap { return {}; }
+#include "engine/timeline/ecs.hpp"
+
+auto TimelineController::evaluateClipParams(int clipId, int relFrame) const -> QVariantMap {
+    Q_UNUSED(relFrame);
+    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    if (const auto *ep = snap->evaluatedParams.find(clipId)) {
+        QVariantMap out;
+        for (auto it = ep->effects.cbegin(); it != ep->effects.cend(); ++it)
+            out.insert(it.key(), it.value());
+        return out;
+    }
+    return {};
+}
 void TimelineController::copyClip(int clipId) { m_timeline->copyClip(clipId); }
 
 void TimelineController::cutClip(int clipId) { m_timeline->cutClip(clipId); }

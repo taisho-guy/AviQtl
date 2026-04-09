@@ -187,22 +187,28 @@ Item {
 
                 // C++モデル(model)とJS配列(modelData)の両方に対応
                 property var _clipData: (typeof modelData !== "undefined") ? modelData : model
-                // FB 収集用: BaseObject が参照できるよう layer を公開
+                property int clipIdRole: _clipData.id
+                property string clipTypeRole: _clipData.type
                 property int clipLayerRole: _clipData.layer
+                property int clipStartFrameRole: _clipData.startFrame
+                property int clipDurationFramesRole: _clipData.durationFrames
+                property url clipQmlSourceRole: _clipData.qmlSource || ""
+                property var clipEffectModelsRole: _clipData.effectModels || []
+                property var clipEvalParamsRole: _clipData.evalParams || ({
+                })
                 property Item fbRendererOutput: null // NodeLoader 完了後に接続
-                // モデルロールから直接値を取得
-                // パラメータを一度だけ取得してキャッシュ
-                readonly property var p: _clipData.params || {
+                // 評価済みパラメータからtransform値を取得 (単一経路化)
+                readonly property var tParams: _clipData.evalParams && _clipData.evalParams["transform"] ? _clipData.evalParams["transform"] : {
                 }
-                readonly property real px: p.x || 0
-                readonly property real py: p.y || 0
-                readonly property real pz: p.z || 0
-                readonly property real pRotX: p.rotationX || 0
-                readonly property real pRotY: p.rotationY || 0
-                readonly property real pRotZ: p.rotationZ || 0
-                readonly property real pScale: p.scale || 100
-                readonly property real pAspect: p.aspect || 0
-                readonly property real pOpacity: p.opacity || 1
+                readonly property real px: tParams.x !== undefined ? Number(tParams.x) : 0
+                readonly property real py: tParams.y !== undefined ? Number(tParams.y) : 0
+                readonly property real pz: tParams.z !== undefined ? Number(tParams.z) : 0
+                readonly property real pRotX: tParams.rotationX !== undefined ? Number(tParams.rotationX) : 0
+                readonly property real pRotY: tParams.rotationY !== undefined ? Number(tParams.rotationY) : 0
+                readonly property real pRotZ: tParams.rotationZ !== undefined ? Number(tParams.rotationZ) : 0
+                readonly property real pScale: tParams.scale !== undefined ? Number(tParams.scale) : 100
+                readonly property real pAspect: tParams.aspect !== undefined ? Number(tParams.aspect) : 0
+                readonly property real pOpacity: tParams.opacity !== undefined ? Number(tParams.opacity) : 1
                 // 拡大率と縦横比
                 readonly property real baseScale: pScale * 0.01
                 readonly property real aspectX: pAspect >= 0 ? (1 + pAspect) : 1
@@ -293,7 +299,7 @@ Item {
                 y: -effectiveTransform.y
                 z: effectiveTransform.z
                 // 中心座標 (Pivot)
-                pivot: Qt.vector3d(p.anchorX || 0, -(p.anchorY || 0), p.anchorZ || 0)
+                pivot: Qt.vector3d(tParams.anchorX || 0, -(tParams.anchorY || 0), tParams.anchorZ || 0)
                 // 3軸回転
                 eulerRotation.x: effectiveTransform.rx
                 eulerRotation.y: -effectiveTransform.ry
@@ -345,14 +351,17 @@ Item {
                     source: _clipData.qmlSource || ""
                     properties: {
                         "opacity": clipNode.pOpacity,
-                        "clipId": _clipData.id,
-                        "clipStartFrame": _clipData.startFrame,
-                        "clipDurationFrames": _clipData.durationFrames,
+                        "clipId": clipNode.clipIdRole,
+                        "clipStartFrame": clipNode.clipStartFrameRole,
+                        "clipDurationFrames": clipNode.clipDurationFramesRole,
                         "currentFrame": Qt.binding(function() {
                             return root.currentFrame;
                         }),
                         "clipEvalParams": Qt.binding(function() {
-                            return _clipData.evalParams;
+                            return clipNode.clipEvalParamsRole;
+                        }),
+                        "rawEffectModels": Qt.binding(function() {
+                            return clipNode.clipEffectModelsRole;
                         }),
                         "renderHost": offscreenRenderHost
                     }

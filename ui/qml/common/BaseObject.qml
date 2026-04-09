@@ -45,8 +45,7 @@ Node {
     property int _tmRev: 0
     // 合成モードの計算 (Transform.qmlを変更できないためここで処理)
     readonly property int blendMode: {
-        var _ = _tmRev; // 依存関係作成
-        var m = transformModel ? transformModel.evaluatedParam("blendMode", relFrame, projectFps) : qsTr("通常");
+        var m = evalString("transform", "blendMode", qsTr("通常"));
         if (m === qsTr("スクリーン"))
             return DefaultMaterial.Screen;
 
@@ -67,11 +66,11 @@ Node {
     // カリングモード (Transform.qmlから取得)
     readonly property int cullMode: hasTransform ? transformLoader.item.outputCullMode : DefaultMaterial.NoCulling
     // 自動計算プロパティ
-    property int currentFrame: (TimelineBridge && TimelineBridge.transport) ? TimelineBridge.transport.currentFrame : 0
+    property int currentFrame: 0
     // Will be overridden by CompositeView
     readonly property int relFrame: currentFrame - clipStartFrame
     readonly property real projectFps: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.fps : 60
-    property var rawEffectModels: (TimelineBridge && clipId > 0) ? TimelineBridge.getClipEffectsModel(clipId) : []
+    property var rawEffectModels: []
     // フィルタ系エフェクト（transform/object以外）
     readonly property var filterModels: {
         var res = [];
@@ -87,11 +86,45 @@ Node {
     // 子クラスがオーバーライドするプロパティ
     property Item sourceItem
     property alias renderer: rendererInstance
-    // CompositeViewのNodeLoaderから注入される評価済みパラメータ
+    // 【統一API】キーフレーム優先評価（全オブジェクトで使用可能）
+    // _paramRev を読むことで Connections→onParamsChanged() への依存を確立する。
+    // property var の配列要素に対する直接依存は QML エンジンが追跡できないため、
+    // _tmRev と同じカウンタ方式を採用する。
+    // CompositeViewのNodeLoaderから注入される評価済みパラメータ (単一ソース)
     property var clipEvalParams: ({
     })
     readonly property var evalParams: clipEvalParams ?? ({
     })
+
+    function _lookupParam(effectId, paramName) {
+        var eff = evalParams ? evalParams[effectId] : undefined;
+        return eff ? eff[paramName] : undefined;
+    }
+
+    function evalParam(effectId, paramName, fallback) {
+        var v = _lookupParam(effectId, paramName);
+        return (v !== undefined && v !== null) ? v : fallback;
+    }
+
+    function evalString(effectId, paramName, fallback) {
+        var v = _lookupParam(effectId, paramName);
+        return (v !== undefined && v !== null) ? String(v) : fallback;
+    }
+
+    function evalNumber(effectId, paramName, fallback) {
+        var v = _lookupParam(effectId, paramName);
+        return (v !== undefined && v !== null && v !== "") ? Number(v) : fallback;
+    }
+
+    function evalBool(effectId, paramName, fallback) {
+        var v = _lookupParam(effectId, paramName);
+        return (v !== undefined && v !== null) ? Boolean(v) : fallback;
+    }
+
+    function evalColor(effectId, paramName, fallback) {
+        var v = _lookupParam(effectId, paramName);
+        return (v !== undefined && v !== null) ? v : fallback;
+    }
 
     function adopt2D(item) {
         if (!item || !renderHost)
@@ -104,11 +137,6 @@ Node {
         // visible を落とすと SceneGraph から外れてテクスチャ更新が止まり得るので触らない。
         // 表示は CompositeView 側の host opacity と ShaderEffectSource.hideSource に任せる。
         owned2D.push(item);
-    }
-
-    function evalParam(effectId, paramName, fallback) {
-        var v = evalParams && evalParams[effectId] ? evalParams[effectId][paramName] : undefined;
-        return (v !== undefined && v !== null) ? v : fallback;
     }
 
     // ぼかしパディング自動計算（全オブジェクト共通）
