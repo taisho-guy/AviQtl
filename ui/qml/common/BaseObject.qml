@@ -3,6 +3,10 @@ import QtQuick
 import QtQuick3D
 
 Node {
+    // object エフェクト（text/rect/image 等）のパラメータ変更検知
+    // _tmRev と同じカウンタ方式: property var 配列要素への直接依存は
+    // QML エンジンが追跡できないため Connections 経由で強制通知する
+
     id: base
 
     // CompositeView 側から渡される「Window配下のItem」。ここに2D系を寄せる
@@ -13,8 +17,6 @@ Node {
     property int sceneId: -1
     property int clipStartFrame: 0
     property int clipDurationFrames: 0
-    property var clipParams: ({
-    })
     // CompositeView の FB 収集ロジックから参照される公開プロパティ
     // clipNode (CompositeView の delegate) から layer 番号を注入する
     // clipNode.clipLayerRole は model.layer と同期、
@@ -85,6 +87,11 @@ Node {
     // 子クラスがオーバーライドするプロパティ
     property Item sourceItem
     property alias renderer: rendererInstance
+    // CompositeViewのNodeLoaderから注入される評価済みパラメータ
+    property var clipEvalParams: ({
+    })
+    readonly property var evalParams: clipEvalParams ?? ({
+    })
 
     function adopt2D(item) {
         if (!item || !renderHost)
@@ -99,13 +106,9 @@ Node {
         owned2D.push(item);
     }
 
-    // 【統一API】キーフレーム優先評価（全オブジェクトで使用可能）
     function evalParam(effectId, paramName, fallback) {
-        // clipParamsはClipModelから渡されるフラットなパラメータマップ
-        if (clipParams && clipParams[paramName] !== undefined)
-            return clipParams[paramName];
-
-        return fallback;
+        var v = evalParams && evalParams[effectId] ? evalParams[effectId][paramName] : undefined;
+        return (v !== undefined && v !== null) ? v : fallback;
     }
 
     // ぼかしパディング自動計算（全オブジェクト共通）

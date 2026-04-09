@@ -1,6 +1,9 @@
 #pragma once
+#include <QHash>
 #include <QSet>
 #include <QString>
+#include <QVariant>
+#include <QVariantMap>
 #include <array>
 #include <atomic>
 #include <cstddef>
@@ -126,12 +129,16 @@ struct RenderComponent {
     QString effectChain;
 };
 
+struct EvaluatedParamsComponent {
+    QHash<QString, QVariantMap> effects;
+};
 struct ECSState {
     bool renderGraphDirty = false;
     DenseComponentMap<TransformComponent> transforms;
     DenseComponentMap<RenderComponent> renderStates;
     DenseComponentMap<AudioComponent> audioStates;
     DenseComponentMap<MetadataComponent> metadataStates;
+    DenseComponentMap<EvaluatedParamsComponent> evaluatedParams;
 };
 
 class ECS {
@@ -144,6 +151,12 @@ class ECS {
     void updateMetadata(int clipId, const QString &name, const QString &source, const QString &type, const QString &color);
 
     void commit();
+
+    ECSState &editState() { return m_buffers[m_editIndex]; }
+    void markEvaluatedParamsDirty(int clipId) {
+        m_dirtyForBuffer[(m_editIndex + 1) % 3].insert(clipId);
+        m_dirtyForBuffer[(m_editIndex + 2) % 3].insert(clipId);
+    }
 
     // スナップショットのポインタを返す。戻り値は呼び出し側スレッドで安全に利用できる。
     const ECSState *getSnapshot() const;

@@ -637,11 +637,7 @@ void TimelineController::splitSelectedClips(int frame) {
     }
 }
 
-auto TimelineController::evaluateClipParams(int clipId, int relFrame) const -> QVariantMap {
-    // relFrame は無視し、EngineSynchronizer が計算済みの最新キャッシュを返す。
-    // これにより UI スレッドでの Lua 実行が完全に排除される。
-    return m_engineSync->getCachedParams(clipId);
-}
+auto TimelineController::evaluateClipParams(int clipId, int relFrame) const -> QVariantMap { return {}; }
 void TimelineController::copyClip(int clipId) { m_timeline->copyClip(clipId); }
 
 void TimelineController::cutClip(int clipId) { m_timeline->cutClip(clipId); }

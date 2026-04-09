@@ -327,7 +327,7 @@ class BuildWorker(QtCore.QThread):
                 dest_path = asset_dest / d
                 if src_path.exists():
                     # Linuxの場合は不要なシェーダーソースを除外
-                    ignore_pat = shutil.ignore_patterns("*.frag", "*.vert", "*.glsl") if self.system == "Linux" else None
+                    ignore_pat = shutil.ignore_patterns("*.frag", "*.vert", "*.comp", "*.glsl")
                     shutil.copytree(src_path, dest_path, ignore=ignore_pat, dirs_exist_ok=True)
 
             # コンパイル済みシェーダー(.qsb)のコピー

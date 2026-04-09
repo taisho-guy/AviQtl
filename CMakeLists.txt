@@ -6,7 +6,6 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-
 # Qtの標準最適化を有効化
 set(QT_QML_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/qml)
 
@@ -22,9 +21,7 @@ list(APPEND CMAKE_MODULE_PATH ${ECM_MODULE_PATH})
 find_package(KF6 REQUIRED COMPONENTS Kirigami ColorScheme)
 find_package(PkgConfig REQUIRED)
 
-# FFmpeg Integration for Hardware Encoding
 pkg_check_modules(FFMPEG IMPORTED_TARGET REQUIRED libavcodec libavformat libavutil libswscale libswresample)
-
 
 # Carla Audio Plugin Backend
 if(WIN32)
@@ -36,7 +33,7 @@ if(WIN32)
     # Windowsでは手動指定を優先し、なければpkg-configを試す
     find_path(CARLA_INCLUDE_DIR NAMES CarlaBackend.h PATHS ${CARLA_SDK_DIR}/include)
     find_library(CARLA_LIBRARY NAMES carla-standalone PATHS ${CARLA_SDK_DIR}/lib ${CARLA_SDK_DIR})
-    
+
     if(CARLA_INCLUDE_DIR AND CARLA_LIBRARY)
         set(CARLA_FOUND TRUE)
         set(CARLA_INCLUDE_DIRS ${CARLA_INCLUDE_DIR})
@@ -126,7 +123,14 @@ qt_add_qml_module(Rina
     URI "Rina"
     VERSION 1.0
     RESOURCE_PREFIX "/qt/qml"
-    
+
+    # [追加] QML_ELEMENT マクロを持つ C++ 型を qmltyperegistrar に明示登録する。
+    # GLOB_RECURSE で既にターゲットに含まれているが、ここに列挙することで
+    # Qt の型情報生成パイプラインが確実にスキャン対象として認識する。
+    SOURCES
+        core/include/compute_effect.hpp
+        core/src/compute_effect.cpp
+
     QML_FILES
         ui/qml/MainWindow.qml
         ui/qml/TimelineWindow.qml
@@ -155,13 +159,14 @@ qt_add_qml_module(Rina
         ui/qml/ExportDialog.qml
         ui/qml/AboutWindow.qml
         ui/qml/UpdateNotificationWindow.qml
-        
+
         ui/qml/common/RinaWindow.qml
         ui/qml/common/ParamControl.qml
         ui/qml/common/ControlLoader.qml
         ui/qml/common/ObjectRenderer.qml
         ui/qml/common/BaseObject.qml
         ui/qml/common/BaseEffect.qml
+        ui/qml/common/BaseComputeEffect.qml
         ui/qml/common/Logger.js
         ui/qml/common/EasingConfigWindow.qml
         ui/qml/common/NodeLoader.qml
@@ -191,7 +196,6 @@ target_link_libraries(
                    PkgConfig::FFMPEG
                    ${CARLA_LIBRARIES}
                    KF6::Kirigami KF6::ColorScheme)
-
 
 # Carlaのライブラリパスを明示（/usr/lib/carla/ 等の非標準ディレクトリ対策）
 target_link_directories(Rina PRIVATE ${CARLA_LIBRARY_DIRS})
@@ -245,37 +249,52 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT DEFINED CMAKE_LINKER_TYPE)
 endif()
 
 # QMLオブジェクト/エフェクト/プラグインをビルド時に毎回コピー
+file(WRITE ${CMAKE_BINARY_DIR}/copy_assets.cmake "
+file(COPY \"${CMAKE_SOURCE_DIR}/ui/qml/objects/\" DESTINATION \"${CMAKE_BINARY_DIR}/objects\" PATTERN \"*.frag\" EXCLUDE PATTERN \"*.vert\" EXCLUDE PATTERN \"*.comp\" EXCLUDE PATTERN \"*.glsl\" EXCLUDE)
+file(COPY \"${CMAKE_SOURCE_DIR}/ui/qml/effects/\" DESTINATION \"${CMAKE_BINARY_DIR}/effects\" PATTERN \"*.frag\" EXCLUDE PATTERN \"*.vert\" EXCLUDE PATTERN \"*.comp\" EXCLUDE PATTERN \"*.glsl\" EXCLUDE)
+file(COPY \"${CMAKE_SOURCE_DIR}/plugins/\" DESTINATION \"${CMAKE_BINARY_DIR}/plugins\")
+")
 add_custom_target(copy_runtime_assets ALL
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/ui/qml/objects ${CMAKE_BINARY_DIR}/objects
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/ui/qml/effects ${CMAKE_BINARY_DIR}/effects
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/plugins        ${CMAKE_BINARY_DIR}/plugins
-    COMMENT "Runtime assets をビルドディレクトリへコピー"
+    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_BINARY_DIR}/copy_assets.cmake
+    COMMENT \"Copying runtime assets (excluding shader sources)\"
     VERBATIM
 )
 
-# シェーダーのコンパイル (.frag -> .qsb)
+# シェーダーのコンパイル (.frag/.vert/.comp -> .qsb)
+# Compute シェーダーは GLSL 430 以上・MSL 20・HLSL 50 が必要。
+# フラグメント/バーテックス用の "100 es,120,150,310 es" を含めても問題ないが、
+# Compute には 430 が最低要件のため引数を統合して対応。
+# copy_runtime_assets より後に実行されるよう依存関係を明示し、
+# .qsb が .comp の生コピーで上書きされないようにする。
 function(compile_shaders TARGET_SUFFIX SRC_DIR DEST_DIR)
     file(GLOB SHADERS "${SRC_DIR}/*.frag" "${SRC_DIR}/*.vert" "${SRC_DIR}/*.comp")
     set(QSB_OUTPUTS "")
     foreach(SHADER ${SHADERS})
         get_filename_component(FILENAME ${SHADER} NAME)
+        get_filename_component(EXT ${SHADER} EXT)
         set(QSB_FILE "${DEST_DIR}/${FILENAME}.qsb")
-        
+
+        if(EXT STREQUAL ".comp")
+            set(GLSL_ARGS "310 es,430")
+        else()
+            set(GLSL_ARGS "100 es,120,150,310 es,430")
+        endif()
+
         add_custom_command(
             OUTPUT ${QSB_FILE}
-            COMMAND Qt6::qsb --glsl "100 es,120,150,310 es,430" --hlsl 50 --msl 12 ${SHADER} -o ${QSB_FILE}
+            COMMAND Qt6::qsb --glsl "${GLSL_ARGS}" --hlsl 50 --msl 20 ${SHADER} -o ${QSB_FILE}
             DEPENDS ${SHADER} ${COMMON_SHADERS}
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
             COMMENT "Compiling shader ${FILENAME} to .qsb"
         )
         list(APPEND QSB_OUTPUTS ${QSB_FILE})
     endforeach()
-    
+
     if(QSB_OUTPUTS)
         add_custom_target(CompileShaders_${TARGET_SUFFIX} ALL DEPENDS ${QSB_OUTPUTS})
+        # copy_runtime_assets の後にシェーダーをコンパイルすることで
+        # .qsb ファイルが生コピーで上書きされる競合を防ぐ
+        add_dependencies(CompileShaders_${TARGET_SUFFIX} copy_runtime_assets)
         add_dependencies(Rina CompileShaders_${TARGET_SUFFIX})
     endif()
 endfunction()

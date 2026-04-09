@@ -351,11 +351,10 @@ Item {
                         "currentFrame": Qt.binding(function() {
                             return root.currentFrame;
                         }),
-                        "renderHost": offscreenRenderHost,
-                        "clipParams": Qt.binding(function() {
-                            return _clipData.params || {
-                            };
-                        })
+                        "clipEvalParams": Qt.binding(function() {
+                            return _clipData.evalParams;
+                        }),
+                        "renderHost": offscreenRenderHost
                     }
                     componentFactory: root.getCachedComponent
                     // NodeLoader 完了後に fbRendererOutput を clipNode へ接続

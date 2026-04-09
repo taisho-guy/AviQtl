@@ -1180,22 +1180,53 @@ Common.RinaWindow {
 
     menuBar: MenuBar {
         Menu {
+            // ignore
+
             id: filterMenu
+
+            // 動的生成したオブジェクトをここで管理する
+            property var _dynamicObjects: []
+
+            function _registerDynamic(obj) {
+                if (obj)
+                    _dynamicObjects.push(obj);
+
+                return obj;
+            }
+
+            function _clearDynamicMenu() {
+                // Menu の管理から外す（takeItem/removeMenu は不要。addMenu/addItem した順序管理が複雑なため）
+                // Qt では addMenu/addItem した Menu/MenuItem は Menu の "item model" 側に保持されるが
+                // createObject で生成した Qt オブジェクト本体の所有権は parent にある。
+                // ここでは clear() で Menu の表示リストをリセットし、
+                // 自前リストに追跡しているオブジェクトを destroy() する。
+                clear();
+                for (var i = 0; i < _dynamicObjects.length; ++i) {
+                    var obj = _dynamicObjects[i];
+                    if (obj) {
+                        try {
+                            obj.destroy();
+                        } catch (e) {
+                        }
+                    }
+                }
+                _dynamicObjects = [];
+            }
 
             function buildMenu(parentMenu, items) {
                 for (var i = 0; i < items.length; ++i) {
                     var node = items[i];
                     if (node.isCategory) {
-                        var subMenu = subMenuComp.createObject(root.contentItem, {
+                        var subMenu = _registerDynamic(subMenuComp.createObject(root.contentItem, {
                             "title": node.title
-                        });
+                        }));
                         buildMenu(subMenu, node.children);
                         parentMenu.addMenu(subMenu);
                     } else {
-                        var effItem = menuItemComp.createObject(root.contentItem, {
+                        var effItem = _registerDynamic(menuItemComp.createObject(root.contentItem, {
                             "text": node.name,
                             "iconName": "magic_line"
-                        });
+                        }));
                         (function(id) {
                             effItem.triggered.connect(() => {
                                 TimelineBridge.addEffect(targetClipId, id);
@@ -1208,17 +1239,7 @@ Common.RinaWindow {
 
             title: qsTr("エフェクトを追加")
             onAboutToShow: {
-                // 古いアイテムを破棄してクリア
-                while (count > 0) {
-                    var it = takeItem(0);
-                    if (it) {
-                        try {
-                            it.destroy();
-                        } catch (e) {
-                            console.log("SettingDialog Menu destroy exception:", e);
-                        }
-                    }
-                }
+                _clearDynamicMenu();
                 if (!TimelineBridge)
                     return ;
 
@@ -1227,16 +1248,16 @@ Common.RinaWindow {
                     var categories = TimelineBridge.getPluginCategories();
                     for (var c = 0; c < categories.length; c++) {
                         var catName = categories[c];
-                        var subMenu = subMenuComp.createObject(root.contentItem, {
+                        var subMenu = _registerDynamic(subMenuComp.createObject(root.contentItem, {
                             "title": catName
-                        });
+                        }));
                         var plugins = TimelineBridge.getPluginsByCategory(catName);
                         for (var p = 0; p < plugins.length; p++) {
                             var plug = plugins[p];
-                            var plugItem = menuItemComp.createObject(root.contentItem, {
+                            var plugItem = _registerDynamic(menuItemComp.createObject(root.contentItem, {
                                 "text": plug.name,
                                 "iconName": "music_line"
-                            });
+                            }));
                             (function(id) {
                                 plugItem.triggered.connect(() => {
                                     TimelineBridge.addAudioPlugin(targetClipId, id);

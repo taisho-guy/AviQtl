@@ -1,5 +1,6 @@
 #include "clip_model.hpp"
 #include "effect_registry.hpp"
+#include "engine/timeline/ecs.hpp"
 #include "timeline_engine_synchronizer.hpp"
 #include "transport_service.hpp"
 
@@ -23,8 +24,8 @@ auto ClipModel::roleNames() const -> QHash<int, QByteArray> {
     roles.insert(DurationRole, "durationFrames");
     roles.insert(LayerRole, "layer");
     roles.insert(Qt::UserRole + 100, "qmlSource");
-    roles.insert(ParamsRole, "params");
     roles.insert(EffectsRole, "effectModels");
+    roles.insert(EvalParamsRole, "evalParams");
     return roles;
 }
 
@@ -60,9 +61,15 @@ auto ClipModel::data(const QModelIndex &index, int role) const -> QVariant {
         }
         return list;
     }
-    case ParamsRole: {
-        auto *sync = qobject_cast<TimelineEngineSynchronizer *>(parent());
-        return (sync != nullptr) ? sync->getCachedParams(clip->id) : QVariantMap();
+    case EvalParamsRole: {
+        const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+        if (const auto *ep = snap->evaluatedParams.find(clip->id)) {
+            QVariantMap out;
+            for (auto it = ep->effects.cbegin(); it != ep->effects.cend(); ++it)
+                out.insert(it.key(), it.value());
+            return out;
+        }
+        return QVariantMap{};
     }
     default:
         return {};
@@ -70,7 +77,6 @@ auto ClipModel::data(const QModelIndex &index, int role) const -> QVariant {
 }
 
 void ClipModel::updateClips(const QList<ClipData *> &newClips) {
-    // クリップのポインタリストを比較し、顔ぶれが変わっていないかチェック
     bool identical = (m_activeClips.size() == newClips.size());
     if (identical) {
         for (int i = 0; i < m_activeClips.size(); ++i) {
@@ -86,12 +92,10 @@ void ClipModel::updateClips(const QList<ClipData *> &newClips) {
         m_activeClips = newClips;
         endResetModel();
     } else if (!newClips.isEmpty()) {
-        // リストは同じだがパラメータが変わった可能性がある場合
-        // ParamsRole (および EffectsRole) の変更を通知
         QModelIndex topLeft = index(0, 0);
         QModelIndex bottomRight = index(rowCount() - 1, 0);
         QList<int> roles;
-        roles << ParamsRole << EffectsRole;
+        roles << EffectsRole << EvalParamsRole;
         emit dataChanged(topLeft, bottomRight, roles);
     }
 }

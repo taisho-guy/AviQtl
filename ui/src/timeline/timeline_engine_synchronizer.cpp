@@ -2,179 +2,124 @@
 #include "clip_model.hpp"
 #include "engine/timeline/ecs.hpp"
 #include "timeline_controller.hpp"
-#include <QThreadPool>
-#include <QtConcurrent>
 #include <algorithm>
 
 namespace Rina::UI {
 
-// Archetypeごとの計算ワークロードを定義
-struct ArchetypeBatch {
-    struct EffectDesc {
-        int index;
-        QStringList floatKeys;
-        QStringList variantKeys;
-    };
-    QList<ClipData *> clips;
-    QList<EffectDesc> activeEffects;
-    QStringList allFloatKeys;
-    QStringList allVariantKeys;
-};
+TimelineEngineSynchronizer::TimelineEngineSynchronizer(TimelineController *controller, QObject *parent) : QObject(parent), m_controller(controller), m_clipModel(new ClipModel(controller->transport(), this)) {}
 
-TimelineEngineSynchronizer::TimelineEngineSynchronizer(TimelineController *controller, QObject *parent) : QObject(parent), m_controller(controller), m_clipModel(new ClipModel(controller->transport(), this)) {
+int TimelineEngineSynchronizer::buildIntervalTree(int left, int right) {
+    if (left > right) {
+        return -1;
+    }
+    int mid = left + (right - left) / 2;
+    int nodeIdx = mid; // インデックスと配列位置を一致させる（O(1)アクセス）
+    auto &node = m_intervalTree[nodeIdx];
+    node.clip = m_sortedClips[mid];
+    node.maxEnd = node.clip->startFrame + node.clip->durationFrames;
+    node.left = buildIntervalTree(left, mid - 1);
+    node.right = buildIntervalTree(mid + 1, right);
 
-    connect(&m_futureWatcher, &QFutureWatcher<QList<ClipEngineResult>>::finished, this, &TimelineEngineSynchronizer::handleResultsReady);
+    if (node.left != -1) {
+        node.maxEnd = std::max(node.maxEnd, m_intervalTree[node.left].maxEnd);
+    }
+    if (node.right != -1) {
+        node.maxEnd = std::max(node.maxEnd, m_intervalTree[node.right].maxEnd);
+    }
+    return nodeIdx;
 }
 
-void TimelineEngineSynchronizer::updateActiveClipsList() {
-    // 前回のバックグラウンド・コミットが継続中の場合はスキップして最新に追従させる
-    if (m_isCommitting.load(std::memory_order_acquire)) {
+void TimelineEngineSynchronizer::queryIntervalTree(int nodeIdx, int frame, QList<ClipData *> &result) {
+    if (nodeIdx == -1) {
+        return;
+    }
+    const auto &node = m_intervalTree[nodeIdx];
+
+    // 枝刈り: この部分木の最大終了時間が現在フレーム以下なら交差するクリップは存在しない
+    if (node.maxEnd <= frame) {
         return;
     }
 
+    if (frame < node.clip->startFrame) {
+        // 現在フレームがこのノードの開始時間より前の場合、
+        // 右部分木のクリップは全て開始時間がさらに未来になるため交差しない。左のみ探索する。
+        queryIntervalTree(node.left, frame, result);
+    } else {
+        // 交差判定
+        int end = node.clip->startFrame + node.clip->durationFrames;
+        if (frame < end) {
+            if (!m_controller->timeline()->isLayerHidden(node.clip->layer)) {
+                result.append(node.clip);
+            }
+        }
+        // 左部分木にもまだ交差する長いクリップがあるかもしれない
+        queryIntervalTree(node.left, frame, result);
+        // 右部分木は開始時間が現在フレーム以下なので交差の可能性がある
+        queryIntervalTree(node.right, frame, result);
+    }
+}
+
+QVariantMap TimelineEngineSynchronizer::getCachedParams(int clipId) const {
+    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    if (const auto *ep = snap->evaluatedParams.find(clipId)) {
+        QVariantMap out;
+        for (auto it = ep->effects.cbegin(); it != ep->effects.cend(); ++it)
+            out.insert(it.key(), it.value());
+        return out;
+    }
+    return {};
+}
+
+void TimelineEngineSynchronizer::updateActiveClipsList() {
     int current = m_controller->transport()->currentFrame();
-    QList<ClipData *> active = m_controller->timeline()->resolvedActiveClipsAt(current);
+
+    QList<ClipData *> active;
+    // 厳密な O(log n + k) 区間検索 (Interval Tree)
+    queryIntervalTree(m_treeRoot, current, active);
 
     // レイヤー番号が小さいほど背面、大きいほど前面になるようソート
     std::ranges::sort(active, [](const ClipData *a, const ClipData *b) -> bool { return a->layer > b->layer; });
 
-    m_clipModel->updateClips(active);
+    double fps = m_controller->project()->fps();
 
-    // Archetype (エフェクト構成の指紋) ごとにグループ化
-    QMap<QString, ArchetypeBatch> archetypeBatches;
-    for (ClipData *clip : active) {
-        QString sig = clip->type;
-        for (auto *eff : clip->effects) {
-            if (eff->isEnabled()) {
-                sig += QLatin1String(":") + eff->id();
-            }
-        }
+    // パラメータ評価を C++ 側で一括実行
+    m_paramEvalSystem.evaluate(active, current, fps);
 
-        auto &batch = archetypeBatches[sig];
-        if (batch.clips.isEmpty()) {
-            for (int i = 0; i < clip->effects.size(); ++i) {
-                if (clip->effects.value(i)->isEnabled()) {
-                    QStringList fKeys;
-                    QStringList vKeys;
-                    QVariantMap params = clip->effects.value(i)->params();
-                    for (auto it = params.begin(); it != params.end(); ++it) {
-                        // 数値として扱えるか判定（文字列や色はVariantとして残す）
-                        auto type = it.value().typeId();
-                        if (type == QMetaType::Double || type == QMetaType::Float || type == QMetaType::Int || type == QMetaType::LongLong) {
-                            fKeys << it.key();
-                        } else {
-                            vKeys << it.key();
-                        }
+    for (const ClipData *clip : std::as_const(active)) {
+        int relFrame = current - clip->startFrame;
+
+        Rina::Engine::Timeline::ECS::instance().updateClipState(clip->id, clip->layer, relFrame);
+
+        if (clip->type == QLatin1String("audio") || clip->type == QLatin1String("video")) {
+            float vol = 1.0F;
+            float pan = 0.0F;
+            bool mute = false;
+            for (auto *eff : clip->effects) {
+                if (eff->id() == clip->type) {
+                    QVariant vVol = eff->evaluatedParam(QStringLiteral("volume"), relFrame, fps);
+                    if (vVol.isValid()) {
+                        vol = vVol.toFloat();
                     }
-                    batch.activeEffects.append({.index = i, .floatKeys = fKeys, .variantKeys = vKeys});
-                    batch.allFloatKeys << fKeys;
-                    batch.allVariantKeys << vKeys;
+                    pan = eff->evaluatedParam(QStringLiteral("pan"), relFrame, fps).toFloat();
+                    mute = eff->evaluatedParam(QStringLiteral("mute"), relFrame, fps).toBool();
+                    break;
                 }
             }
+            Rina::Engine::Timeline::ECS::instance().updateAudioClipState(clip->id, clip->startFrame, clip->durationFrames, vol, pan, mute);
         }
-        batch.clips.append(clip);
     }
 
-    double fps = m_controller->project()->fps();
-    updateECSState(archetypeBatches.values(), current, fps);
-}
-
-void TimelineEngineSynchronizer::updateECSState(const QList<ArchetypeBatch> &batches, int currentFrame, double fps) {
-    auto batchMapper = [currentFrame, fps](const ArchetypeBatch &batch) -> QList<ClipEngineResult> {
-        QList<ClipEngineResult> results;
-        results.reserve(batch.clips.size());
-
-        for (const ClipData *clip : batch.clips) {
-            ClipEngineResult res;
-            res.clipId = clip->id;
-            res.layer = clip->layer;
-            res.relFrame = currentFrame - clip->startFrame;
-            res.propertyNames = batch.allFloatKeys;
-            res.propertyValues.reserve(batch.allFloatKeys.size());
-            res.variantNames = batch.allVariantKeys;
-            res.variantValues.reserve(batch.allVariantKeys.size());
-
-            // 1. エフェクト計算
-            for (const auto &ed : batch.activeEffects) {
-                auto *eff = clip->effects.value(ed.index);
-                // 数値パラメータ (DOD path)
-                for (const auto &key : ed.floatKeys) {
-                    res.propertyValues.push_back(eff->evaluatedParam(key, res.relFrame, fps).toFloat());
-                }
-                // 非数値パラメータ (Variant path)
-                for (const auto &key : ed.variantKeys) {
-                    res.variantValues.append(eff->evaluatedParam(key, res.relFrame, fps));
-                }
-            }
-
-            // 2. オーディオ/ビデオ共通属性
-            if (clip->type == QLatin1String("audio") || clip->type == QLatin1String("video")) {
-                res.hasAudio = true;
-                res.startFrame = clip->startFrame;
-                res.durationFrames = clip->durationFrames;
-                for (const auto &ed : batch.activeEffects) {
-                    auto *eff = clip->effects.value(ed.index);
-                    if (eff->id() == clip->type) {
-                        QVariant vVol = eff->evaluatedParam(QStringLiteral("volume"), res.relFrame, fps);
-                        res.vol = vVol.isValid() ? vVol.toFloat() : 1.0F;
-                        res.pan = eff->evaluatedParam(QStringLiteral("pan"), res.relFrame, fps).toFloat();
-                        res.mute = eff->evaluatedParam(QStringLiteral("mute"), res.relFrame, fps).toBool();
-                        break;
-                    }
-                }
-            }
-            results.append(res);
-        }
-        return results;
-    };
-
-    m_futureWatcher.setFuture(QtConcurrent::mapped(batches, batchMapper));
-}
-
-void TimelineEngineSynchronizer::handleResultsReady() {
-    // 重い「QVariantMapの復元」と「ECSの裏側バッファ（Back Buffer）への書き込み」をバックグラウンドへ逃がす
-    const auto batchResults = m_futureWatcher.future().results();
-    m_isCommitting.store(true, std::memory_order_release);
-
-    QThreadPool::globalInstance()->start([this, batchResults]() -> void {
-        QHash<int, QVariantMap> nextCache;
-
-        for (const auto &results : batchResults) {
-            for (const auto &res : results) {
-                // UIスレッド用に QVariantMap を復元
-                QVariantMap resMap;
-                for (int i = 0; i < static_cast<int>(res.propertyNames.size()); ++i) {
-                    resMap.insert(res.propertyNames.value(i), res.propertyValues[static_cast<std::size_t>(i)]);
-                }
-                // 非数値（テキスト等）を復元
-                for (int i = 0; i < res.variantNames.size(); ++i) {
-                    resMap.insert(res.variantNames.value(i), res.variantValues.value(i));
-                }
-                nextCache.insert(res.clipId, resMap);
-
-                // ECSの「裏側」のバッファを更新。ECS内部でダブルバッファリングが実装されている前提
-                Rina::Engine::Timeline::ECS::instance().updateClipState(res.clipId, res.layer, res.relFrame);
-                if (res.hasAudio) {
-                    Rina::Engine::Timeline::ECS::instance().updateAudioClipState(res.clipId, res.startFrame, res.durationFrames, res.vol, res.pan, res.mute);
-                }
-            }
-        }
-
-        // 全ての書き込みが完了したらメインスレッドでスワップ（O(1)）のみ行う
-        QMetaObject::invokeMethod(this, [this, nextCache]() -> void { finalizeCommit(nextCache); }, Qt::QueuedConnection);
-    });
-}
-
-void TimelineEngineSynchronizer::finalizeCommit(const QHash<int, QVariantMap> &newCache) {
-    m_frontParamCache = newCache;
-    Rina::Engine::Timeline::ECS::instance().commit(); // ここで Front と Back をポインタスワップ
-    m_isCommitting.store(false, std::memory_order_release);
+    Rina::Engine::Timeline::ECS::instance().commit();
+    m_clipModel->updateClips(active);
 }
 
 void TimelineEngineSynchronizer::rebuildClipIndex() {
     m_sortedClips.clear();
+    m_intervalTree.clear();
+    m_treeRoot = -1;
     m_maxDuration = 0;
     m_timelineDuration = 0;
+
     auto &clips = m_controller->timeline()->clipsMutable();
     m_sortedClips.reserve(clips.size());
 
@@ -188,7 +133,15 @@ void TimelineEngineSynchronizer::rebuildClipIndex() {
         int end = clip.startFrame + clip.durationFrames;
         m_timelineDuration = std::max(end, m_timelineDuration);
     }
+
+    // startFrame でソート
     std::ranges::sort(m_sortedClips, [](const ClipData *a, const ClipData *b) -> bool { return a->startFrame < b->startFrame; });
+
+    // Interval Tree の構築 (O(n))
+    if (!m_sortedClips.isEmpty()) {
+        m_intervalTree.resize(m_sortedClips.size());
+        m_treeRoot = buildIntervalTree(0, static_cast<int>(m_sortedClips.size()) - 1);
+    }
 
     // ECSの不要になったコンポーネントを掃除する
     Rina::Engine::Timeline::ECS::instance().syncClipIds(aliveIds);
