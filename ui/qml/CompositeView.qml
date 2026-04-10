@@ -194,11 +194,11 @@ Item {
                 property int clipDurationFramesRole: _clipData.durationFrames
                 property url clipQmlSourceRole: _clipData.qmlSource || ""
                 property var clipEffectModelsRole: _clipData.effectModels || []
-                property var clipEvalParamsRole: _clipData.evalParams || ({
-                })
+                property var clipEvalParamsRole: (typeof modelData !== "undefined" ? modelData.evalParams : model.evalParams) || {
+                }
                 property Item fbRendererOutput: null // NodeLoader 完了後に接続
                 // 評価済みパラメータからtransform値を取得 (単一経路化)
-                readonly property var tParams: _clipData.evalParams && _clipData.evalParams["transform"] ? _clipData.evalParams["transform"] : {
+                readonly property var tParams: clipEvalParamsRole["transform"] || {
                 }
                 readonly property real px: tParams.x !== undefined ? Number(tParams.x) : 0
                 readonly property real py: tParams.y !== undefined ? Number(tParams.y) : 0
@@ -224,7 +224,7 @@ Item {
                         if (!gc)
                             continue;
 
-                        if (gc.clipLayer < _clipData.layer && _clipData.layer <= (gc.clipLayer + gc.layerCount))
+                        if (gc.clipLayer < clipLayerRole && clipLayerRole <= (gc.clipLayer + gc.layerCount))
                             activeGroups.push(gc);
 
                     }
@@ -277,7 +277,7 @@ Item {
                 }
 
                 function dbg(msg) {
-                    Logger.log("[CompositeView][clipId=" + _clipData.id + "][type=" + _clipData.type + "] " + msg, TimelineBridge);
+                    Logger.log("[CompositeView][clipId=" + clipIdRole + "][type=" + clipTypeRole + "] " + msg, TimelineBridge);
                 }
 
                 // レイヤーが非表示の場合は描画しない
@@ -285,13 +285,13 @@ Item {
                     // 1. レイヤー自体の表示設定
                     // QMLエンジンのバインディングシステムに検知させるため、layerStatesを直接参照する
                     var states = root.layerStates;
-                    var layerInfo = states ? states[_clipData.layer] : null;
+                    var layerInfo = states ? states[clipLayerRole] : null;
                     var layerVisible = (layerInfo !== null && layerInfo !== undefined) ? layerInfo.visible : true;
                     if (!layerVisible)
                         return false;
 
                     // 2. 再生ヘッドがクリップの範囲内にあるか（プリロードされたオブジェクトを隠す）
-                    return root.currentFrame >= _clipData.startFrame && root.currentFrame < (_clipData.startFrame + _clipData.durationFrames);
+                    return root.currentFrame >= clipStartFrameRole && root.currentFrame < (clipStartFrameRole + clipDurationFramesRole);
                 }
                 // 座標変換: 中心(0,0)、Y軸下プラス(AviUtl互換)
                 // Qt3DはY上がプラスなので、入力を反転させる
@@ -348,7 +348,7 @@ Item {
 
                     }
 
-                    source: _clipData.qmlSource || ""
+                    source: clipNode.clipQmlSourceRole
                     properties: {
                         "opacity": clipNode.pOpacity,
                         "clipId": clipNode.clipIdRole,
@@ -368,37 +368,37 @@ Item {
                     componentFactory: root.getCachedComponent
                     // NodeLoader 完了後に fbRendererOutput を clipNode へ接続
                     onItemChanged: {
-                        // FB専用プロパティは FrameBufferObject にのみ注入
                         if (item) {
-                            // fbCaptureItem は BaseObject の property alias として公開済み
                             clipNode.fbRendererOutput = item.fbCaptureItem ?? null;
-                            // clipLayer と sceneRootRef は FB のみが持つプロパティ
-                            if (typeof item.clipLayer !== "undefined")
-                                item.clipLayer = _clipData.layer;
-
-                            if (typeof item.sceneRootRef !== "undefined")
-                                item.sceneRootRef = sceneRoot;
-
-                            // レイヤー番号を注入 (グループ制御判定用)
                             if ("clipLayer" in item)
-                                item.clipLayer = _clipData.layer;
+                                item.clipLayer = clipNode.clipLayerRole;
 
-                            // sceneId を持つオブジェクト(BaseObject派生)にのみ注入
                             if ("sceneId" in item)
                                 item.sceneId = root.sceneId;
 
-                            // グループ制御オブジェクトなら登録
+                            if ("clipEvalParams" in item)
+                                item.clipEvalParams = Qt.binding(function() {
+                                return clipNode.clipEvalParamsRole;
+                            });
+
+                            if ("rawEffectModels" in item)
+                                item.rawEffectModels = Qt.binding(function() {
+                                return clipNode.clipEffectModelsRole;
+                            });
+
+                            if ("currentFrame" in item)
+                                item.currentFrame = Qt.binding(function() {
+                                return root.currentFrame;
+                            });
+
                             if (item.isGroupControl && root.registerGroupControl)
                                 root.registerGroupControl(item);
 
-                            // カメラ制御オブジェクトなら登録
                             if (item.isCameraControl && root.registerCameraControl)
                                 root.registerCameraControl(item);
 
-                            // 変換パラメータを注入 (初期値)
                             _syncTransformToItem();
                         }
-                        // アイテムのロード・アンロードが発生したことを FBO 等に通知
                         root.childRendererOutputsChanged();
                     }
                 }

@@ -16,6 +16,17 @@ Node {
     property var componentFactory: null
     property Component _component: null
 
+    function _applyProperties() {
+        if (!item || !properties)
+            return ;
+
+        for (var key in properties) {
+            if (item.hasOwnProperty(key) || (key in item))
+                item[key] = properties[key];
+
+        }
+    }
+
     function _load() {
         if (item) {
             item.destroy();
@@ -44,6 +55,7 @@ Node {
         status = _component.status;
         if (status === Component.Ready) {
             item = _component.createObject(loader, properties);
+            _applyProperties();
         } else if (status === Component.Error) {
             errorString = _component.errorString();
             Logger.log(qsTr("[NodeLoader] コンポーネントエラー: %1").arg(errorString));
@@ -51,6 +63,7 @@ Node {
     }
 
     onSourceChanged: _load()
+    onPropertiesChanged: _applyProperties()
 
     Connections {
         function onStatusChanged() {

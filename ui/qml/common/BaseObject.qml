@@ -102,8 +102,23 @@ Node {
     }
 
     function evalParam(effectId, paramName, fallback) {
-        var v = _lookupParam(effectId, paramName);
-        return (v !== undefined && v !== null) ? v : fallback;
+        var _ = base._tmRev; // リアクティブ依存
+        if (base.rawEffectModels) {
+            for (var i = 0; i < base.rawEffectModels.length; i++) {
+                if (base.rawEffectModels[i].id === effectId) {
+                    if (base.rawEffectModels[i].evaluatedParam) {
+                        var v = base.rawEffectModels[i].evaluatedParam(paramName, base.relFrame, base.projectFps);
+                        if (v !== undefined && v !== null)
+                            return v;
+
+                    }
+                    if (base.rawEffectModels[i].params && base.rawEffectModels[i].params[paramName] !== undefined)
+                        return base.rawEffectModels[i].params[paramName];
+
+                }
+            }
+        }
+        return fallback;
     }
 
     function evalString(effectId, paramName, fallback) {
@@ -200,6 +215,24 @@ Node {
     onRelFrameChanged: {
         if (hasTransform)
             transformLoader.item.frame = relFrame;
+
+    }
+
+    Instantiator {
+        model: base.rawEffectModels
+
+        Connections {
+            function onParamsChanged() {
+                base._tmRev++;
+            }
+
+            function onKeyframeTracksChanged() {
+                base._tmRev++;
+            }
+
+            target: modelData
+            ignoreUnknownSignals: true
+        }
 
     }
 

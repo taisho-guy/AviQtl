@@ -950,7 +950,7 @@
 <context>
     <name>NodeLoader</name>
     <message>
-        <location filename="../ui/qml/common/NodeLoader.qml" line="49"/>
+        <location filename="../ui/qml/common/NodeLoader.qml" line="61"/>
         <source>[NodeLoader] コンポーネントエラー: %1</source>
         <translation type="unfinished"></translation>
     </message>

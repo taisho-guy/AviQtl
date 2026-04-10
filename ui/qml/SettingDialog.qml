@@ -606,7 +606,7 @@ Common.RinaWindow {
                                 property var def: modelData
                                 property string key: (def && (def.param || def.name)) || ""
                                 property var effVal: effectRoot.currentParams[key]
-                                property bool isNumber: typeof effVal === "number" && (!def.type || ["float", "number", "slider", "spinner"].indexOf(def.type) !== -1)
+                                property bool isNumber: typeof effVal === "number" && (!def.type || ["float", "number", "slider", "spinner", "int", "integer"].indexOf(def.type) !== -1)
                                 property var effectModel: effectRoot.effectModel
                                 property int effIdx: effectRoot.effectIndex
                                 // キーフレーム
@@ -623,11 +623,11 @@ Common.RinaWindow {
                                 property int endFrame: interval.end
                                 property var startVal: {
                                     var _ = tracks;
-                                    return isNumber ? (effectModel ? effectModel.evaluatedParam(key, startFrame, root._projectFps) : effVal) : effVal;
+                                    return effectModel ? effectModel.evaluatedParam(key, startFrame, root._projectFps) : effVal;
                                 }
                                 property var endVal: {
                                     var _ = tracks;
-                                    return isNumber ? (effectModel ? effectModel.evaluatedParam(key, endFrame, root._projectFps) : effVal) : effVal;
+                                    return effectModel ? effectModel.evaluatedParam(key, endFrame, root._projectFps) : effVal;
                                 }
                                 property string interpType: {
                                     var _ = tracks;
@@ -754,7 +754,7 @@ Common.RinaWindow {
                                     if (type === "constant")
                                         type = "linear";
 
-                                    paramDelegate.effectModel.setKeyframe(paramDelegate.key, frame, val, {
+                                    TimelineBridge.setKeyframe(targetClipId, effIdx, paramDelegate.key, frame, val, {
                                         "interp": type
                                     });
                                 }
@@ -851,7 +851,7 @@ Common.RinaWindow {
                                     }
                                     onValueModified: function(val) {
                                         root.inputting = true;
-                                        TimelineBridge.updateClipEffectParam(targetClipId, effIdx, key, val);
+                                        updateParam(startFrame, val);
                                         root.inputting = false;
                                     }
                                     onParamButtonClicked: {

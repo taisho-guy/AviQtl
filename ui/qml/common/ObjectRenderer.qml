@@ -6,6 +6,9 @@ Item {
     required property Item originalSource
     required property var effectModels
     required property int relFrame
+    property var clipEvalParams: ({
+    })
+    property int _paramRev: 0
     property alias output: textureSource
     readonly property Item finalItem: textureSource.sourceItem
 
@@ -55,6 +58,16 @@ Item {
 
                 if ("frame" in item)
                     item.frame = renderer.relFrame;
+
+                if ("clipEvalParams" in item)
+                    item.clipEvalParams = Qt.binding(function() {
+                    return renderer.clipEvalParams;
+                });
+
+                if ("_paramRev" in item)
+                    item._paramRev = Qt.binding(function() {
+                    return renderer._paramRev;
+                });
 
             }
 
