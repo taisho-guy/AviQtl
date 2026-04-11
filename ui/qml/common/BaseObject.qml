@@ -6,6 +6,10 @@ Node {
     // object エフェクト（text/rect/image 等）のパラメータ変更検知
     // _tmRev と同じカウンタ方式: property var 配列要素への直接依存は
     // QML エンジンが追跡できないため Connections 経由で強制通知する
+    // 【統一API】キーフレーム優先評価（全オブジェクトで使用可能）
+    // _paramRev を読むことで Connections→onParamsChanged() への依存を確立する。
+    // property var の配列要素に対する直接依存は QML エンジンが追跡できないため、
+    // _tmRev と同じカウンタ方式を採用する。
 
     id: base
 
@@ -86,12 +90,6 @@ Node {
     // 子クラスがオーバーライドするプロパティ
     property Item sourceItem
     property alias renderer: rendererInstance
-    // 【統一API】キーフレーム優先評価（全オブジェクトで使用可能）
-    // _paramRev を読むことで Connections→onParamsChanged() への依存を確立する。
-    // property var の配列要素に対する直接依存は QML エンジンが追跡できないため、
-    // _tmRev と同じカウンタ方式を採用する。
-    readonly property var evalParams: clipEvalParams ?? ({
-    })
 
     function evalParam(effectId, paramName, fallback) {
         var _ = base._tmRev; // リアクティブ依存

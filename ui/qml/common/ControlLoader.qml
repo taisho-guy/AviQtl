@@ -368,23 +368,13 @@ Loader {
     Component {
         id: boolComponent
 
-        RowLayout {
-            spacing: 8
-
-            Label {
-                text: controlLoader._label()
-                color: sysPalette.text
-                Layout.preferredWidth: 80
+        CheckBox {
+            text: controlLoader._label()
+            checked: controlLoader.value === true
+            Layout.fillWidth: true
+            onToggled: {
+                controlLoader.valueModified(checked);
             }
-
-            CheckBox {
-                checked: controlLoader.value === true
-                text: checked ? qsTr("オン") : qsTr("オフ")
-                onCheckedChanged: {
-                    controlLoader.valueModified(checked);
-                }
-            }
-
         }
 
     }

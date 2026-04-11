@@ -626,9 +626,14 @@ Common.RinaWindow {
                                     if (v !== undefined && v !== null)
                                         return v;
 
-                                    return effectModel.params[key];
+                                    if (effectModel.params)
+                                        return effectModel.params[key];
+
+                                    return undefined;
                                 }
                                 property bool isNumber: typeof effVal === "number" && (!def.type || ["float", "number", "slider", "spinner", "int", "integer"].indexOf(def.type) !== -1)
+                                property bool isColor: !!def && (def.type === "color" || def.type === "colour")
+                                property bool supportsRangeUi: isNumber || isColor
                                 property var effectModel: effectRoot.effectModel
                                 property int effIdx: effectRoot.effectIndex
                                 // キーフレーム
@@ -657,7 +662,7 @@ Common.RinaWindow {
                                     var _ = tracks;
                                     return hasKeyframes ? getInterpAt(startFrame) : "constant";
                                 }
-                                property bool isMoving: isNumber && (hasKeyframes || interpType !== "constant")
+                                property bool isMoving: supportsRangeUi && (hasKeyframes || interpType !== "constant")
 
                                 function hasKeyframeAt(f) {
                                     if (!kfs)
@@ -904,7 +909,7 @@ Common.RinaWindow {
                                     Layout.preferredHeight: 12
                                     Layout.leftMargin: 4
                                     Layout.rightMargin: 4
-                                    visible: isNumber
+                                    visible: supportsRangeUi
 
                                     Rectangle {
                                         anchors.centerIn: parent
@@ -1224,7 +1229,7 @@ Common.RinaWindow {
                 // createObject で生成した Qt オブジェクト本体の所有権は parent にある。
                 // ここでは clear() で Menu の表示リストをリセットし、
                 // 自前リストに追跡しているオブジェクトを destroy() する。
-                clear();
+                // clear();
                 for (var i = 0; i < _dynamicObjects.length; ++i) {
                     var obj = _dynamicObjects[i];
                     if (obj) {

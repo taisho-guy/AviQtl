@@ -120,9 +120,8 @@ RowLayout {
         }
 
         validator: DoubleValidator {
-            bottom: root.minValue
-            top: root.maxValue
             decimals: root.decimals
+            notation: DoubleValidator.StandardNotation
         }
 
     }
@@ -155,9 +154,8 @@ RowLayout {
         }
 
         validator: DoubleValidator {
-            bottom: root.minValue
-            top: root.maxValue
             decimals: root.decimals
+            notation: DoubleValidator.StandardNotation
         }
 
     }
