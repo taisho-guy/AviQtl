@@ -640,15 +640,14 @@ void TimelineController::splitSelectedClips(int frame) {
 #include "engine/timeline/ecs.hpp"
 
 auto TimelineController::evaluateClipParams(int clipId, int relFrame) const -> QVariantMap {
-    Q_UNUSED(relFrame);
-    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
-    if (const auto *ep = snap->evaluatedParams.find(clipId)) {
-        QVariantMap out;
-        for (auto it = ep->effects.cbegin(); it != ep->effects.cend(); ++it)
-            out.insert(it.key(), it.value());
-        return out;
+    QVariantMap out;
+    if (const auto *clip = m_timeline->findClipById(clipId)) {
+        double fps = project()->fps();
+        for (auto *eff : clip->effects) {
+            out.insert(eff->id(), eff->evaluatedParams(relFrame));
+        }
     }
-    return {};
+    return out;
 }
 void TimelineController::copyClip(int clipId) { m_timeline->copyClip(clipId); }
 

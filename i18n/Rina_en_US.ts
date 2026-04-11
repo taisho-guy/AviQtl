@@ -112,17 +112,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="540"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="535"/>
         <source>設定</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="616"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="611"/>
         <source>フォントを選択</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="632"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="627"/>
         <source>デフォルト</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1484,32 +1484,32 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="775"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="799"/>
         <source> (直線)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="776"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="800"/>
         <source> (加速)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="777"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="801"/>
         <source> (減速)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="778"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="802"/>
         <source> (加減速)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="779"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="803"/>
         <source> (ベジェ)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="1240"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="1264"/>
         <source>エフェクトを追加</source>
         <translation type="unfinished"></translation>
     </message>

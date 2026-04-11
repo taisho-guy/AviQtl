@@ -551,11 +551,23 @@ Common.RinaWindow {
 
                         property int effectIndex: index
                         property var effectModel: modelData
-                        property var currentParams: effectModel ? effectModel.params : ({
-                        })
+                        property int _effectRev: 0
 
                         width: root.width
                         spacing: 0
+
+                        Connections {
+                            function onParamsChanged() {
+                                effectRoot._effectRev++;
+                            }
+
+                            function onKeyframeTracksChanged() {
+                                effectRoot._effectRev++;
+                            }
+
+                            target: effectRoot.effectModel
+                            ignoreUnknownSignals: true
+                        }
 
                         // エフェクトヘッダー
                         Rectangle {
@@ -605,7 +617,17 @@ Common.RinaWindow {
                                 property int activeDragCurrent: -1
                                 property var def: modelData
                                 property string key: (def && (def.param || def.name)) || ""
-                                property var effVal: effectRoot.currentParams[key]
+                                property var effVal: {
+                                    var _ = effectRoot._effectRev;
+                                    if (!effectModel)
+                                        return undefined;
+
+                                    var v = effectModel.evaluatedParam(key, curRelFrame, root._projectFps);
+                                    if (v !== undefined && v !== null)
+                                        return v;
+
+                                    return effectModel.params[key];
+                                }
                                 property bool isNumber: typeof effVal === "number" && (!def.type || ["float", "number", "slider", "spinner", "int", "integer"].indexOf(def.type) !== -1)
                                 property var effectModel: effectRoot.effectModel
                                 property int effIdx: effectRoot.effectIndex
@@ -622,11 +644,13 @@ Common.RinaWindow {
                                 property int startFrame: interval.start
                                 property int endFrame: interval.end
                                 property var startVal: {
-                                    var _ = tracks;
+                                    var _t = tracks;
+                                    var _r = effectRoot._effectRev;
                                     return effectModel ? effectModel.evaluatedParam(key, startFrame, root._projectFps) : effVal;
                                 }
                                 property var endVal: {
-                                    var _ = tracks;
+                                    var _t = tracks;
+                                    var _r = effectRoot._effectRev;
                                     return effectModel ? effectModel.evaluatedParam(key, endFrame, root._projectFps) : effVal;
                                 }
                                 property string interpType: {

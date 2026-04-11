@@ -194,11 +194,34 @@ Item {
                 property int clipDurationFramesRole: _clipData.durationFrames
                 property url clipQmlSourceRole: _clipData.qmlSource || ""
                 property var clipEffectModelsRole: _clipData.effectModels || []
-                property var clipEvalParamsRole: (typeof modelData !== "undefined" ? modelData.evalParams : model.evalParams) || {
-                }
                 property Item fbRendererOutput: null // NodeLoader 完了後に接続
                 // 評価済みパラメータからtransform値を取得 (単一経路化)
-                readonly property var tParams: clipEvalParamsRole["transform"] || {
+                readonly property var tParams: {
+                    var tModel = null;
+                    for (var i = 0; i < clipEffectModelsRole.length; i++) {
+                        if (clipEffectModelsRole[i].id === "transform") {
+                            tModel = clipEffectModelsRole[i];
+                            break;
+                        }
+                    }
+                    if (!tModel)
+                        return {
+                    };
+
+                    var out = {
+                    };
+                    var fps = (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.fps : 60;
+                    var relFrame = root.currentFrame - clipStartFrameRole;
+                    var keys = ["x", "y", "z", "rotationX", "rotationY", "rotationZ", "scale", "aspect", "opacity"];
+                    for (var k = 0; k < keys.length; k++) {
+                        var key = keys[k];
+                        var v = tModel.evaluatedParam(key, relFrame, fps);
+                        if (v === undefined || v === null)
+                            v = tModel.params[key];
+
+                        out[key] = v;
+                    }
+                    return out;
                 }
                 readonly property real px: tParams.x !== undefined ? Number(tParams.x) : 0
                 readonly property real py: tParams.y !== undefined ? Number(tParams.y) : 0
@@ -357,9 +380,6 @@ Item {
                         "currentFrame": Qt.binding(function() {
                             return root.currentFrame;
                         }),
-                        "clipEvalParams": Qt.binding(function() {
-                            return clipNode.clipEvalParamsRole;
-                        }),
                         "rawEffectModels": Qt.binding(function() {
                             return clipNode.clipEffectModelsRole;
                         }),
@@ -375,11 +395,6 @@ Item {
 
                             if ("sceneId" in item)
                                 item.sceneId = root.sceneId;
-
-                            if ("clipEvalParams" in item)
-                                item.clipEvalParams = Qt.binding(function() {
-                                return clipNode.clipEvalParamsRole;
-                            });
 
                             if ("rawEffectModels" in item)
                                 item.rawEffectModels = Qt.binding(function() {

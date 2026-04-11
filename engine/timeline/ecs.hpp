@@ -129,16 +129,12 @@ struct RenderComponent {
     QString effectChain;
 };
 
-struct EvaluatedParamsComponent {
-    QHash<QString, QVariantMap> effects;
-};
 struct ECSState {
     bool renderGraphDirty = false;
     DenseComponentMap<TransformComponent> transforms;
     DenseComponentMap<RenderComponent> renderStates;
     DenseComponentMap<AudioComponent> audioStates;
     DenseComponentMap<MetadataComponent> metadataStates;
-    DenseComponentMap<EvaluatedParamsComponent> evaluatedParams;
 };
 
 class ECS {

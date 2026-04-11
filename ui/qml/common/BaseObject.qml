@@ -90,16 +90,8 @@ Node {
     // _paramRev を読むことで Connections→onParamsChanged() への依存を確立する。
     // property var の配列要素に対する直接依存は QML エンジンが追跡できないため、
     // _tmRev と同じカウンタ方式を採用する。
-    // CompositeViewのNodeLoaderから注入される評価済みパラメータ (単一ソース)
-    property var clipEvalParams: ({
-    })
     readonly property var evalParams: clipEvalParams ?? ({
     })
-
-    function _lookupParam(effectId, paramName) {
-        var eff = evalParams ? evalParams[effectId] : undefined;
-        return eff ? eff[paramName] : undefined;
-    }
 
     function evalParam(effectId, paramName, fallback) {
         var _ = base._tmRev; // リアクティブ依存
@@ -122,22 +114,22 @@ Node {
     }
 
     function evalString(effectId, paramName, fallback) {
-        var v = _lookupParam(effectId, paramName);
+        var v = evalParam(effectId, paramName, undefined);
         return (v !== undefined && v !== null) ? String(v) : fallback;
     }
 
     function evalNumber(effectId, paramName, fallback) {
-        var v = _lookupParam(effectId, paramName);
+        var v = evalParam(effectId, paramName, undefined);
         return (v !== undefined && v !== null && v !== "") ? Number(v) : fallback;
     }
 
     function evalBool(effectId, paramName, fallback) {
-        var v = _lookupParam(effectId, paramName);
+        var v = evalParam(effectId, paramName, undefined);
         return (v !== undefined && v !== null) ? Boolean(v) : fallback;
     }
 
     function evalColor(effectId, paramName, fallback) {
-        var v = _lookupParam(effectId, paramName);
+        var v = evalParam(effectId, paramName, undefined);
         return (v !== undefined && v !== null) ? v : fallback;
     }
 

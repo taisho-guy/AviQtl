@@ -22,7 +22,6 @@ void ECS::syncClipIds(const QSet<int> &aliveIds) {
     changed |= editState.renderStates.syncAlive(aliveIds);
     changed |= editState.audioStates.syncAlive(aliveIds);
     changed |= editState.metadataStates.syncAlive(aliveIds);
-    changed |= editState.evaluatedParams.syncAlive(aliveIds);
 
     if (changed) {
         m_fullSyncRequired[(m_editIndex + 1) % 3] = true;
@@ -130,9 +129,6 @@ void ECS::commit() {
             }
             if (const auto *s = src.metadataStates.find(id)) {
                 dst.metadataStates[id] = *s;
-            }
-            if (const auto *s = src.evaluatedParams.find(id)) {
-                dst.evaluatedParams[id] = *s;
             }
         }
         m_dirtyForBuffer[m_editIndex].clear();

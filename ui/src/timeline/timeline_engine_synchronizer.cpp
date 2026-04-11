@@ -59,17 +59,6 @@ void TimelineEngineSynchronizer::queryIntervalTree(int nodeIdx, int frame, QList
     }
 }
 
-QVariantMap TimelineEngineSynchronizer::getCachedParams(int clipId) const {
-    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
-    if (const auto *ep = snap->evaluatedParams.find(clipId)) {
-        QVariantMap out;
-        for (auto it = ep->effects.cbegin(); it != ep->effects.cend(); ++it)
-            out.insert(it.key(), it.value());
-        return out;
-    }
-    return {};
-}
-
 void TimelineEngineSynchronizer::updateActiveClipsList() {
     int current = m_controller->transport()->currentFrame();
 
@@ -81,9 +70,6 @@ void TimelineEngineSynchronizer::updateActiveClipsList() {
     std::ranges::sort(active, [](const ClipData *a, const ClipData *b) -> bool { return a->layer > b->layer; });
 
     double fps = m_controller->project()->fps();
-
-    // パラメータ評価を C++ 側で一括実行
-    m_paramEvalSystem.evaluate(active, current, fps);
 
     for (const ClipData *clip : std::as_const(active)) {
         int relFrame = current - clip->startFrame;

@@ -25,7 +25,6 @@ auto ClipModel::roleNames() const -> QHash<int, QByteArray> {
     roles.insert(LayerRole, "layer");
     roles.insert(Qt::UserRole + 100, "qmlSource");
     roles.insert(EffectsRole, "effectModels");
-    roles.insert(EvalParamsRole, "evalParams");
     return roles;
 }
 
@@ -61,16 +60,6 @@ auto ClipModel::data(const QModelIndex &index, int role) const -> QVariant {
         }
         return list;
     }
-    case EvalParamsRole: {
-        const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
-        if (const auto *ep = snap->evaluatedParams.find(clip->id)) {
-            QVariantMap out;
-            for (auto it = ep->effects.cbegin(); it != ep->effects.cend(); ++it)
-                out.insert(it.key(), it.value());
-            return out;
-        }
-        return QVariantMap{};
-    }
     default:
         return {};
     }
@@ -95,7 +84,7 @@ void ClipModel::updateClips(const QList<ClipData *> &newClips) {
         QModelIndex topLeft = index(0, 0);
         QModelIndex bottomRight = index(rowCount() - 1, 0);
         QList<int> roles;
-        roles << EffectsRole << EvalParamsRole;
+        roles << EffectsRole;
         emit dataChanged(topLeft, bottomRight, roles);
     }
 }

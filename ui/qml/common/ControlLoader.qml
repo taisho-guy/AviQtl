@@ -475,21 +475,16 @@ Loader {
                 TextArea {
                     id: textAreaItem
 
-                    text: String(controlLoader.value ?? "")
+                    text: String(controlLoader.value !== undefined && controlLoader.value !== null ? controlLoader.value : "")
                     selectByMouse: true
                     wrapMode: TextArea.Wrap
-                    onTextChanged: {
-                        if (activeFocus)
-                            controlLoader.valueModified(text);
-
-                    }
                     onEditingFinished: {
                         controlLoader.valueModified(text);
                     }
 
                     Binding on text {
                         when: !textAreaItem.activeFocus
-                        value: String(controlLoader.value ?? "")
+                        value: String(controlLoader.value !== undefined && controlLoader.value !== null ? controlLoader.value : "")
                     }
 
                 }

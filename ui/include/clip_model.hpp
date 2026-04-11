@@ -8,7 +8,7 @@ class TransportService;
 class ClipModel : public QAbstractListModel {
     Q_OBJECT
   public:
-    enum Roles { IdRole = Qt::UserRole + 1, TypeRole, NameRole, StartFrameRole, DurationRole, LayerRole, EffectsRole, EvalParamsRole };
+    enum Roles { IdRole = Qt::UserRole + 1, TypeRole, NameRole, StartFrameRole, DurationRole, LayerRole, EffectsRole };
 
     explicit ClipModel(TransportService *transport, QObject *parent = nullptr);
 

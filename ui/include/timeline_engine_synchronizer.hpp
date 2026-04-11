@@ -1,6 +1,5 @@
 #pragma once
 #include "clip_model.hpp"
-#include "parameter_evaluation_system.hpp"
 #include "timeline_types.hpp"
 #include <QObject>
 #include <QPointer>
@@ -31,8 +30,6 @@ class TimelineEngineSynchronizer : public QObject {
     void updateActiveClipsList();
     void rebuildClipIndex();
 
-    QVariantMap getCachedParams(int clipId) const;
-
   private:
     int buildIntervalTree(int left, int right);
     void queryIntervalTree(int nodeIdx, int frame, QList<ClipData *> &result);
@@ -47,7 +44,5 @@ class TimelineEngineSynchronizer : public QObject {
 
     int m_maxDuration = 0;
     int m_timelineDuration = 0;
-
-    ParameterEvaluationSystem m_paramEvalSystem;
 };
 } // namespace Rina::UI
