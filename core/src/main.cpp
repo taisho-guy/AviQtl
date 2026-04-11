@@ -8,7 +8,6 @@
 #include "settings_manager.hpp"
 #include "theme_controller.hpp"
 #include "timeline_controller.hpp"
-#include "update_checker.hpp"
 #include "video_encoder.hpp"
 #include "video_frame_provider.hpp"
 #include "video_frame_store.hpp"
@@ -104,11 +103,8 @@ auto main(int argc, char *argv[]) -> int {
 
     engine.rootContext()->setContextProperty(QStringLiteral("WindowManager"), static_cast<QObject *>(&Rina::UI::WindowManager::instance()));
 
-    auto *updateChecker = new Rina::Core::UpdateChecker(&app);
-    engine.rootContext()->setContextProperty(QStringLiteral("UpdateChecker"), updateChecker);
-
     // 遅延初期化処理を実行する
-    QTimer::singleShot(10, &engine, [&engine, timelineController, &modEngine, splash, updateChecker]() -> void {
+    QTimer::singleShot(10, &engine, [&engine, timelineController, &modEngine, splash]() -> void {
         Rina::Core::initializeStandardEffects();
         modEngine.initialize(nullptr);
         modEngine.registerController(timelineController);
@@ -119,9 +115,8 @@ auto main(int argc, char *argv[]) -> int {
         Rina::Core::EffectRegistry::instance().loadEffectsFromDirectory(appDir + QStringLiteral("/objects"));
 
         // 音声プラグインの読み込み完了時にスプラッシュ画面を消去する
-        QObject::connect(&Rina::Engine::Plugin::AudioPluginManager::instance(), &Rina::Engine::Plugin::AudioPluginManager::pluginsReady, splash, [&engine, splash, updateChecker](int) -> void {
+        QObject::connect(&Rina::Engine::Plugin::AudioPluginManager::instance(), &Rina::Engine::Plugin::AudioPluginManager::pluginsReady, splash, [&engine, splash](int) -> void {
             Rina::UI::WindowManager::instance().spawnInitialWindows(&engine);
-            updateChecker->checkOnStartup();
             splash->finish(nullptr);
             splash->deleteLater();
         });

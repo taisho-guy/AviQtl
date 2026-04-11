@@ -1337,53 +1337,48 @@
 <context>
     <name>Rina::UI::WindowManager</name>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="50"/>
+        <location filename="../ui/src/window_manager.cpp" line="49"/>
         <source>Rina メインプレビュー</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="51"/>
+        <location filename="../ui/src/window_manager.cpp" line="50"/>
         <source>タイムライン</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="52"/>
+        <location filename="../ui/src/window_manager.cpp" line="51"/>
         <source>プロジェクト設定</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="53"/>
+        <location filename="../ui/src/window_manager.cpp" line="52"/>
         <source>オブジェクト設定</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="54"/>
+        <location filename="../ui/src/window_manager.cpp" line="53"/>
         <source>システム設定</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="55"/>
+        <location filename="../ui/src/window_manager.cpp" line="54"/>
         <source>Rinaについて</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="56"/>
+        <location filename="../ui/src/window_manager.cpp" line="55"/>
         <source>シーン設定</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="57"/>
+        <location filename="../ui/src/window_manager.cpp" line="56"/>
         <source>メディアの書き出し</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="58"/>
+        <location filename="../ui/src/window_manager.cpp" line="57"/>
         <source>補間設定</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/src/window_manager.cpp" line="60"/>
-        <source>新しいバージョンがあります</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -1872,39 +1867,6 @@
     <message>
         <location filename="../ui/qml/TimelineWindow.qml" line="127"/>
         <source>シーン %1</source>
-        <translation type="unfinished"></translation>
-    </message>
-</context>
-<context>
-    <name>UpdateNotificationWindow</name>
-    <message>
-        <location filename="../ui/qml/UpdateNotificationWindow.qml" line="14"/>
-        <source>新しいバージョンがあります</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/UpdateNotificationWindow.qml" line="44"/>
-        <source>Rina %1 がリリースされました</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/UpdateNotificationWindow.qml" line="53"/>
-        <source>新しいバージョンが Codeberg で公開されています。</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/UpdateNotificationWindow.qml" line="100"/>
-        <source>後で</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/UpdateNotificationWindow.qml" line="107"/>
-        <source>リリースページを開く</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/UpdateNotificationWindow.qml" line="117"/>
-        <source>確認した</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
