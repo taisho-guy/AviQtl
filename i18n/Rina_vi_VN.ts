@@ -112,17 +112,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="535"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="540"/>
         <source>設定</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="611"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="616"/>
         <source>フォントを選択</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="627"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="632"/>
         <source>デフォルト</source>
         <translation type="unfinished"></translation>
     </message>

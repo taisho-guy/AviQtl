@@ -478,6 +478,11 @@ Loader {
                     text: String(controlLoader.value !== undefined && controlLoader.value !== null ? controlLoader.value : "")
                     selectByMouse: true
                     wrapMode: TextArea.Wrap
+                    onTextChanged: {
+                        if (activeFocus)
+                            controlLoader.valueModified(text);
+
+                    }
                     onEditingFinished: {
                         controlLoader.valueModified(text);
                     }
