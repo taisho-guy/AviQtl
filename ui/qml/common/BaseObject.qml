@@ -73,7 +73,7 @@ Node {
     property int currentFrame: 0
     // Will be overridden by CompositeView
     readonly property int relFrame: currentFrame - clipStartFrame
-    readonly property real projectFps: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.fps : 60
+    readonly property real projectFps: (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.fps : 60
     property var rawEffectModels: []
     // フィルタ系エフェクト（transform/object以外）
     readonly property var filterModels: {
@@ -256,15 +256,15 @@ Node {
     Connections {
         function onClipEffectsChanged(changedClipId) {
             if (changedClipId === clipId)
-                rawEffectModels = TimelineBridge.getClipEffectsModel(clipId);
+                rawEffectModels = Workspace.currentTimeline.getClipEffectsModel(clipId);
 
         }
 
         function onClipsChanged() {
-            rawEffectModels = TimelineBridge.getClipEffectsModel(clipId);
+            rawEffectModels = Workspace.currentTimeline.getClipEffectsModel(clipId);
         }
 
-        target: TimelineBridge
+        target: Workspace.currentTimeline
     }
 
     // ─── 2D変換済みキャプチャアイテム ─────────────────────────────
@@ -273,8 +273,8 @@ Node {
     Item {
         id: _fbCaptureItemImpl
 
-        width: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.width : 1920
-        height: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.height : 1080
+        width: (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.width : 1920
+        height: (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.height : 1080
         visible: true // SceneGraph に残すため true (opacity は renderHost 側で 0)
 
         Item {

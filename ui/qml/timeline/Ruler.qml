@@ -15,7 +15,7 @@ Rectangle {
 
     // ユーティリティ
     function pxToFrame(px, contentX) {
-        var scale = TimelineBridge ? TimelineBridge.timelineScale : 1;
+        var scale = Workspace.currentTimeline ? Workspace.currentTimeline.timelineScale : 1;
         var x = px + contentX;
         return Math.max(0, Math.round(x / scale));
     }
@@ -25,17 +25,17 @@ Rectangle {
     }
 
     function zoomAt(wheel, zoomFactor) {
-        if (!TimelineBridge || !targetFlickable)
+        if (!Workspace.currentTimeline || !targetFlickable)
             return ;
 
-        var oldScale = TimelineBridge.timelineScale;
+        var oldScale = Workspace.currentTimeline.timelineScale;
         var newScale = clamp(oldScale * zoomFactor, 0.1, 20);
         if (Math.abs(newScale - oldScale) < 1e-06)
             return ;
 
         var mouseX = wheel.x !== undefined ? wheel.x : (wheel.position ? wheel.position.x : 0);
         var anchorFrame = (targetFlickable.contentX + mouseX - timeWidth) / oldScale; // timeWidth補正
-        TimelineBridge.timelineScale = newScale;
+        Workspace.currentTimeline.timelineScale = newScale;
         // ズーム後の位置補正
         var newContentX = anchorFrame * newScale - mouseX + timeWidth;
         var maxX = Math.max(0, targetFlickable.contentWidth - targetFlickable.width);
@@ -71,7 +71,7 @@ Rectangle {
 
             Text {
                 anchors.centerIn: parent
-                text: TimelineBridge && TimelineBridge.transport ? TimelineBridge.transport.currentFrame + "f" : "0f"
+                text: Workspace.currentTimeline && Workspace.currentTimeline.transport ? Workspace.currentTimeline.transport.currentFrame + "f" : "0f"
                 font.pixelSize: 11
                 font.bold: true
                 color: palette.highlight
@@ -88,7 +88,7 @@ Rectangle {
             Canvas {
                 id: rulerCanvas
 
-                property double scale: TimelineBridge ? TimelineBridge.timelineScale : 1
+                property double scale: Workspace.currentTimeline ? Workspace.currentTimeline.timelineScale : 1
                 property double offsetX: targetFlickable ? targetFlickable.contentX : 0
                 property int fpsInt: Math.round(rulerRoot.fps)
 
@@ -98,7 +98,7 @@ Rectangle {
                 onPaint: {
                     var ctx = getContext("2d");
                     ctx.clearRect(0, 0, width, height);
-                    if (!TimelineBridge)
+                    if (!Workspace.currentTimeline)
                         return ;
 
                     var viewWidth = width;
@@ -161,7 +161,7 @@ Rectangle {
             Rectangle {
                 id: rulerPlayhead
 
-                x: Math.round(((TimelineBridge && TimelineBridge.transport ? TimelineBridge.transport.currentFrame : 0) * (TimelineBridge ? TimelineBridge.timelineScale : 1)) - (targetFlickable ? targetFlickable.contentX : 0))
+                x: Math.round(((Workspace.currentTimeline && Workspace.currentTimeline.transport ? Workspace.currentTimeline.transport.currentFrame : 0) * (Workspace.currentTimeline ? Workspace.currentTimeline.timelineScale : 1)) - (targetFlickable ? targetFlickable.contentX : 0))
                 y: 0
                 width: 2
                 height: parent.height
@@ -176,19 +176,19 @@ Rectangle {
                 hoverEnabled: true
                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                 onPressed: (mouse) => {
-                    if (mouse.button === Qt.LeftButton && targetFlickable && TimelineBridge && TimelineBridge.transport) {
-                        TimelineBridge.transport.beginScrub();
-                        TimelineBridge.transport.scrubTo(pxToFrame(mouse.x, targetFlickable.contentX));
+                    if (mouse.button === Qt.LeftButton && targetFlickable && Workspace.currentTimeline && Workspace.currentTimeline.transport) {
+                        Workspace.currentTimeline.transport.beginScrub();
+                        Workspace.currentTimeline.transport.scrubTo(pxToFrame(mouse.x, targetFlickable.contentX));
                     }
                 }
                 onPositionChanged: (mouse) => {
-                    if (pressed && (mouse.buttons & Qt.LeftButton) && targetFlickable && TimelineBridge && TimelineBridge.transport)
-                        TimelineBridge.transport.scrubTo(pxToFrame(mouse.x, targetFlickable.contentX));
+                    if (pressed && (mouse.buttons & Qt.LeftButton) && targetFlickable && Workspace.currentTimeline && Workspace.currentTimeline.transport)
+                        Workspace.currentTimeline.transport.scrubTo(pxToFrame(mouse.x, targetFlickable.contentX));
 
                 }
                 onReleased: (mouse) => {
-                    if (mouse.button === Qt.LeftButton && TimelineBridge && TimelineBridge.transport)
-                        TimelineBridge.transport.endScrub();
+                    if (mouse.button === Qt.LeftButton && Workspace.currentTimeline && Workspace.currentTimeline.transport)
+                        Workspace.currentTimeline.transport.endScrub();
 
                 }
                 onWheel: (wheel) => {

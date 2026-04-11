@@ -20,7 +20,7 @@ Common.BaseObject {
     property alias camera: cam
     // デフォルトカメラ距離 (mainCamera と同じ計算式)
     readonly property real _defaultDist: {
-        var h = (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.height : 1080;
+        var h = (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.height : 1080;
         return h / (2 * Math.tan(fov * Math.PI / 360));
     }
 

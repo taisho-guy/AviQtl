@@ -1,4 +1,5 @@
 #include "window_manager.hpp"
+#include "workspace.hpp"
 #include <QCoreApplication>
 #include <QDebug>
 #include <QQmlComponent>
@@ -57,7 +58,8 @@ void WindowManager::onProjectSelected(const QString &path, int w, int h, double 
     spawnWindow(m_engine, QStringLiteral("easingConfig"), QStringLiteral("qrc:/qt/qml/Rina/ui/qml/common/EasingConfigWindow.qml"), tr("補間設定"), 820, 540, 420, 180, false);
 
     // 設定の反映
-    auto *bridge = m_engine->rootContext()->contextProperty(QStringLiteral("TimelineBridge")).value<QObject *>();
+    auto *workspace = qobject_cast<Rina::UI::Workspace *>(m_engine->rootContext()->contextProperty(QStringLiteral("Workspace")).value<QObject *>());
+    auto *bridge = workspace ? workspace->currentTimeline() : nullptr;
     if (bridge != nullptr) {
         if (!path.isEmpty()) {
             QMetaObject::invokeMethod(bridge, "loadProject", Q_ARG(QString, path));

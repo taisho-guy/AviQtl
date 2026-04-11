@@ -14,13 +14,13 @@ Common.BaseObject {
 
     sourceItem: containerItem
     onImagePathChanged: {
-        if (TimelineBridge && typeof TimelineBridge.requestImageLoad === "function" && base.clipId > 0)
-            TimelineBridge.requestImageLoad(base.clipId, base.imagePath);
+        if (Workspace.currentTimeline && typeof Workspace.currentTimeline.requestImageLoad === "function" && base.clipId > 0)
+            Workspace.currentTimeline.requestImageLoad(base.clipId, base.imagePath);
 
     }
     Component.onCompleted: {
-        if (TimelineBridge && typeof TimelineBridge.requestImageLoad === "function" && base.clipId > 0)
-            TimelineBridge.requestImageLoad(base.clipId, base.imagePath);
+        if (Workspace.currentTimeline && typeof Workspace.currentTimeline.requestImageLoad === "function" && base.clipId > 0)
+            Workspace.currentTimeline.requestImageLoad(base.clipId, base.imagePath);
 
     }
 
@@ -57,16 +57,16 @@ Common.BaseObject {
 
         readonly property real pad: base.padding * 2
 
-        width: (TimelineBridge && TimelineBridge.project ? TimelineBridge.project.width : 1920) + pad
-        height: (TimelineBridge && TimelineBridge.project ? TimelineBridge.project.height : 1080) + pad
+        width: (Workspace.currentTimeline && Workspace.currentTimeline.project ? Workspace.currentTimeline.project.width : 1920) + pad
+        height: (Workspace.currentTimeline && Workspace.currentTimeline.project ? Workspace.currentTimeline.project.height : 1080) + pad
         visible: false
 
         VideoOutput {
             id: videoOut
 
             anchors.centerIn: parent
-            width: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.width : 1920
-            height: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.height : 1080
+            width: (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.width : 1920
+            height: (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.height : 1080
             fillMode: base.fillMode
             opacity: base.imageOpacity
             layer.enabled: true

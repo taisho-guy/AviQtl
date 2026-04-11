@@ -184,8 +184,8 @@ Common.RinaWindow {
                 highlighted: true
                 Layout.fillWidth: true
                 onClicked: {
-                    if (TimelineBridge && TimelineBridge.project)
-                        TimelineBridge.project.sampleRate = parseInt(sampleRateField.text);
+                    if (Workspace.currentTimeline && Workspace.currentTimeline.project)
+                        Workspace.currentTimeline.project.sampleRate = parseInt(sampleRateField.text);
 
                     root.projectSelected("", parseInt(widthField.text), parseInt(heightField.text), parseFloat(fpsField.text));
                     root.close();
@@ -311,8 +311,8 @@ Common.RinaWindow {
             var width = 1920;
             var height = 1080;
             var fps = 60;
-            if (TimelineBridge) {
-                var info = TimelineBridge.getProjectInfo(fileDialog.selectedFile);
+            if (Workspace.currentTimeline) {
+                var info = Workspace.currentTimeline.getProjectInfo(fileDialog.selectedFile);
                 if (info.width !== undefined)
                     width = info.width;
 

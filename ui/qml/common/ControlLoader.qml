@@ -204,9 +204,9 @@ Loader {
             property var _em: controlLoader.effectRootRef ? controlLoader.effectRootRef.effectModel : null
             property int _effIdx: controlLoader.effectRootRef ? controlLoader.effectRootRef.effectIndex : 0
             property string _key: controlLoader.definition.param || controlLoader.definition.name || ""
-            property int _clipDur: TimelineBridge ? TimelineBridge.clipDurationFrames : 100
-            property real _fps: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.fps : 60
-            property int _curFrame: (TimelineBridge && TimelineBridge.transport) ? TimelineBridge.transport.currentFrame - TimelineBridge.clipStartFrame : 0
+            property int _clipDur: Workspace.currentTimeline ? Workspace.currentTimeline.clipDurationFrames : 100
+            property real _fps: (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.fps : 60
+            property int _curFrame: (Workspace.currentTimeline && Workspace.currentTimeline.transport) ? Workspace.currentTimeline.transport.currentFrame - Workspace.currentTimeline.clipStartFrame : 0
             property int _rev: 0
             property int _startFrame: controlLoader.startFrameState
             property int _endFrame: controlLoader.endFrameState
@@ -559,8 +559,8 @@ Loader {
                 id: combo
 
                 property var sourceObj: {
-                    if (controlLoader.definition.source === "TimelineBridge")
-                        return TimelineBridge;
+                    if (controlLoader.definition.source === "Workspace.currentTimeline")
+                        return Workspace.currentTimeline;
 
                     return null;
                 }

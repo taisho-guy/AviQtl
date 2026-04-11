@@ -299,3 +299,5 @@ endfunction()
 
 compile_shaders("Effects" "ui/qml/effects" "${CMAKE_BINARY_DIR}/effects")
 compile_shaders("Objects" "ui/qml/objects" "${CMAKE_BINARY_DIR}/objects")
+
+# Trigger rescan for workspace.cpp and workspace.hpp

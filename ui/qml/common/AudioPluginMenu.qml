@@ -8,7 +8,7 @@ Menu {
     property int targetClipId: -1
 
     Instantiator {
-        model: TimelineBridge ? TimelineBridge.getPluginCategories() : []
+        model: Workspace.currentTimeline ? Workspace.currentTimeline.getPluginCategories() : []
         onObjectAdded: (index, object) => {
             return filterMenu.insertMenu(index, object);
         }
@@ -22,7 +22,7 @@ Menu {
             title: modelData
 
             Instantiator {
-                model: TimelineBridge.getPluginsByCategory(categoryMenu.title)
+                model: Workspace.currentTimeline.getPluginsByCategory(categoryMenu.title)
                 onObjectAdded: (index, subObj) => {
                     return categoryMenu.insertItem(index, subObj);
                 }
@@ -34,8 +34,8 @@ Menu {
                     text: modelData.name
                     iconName: "music_line"
                     onTriggered: {
-                        if (TimelineBridge)
-                            TimelineBridge.addAudioPlugin(targetClipId, modelData.id);
+                        if (Workspace.currentTimeline)
+                            Workspace.currentTimeline.addAudioPlugin(targetClipId, modelData.id);
 
                     }
                 }

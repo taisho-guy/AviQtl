@@ -12,6 +12,7 @@
 #include "video_frame_provider.hpp"
 #include "video_frame_store.hpp"
 #include "window_manager.hpp"
+#include "workspace.hpp"
 #include <QApplication>
 #include <QIcon>
 #include <QPixmap>
@@ -96,18 +97,23 @@ auto main(int argc, char *argv[]) -> int {
     qmlRegisterType<Rina::UI::Effects::ComputeEffect>("Rina.Compute", 1, 0, "ComputeEffect");
     engine.rootContext()->setContextProperty(QStringLiteral("SettingsManager"), &Rina::Core::SettingsManager::instance());
     engine.rootContext()->setContextProperty(QStringLiteral("ColorSchemeController"), colorSchemeController);
-
-    auto *timelineController = new Rina::UI::TimelineController(&app);
-    engine.rootContext()->setContextProperty(QStringLiteral("TimelineBridge"), timelineController);
-    timelineController->setVideoFrameStore(videoFrameStore);
+    qmlRegisterUncreatableType<Rina::UI::TimelineController>("Rina.UI", 1, 0, "TimelineController", "Managed by C++");
+    auto *workspace = new Rina::UI::Workspace(&app);
+    engine.rootContext()->setContextProperty(QStringLiteral("Workspace"), workspace);
+    QObject::connect(workspace, &Rina::UI::Workspace::currentTimelineChanged, &app, [&modEngine, workspace]() {
+        if (workspace->currentTimeline()) {
+            modEngine.registerController(workspace->currentTimeline());
+        }
+    });
+    workspace->setVideoFrameStore(videoFrameStore);
 
     engine.rootContext()->setContextProperty(QStringLiteral("WindowManager"), static_cast<QObject *>(&Rina::UI::WindowManager::instance()));
 
     // 遅延初期化処理を実行する
-    QTimer::singleShot(10, &engine, [&engine, timelineController, &modEngine, splash]() -> void {
+    QTimer::singleShot(10, &engine, [&engine, workspace, &modEngine, splash]() -> void {
         Rina::Core::initializeStandardEffects();
         modEngine.initialize(nullptr);
-        modEngine.registerController(timelineController);
+        modEngine.registerController(workspace->currentTimeline());
         modEngine.loadPlugins();
 
         QString appDir = QCoreApplication::applicationDirPath();

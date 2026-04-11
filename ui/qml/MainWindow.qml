@@ -11,7 +11,7 @@ ApplicationWindow {
     id: mainWin
 
     function checkSaveAndExecute(action) {
-        if (TimelineBridge && TimelineBridge.hasUnsavedChanges) {
+        if (Workspace.currentTimeline && Workspace.currentTimeline.hasUnsavedChanges) {
             saveConfirmDialog.pendingAction = action;
             saveConfirmDialog.open();
         } else {
@@ -34,22 +34,22 @@ ApplicationWindow {
     }
     // 起動時に自分自身(Window)をコントローラーに渡す
     Component.onCompleted: {
-        if (TimelineBridge)
-            TimelineBridge.setCompositeView(compositeView);
+        if (Workspace.currentTimeline)
+            Workspace.currentTimeline.setCompositeView(compositeView);
 
     }
 
     // 末尾到達時に一時停止するだけのシンプルなロジック
     Connections {
         function onCurrentFrameChanged() {
-            if (TimelineBridge && TimelineBridge.transport) {
-                if (TimelineBridge.transport.totalFrames > 0 && TimelineBridge.transport.currentFrame >= TimelineBridge.transport.totalFrames)
-                    TimelineBridge.transport.pause();
+            if (Workspace.currentTimeline && Workspace.currentTimeline.transport) {
+                if (Workspace.currentTimeline.transport.totalFrames > 0 && Workspace.currentTimeline.transport.currentFrame >= Workspace.currentTimeline.transport.totalFrames)
+                    Workspace.currentTimeline.transport.pause();
 
             }
         }
 
-        target: TimelineBridge ? TimelineBridge.transport : null
+        target: Workspace.currentTimeline ? Workspace.currentTimeline.transport : null
     }
 
     FontLoader {
@@ -64,14 +64,9 @@ ApplicationWindow {
 
         text: qsTr("新規プロジェクト")
         onTriggered: {
-            checkSaveAndExecute(function() {
-                var win = WindowManager.getWindow("launcher");
-                if (win) {
-                    win.show();
-                    win.raise();
-                    win.requestActivate();
-                }
-            });
+            if (Workspace)
+                Workspace.newProject();
+
         }
     }
 
@@ -82,12 +77,12 @@ ApplicationWindow {
 
         text: qsTr("プロジェクトの上書き保存")
         onTriggered: {
-            if (TimelineBridge) {
+            if (Workspace.currentTimeline) {
                 // 現在のプロジェクトパスが未設定の場合は名前を付けて保存ダイアログを開く
-                if (TimelineBridge.currentProjectUrl === "")
+                if (Workspace.currentTimeline.currentProjectUrl === "")
                     saveDialog.open();
                 else
-                    TimelineBridge.saveProject("");
+                    Workspace.currentTimeline.saveProject("");
             }
         }
     }
@@ -99,9 +94,7 @@ ApplicationWindow {
 
         text: qsTr("プロジェクトを開く")
         onTriggered: {
-            checkSaveAndExecute(function() {
-                loadDialog.open();
-            });
+            loadDialog.open();
         }
     }
 
@@ -136,8 +129,8 @@ ApplicationWindow {
 
         text: qsTr("元に戻す")
         onTriggered: {
-            if (TimelineBridge)
-                TimelineBridge.undo();
+            if (Workspace.currentTimeline)
+                Workspace.currentTimeline.undo();
 
         }
     }
@@ -149,8 +142,8 @@ ApplicationWindow {
 
         text: qsTr("やり直す")
         onTriggered: {
-            if (TimelineBridge)
-                TimelineBridge.redo();
+            if (Workspace.currentTimeline)
+                Workspace.currentTimeline.redo();
 
         }
     }
@@ -162,8 +155,8 @@ ApplicationWindow {
 
         text: qsTr("再生 / 一時停止")
         onTriggered: {
-            if (TimelineBridge)
-                TimelineBridge.togglePlay();
+            if (Workspace.currentTimeline)
+                Workspace.currentTimeline.togglePlay();
 
         }
     }
@@ -175,14 +168,14 @@ ApplicationWindow {
 
         text: qsTr("クリップを分割")
         onTriggered: {
-            if (TimelineBridge && TimelineBridge.transport) {
-                var f = TimelineBridge.transport.currentFrame;
-                if (TimelineBridge.selection && TimelineBridge.selection.selectedClipId >= 0) {
-                    TimelineBridge.splitClip(TimelineBridge.selection.selectedClipId, f);
+            if (Workspace.currentTimeline && Workspace.currentTimeline.transport) {
+                var f = Workspace.currentTimeline.transport.currentFrame;
+                if (Workspace.currentTimeline.selection && Workspace.currentTimeline.selection.selectedClipId >= 0) {
+                    Workspace.currentTimeline.splitClip(Workspace.currentTimeline.selection.selectedClipId, f);
                 } else {
-                    if (TimelineBridge.selection && TimelineBridge.selection.selectedClipIds.length > 0) {
-                        for (var i = 0; i < TimelineBridge.selection.selectedClipIds.length; i++) {
-                            TimelineBridge.splitClip(TimelineBridge.selection.selectedClipIds[i], f);
+                    if (Workspace.currentTimeline.selection && Workspace.currentTimeline.selection.selectedClipIds.length > 0) {
+                        for (var i = 0; i < Workspace.currentTimeline.selection.selectedClipIds.length; i++) {
+                            Workspace.currentTimeline.splitClip(Workspace.currentTimeline.selection.selectedClipIds[i], f);
                         }
                     }
                 }
@@ -197,8 +190,8 @@ ApplicationWindow {
 
         text: qsTr("削除")
         onTriggered: {
-            if (TimelineBridge)
-                TimelineBridge.deleteSelectedClips();
+            if (Workspace.currentTimeline)
+                Workspace.currentTimeline.deleteSelectedClips();
 
         }
     }
@@ -210,8 +203,8 @@ ApplicationWindow {
 
         text: qsTr("コピー")
         onTriggered: {
-            if (TimelineBridge)
-                TimelineBridge.copySelectedClips();
+            if (Workspace.currentTimeline)
+                Workspace.currentTimeline.copySelectedClips();
 
         }
     }
@@ -223,8 +216,8 @@ ApplicationWindow {
 
         text: qsTr("カット")
         onTriggered: {
-            if (TimelineBridge)
-                TimelineBridge.cutSelectedClips();
+            if (Workspace.currentTimeline)
+                Workspace.currentTimeline.cutSelectedClips();
 
         }
     }
@@ -236,10 +229,10 @@ ApplicationWindow {
 
         text: qsTr("貼り付け")
         onTriggered: {
-            if (TimelineBridge && TimelineBridge.transport) {
-                var f = TimelineBridge.transport.currentFrame;
-                var l = TimelineBridge.selectedLayer !== undefined ? TimelineBridge.selectedLayer : 0;
-                TimelineBridge.pasteClip(f, l);
+            if (Workspace.currentTimeline && Workspace.currentTimeline.transport) {
+                var f = Workspace.currentTimeline.transport.currentFrame;
+                var l = Workspace.currentTimeline.selectedLayer !== undefined ? Workspace.currentTimeline.selectedLayer : 0;
+                Workspace.currentTimeline.pasteClip(f, l);
             }
         }
     }
@@ -251,11 +244,11 @@ ApplicationWindow {
 
         text: qsTr("複製")
         onTriggered: {
-            if (TimelineBridge) {
-                TimelineBridge.copySelectedClips();
-                var f = TimelineBridge.transport ? TimelineBridge.transport.currentFrame : 0;
-                var l = TimelineBridge.selectedLayer !== undefined ? TimelineBridge.selectedLayer : 0;
-                TimelineBridge.pasteClip(f, l);
+            if (Workspace.currentTimeline) {
+                Workspace.currentTimeline.copySelectedClips();
+                var f = Workspace.currentTimeline.transport ? Workspace.currentTimeline.transport.currentFrame : 0;
+                var l = Workspace.currentTimeline.selectedLayer !== undefined ? Workspace.currentTimeline.selectedLayer : 0;
+                Workspace.currentTimeline.pasteClip(f, l);
             }
         }
     }
@@ -267,8 +260,8 @@ ApplicationWindow {
 
         text: qsTr("1フレーム進む")
         onTriggered: {
-            if (TimelineBridge && TimelineBridge.transport)
-                TimelineBridge.transport.currentFrame = Math.min(TimelineBridge.transport.currentFrame + 1, TimelineBridge.transport.totalFrames);
+            if (Workspace.currentTimeline && Workspace.currentTimeline.transport)
+                Workspace.currentTimeline.transport.currentFrame = Math.min(Workspace.currentTimeline.transport.currentFrame + 1, Workspace.currentTimeline.transport.totalFrames);
 
         }
     }
@@ -280,8 +273,8 @@ ApplicationWindow {
 
         text: qsTr("1フレーム戻る")
         onTriggered: {
-            if (TimelineBridge && TimelineBridge.transport)
-                TimelineBridge.transport.currentFrame = Math.max(TimelineBridge.transport.currentFrame - 1, 0);
+            if (Workspace.currentTimeline && Workspace.currentTimeline.transport)
+                Workspace.currentTimeline.transport.currentFrame = Math.max(Workspace.currentTimeline.transport.currentFrame - 1, 0);
 
         }
     }
@@ -293,8 +286,8 @@ ApplicationWindow {
 
         text: qsTr("先頭へ移動")
         onTriggered: {
-            if (TimelineBridge && TimelineBridge.transport)
-                TimelineBridge.transport.currentFrame = 0;
+            if (Workspace.currentTimeline && Workspace.currentTimeline.transport)
+                Workspace.currentTimeline.transport.currentFrame = 0;
 
         }
     }
@@ -306,8 +299,8 @@ ApplicationWindow {
 
         text: qsTr("末尾へ移動")
         onTriggered: {
-            if (TimelineBridge && TimelineBridge.transport)
-                TimelineBridge.transport.currentFrame = TimelineBridge.transport.totalFrames;
+            if (Workspace.currentTimeline && Workspace.currentTimeline.transport)
+                Workspace.currentTimeline.transport.currentFrame = Workspace.currentTimeline.transport.totalFrames;
 
         }
     }
@@ -319,10 +312,10 @@ ApplicationWindow {
 
         text: qsTr("ズームイン")
         onTriggered: {
-            if (TimelineBridge) {
+            if (Workspace.currentTimeline) {
                 var step = SettingsManager ? SettingsManager.value("timelineZoomStep", 10) : 10;
                 var maxZ = SettingsManager ? SettingsManager.value("timelineZoomMax", 400) : 400;
-                TimelineBridge.timelineScale = Math.min(TimelineBridge.timelineScale + step / 100, maxZ / 100);
+                Workspace.currentTimeline.timelineScale = Math.min(Workspace.currentTimeline.timelineScale + step / 100, maxZ / 100);
             }
         }
     }
@@ -334,10 +327,10 @@ ApplicationWindow {
 
         text: qsTr("ズームアウト")
         onTriggered: {
-            if (TimelineBridge) {
+            if (Workspace.currentTimeline) {
                 var step = SettingsManager ? SettingsManager.value("timelineZoomStep", 10) : 10;
                 var minZ = SettingsManager ? SettingsManager.value("timelineZoomMin", 10) : 10;
-                TimelineBridge.timelineScale = Math.max(TimelineBridge.timelineScale - step / 100, minZ / 100);
+                Workspace.currentTimeline.timelineScale = Math.max(Workspace.currentTimeline.timelineScale - step / 100, minZ / 100);
             }
         }
     }
@@ -349,8 +342,8 @@ ApplicationWindow {
 
         text: qsTr("レイヤーを上へ移動")
         onTriggered: {
-            if (TimelineBridge)
-                TimelineBridge.moveSelectedClips(-1, 0);
+            if (Workspace.currentTimeline)
+                Workspace.currentTimeline.moveSelectedClips(-1, 0);
 
         }
     }
@@ -362,8 +355,8 @@ ApplicationWindow {
 
         text: qsTr("レイヤーを下へ移動")
         onTriggered: {
-            if (TimelineBridge)
-                TimelineBridge.moveSelectedClips(1, 0);
+            if (Workspace.currentTimeline)
+                Workspace.currentTimeline.moveSelectedClips(1, 0);
 
         }
     }
@@ -375,8 +368,8 @@ ApplicationWindow {
 
         text: qsTr("1フレーム左へ移動")
         onTriggered: {
-            if (TimelineBridge)
-                TimelineBridge.moveSelectedClips(0, -1);
+            if (Workspace.currentTimeline)
+                Workspace.currentTimeline.moveSelectedClips(0, -1);
 
         }
     }
@@ -388,8 +381,8 @@ ApplicationWindow {
 
         text: qsTr("1フレーム右へ移動")
         onTriggered: {
-            if (TimelineBridge)
-                TimelineBridge.moveSelectedClips(0, 1);
+            if (Workspace.currentTimeline)
+                Workspace.currentTimeline.moveSelectedClips(0, 1);
 
         }
     }
@@ -413,13 +406,13 @@ ApplicationWindow {
         parent: Overlay.overlay
         standardButtons: Dialog.Save | Dialog.Discard | Dialog.Cancel
         onAccepted: {
-            if (TimelineBridge) {
-                if (TimelineBridge.currentProjectUrl === "") {
+            if (Workspace.currentTimeline) {
+                if (Workspace.currentTimeline.currentProjectUrl === "") {
                     // 名前を付けて保存 → 完了後に pendingAction を実行
                     saveDialog._nextAction = pendingAction;
                     saveDialog.open();
                 } else {
-                    TimelineBridge.saveProject("");
+                    Workspace.currentTimeline.saveProject("");
                     if (pendingAction)
                         pendingAction();
 
@@ -450,34 +443,34 @@ ApplicationWindow {
             errorDialog.open();
         }
 
-        target: TimelineBridge
+        target: Workspace.currentTimeline
     }
 
     // FPSと再生速度の同期設定
     Binding {
-        target: TimelineBridge ? TimelineBridge.transport : null
+        target: Workspace.currentTimeline ? Workspace.currentTimeline.transport : null
         property: "fps"
-        value: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.fps : 60
+        value: (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.fps : 60
     }
 
     Connections {
         function onPlaybackSpeedChanged() {
-            if (TimelineBridge)
-                TimelineBridge.syncPlaybackSpeed();
+            if (Workspace.currentTimeline)
+                Workspace.currentTimeline.syncPlaybackSpeed();
 
         }
 
-        target: TimelineBridge ? TimelineBridge.transport : null
+        target: Workspace.currentTimeline ? Workspace.currentTimeline.transport : null
     }
 
     Connections {
         function onSampleRateChanged() {
-            if (TimelineBridge)
-                TimelineBridge.updateAudioSampleRate();
+            if (Workspace.currentTimeline)
+                Workspace.currentTimeline.updateAudioSampleRate();
 
         }
 
-        target: TimelineBridge ? TimelineBridge.project : null
+        target: Workspace.currentTimeline ? Workspace.currentTimeline.project : null
     }
 
     Platform.FileDialog {
@@ -490,8 +483,8 @@ ApplicationWindow {
         nameFilters: ["Rina Project files (*.rina)", "JSON files (*.json)"]
         defaultSuffix: "rina"
         onAccepted: {
-            if (TimelineBridge)
-                TimelineBridge.saveProject(file);
+            if (Workspace.currentTimeline)
+                Workspace.currentTimeline.saveProject(file);
 
             if (_nextAction)
                 _nextAction();
@@ -509,8 +502,8 @@ ApplicationWindow {
         title: qsTr("プロジェクトを開く")
         nameFilters: ["Rina Project files (*.rina)", "JSON files (*.json)"]
         onAccepted: {
-            if (TimelineBridge)
-                TimelineBridge.loadProject(file);
+            if (Workspace)
+                Workspace.loadProject(file);
 
         }
     }
@@ -522,6 +515,104 @@ ApplicationWindow {
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
+
+        // プロジェクトタブバー
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.preferredHeight: SettingsManager && SettingsManager.settings ? (SettingsManager.settings.timelineHeaderHeight || 28) : 28
+            Layout.maximumHeight: SettingsManager && SettingsManager.settings ? (SettingsManager.settings.timelineHeaderHeight || 28) : 28
+            Layout.minimumHeight: SettingsManager && SettingsManager.settings ? (SettingsManager.settings.timelineHeaderHeight || 28) : 28
+            spacing: 0
+            z: 1
+
+            ScrollView {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                ScrollBar.vertical.policy: ScrollBar.AlwaysOff
+                clip: true
+
+                TabBar {
+                    id: projectTabBar
+
+                    width: Math.max(parent.width, contentWidth)
+
+                    Repeater {
+                        id: projectRepeater
+
+                        model: Workspace ? Workspace.tabs : []
+
+                        TabButton {
+                            id: tabBtn
+
+                            checked: Workspace && Workspace.currentIndex === index
+                            onClicked: {
+                                if (Workspace)
+                                    Workspace.currentIndex = index;
+
+                            }
+
+                            contentItem: RowLayout {
+                                spacing: 4
+
+                                Text {
+                                    text: modelData.name + (modelData.hasUnsavedChanges ? " *" : "")
+                                    font: tabBtn.font
+                                    color: palette.text
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                    elide: Text.ElideRight
+                                    Layout.maximumWidth: 200
+                                }
+
+                                Button {
+                                    flat: true
+                                    Layout.preferredWidth: 20
+                                    Layout.preferredHeight: 20
+                                    onClicked: {
+                                        if (Workspace)
+                                            Workspace.closeProject(index);
+
+                                    }
+
+                                    contentItem: Common.RinaIcon {
+                                        iconName: "close_line"
+                                        size: 14
+                                        color: parent.hovered ? parent.palette.highlight : parent.palette.text
+                                    }
+
+                                }
+
+                            }
+
+                        }
+
+                    }
+
+                }
+
+            }
+
+            // 新規プロジェクト追加ボタン
+            Button {
+                flat: true
+                Layout.preferredWidth: 40
+                Layout.fillHeight: true
+                onClicked: {
+                    if (Workspace)
+                        Workspace.newProject();
+
+                }
+
+                contentItem: Common.RinaIcon {
+                    iconName: "add_line"
+                    size: 16
+                    color: parent.hovered ? parent.palette.highlight : parent.palette.text
+                }
+
+            }
+
+        }
 
         CompositeView {
             id: compositeView
@@ -572,7 +663,7 @@ ApplicationWindow {
                     to: {
                         // クリップの末尾を取得して動的に拡張
                         var maxEnd = 0;
-                        var clipList = (TimelineBridge && TimelineBridge.clips) ? TimelineBridge.clips : [];
+                        var clipList = (Workspace.currentTimeline && Workspace.currentTimeline.clips) ? Workspace.currentTimeline.clips : [];
                         for (var j = 0; j < clipList.length; j++) {
                             var clip = clipList[j];
                             var end = clip.startFrame + clip.durationFrames;
@@ -583,24 +674,24 @@ ApplicationWindow {
                         return Math.max(1, maxEnd + 1);
                     }
                     onPressedChanged: {
-                        if (TimelineBridge && TimelineBridge.transport) {
-                            TimelineBridge.transport.isScrubbing = pressed;
+                        if (Workspace.currentTimeline && Workspace.currentTimeline.transport) {
+                            Workspace.currentTimeline.transport.isScrubbing = pressed;
                             if (pressed)
-                                TimelineBridge.transport.beginScrub();
+                                Workspace.currentTimeline.transport.beginScrub();
                             else
-                                TimelineBridge.transport.setCurrentFrame_seek(Math.floor(value));
+                                Workspace.currentTimeline.transport.setCurrentFrame_seek(Math.floor(value));
                         }
                     }
                     onMoved: {
-                        if (TimelineBridge && TimelineBridge.transport)
-                            TimelineBridge.transport.scrubTo(Math.floor(value));
+                        if (Workspace.currentTimeline && Workspace.currentTimeline.transport)
+                            Workspace.currentTimeline.transport.scrubTo(Math.floor(value));
 
                     }
 
                     // スクラブ中はUI側からの書き換えを優先し、通常時はトランスポートに同期する
                     Binding on value {
                         when: !seekSlider.pressed
-                        value: (TimelineBridge && TimelineBridge.transport) ? TimelineBridge.transport.currentFrame : 0
+                        value: (Workspace.currentTimeline && Workspace.currentTimeline.transport) ? Workspace.currentTimeline.transport.currentFrame : 0
                         restoreMode: Binding.RestoreBinding
                     }
 
@@ -632,8 +723,8 @@ ApplicationWindow {
                         Layout.preferredHeight: 32
                         flat: true
                         onClicked: {
-                            if (TimelineBridge && TimelineBridge.transport)
-                                TimelineBridge.transport.setCurrentFrame_seek(Math.max(0, TimelineBridge.transport.currentFrame - 1));
+                            if (Workspace.currentTimeline && Workspace.currentTimeline.transport)
+                                Workspace.currentTimeline.transport.setCurrentFrame_seek(Math.max(0, Workspace.currentTimeline.transport.currentFrame - 1));
 
                         }
 
@@ -650,13 +741,13 @@ ApplicationWindow {
                         Layout.preferredHeight: 32
                         flat: true
                         onClicked: {
-                            if (TimelineBridge && TimelineBridge.transport)
-                                TimelineBridge.transport.togglePlay();
+                            if (Workspace.currentTimeline && Workspace.currentTimeline.transport)
+                                Workspace.currentTimeline.transport.togglePlay();
 
                         }
 
                         contentItem: Common.RinaIcon {
-                            iconName: (TimelineBridge && TimelineBridge.transport && TimelineBridge.transport.isPlaying) ? "pause_fill" : "play_fill"
+                            iconName: (Workspace.currentTimeline && Workspace.currentTimeline.transport && Workspace.currentTimeline.transport.isPlaying) ? "pause_fill" : "play_fill"
                             size: 24
                             color: parent.hovered ? parent.palette.highlight : parent.palette.text
                         }
@@ -668,8 +759,8 @@ ApplicationWindow {
                         Layout.preferredHeight: 32
                         flat: true
                         onClicked: {
-                            if (TimelineBridge && TimelineBridge.transport)
-                                TimelineBridge.transport.setCurrentFrame_seek(TimelineBridge.transport.currentFrame + 1);
+                            if (Workspace.currentTimeline && Workspace.currentTimeline.transport)
+                                Workspace.currentTimeline.transport.setCurrentFrame_seek(Workspace.currentTimeline.transport.currentFrame + 1);
 
                         }
 
@@ -700,12 +791,12 @@ ApplicationWindow {
                         editable: true
                         Layout.preferredWidth: 80
                         Layout.preferredHeight: 28
-                        enabled: !(TimelineBridge && TimelineBridge.transport && TimelineBridge.transport.isPlaying)
+                        enabled: !(Workspace.currentTimeline && Workspace.currentTimeline.transport && Workspace.currentTimeline.transport.isPlaying)
                         // 値のバインディング
-                        value: (TimelineBridge && TimelineBridge.transport) ? Math.round(TimelineBridge.transport.playbackSpeed * 100) : 100
+                        value: (Workspace.currentTimeline && Workspace.currentTimeline.transport) ? Math.round(Workspace.currentTimeline.transport.playbackSpeed * 100) : 100
                         onValueModified: {
-                            if (TimelineBridge && TimelineBridge.transport)
-                                TimelineBridge.transport.playbackSpeed = value / 100;
+                            if (Workspace.currentTimeline && Workspace.currentTimeline.transport)
+                                Workspace.currentTimeline.transport.playbackSpeed = value / 100;
 
                         }
                         textFromValue: function(value, locale) {
@@ -908,7 +999,7 @@ ApplicationWindow {
             Common.IconMenuItem {
                 text: qsTr("メディアの書き出し...")
                 iconName: "movie_line"
-                enabled: TimelineBridge && TimelineBridge.project
+                enabled: Workspace.currentTimeline && Workspace.currentTimeline.project
                 onTriggered: {
                     exportDialog.x = mainWin.x + (mainWin.width - exportDialog.width) / 2;
                     exportDialog.y = mainWin.y + (mainWin.height - exportDialog.height) / 2;

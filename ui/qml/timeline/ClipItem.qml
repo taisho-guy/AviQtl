@@ -14,11 +14,11 @@ Item {
     }
     property int resizeDraftStart: -1
     property int resizeDraftDuration: -1
-    property double scale: TimelineBridge ? TimelineBridge.timelineScale : 1
+    property double scale: Workspace.currentTimeline ? Workspace.currentTimeline.timelineScale : 1
     property bool forceVisualSelection: false
     property var forcedSelectedIds: []
-    readonly property bool committedSelected: ((TimelineBridge && TimelineBridge.selection) ? (TimelineBridge.selection.selectedClipIds.includes(modelData.id)) : false)
-    readonly property bool previewSelected: TimelineBridge && TimelineBridge.previewSelectionIds ? TimelineBridge.previewSelectionIds.includes(modelData.id) : false
+    readonly property bool committedSelected: ((Workspace.currentTimeline && Workspace.currentTimeline.selection) ? (Workspace.currentTimeline.selection.selectedClipIds.includes(modelData.id)) : false)
+    readonly property bool previewSelected: Workspace.currentTimeline && Workspace.currentTimeline.previewSelectionIds ? Workspace.currentTimeline.previewSelectionIds.includes(modelData.id) : false
     readonly property bool forcedSelected: forceVisualSelection && forcedSelectedIds.includes(modelData.id)
     readonly property bool isSelected: previewSelected || (forceVisualSelection ? forcedSelected : committedSelected)
     readonly property bool isLayerLocked: getLayerLocked(modelData.layer)
@@ -54,7 +54,7 @@ Item {
         anchors.fill: parent
         anchors.bottomMargin: 2
         color: {
-            var c = TimelineBridge ? TimelineBridge.getClipTypeColor(modelData.type) : "";
+            var c = Workspace.currentTimeline ? Workspace.currentTimeline.getClipTypeColor(modelData.type) : "";
             if (c !== "")
                 return isSelected ? Qt.lighter(c, 1.3) : c;
 
@@ -114,7 +114,7 @@ Item {
             onPaint: {
                 var ctx = getContext("2d");
                 ctx.clearRect(0, 0, width, height);
-                if (!isAudio || width <= 0 || !TimelineBridge)
+                if (!isAudio || width <= 0 || !Workspace.currentTimeline)
                     return ;
 
                 var pw = Math.floor(width);
@@ -122,7 +122,7 @@ Item {
                 if (pw <= 0 || dur <= 0)
                     return ;
 
-                var peaks = TimelineBridge.getWaveformPeaks(modelData.id, pw, dur);
+                var peaks = Workspace.currentTimeline.getWaveformPeaks(modelData.id, pw, dur);
                 if (!peaks || peaks.length === 0)
                     return ;
 
@@ -151,7 +151,7 @@ Item {
                     waveformCanvas._schedulePaint();
                 }
 
-                target: TimelineBridge
+                target: Workspace.currentTimeline
             }
 
         }
@@ -180,12 +180,12 @@ Item {
                 var deltaFrame = Math.round(dX / clipDelegate.scale);
                 var deltaLayer = Math.round(dY / layerHeight);
                 var ignoreSnap = (modifiers & Qt.ShiftModifier);
-                if (TimelineBridge && typeof TimelineBridge.resolveDragDelta === "function") {
+                if (Workspace.currentTimeline && typeof Workspace.currentTimeline.resolveDragDelta === "function") {
                     var activeIds = (timelineViewRoot && timelineViewRoot.selectionVisualLatchIds) || [];
-                    if (activeIds.length === 0 && TimelineBridge.selection)
-                        activeIds = TimelineBridge.selection.selectedClipIds;
+                    if (activeIds.length === 0 && Workspace.currentTimeline.selection)
+                        activeIds = Workspace.currentTimeline.selection.selectedClipIds;
 
-                    var res = TimelineBridge.resolveDragDelta(modelData.id, deltaFrame, deltaLayer, activeIds, timelineViewRoot.selectionMinFrame, timelineViewRoot.selectionMinLayer, timelineViewRoot.selectionMaxLayer, timelineViewRoot.layerCount);
+                    var res = Workspace.currentTimeline.resolveDragDelta(modelData.id, deltaFrame, deltaLayer, activeIds, timelineViewRoot.selectionMinFrame, timelineViewRoot.selectionMinLayer, timelineViewRoot.selectionMaxLayer, timelineViewRoot.layerCount);
                     var dF = res.x;
                     var dL = res.y;
                     if (!ignoreSnap)
@@ -241,23 +241,23 @@ Item {
                         return ;
 
                     dragActive = true;
-                    if (!clipDelegate.isSelected && TimelineBridge)
-                        TimelineBridge.handleClipClick(modelData.id, pressModifiers);
+                    if (!clipDelegate.isSelected && Workspace.currentTimeline)
+                        Workspace.currentTimeline.handleClipClick(modelData.id, pressModifiers);
 
                     var minF = modelData.startFrame;
                     var minL = modelData.layer;
                     var maxL = modelData.layer;
-                    if (TimelineBridge && TimelineBridge.selection) {
+                    if (Workspace.currentTimeline && Workspace.currentTimeline.selection) {
                         var ids = (timelineViewRoot && timelineViewRoot.selectionVisualLatchIds) || [];
                         if (ids.length === 0)
-                            ids = TimelineBridge.selection.selectedClipIds;
+                            ids = Workspace.currentTimeline.selection.selectedClipIds;
 
                         if (ids.length > 0) {
                             minF = 1e+07;
                             minL = 1e+07;
                             maxL = -1;
-                            for (var i = 0; i < TimelineBridge.clips.length; i++) {
-                                var c = TimelineBridge.clips[i];
+                            for (var i = 0; i < Workspace.currentTimeline.clips.length; i++) {
+                                var c = Workspace.currentTimeline.clips[i];
                                 if (ids.includes(c.id)) {
                                     if (c.startFrame < minF)
                                         minF = c.startFrame;
@@ -287,12 +287,12 @@ Item {
             }
             onReleased: (mouse) => {
                 timelineViewRoot.endDragAutoScroll();
-                if (!TimelineBridge)
+                if (!Workspace.currentTimeline)
                     return ;
 
                 if (!dragActive) {
-                    if (TimelineBridge)
-                        TimelineBridge.handleClipClick(modelData.id, pressModifiers);
+                    if (Workspace.currentTimeline)
+                        Workspace.currentTimeline.handleClipClick(modelData.id, pressModifiers);
 
                     return ;
                 }
@@ -342,8 +342,8 @@ Item {
                     if (clipDelegate.isLayerLocked)
                         return ;
 
-                    if (!clipDelegate.isSelected && TimelineBridge)
-                        TimelineBridge.handleClipClick(modelData.id, mouse.modifiers);
+                    if (!clipDelegate.isSelected && Workspace.currentTimeline)
+                        Workspace.currentTimeline.handleClipClick(modelData.id, mouse.modifiers);
 
                     var sp = mapToItem(flickableContentItem, mouse.x, mouse.y);
                     startSceneX = sp.x;
@@ -378,7 +378,7 @@ Item {
                         return ;
 
                     resizing = false;
-                    if (TimelineBridge && clipDelegate.resizeDraftDuration > 0) {
+                    if (Workspace.currentTimeline && clipDelegate.resizeDraftDuration > 0) {
                         var newStart = clipDelegate.resizeDraftStart >= 0 ? clipDelegate.resizeDraftStart : modelData.startFrame;
                         var deltaStart = newStart - startFrame;
                         var deltaDuration = clipDelegate.resizeDraftDuration - startDuration;
@@ -415,8 +415,8 @@ Item {
                     if (clipDelegate.isLayerLocked)
                         return ;
 
-                    if (!clipDelegate.isSelected && TimelineBridge)
-                        TimelineBridge.handleClipClick(modelData.id, mouse.modifiers);
+                    if (!clipDelegate.isSelected && Workspace.currentTimeline)
+                        Workspace.currentTimeline.handleClipClick(modelData.id, mouse.modifiers);
 
                     var sp = mapToItem(flickableContentItem, mouse.x, mouse.y);
                     startSceneX = sp.x;
@@ -445,7 +445,7 @@ Item {
                         return ;
 
                     resizing = false;
-                    if (TimelineBridge && clipDelegate.resizeDraftDuration > 0) {
+                    if (Workspace.currentTimeline && clipDelegate.resizeDraftDuration > 0) {
                         var deltaDuration = clipDelegate.resizeDraftDuration - startDuration;
                         clipResized(modelData.id, 0, deltaDuration, 0);
                     }

@@ -9,7 +9,7 @@ import "common" as Common
 Common.RinaWindow {
     id: root
 
-    property int targetClipId: (TimelineBridge && TimelineBridge.selection) ? TimelineBridge.selection.selectedClipId : -1
+    property int targetClipId: (Workspace.currentTimeline && Workspace.currentTimeline.selection) ? Workspace.currentTimeline.selection.selectedClipId : -1
     property var effectsModel: []
     property var audioEffectsModel: []
     property bool inputting: false // 入力中フラグ（reloadループ防止用）
@@ -17,15 +17,15 @@ Common.RinaWindow {
     property bool isDeleting: false // 複数エフェクト削除中フラグ（途中reload抑制用）
     property bool enableSnap: SettingsManager && SettingsManager.settings ? SettingsManager.settings.enableSnap : true
     property bool sidebarOnRight: (SettingsManager && SettingsManager.settings && SettingsManager.settings.settingDialogSidebarRight !== undefined) ? SettingsManager.settings.settingDialogSidebarRight : false
-    readonly property real _projectFps: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.fps : 60
+    readonly property real _projectFps: (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.fps : 60
 
     function currentSceneData() {
-        if (!TimelineBridge || !TimelineBridge.scenes)
+        if (!Workspace.currentTimeline || !Workspace.currentTimeline.scenes)
             return null;
 
-        for (let i = 0; i < TimelineBridge.scenes.length; i++) {
-            if (TimelineBridge.scenes[i].id === TimelineBridge.currentSceneId)
-                return TimelineBridge.scenes[i];
+        for (let i = 0; i < Workspace.currentTimeline.scenes.length; i++) {
+            if (Workspace.currentTimeline.scenes[i].id === Workspace.currentTimeline.currentSceneId)
+                return Workspace.currentTimeline.scenes[i];
 
         }
         return null;
@@ -52,12 +52,12 @@ Common.RinaWindow {
     }
 
     function getGridInterval() {
-        if (!TimelineBridge)
+        if (!Workspace.currentTimeline)
             return 1;
 
         const gs = gridSettings();
-        const scale = TimelineBridge.timelineScale;
-        const fps = (TimelineBridge.project && TimelineBridge.project.fps) ? TimelineBridge.project.fps : 60;
+        const scale = Workspace.currentTimeline.timelineScale;
+        const fps = (Workspace.currentTimeline.project && Workspace.currentTimeline.project.fps) ? Workspace.currentTimeline.project.fps : 60;
         if (gs.mode === "BPM") {
             const beatFrames = fps / (gs.bpm / 60);
             const bpmDiv = scale > 3 ? 4 : scale > 1.5 ? 2 : 1;
@@ -76,25 +76,25 @@ Common.RinaWindow {
     }
 
     function snapRelativeFrame(relFrame) {
-        if (!TimelineBridge || !enableSnap)
+        if (!Workspace.currentTimeline || !enableSnap)
             return Math.max(0, Math.round(relFrame));
 
         const gs = gridSettings();
-        const absFrame = TimelineBridge.clipStartFrame + relFrame;
+        const absFrame = Workspace.currentTimeline.clipStartFrame + relFrame;
         const step = getGridInterval();
-        const offset = (gs.mode === "BPM" && TimelineBridge.project) ? gs.offset * TimelineBridge.project.fps : 0;
+        const offset = (gs.mode === "BPM" && Workspace.currentTimeline.project) ? gs.offset * Workspace.currentTimeline.project.fps : 0;
         const snappedAbs = Math.max(0, Math.round((Math.round((absFrame - offset) / step) * step) + offset));
-        const newRelFrame = snappedAbs - TimelineBridge.clipStartFrame;
+        const newRelFrame = snappedAbs - Workspace.currentTimeline.clipStartFrame;
         // Don't snap outside the clip bounds if it goes negative
         return Math.max(0, newRelFrame);
     }
 
     function reload() {
-        if (!TimelineBridge || !TimelineBridge.selection || reloading)
+        if (!Workspace.currentTimeline || !Workspace.currentTimeline.selection || reloading)
             return ;
 
         reloading = true;
-        var id = TimelineBridge.selection.selectedClipId;
+        var id = Workspace.currentTimeline.selection.selectedClipId;
         targetClipId = id;
         // 選択状態をオブジェクト参照で保存（インデックスずれ防止）
         var oldModel = sidebarList.model;
@@ -112,14 +112,14 @@ Common.RinaWindow {
 
         }
         if (id >= 0) {
-            effectsModel = TimelineBridge.getClipEffectsModel(id);
-            audioEffectsModel = TimelineBridge.getClipEffectStack(id);
+            effectsModel = Workspace.currentTimeline.getClipEffectsModel(id);
+            audioEffectsModel = Workspace.currentTimeline.getClipEffectStack(id);
         } else {
             effectsModel = [];
             audioEffectsModel = [];
         }
         // 保存したオブジェクト参照から新インデックスを復元
-        var newModel = (TimelineBridge && TimelineBridge.isAudioClip(id)) ? audioEffectsModel : effectsModel;
+        var newModel = (Workspace.currentTimeline && Workspace.currentTimeline.isAudioClip(id)) ? audioEffectsModel : effectsModel;
         if (newModel && oldSelectedObjects.length > 0) {
             var newSel = [];
             for (var j = 0; j < newModel.length; j++) {
@@ -139,10 +139,10 @@ Common.RinaWindow {
 
     // 複数エフェクト一括削除（reload を削除完了後に1回だけ行う）
     function executeEffectDelete(indices) {
-        if (!TimelineBridge)
+        if (!Workspace.currentTimeline)
             return ;
 
-        var isAudio = TimelineBridge.isAudioClip(targetClipId);
+        var isAudio = Workspace.currentTimeline.isAudioClip(targetClipId);
         // ① 削除対象を現在のモデルから事前に確定（途中のモデル更新に依存しない）
         var m = sidebarList.model;
         var toDelete = [];
@@ -167,12 +167,12 @@ Common.RinaWindow {
             // AudioPlugin は clipsMutable ループ外で処理されるため従来方式
             root.isDeleting = true;
             for (var j = 0; j < toDelete.length; j++) {
-                TimelineBridge.removeAudioPlugin(targetClipId, toDelete[j]);
+                Workspace.currentTimeline.removeAudioPlugin(targetClipId, toDelete[j]);
             }
             root.isDeleting = false;
         } else {
             // ビデオエフェクトは C++ removeMultipleEffects で一括削除
-            TimelineBridge.removeMultipleEffects(targetClipId, toDelete);
+            Workspace.currentTimeline.removeMultipleEffects(targetClipId, toDelete);
         }
         // ③ 全削除完了後に一回だけリロード
         reload();
@@ -180,7 +180,7 @@ Common.RinaWindow {
     }
 
     function scrollToEffect(index) {
-        var isAudio = TimelineBridge && TimelineBridge.isAudioClip(targetClipId);
+        var isAudio = Workspace.currentTimeline && Workspace.currentTimeline.isAudioClip(targetClipId);
         var repeater = isAudio ? audioEffectsRepeater : videoEffectsRepeater;
         if (!repeater)
             return ;
@@ -235,7 +235,7 @@ Common.RinaWindow {
 
         }
 
-        target: TimelineBridge ? TimelineBridge.selection : null
+        target: Workspace.currentTimeline ? Workspace.currentTimeline.selection : null
     }
 
     Connections {
@@ -245,7 +245,7 @@ Common.RinaWindow {
 
         }
 
-        target: TimelineBridge
+        target: Workspace.currentTimeline
     }
 
     SplitView {
@@ -302,7 +302,7 @@ Common.RinaWindow {
                 LayoutMirroring.childrenInherit: true
                 clip: true
                 // 選択中のクリップタイプに応じてモデルを切り替え
-                model: (TimelineBridge && TimelineBridge.isAudioClip(targetClipId)) ? audioEffectsModel : effectsModel
+                model: (Workspace.currentTimeline && Workspace.currentTimeline.isAudioClip(targetClipId)) ? audioEffectsModel : effectsModel
                 boundsBehavior: Flickable.StopAtBounds
 
                 delegate: Item {
@@ -430,15 +430,15 @@ Common.RinaWindow {
                                         if (targetIndex === -1 || targetIndex === index)
                                             return ;
 
-                                        var isAudio = TimelineBridge.isAudioClip(targetClipId);
+                                        var isAudio = Workspace.currentTimeline.isAudioClip(targetClipId);
                                         var sel = sidebarList.selectedIndices;
                                         // 複数選択中 かつ ドラッグ元が選択範囲内 → 一括移動
                                         if (!isAudio && sel.length > 1 && sel.indexOf(index) >= 0)
-                                            TimelineBridge.reorderMultipleEffects(targetClipId, sel, targetIndex);
+                                            Workspace.currentTimeline.reorderMultipleEffects(targetClipId, sel, targetIndex);
                                         else if (isAudio)
-                                            TimelineBridge.reorderAudioPlugins(targetClipId, index, targetIndex);
+                                            Workspace.currentTimeline.reorderAudioPlugins(targetClipId, index, targetIndex);
                                         else
-                                            TimelineBridge.reorderEffects(targetClipId, index, targetIndex);
+                                            Workspace.currentTimeline.reorderEffects(targetClipId, index, targetIndex);
                                     }
                                 }
 
@@ -450,16 +450,16 @@ Common.RinaWindow {
                                 Layout.preferredHeight: 20
                                 Layout.preferredWidth: 20
                                 onToggled: {
-                                    if (!TimelineBridge)
+                                    if (!Workspace.currentTimeline)
                                         return ;
 
                                     var targets = (sidebarList.isSelected(index) && sidebarList.selectedIndices.length > 1) ? sidebarList.selectedIndices : [index];
-                                    var isAudio = TimelineBridge.isAudioClip(targetClipId);
+                                    var isAudio = Workspace.currentTimeline.isAudioClip(targetClipId);
                                     for (var i = 0; i < targets.length; i++) {
                                         if (isAudio)
-                                            TimelineBridge.setAudioPluginEnabled(targetClipId, targets[i], checked);
+                                            Workspace.currentTimeline.setAudioPluginEnabled(targetClipId, targets[i], checked);
                                         else
-                                            TimelineBridge.setEffectEnabled(targetClipId, targets[i], checked);
+                                            Workspace.currentTimeline.setEffectEnabled(targetClipId, targets[i], checked);
                                     }
                                 }
                             }
@@ -500,7 +500,7 @@ Common.RinaWindow {
                         if (!m)
                             return false;
 
-                        var isAudio = TimelineBridge && TimelineBridge.isAudioClip(targetClipId);
+                        var isAudio = Workspace.currentTimeline && Workspace.currentTimeline.isAudioClip(targetClipId);
                         // 1件でも削除可能なものがあれば有効
                         for (var i = 0; i < indices.length; i++) {
                             var idx = indices[i];
@@ -513,7 +513,7 @@ Common.RinaWindow {
                         return false;
                     }
                     onTriggered: {
-                        if (!TimelineBridge)
+                        if (!Workspace.currentTimeline)
                             return ;
 
                         var indices = sidebarList.selectedIndices.length > 0 ? sidebarList.selectedIndices.slice() : (effectContextMenu.effectIndex >= 0 ? [effectContextMenu.effectIndex] : []);
@@ -592,7 +592,7 @@ Common.RinaWindow {
                                 flat: true
                                 width: 24
                                 height: 24
-                                onClicked: TimelineBridge.removeEffect(targetClipId, effectRoot.effectIndex)
+                                onClicked: Workspace.currentTimeline.removeEffect(targetClipId, effectRoot.effectIndex)
 
                                 contentItem: Common.RinaIcon {
                                     iconName: "close_line"
@@ -637,8 +637,8 @@ Common.RinaWindow {
                                 property var effectModel: effectRoot.effectModel
                                 property int effIdx: effectRoot.effectIndex
                                 // キーフレーム
-                                property int curRelFrame: (TimelineBridge && TimelineBridge.transport) ? Math.max(0, TimelineBridge.transport.currentFrame - TimelineBridge.clipStartFrame) : 0
-                                property int clipDur: TimelineBridge ? TimelineBridge.clipDurationFrames : 100
+                                property int curRelFrame: (Workspace.currentTimeline && Workspace.currentTimeline.transport) ? Math.max(0, Workspace.currentTimeline.transport.currentFrame - Workspace.currentTimeline.clipStartFrame) : 0
+                                property int clipDur: Workspace.currentTimeline ? Workspace.currentTimeline.clipDurationFrames : 100
                                 property var tracks: effectModel ? effectModel.keyframeTracks : null
                                 property var kfs: {
                                     var _ = tracks;
@@ -741,7 +741,7 @@ Common.RinaWindow {
                                 }
 
                                 function getGridLines() {
-                                    if (!TimelineBridge || !enableSnap)
+                                    if (!Workspace.currentTimeline || !enableSnap)
                                         return [];
 
                                     let step = getGridInterval();
@@ -749,10 +749,10 @@ Common.RinaWindow {
                                         return [];
 
                                     let gs = gridSettings();
-                                    let fps = (TimelineBridge.project && TimelineBridge.project.fps) ? TimelineBridge.project.fps : 60;
+                                    let fps = (Workspace.currentTimeline.project && Workspace.currentTimeline.project.fps) ? Workspace.currentTimeline.project.fps : 60;
                                     let offsetF = (gs.mode === "BPM") ? gs.offset * fps : 0;
                                     let lines = [];
-                                    let startAbs = TimelineBridge.clipStartFrame;
+                                    let startAbs = Workspace.currentTimeline.clipStartFrame;
                                     let endAbs = startAbs + clipDur;
                                     let firstLine = Math.ceil((startAbs - offsetF) / step) * step + offsetF;
                                     if (clipDur / step > 150)
@@ -772,7 +772,7 @@ Common.RinaWindow {
                                         return ;
 
                                     if (!hasKeyframes) {
-                                        TimelineBridge.updateClipEffectParam(targetClipId, effIdx, key, val);
+                                        Workspace.currentTimeline.updateClipEffectParam(targetClipId, effIdx, key, val);
                                         return ;
                                     }
                                     let type = "linear";
@@ -783,7 +783,7 @@ Common.RinaWindow {
                                     if (type === "constant")
                                         type = "linear";
 
-                                    TimelineBridge.setKeyframe(targetClipId, effIdx, paramDelegate.key, frame, val, {
+                                    Workspace.currentTimeline.setKeyframe(targetClipId, effIdx, paramDelegate.key, frame, val, {
                                         "interp": type
                                     });
                                 }
@@ -1111,7 +1111,7 @@ Common.RinaWindow {
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 1
-                    visible: TimelineBridge && TimelineBridge.isAudioClip(targetClipId)
+                    visible: Workspace.currentTimeline && Workspace.currentTimeline.isAudioClip(targetClipId)
 
                     Repeater {
                         id: audioEffectsRepeater
@@ -1147,7 +1147,7 @@ Common.RinaWindow {
                                     flat: true
                                     width: 24
                                     height: 24
-                                    onClicked: TimelineBridge.removeAudioPlugin(targetClipId, audioEffectRoot.effectIndex)
+                                    onClicked: Workspace.currentTimeline.removeAudioPlugin(targetClipId, audioEffectRoot.effectIndex)
 
                                     contentItem: Common.RinaIcon {
                                         iconName: "close_line"
@@ -1160,7 +1160,7 @@ Common.RinaWindow {
                             }
 
                             Repeater {
-                                model: TimelineBridge.getEffectParameters(targetClipId, index)
+                                model: Workspace.currentTimeline.getEffectParameters(targetClipId, index)
 
                                 delegate: Common.ControlLoader {
                                     Layout.fillWidth: true
@@ -1173,7 +1173,7 @@ Common.RinaWindow {
                                     })
                                     value: modelData.current
                                     onValueModified: (newValue) => {
-                                        TimelineBridge.setEffectParameter(targetClipId, audioEffectRoot.effectIndex, modelData.pIdx, newValue);
+                                        Workspace.currentTimeline.setEffectParameter(targetClipId, audioEffectRoot.effectIndex, modelData.pIdx, newValue);
                                     }
                                 }
 
@@ -1196,7 +1196,7 @@ Common.RinaWindow {
         sequence: "Delete"
         context: Qt.WindowShortcut
         onActivated: {
-            if (!TimelineBridge)
+            if (!Workspace.currentTimeline)
                 return ;
 
             var indices = sidebarList.selectedIndices.length > 0 ? sidebarList.selectedIndices.slice() : (sidebarList.currentIndex >= 0 ? [sidebarList.currentIndex] : []);
@@ -1258,7 +1258,7 @@ Common.RinaWindow {
                         }));
                         (function(id) {
                             effItem.triggered.connect(() => {
-                                TimelineBridge.addEffect(targetClipId, id);
+                                Workspace.currentTimeline.addEffect(targetClipId, id);
                             });
                         })(node.id);
                         parentMenu.addItem(effItem);
@@ -1269,18 +1269,18 @@ Common.RinaWindow {
             title: qsTr("エフェクトを追加")
             onAboutToShow: {
                 _clearDynamicMenu();
-                if (!TimelineBridge)
+                if (!Workspace.currentTimeline)
                     return ;
 
-                if (targetClipId !== -1 && TimelineBridge.isAudioClip(targetClipId)) {
+                if (targetClipId !== -1 && Workspace.currentTimeline.isAudioClip(targetClipId)) {
                     // オーディオプラグイン (VST等)
-                    var categories = TimelineBridge.getPluginCategories();
+                    var categories = Workspace.currentTimeline.getPluginCategories();
                     for (var c = 0; c < categories.length; c++) {
                         var catName = categories[c];
                         var subMenu = _registerDynamic(subMenuComp.createObject(root.contentItem, {
                             "title": catName
                         }));
-                        var plugins = TimelineBridge.getPluginsByCategory(catName);
+                        var plugins = Workspace.currentTimeline.getPluginsByCategory(catName);
                         for (var p = 0; p < plugins.length; p++) {
                             var plug = plugins[p];
                             var plugItem = _registerDynamic(menuItemComp.createObject(root.contentItem, {
@@ -1289,7 +1289,7 @@ Common.RinaWindow {
                             }));
                             (function(id) {
                                 plugItem.triggered.connect(() => {
-                                    TimelineBridge.addAudioPlugin(targetClipId, id);
+                                    Workspace.currentTimeline.addAudioPlugin(targetClipId, id);
                                 });
                             })(plug.id);
                             subMenu.addItem(plugItem);
@@ -1298,7 +1298,7 @@ Common.RinaWindow {
                     }
                 } else {
                     // 標準エフェクト (木構造)
-                    var effects = TimelineBridge.getAvailableEffects();
+                    var effects = Workspace.currentTimeline.getAvailableEffects();
                     buildMenu(filterMenu, effects);
                 }
             }

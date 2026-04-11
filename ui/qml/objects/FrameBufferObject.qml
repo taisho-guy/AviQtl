@@ -76,15 +76,15 @@ Common.BaseObject {
             Qt.callLater(root._rebuildCapture);
         }
 
-        target: TimelineBridge
+        target: Workspace.currentTimeline
     }
 
     // ─── 合成ホスト (offscreenRenderHost へ adopt2D される) ──────
     Item {
         id: flattenHost
 
-        width: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.width : 1920
-        height: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.height : 1080
+        width: (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.width : 1920
+        height: (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.height : 1080
         visible: true // SceneGraph に残す (renderHost 側の opacity:0 で非表示にする)
 
         // 収集した各レイヤーの output をレイヤー順に重ねる

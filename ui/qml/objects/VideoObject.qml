@@ -21,7 +21,7 @@ Common.BaseObject {
     property int height: containerItem.height
     property int updateCounter: 0
     // インスタンスごとにユニークなキーを生成（シーンID + クリップID）
-    // TimelineBridge.currentSceneId 等が使えない場合、単純にclipIdだけで良いが、
+    // Workspace.currentTimeline.currentSceneId 等が使えない場合、単純にclipIdだけで良いが、
     // 動画表示時は必ずこのオブジェクトの親の currentFrame が変わるので
     property string instanceKey: String(base.clipId)
 
@@ -29,13 +29,13 @@ Common.BaseObject {
     // この VideoObject が属しているシーンの時間が進んだとき (relFrame は BaseObject の property)
     // C++ 側に「このクリップのこのローカル時間でデコードして！」と要求を出す
     onRelFrameChanged: {
-        if (TimelineBridge && typeof TimelineBridge.requestVideoFrame === "function" && base.clipId > 0)
-            TimelineBridge.requestVideoFrame(base.clipId, base.relFrame);
+        if (Workspace.currentTimeline && typeof Workspace.currentTimeline.requestVideoFrame === "function" && base.clipId > 0)
+            Workspace.currentTimeline.requestVideoFrame(base.clipId, base.relFrame);
 
     }
     Component.onCompleted: {
-        if (TimelineBridge && typeof TimelineBridge.requestVideoFrame === "function" && base.clipId > 0)
-            TimelineBridge.requestVideoFrame(base.clipId, base.relFrame);
+        if (Workspace.currentTimeline && typeof Workspace.currentTimeline.requestVideoFrame === "function" && base.clipId > 0)
+            Workspace.currentTimeline.requestVideoFrame(base.clipId, base.relFrame);
 
     }
 
@@ -69,8 +69,8 @@ Common.BaseObject {
     sourceItem: Item {
         id: containerItem
 
-        width: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.width : 1920
-        height: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.height : 1080
+        width: (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.width : 1920
+        height: (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.height : 1080
         visible: false
 
         VideoOutput {

@@ -7,7 +7,7 @@ import Rina.Core 1.0
 Window {
     id: root
 
-    property var project: TimelineBridge ? TimelineBridge.project : null
+    property var project: Workspace.currentTimeline ? Workspace.currentTimeline.project : null
     readonly property double pFps: project ? project.fps : 60
     property string defaultCodec: SettingsManager ? SettingsManager.value("exportDefaultCodec", "h264_vaapi") : "h264_vaapi"
     property int defaultBitrateMbps: SettingsManager ? SettingsManager.value("exportDefaultBitrateMbps", 15) : 15
@@ -35,7 +35,7 @@ Window {
 
         anchors.fill: parent
         color: Qt.rgba(0, 0, 0, 0.75)
-        visible: TimelineBridge && TimelineBridge.isExporting
+        visible: Workspace.currentTimeline && Workspace.currentTimeline.isExporting
         z: 100
 
         ColumnLayout {
@@ -72,7 +72,7 @@ Window {
             Button {
                 Layout.alignment: Qt.AlignHCenter
                 text: qsTr("キャンセル")
-                onClicked: TimelineBridge.cancelExport()
+                onClicked: Workspace.currentTimeline.cancelExport()
             }
 
         }
@@ -92,7 +92,7 @@ Window {
             resultPopup.open();
         }
 
-        target: TimelineBridge
+        target: Workspace.currentTimeline
     }
 
     // 完了ポップアップ
@@ -448,19 +448,19 @@ Window {
                     value: 300
                     editable: true
                     Component.onCompleted: {
-                        if (TimelineBridge && TimelineBridge.timelineDuration > 0)
-                            value = TimelineBridge.timelineDuration;
+                        if (Workspace.currentTimeline && Workspace.currentTimeline.timelineDuration > 0)
+                            value = Workspace.currentTimeline.timelineDuration;
 
                     }
 
                     Connections {
                         function onClipsChanged() {
-                            if (TimelineBridge && TimelineBridge.timelineDuration > 0)
-                                endFrameSpin.value = TimelineBridge.timelineDuration;
+                            if (Workspace.currentTimeline && Workspace.currentTimeline.timelineDuration > 0)
+                                endFrameSpin.value = Workspace.currentTimeline.timelineDuration;
 
                         }
 
-                        target: TimelineBridge
+                        target: Workspace.currentTimeline
                     }
 
                 }
@@ -468,7 +468,7 @@ Window {
                 Label {
                     text: {
                         var s = fullRangeCheck.checked ? 0 : startFrameSpin.value;
-                        var e = fullRangeCheck.checked ? (TimelineBridge ? TimelineBridge.timelineDuration : 300) : endFrameSpin.value;
+                        var e = fullRangeCheck.checked ? (Workspace.currentTimeline ? Workspace.currentTimeline.timelineDuration : 300) : endFrameSpin.value;
                         var sec = (e - s) / pFps;
                         return qsTr("(%1 フレーム / %2 秒)").arg(e - s).arg(sec.toFixed(2));
                     }
@@ -504,7 +504,7 @@ Window {
                 onClicked: {
                     var codec = codecCombo.model[codecCombo.currentIndex].value;
                     var audioCodec = audioCodecCombo.model[audioCodecCombo.currentIndex].value;
-                    TimelineBridge.exportVideoAsync({
+                    Workspace.currentTimeline.exportVideoAsync({
                         "width": (project ? project.width : 1920),
                         "height": (project ? project.height : 1080),
                         "fps_num": Math.round(pFps * 1000),

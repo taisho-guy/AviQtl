@@ -8,7 +8,7 @@ Canvas {
     property real gridInterval: 1
     property int layerCount: 128
     property int layerHeight: 30
-    property real scale: TimelineBridge ? TimelineBridge.timelineScale : 1
+    property real scale: Workspace.currentTimeline ? Workspace.currentTimeline.timelineScale : 1
     property var gridSettings: ({
         "mode": "Auto",
         "bpm": 120,
@@ -40,14 +40,14 @@ Canvas {
             ctx.lineTo(width, ly);
             ctx.stroke();
         }
-        if (!TimelineBridge)
+        if (!Workspace.currentTimeline)
             return ;
 
         // 垂直グリッド線
         var currentScale = scale;
         var currentContentX = contentX;
         var step = gridInterval;
-        var offsetF = (gridSettings.mode === "BPM" && TimelineBridge.project) ? gridSettings.offset * TimelineBridge.project.fps : 0;
+        var offsetF = (gridSettings.mode === "BPM" && Workspace.currentTimeline.project) ? gridSettings.offset * Workspace.currentTimeline.project.fps : 0;
         var isBpm = (gridSettings.mode === "BPM");
         var bpmDiv = isBpm ? (currentScale > 3 ? 4 : currentScale > 1.5 ? 2 : 1) : 1;
         var startN = Math.ceil((Math.floor(currentContentX / currentScale) - offsetF) / step);

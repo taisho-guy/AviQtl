@@ -281,8 +281,8 @@ ApplicationWindow {
         previewOffsetY = 0;
         // 初回オープン時: 最終フレームにキーフレームがなければ通常の中間点として自動追加
         {
-            const _clipDur = TimelineBridge ? TimelineBridge.clipDurationFrames : 100;
-            const _fps = (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.fps : 60;
+            const _clipDur = Workspace.currentTimeline ? Workspace.currentTimeline.clipDurationFrames : 100;
+            const _fps = (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.fps : 60;
             const _endFrame = _clipDur;
             const _track = effectModel.keyframeListForUi(paramName) || [];
             const _hasKfAtEnd = _track.some(function(kf) {
@@ -294,12 +294,12 @@ ApplicationWindow {
                 // これにより 左端フレーム→endFrame が直線補間になる
                 if (_track.length > 0) {
                     const _prevKf = _track[_track.length - 1];
-                    TimelineBridge.setKeyframe(clipId, effectIndex, paramName, _prevKf.frame, _prevKf.value, {
+                    Workspace.currentTimeline.setKeyframe(clipId, effectIndex, paramName, _prevKf.frame, _prevKf.value, {
                         "interp": "linear"
                     });
                 }
                 // endFrame 自体は末尾なので interp は使われない（none のまま）
-                TimelineBridge.setKeyframe(clipId, effectIndex, paramName, _endFrame, _endVal, {
+                Workspace.currentTimeline.setKeyframe(clipId, effectIndex, paramName, _endFrame, _endVal, {
                     "interp": "none"
                 });
                 // 初回設定直後に UI の補間状態を確定させる（右値変更なしでも補間が反映されるよう）
@@ -366,7 +366,7 @@ ApplicationWindow {
             "stepFrames": Math.max(1, stepFrames)
         };
 
-        TimelineBridge.setKeyframe(clipId, effectIndex, paramName, keyframeFrame, kf.value, options);
+        Workspace.currentTimeline.setKeyframe(clipId, effectIndex, paramName, keyframeFrame, kf.value, options);
     }
 
     title: qsTr("補間設定: %1").arg(paramName)

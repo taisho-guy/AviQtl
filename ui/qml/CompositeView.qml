@@ -10,10 +10,10 @@ Item {
     property var layerStates: ({
     })
     // 外部から注入可能なプロパティ (デフォルトはTimelineBridgeから取得)
-    property var clipModel: TimelineBridge ? TimelineBridge.clipModel : null
-    property int projectWidth: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.width : 1920
-    property int projectHeight: (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.height : 1080
-    property int currentFrame: (TimelineBridge && TimelineBridge.transport) ? TimelineBridge.transport.currentFrame : 0
+    property var clipModel: Workspace.currentTimeline ? Workspace.currentTimeline.clipModel : null
+    property int projectWidth: (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.width : 1920
+    property int projectHeight: (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.height : 1080
+    property int currentFrame: (Workspace.currentTimeline && Workspace.currentTimeline.transport) ? Workspace.currentTimeline.transport.currentFrame : 0
     property int sceneId: -1
     readonly property int hiddenZ: -9999
     // Component cache to prevent redundant Qt.createComponent calls
@@ -109,7 +109,7 @@ Item {
         // アスペクト比計算
         property double aspect: projW / projH
         // 現在のクリップ内での相対時間 (0.0 ~ 1.0)
-        property double currentClipTimeRatio: (TimelineBridge) ? Math.max(0, Math.min(1, (root.currentFrame - TimelineBridge.clipStartFrame) / TimelineBridge.clipDurationFrames)) : 0
+        property double currentClipTimeRatio: (Workspace.currentTimeline) ? Math.max(0, Math.min(1, (root.currentFrame - Workspace.currentTimeline.clipStartFrame) / Workspace.currentTimeline.clipDurationFrames)) : 0
 
         camera: activeCameraControl ? activeCameraControl.camera : mainCamera
         // 親に収まる最大サイズを計算 (Letterboxing)
@@ -118,8 +118,8 @@ Item {
         anchors.centerIn: parent
         focus: true
         Keys.onSpacePressed: {
-            if (TimelineBridge && TimelineBridge.transport)
-                TimelineBridge.transport.togglePlay();
+            if (Workspace.currentTimeline && Workspace.currentTimeline.transport)
+                Workspace.currentTimeline.transport.togglePlay();
 
         }
 
@@ -210,7 +210,7 @@ Item {
 
                     var out = {
                     };
-                    var fps = (TimelineBridge && TimelineBridge.project) ? TimelineBridge.project.fps : 60;
+                    var fps = (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.fps : 60;
                     var relFrame = root.currentFrame - clipStartFrameRole;
                     var keys = ["x", "y", "z", "rotationX", "rotationY", "rotationZ", "scale", "aspect", "opacity"];
                     for (var k = 0; k < keys.length; k++) {
@@ -300,7 +300,7 @@ Item {
                 }
 
                 function dbg(msg) {
-                    Logger.log("[CompositeView][clipId=" + clipIdRole + "][type=" + clipTypeRole + "] " + msg, TimelineBridge);
+                    Logger.log("[CompositeView][clipId=" + clipIdRole + "][type=" + clipTypeRole + "] " + msg, Workspace.currentTimeline);
                 }
 
                 // レイヤーが非表示の場合は描画しない

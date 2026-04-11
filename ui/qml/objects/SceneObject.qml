@@ -15,7 +15,7 @@ Common.BaseObject {
     property int sceneFrame: {
         var f = Math.floor(relFrame * speed) + offset;
         // シーン長が定義されていればクランプ
-        var dur = typeof TimelineBridge !== "undefined" ? TimelineBridge.getSceneDuration(targetSceneId) : 0;
+        var dur = typeof Workspace.currentTimeline !== "undefined" ? Workspace.currentTimeline.getSceneDuration(targetSceneId) : 0;
         if (dur > 0)
             f = Math.max(0, Math.min(f, dur - 1));
 
@@ -46,7 +46,7 @@ Common.BaseObject {
     sourceItem: Ui.SceneRenderer {
         sceneId: root.targetSceneId
         currentFrame: root.sceneFrame
-        timelineBridge: typeof TimelineBridge !== "undefined" ? TimelineBridge : null
+        timelineBridge: typeof Workspace.currentTimeline !== "undefined" ? Workspace.currentTimeline : null
         visible: false // テクスチャソースとして用いるため可視化しない
     }
 

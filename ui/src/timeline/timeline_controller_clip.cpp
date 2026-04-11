@@ -642,7 +642,6 @@ void TimelineController::splitSelectedClips(int frame) {
 auto TimelineController::evaluateClipParams(int clipId, int relFrame) const -> QVariantMap {
     QVariantMap out;
     if (const auto *clip = m_timeline->findClipById(clipId)) {
-        double fps = project()->fps();
         for (auto *eff : clip->effects) {
             out.insert(eff->id(), eff->evaluatedParams(relFrame));
         }

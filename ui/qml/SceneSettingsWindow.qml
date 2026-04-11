@@ -263,7 +263,7 @@ Common.RinaWindow {
                     text: "OK"
                     highlighted: true
                     onClicked: {
-                        if (targetSceneId !== -1 && TimelineBridge) {
+                        if (targetSceneId !== -1 && Workspace.currentTimeline) {
                             var mKey = "Auto";
                             if (modeCombo.currentIndex === 1)
                                 mKey = "BPM";
@@ -271,7 +271,7 @@ Common.RinaWindow {
                             if (modeCombo.currentIndex === 2)
                                 mKey = "Frame";
 
-                            TimelineBridge.updateSceneSettings(targetSceneId, nameField.text, widthField.value, heightField.value, fpsField.realValue, currentFrames, mKey, parseFloat(bpmField.text) || 120, parseFloat(offsetField.text) || 0, parseInt(intervalField.text) || 10, parseInt(subdivisionField.text) || 4, enableSnapCheck.checked, snapRangeField.value);
+                            Workspace.currentTimeline.updateSceneSettings(targetSceneId, nameField.text, widthField.value, heightField.value, fpsField.realValue, currentFrames, mKey, parseFloat(bpmField.text) || 120, parseFloat(offsetField.text) || 0, parseInt(intervalField.text) || 10, parseInt(subdivisionField.text) || 4, enableSnapCheck.checked, snapRangeField.value);
                         }
                         root.hide();
                     }

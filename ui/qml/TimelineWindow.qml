@@ -54,15 +54,15 @@ Common.RinaWindow {
                     Repeater {
                         id: sceneRepeater
 
-                        model: TimelineBridge ? TimelineBridge.scenes : []
+                        model: Workspace.currentTimeline ? Workspace.currentTimeline.scenes : []
 
                         TabButton {
                             id: tabBtn
 
-                            checked: TimelineBridge && TimelineBridge.currentSceneId === modelData.id
+                            checked: Workspace.currentTimeline && Workspace.currentTimeline.currentSceneId === modelData.id
                             onClicked: {
-                                if (TimelineBridge)
-                                    TimelineBridge.switchScene(modelData.id);
+                                if (Workspace.currentTimeline)
+                                    Workspace.currentTimeline.switchScene(modelData.id);
 
                             }
 
@@ -96,8 +96,8 @@ Common.RinaWindow {
                                     Layout.preferredWidth: 20
                                     Layout.preferredHeight: 20
                                     onClicked: {
-                                        if (TimelineBridge)
-                                            TimelineBridge.removeScene(modelData.id);
+                                        if (Workspace.currentTimeline)
+                                            Workspace.currentTimeline.removeScene(modelData.id);
 
                                     }
 
@@ -124,7 +124,7 @@ Common.RinaWindow {
                 flat: true
                 Layout.preferredWidth: 40
                 Layout.fillHeight: true
-                onClicked: TimelineBridge.createScene(qsTr("シーン %1").arg(sceneRepeater.count + 1))
+                onClicked: Workspace.currentTimeline.createScene(qsTr("シーン %1").arg(sceneRepeater.count + 1))
 
                 contentItem: Common.RinaIcon {
                     iconName: "add_line"
@@ -141,7 +141,7 @@ Common.RinaWindow {
             targetFlickable: timelineView.flickable
             rulerHeight: timelineWindow.rulerHeight
             timeWidth: timelineWindow.headerWidth
-            fps: TimelineBridge && TimelineBridge.project ? TimelineBridge.project.fps : 60
+            fps: Workspace.currentTimeline && Workspace.currentTimeline.project ? Workspace.currentTimeline.project.fps : 60
         }
 
         // 3. メインエリア

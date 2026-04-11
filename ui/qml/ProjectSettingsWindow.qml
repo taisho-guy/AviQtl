@@ -11,11 +11,11 @@ Common.RinaWindow {
     title: qsTr("プロジェクト設定")
     // ウィンドウが表示されたときに現在の値をUIに反映
     onVisibleChanged: {
-        if (visible && TimelineBridge && TimelineBridge.project) {
-            widthField.text = TimelineBridge.project.width;
-            heightField.text = TimelineBridge.project.height;
-            fpsField.text = TimelineBridge.project.fps;
-            sampleRateField.text = TimelineBridge.project.sampleRate;
+        if (visible && Workspace.currentTimeline && Workspace.currentTimeline.project) {
+            widthField.text = Workspace.currentTimeline.project.width;
+            heightField.text = Workspace.currentTimeline.project.height;
+            fpsField.text = Workspace.currentTimeline.project.fps;
+            sampleRateField.text = Workspace.currentTimeline.project.sampleRate;
         }
     }
 
@@ -101,11 +101,11 @@ Common.RinaWindow {
                 text: qsTr("適用")
                 highlighted: true
                 onClicked: {
-                    if (TimelineBridge && TimelineBridge.project) {
-                        TimelineBridge.project.width = parseInt(widthField.text);
-                        TimelineBridge.project.height = parseInt(heightField.text);
-                        TimelineBridge.project.fps = parseFloat(fpsField.text);
-                        TimelineBridge.project.sampleRate = parseInt(sampleRateField.text);
+                    if (Workspace.currentTimeline && Workspace.currentTimeline.project) {
+                        Workspace.currentTimeline.project.width = parseInt(widthField.text);
+                        Workspace.currentTimeline.project.height = parseInt(heightField.text);
+                        Workspace.currentTimeline.project.fps = parseFloat(fpsField.text);
+                        Workspace.currentTimeline.project.sampleRate = parseInt(sampleRateField.text);
                         root.hide();
                     }
                 }

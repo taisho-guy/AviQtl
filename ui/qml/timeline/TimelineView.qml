@@ -36,12 +36,12 @@ ScrollView {
     property real dragScrollStep: 24
     property var dragAutoScrollCallback: null
     property var currentSceneData: {
-        if (!TimelineBridge || !TimelineBridge.scenes)
+        if (!Workspace.currentTimeline || !Workspace.currentTimeline.scenes)
             return null;
 
-        for (var i = 0; i < TimelineBridge.scenes.length; i++) {
-            if (TimelineBridge.scenes[i].id === TimelineBridge.currentSceneId)
-                return TimelineBridge.scenes[i];
+        for (var i = 0; i < Workspace.currentTimeline.scenes.length; i++) {
+            if (Workspace.currentTimeline.scenes[i].id === Workspace.currentTimeline.currentSceneId)
+                return Workspace.currentTimeline.scenes[i];
 
         }
         return null;
@@ -69,7 +69,7 @@ ScrollView {
     }
     readonly property int maxClipEndFrame: {
         var maxEnd = 0;
-        var clipList = (TimelineBridge && TimelineBridge.clips) ? TimelineBridge.clips : [];
+        var clipList = (Workspace.currentTimeline && Workspace.currentTimeline.clips) ? Workspace.currentTimeline.clips : [];
         for (var i = 0; i < clipList.length; i++) {
             var end = clipList[i].startFrame + clipList[i].durationFrames;
             if (end > maxEnd)
@@ -95,15 +95,15 @@ ScrollView {
     }
 
     function syncBoxSelectionPreview() {
-        if (!TimelineBridge)
+        if (!Workspace.currentTimeline)
             return ;
 
-        var scale = TimelineBridge.timelineScale;
+        var scale = Workspace.currentTimeline.timelineScale;
         var f1 = Math.floor(boxSelectionStart.x / scale);
         var f2 = Math.ceil(boxSelectionCurrent.x / scale);
         var l1 = Math.floor(boxSelectionStart.y / layerHeight);
         var l2 = Math.floor(boxSelectionCurrent.y / layerHeight);
-        TimelineBridge.updateSelectionPreview(f1, f2, l1, l2, boxSelectionAdditive);
+        Workspace.currentTimeline.updateSelectionPreview(f1, f2, l1, l2, boxSelectionAdditive);
     }
 
     function clamp(v, lo, hi) {
@@ -111,11 +111,11 @@ ScrollView {
     }
 
     function getGridInterval() {
-        if (!TimelineBridge)
+        if (!Workspace.currentTimeline)
             return 1;
 
-        var scale = TimelineBridge.timelineScale;
-        var projectFps = (TimelineBridge.project && TimelineBridge.project.fps) ? TimelineBridge.project.fps : 60;
+        var scale = Workspace.currentTimeline.timelineScale;
+        var projectFps = (Workspace.currentTimeline.project && Workspace.currentTimeline.project.fps) ? Workspace.currentTimeline.project.fps : 60;
         if (gridSettings.mode === "BPM") {
             var beatFrames = projectFps / (gridSettings.bpm / 60);
             var bpmDiv = scale > 3 ? 4 : scale > 1.5 ? 2 : 1;
@@ -143,7 +143,7 @@ ScrollView {
 
         // グリッド無視時は整数丸めのみ
         var step = getGridInterval();
-        var offset = (gridSettings.mode === "BPM" && TimelineBridge && TimelineBridge.project) ? gridSettings.offset * TimelineBridge.project.fps : 0;
+        var offset = (gridSettings.mode === "BPM" && Workspace.currentTimeline && Workspace.currentTimeline.project) ? gridSettings.offset * Workspace.currentTimeline.project.fps : 0;
         return Math.max(0, Math.round((Math.round((frame - offset) / step) * step) + offset));
     }
 
@@ -155,7 +155,7 @@ ScrollView {
         // unified loop handles viewport updates now
         id: timelineFlickable
 
-        contentWidth: Math.max(width, timelineLengthFrames * (TimelineBridge ? TimelineBridge.timelineScale : 1))
+        contentWidth: Math.max(width, timelineLengthFrames * (Workspace.currentTimeline ? Workspace.currentTimeline.timelineScale : 1))
         contentHeight: layerCount * layerHeight
         interactive: true
         onMovementStarted: timelineViewRoot.autoScrollSuspended = true
@@ -167,12 +167,12 @@ ScrollView {
             repeat: true
             running: true // Unified render loop
             onTriggered: {
-                if (!TimelineBridge)
+                if (!Workspace.currentTimeline)
                     return ;
 
                 // 1. Viewport sync
-                if (typeof TimelineBridge.updateViewport === "function")
-                    TimelineBridge.updateViewport(timelineFlickable.contentX, timelineFlickable.contentY);
+                if (typeof Workspace.currentTimeline.updateViewport === "function")
+                    Workspace.currentTimeline.updateViewport(timelineFlickable.contentX, timelineFlickable.contentY);
 
                 if (timelineViewRoot.ScrollBar.horizontal && timelineViewRoot.ScrollBar.horizontal.pressed)
                     timelineViewRoot.autoScrollSuspended = true;
@@ -181,9 +181,9 @@ ScrollView {
                     timelineViewRoot.autoScrollSuspended = true;
 
                 // 2. Playhead auto-scroll (Page turn)
-                if (TimelineBridge.transport && TimelineBridge.transport.isPlaying && !timelineViewRoot.autoScrollSuspended) {
+                if (Workspace.currentTimeline.transport && Workspace.currentTimeline.transport.isPlaying && !timelineViewRoot.autoScrollSuspended) {
                     let viewportWidth = timelineFlickable.width;
-                    let playheadX = TimelineBridge.transport.currentFrame * TimelineBridge.timelineScale;
+                    let playheadX = Workspace.currentTimeline.transport.currentFrame * Workspace.currentTimeline.timelineScale;
                     let left = timelineFlickable.contentX;
                     let right = left + viewportWidth;
                     let margin = 24;
@@ -224,17 +224,17 @@ ScrollView {
             function onTimelineScaleChanged() {
             }
 
-            target: TimelineBridge ?? null
+            target: Workspace.currentTimeline ?? null
         }
 
         Connections {
             function onIsPlayingChanged() {
-                if (TimelineBridge.transport.isPlaying)
+                if (Workspace.currentTimeline.transport.isPlaying)
                     timelineViewRoot.autoScrollSuspended = false;
 
             }
 
-            target: TimelineBridge && TimelineBridge.transport ? TimelineBridge.transport : null
+            target: Workspace.currentTimeline && Workspace.currentTimeline.transport ? Workspace.currentTimeline.transport : null
         }
 
         Item {
@@ -261,7 +261,7 @@ ScrollView {
         }
 
         Repeater {
-            model: TimelineBridge ? TimelineBridge.clips : []
+            model: Workspace.currentTimeline ? Workspace.currentTimeline.clips : []
 
             delegate: ClipItem {
                 layerHeight: timelineViewRoot.layerHeight
@@ -272,12 +272,12 @@ ScrollView {
                 flickableContentItem: timelineFlickable.contentItem
                 snapFrameFunc: timelineViewRoot.snapFrame
                 onClipMoved: (clipId, deltaLayer, deltaStart, unused) => {
-                    if (TimelineBridge) {
-                        var selectedIds = TimelineBridge.selection ? TimelineBridge.selection.selectedClipIds : [];
+                    if (Workspace.currentTimeline) {
+                        var selectedIds = Workspace.currentTimeline.selection ? Workspace.currentTimeline.selection.selectedClipIds : [];
                         if (selectedIds.includes(clipId)) {
                             var moves = [];
-                            for (var i = 0; i < TimelineBridge.clips.length; i++) {
-                                var c = TimelineBridge.clips[i];
+                            for (var i = 0; i < Workspace.currentTimeline.clips.length; i++) {
+                                var c = Workspace.currentTimeline.clips[i];
                                 if (selectedIds.includes(c.id)) {
                                     var newL = Math.round(Number(c.layer) + Number(deltaLayer));
                                     var newF = Math.round(Number(c.startFrame) + Number(deltaStart));
@@ -298,28 +298,28 @@ ScrollView {
                                     });
                                 }
                             }
-                            TimelineBridge.applyClipBatchMove(moves);
+                            Workspace.currentTimeline.applyClipBatchMove(moves);
                         } else {
                             // Should not happen with new UX fix, but fallback
-                            var c = TimelineBridge.clips.find((c) => {
+                            var c = Workspace.currentTimeline.clips.find((c) => {
                                 return c.id === clipId;
                             });
                             if (c)
-                                TimelineBridge.updateClip(clipId, Math.max(0, c.layer + deltaLayer), Math.max(0, c.startFrame + deltaStart), c.durationFrames);
+                                Workspace.currentTimeline.updateClip(clipId, Math.max(0, c.layer + deltaLayer), Math.max(0, c.startFrame + deltaStart), c.durationFrames);
 
                         }
                     }
                 }
                 onClipResized: (clipId, deltaStart, deltaDuration, unused) => {
-                    if (TimelineBridge) {
-                        if (TimelineBridge && TimelineBridge.selection && TimelineBridge.selection.selectedClipIds.includes(clipId)) {
-                            TimelineBridge.resizeSelectedClips(deltaStart, deltaDuration);
+                    if (Workspace.currentTimeline) {
+                        if (Workspace.currentTimeline && Workspace.currentTimeline.selection && Workspace.currentTimeline.selection.selectedClipIds.includes(clipId)) {
+                            Workspace.currentTimeline.resizeSelectedClips(deltaStart, deltaDuration);
                         } else {
-                            var c = TimelineBridge.clips.find((c) => {
+                            var c = Workspace.currentTimeline.clips.find((c) => {
                                 return c.id === clipId;
                             });
                             if (c)
-                                TimelineBridge.updateClip(clipId, c.layer, Math.max(0, c.startFrame + deltaStart), Math.max(1, c.durationFrames + deltaDuration));
+                                Workspace.currentTimeline.updateClip(clipId, c.layer, Math.max(0, c.startFrame + deltaStart), Math.max(1, c.durationFrames + deltaDuration));
 
                         }
                     }
@@ -336,7 +336,7 @@ ScrollView {
         Rectangle {
             id: playhead
 
-            x: (TimelineBridge && TimelineBridge.transport ? TimelineBridge.transport.currentFrame : 0) * (TimelineBridge ? TimelineBridge.timelineScale : 1)
+            x: (Workspace.currentTimeline && Workspace.currentTimeline.transport ? Workspace.currentTimeline.transport.currentFrame : 0) * (Workspace.currentTimeline ? Workspace.currentTimeline.timelineScale : 1)
             y: 0
             width: 2
             height: parent.height
@@ -349,10 +349,10 @@ ScrollView {
             z: -1
             acceptedButtons: Qt.LeftButton
             onReleased: (mouse) => {
-                var scale = TimelineBridge ? TimelineBridge.timelineScale : 1;
+                var scale = Workspace.currentTimeline ? Workspace.currentTimeline.timelineScale : 1;
                 var frame = timelineViewRoot.snapFrame(mouse.x / scale);
-                if (TimelineBridge && TimelineBridge.transport)
-                    TimelineBridge.transport.setCurrentFrame_seek(frame);
+                if (Workspace.currentTimeline && Workspace.currentTimeline.transport)
+                    Workspace.currentTimeline.transport.setCurrentFrame_seek(frame);
 
             }
         }
@@ -367,8 +367,8 @@ ScrollView {
                 boxSelectionStart = mapToItem(timelineFlickable.contentItem, mouse.x, mouse.y);
                 boxSelectionCurrent = boxSelectionStart;
                 boxSelectionAdditive = !!(mouse.modifiers & Qt.ControlModifier);
-                if (TimelineBridge)
-                    TimelineBridge.clearSelectionPreview();
+                if (Workspace.currentTimeline)
+                    Workspace.currentTimeline.clearSelectionPreview();
 
             }
             onPositionChanged: (mouse) => {
@@ -388,15 +388,15 @@ ScrollView {
                 }
                 if (!boxSelecting) {
                     // 単一クリック（コンテキストメニュー）ロジック
-                    var scale = TimelineBridge ? TimelineBridge.timelineScale : 1;
+                    var scale = Workspace.currentTimeline ? Workspace.currentTimeline.timelineScale : 1;
                     // ビューポート座標(mouse.x)ではなく、内容座標(boxSelectionCurrent.x)を使用することで
                     // スクロール状態に依存せず正確な位置を特定する
                     var frame = timelineViewRoot.snapFrame(boxSelectionCurrent.x / scale);
                     var layer = Math.floor(boxSelectionCurrent.y / layerHeight);
                     var clickedClipId = -1;
-                    if (TimelineBridge && TimelineBridge.clips) {
-                        for (var i = TimelineBridge.clips.length - 1; i >= 0; i--) {
-                            var c = TimelineBridge.clips[i];
+                    if (Workspace.currentTimeline && Workspace.currentTimeline.clips) {
+                        for (var i = Workspace.currentTimeline.clips.length - 1; i >= 0; i--) {
+                            var c = Workspace.currentTimeline.clips[i];
                             if (c.layer === layer && frame >= c.startFrame && frame < c.startFrame + c.durationFrames) {
                                 clickedClipId = c.id;
                                 break;
@@ -405,17 +405,17 @@ ScrollView {
                     }
                     if (clickedClipId >= 0) {
                         // すでに選択されている場合を除き、右クリックしたクリップを選択
-                        if (TimelineBridge && TimelineBridge.selection && !TimelineBridge.selection.selectedClipIds.includes(clickedClipId))
-                            TimelineBridge.applySelectionIds([clickedClipId]);
+                        if (Workspace.currentTimeline && Workspace.currentTimeline.selection && !Workspace.currentTimeline.selection.selectedClipIds.includes(clickedClipId))
+                            Workspace.currentTimeline.applySelectionIds([clickedClipId]);
 
                     }
                     // メニューを開く座標はビューポート（mouse.x/y）基準で良い
                     contextMenu.openAt(mouse.x, mouse.y, clickedClipId >= 0 ? "clip" : "timeline", frame, layer, clickedClipId);
                     return ;
                 }
-                if (TimelineBridge) {
+                if (Workspace.currentTimeline) {
                     syncBoxSelectionPreview(); // 確定直前に最終座標で同期
-                    TimelineBridge.finalizeSelectionPreview();
+                    Workspace.currentTimeline.finalizeSelectionPreview();
                 }
                 boxSelecting = false;
             }
@@ -442,18 +442,18 @@ ScrollView {
                 var dx = (wheel.pixelDelta && wheel.pixelDelta.x !== 0) ? wheel.pixelDelta.x * 10 : wheel.angleDelta.x;
                 if (wheel.modifiers & Qt.AltModifier || wheel.modifiers & Qt.ControlModifier) {
                     // Zoom
-                    if (TimelineBridge) {
+                    if (Workspace.currentTimeline) {
                         var step = SettingsManager ? SettingsManager.value("timelineZoomStep", 10) : 10;
                         var minZ = SettingsManager ? SettingsManager.value("timelineZoomMin", 10) : 10;
                         var maxZ = SettingsManager ? SettingsManager.value("timelineZoomMax", 400) : 400;
                         var direction = (Math.abs(dy) > Math.abs(dx) ? dy : dx) > 0 ? 1 : -1;
-                        var newScale = TimelineBridge.timelineScale + (direction * step / 100);
+                        var newScale = Workspace.currentTimeline.timelineScale + (direction * step / 100);
                         newScale = clamp(newScale, minZ / 100, maxZ / 100);
                         // Zoom keeping the mouse position stationary if possible
                         var contentX = timelineFlickable.contentX;
                         var mouseX = wheel.x;
-                        var frameAtMouse = (contentX + mouseX) / TimelineBridge.timelineScale;
-                        TimelineBridge.timelineScale = newScale;
+                        var frameAtMouse = (contentX + mouseX) / Workspace.currentTimeline.timelineScale;
+                        Workspace.currentTimeline.timelineScale = newScale;
                         // Adjust scroll to keep frameAtMouse at mouseX
                         var newContentX = frameAtMouse * newScale - mouseX;
                         var maxX = Math.max(0, timelineFlickable.contentWidth - timelineFlickable.width);
@@ -514,10 +514,10 @@ ScrollView {
         }
 
         function shouldApplyToSelection() {
-            if (!TimelineBridge || !TimelineBridge.selection || targetClipId < 0)
+            if (!Workspace.currentTimeline || !Workspace.currentTimeline.selection || targetClipId < 0)
                 return false;
 
-            var ids = TimelineBridge.selection.selectedClipIds;
+            var ids = Workspace.currentTimeline.selection.selectedClipIds;
             if (!ids || ids.length <= 1)
                 return false;
 
@@ -530,49 +530,49 @@ ScrollView {
         }
 
         function handleCommand(cmd) {
-            if (!TimelineBridge)
+            if (!Workspace.currentTimeline)
                 return ;
 
             if (cmd.startsWith("add.")) {
-                TimelineBridge.createObject(cmd.substring(4), contextClickFrame, contextClickLayer);
+                Workspace.currentTimeline.createObject(cmd.substring(4), contextClickFrame, contextClickLayer);
                 return ;
             }
             switch (cmd) {
             case "edit.undo":
-                TimelineBridge.undo();
+                Workspace.currentTimeline.undo();
                 break;
             case "edit.redo":
-                TimelineBridge.redo();
+                Workspace.currentTimeline.redo();
                 break;
             case "clip.delete":
                 if (shouldApplyToSelection())
-                    TimelineBridge.deleteSelectedClips();
+                    Workspace.currentTimeline.deleteSelectedClips();
                 else
-                    TimelineBridge.deleteClip(targetClipId);
+                    Workspace.currentTimeline.deleteClip(targetClipId);
                 break;
             case "clip.split":
-                TimelineBridge.splitClip(targetClipId, contextClickFrame);
+                Workspace.currentTimeline.splitClip(targetClipId, contextClickFrame);
                 break;
             case "clip.cut":
                 if (shouldApplyToSelection())
-                    TimelineBridge.cutSelectedClips();
+                    Workspace.currentTimeline.cutSelectedClips();
                 else
-                    TimelineBridge.cutClip(targetClipId);
+                    Workspace.currentTimeline.cutClip(targetClipId);
                 break;
             case "clip.copy":
                 if (shouldApplyToSelection())
-                    TimelineBridge.copySelectedClips();
+                    Workspace.currentTimeline.copySelectedClips();
                 else
-                    TimelineBridge.copyClip(targetClipId);
+                    Workspace.currentTimeline.copyClip(targetClipId);
                 break;
             case "edit.paste":
-                TimelineBridge.pasteClip(contextClickFrame, contextClickLayer);
+                Workspace.currentTimeline.pasteClip(contextClickFrame, contextClickLayer);
                 break;
             case "view.scenesettings":
                 var win = WindowManager.getWindow("sceneSettings");
-                if (win && TimelineBridge && TimelineBridge.scenes) {
-                    var scenes = TimelineBridge.scenes;
-                    var curId = TimelineBridge.currentSceneId;
+                if (win && Workspace.currentTimeline && Workspace.currentTimeline.scenes) {
+                    var scenes = Workspace.currentTimeline.scenes;
+                    var curId = Workspace.currentTimeline.currentSceneId;
                     var curScene = null;
                     for (var i = 0; i < scenes.length; i++) {
                         if (scenes[i].id === curId) {
@@ -648,7 +648,7 @@ ScrollView {
             }
             if (targetType === "timeline") {
                 var objectMenu = createSubMenu(qsTr("オブジェクトを追加"));
-                var objects = TimelineBridge.getAvailableObjects();
+                var objects = Workspace.currentTimeline.getAvailableObjects();
                 buildObjMenu(objectMenu, objects);
                 contextMenu.addMenu(objectMenu);
                 addSeparator();
