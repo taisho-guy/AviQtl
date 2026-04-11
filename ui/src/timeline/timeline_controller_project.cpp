@@ -26,7 +26,9 @@ auto TimelineController::saveProject(const QString &fileUrl) -> bool {
     if (result) {
         // 保存に成功したパスを現在のプロジェクトパスとして記憶する
         m_currentProjectUrl = targetUrl;
+        m_timeline->undoStack()->setClean();
         emit currentProjectUrlChanged();
+        emit hasUnsavedChangesChanged();
     } else {
         emit errorOccurred(error);
     }
@@ -40,7 +42,9 @@ auto TimelineController::loadProject(const QString &fileUrl) -> bool {
     if (result) {
         // 読み込みに成功したパスを現在のプロジェクトパスとして記憶する
         m_currentProjectUrl = fileUrl;
+        m_timeline->undoStack()->setClean();
         emit currentProjectUrlChanged();
+        emit hasUnsavedChangesChanged();
     } else {
         emit errorOccurred(error);
     }

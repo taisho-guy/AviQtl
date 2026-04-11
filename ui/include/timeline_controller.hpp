@@ -56,6 +56,7 @@ class TimelineController : public QObject {
     Q_PROPERTY(QVariantList scenes READ scenes NOTIFY scenesChanged)
     Q_PROPERTY(int currentSceneId READ currentSceneId NOTIFY currentSceneIdChanged)
     Q_PROPERTY(QString currentProjectUrl READ currentProjectUrl NOTIFY currentProjectUrlChanged)
+    Q_PROPERTY(bool hasUnsavedChanges READ hasUnsavedChanges NOTIFY hasUnsavedChangesChanged)
     Q_PROPERTY(QVariantList previewSelectionIds READ previewSelectionIds NOTIFY previewSelectionIdsChanged)
 
   public:
@@ -158,6 +159,7 @@ class TimelineController : public QObject {
     QVariantList scenes() const;
     int currentSceneId() const;
     QString currentProjectUrl() const { return m_currentProjectUrl; }
+    bool hasUnsavedChanges() const;
     Q_INVOKABLE void createScene(const QString &name);
     Q_INVOKABLE void removeScene(int sceneId);
     Q_INVOKABLE void switchScene(int sceneId);
@@ -238,6 +240,7 @@ class TimelineController : public QObject {
     void scenesChanged();
     void currentSceneIdChanged();
     void currentProjectUrlChanged();
+    void hasUnsavedChangesChanged();
     void clipEffectsChanged(int clipId);
     void layerStateChanged(int layer);
     void previewSelectionIdsChanged();

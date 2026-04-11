@@ -10,6 +10,15 @@ ApplicationWindow {
 
     id: mainWin
 
+    function checkSaveAndExecute(action) {
+        if (TimelineBridge && TimelineBridge.hasUnsavedChanges) {
+            saveConfirmDialog.pendingAction = action;
+            saveConfirmDialog.open();
+        } else {
+            action();
+        }
+    }
+
     visible: true
     width: 640
     height: 360
@@ -54,7 +63,16 @@ ApplicationWindow {
         property string shortcutText: SettingsManager ? SettingsManager.shortcut("project.new", "Ctrl+N") : "Ctrl+N"
 
         text: qsTr("新規プロジェクト")
-        onTriggered: console.log("New Project")
+        onTriggered: {
+            checkSaveAndExecute(function() {
+                var win = WindowManager.getWindow("launcher");
+                if (win) {
+                    win.show();
+                    win.raise();
+                    win.requestActivate();
+                }
+            });
+        }
     }
 
     Action {
@@ -80,7 +98,11 @@ ApplicationWindow {
         property string shortcutText: SettingsManager ? SettingsManager.shortcut("project.open", "Ctrl+O") : "Ctrl+O"
 
         text: qsTr("プロジェクトを開く")
-        onTriggered: loadDialog.open()
+        onTriggered: {
+            checkSaveAndExecute(function() {
+                loadDialog.open();
+            });
+        }
     }
 
     Action {
@@ -99,9 +121,11 @@ ApplicationWindow {
 
         text: qsTr("終了")
         onTriggered: {
-            if (WindowManager)
-                WindowManager.requestQuit();
+            checkSaveAndExecute(function() {
+                if (WindowManager)
+                    WindowManager.requestQuit();
 
+            });
         }
     }
 
@@ -377,6 +401,49 @@ ApplicationWindow {
         buttons: Platform.MessageDialog.Ok
     }
 
+    Dialog {
+        id: saveConfirmDialog
+
+        property var pendingAction: null
+
+        title: qsTr("保存の確認")
+        x: (mainWin.width - width) / 2
+        y: (mainWin.height - height) / 2
+        modal: true
+        parent: Overlay.overlay
+        standardButtons: Dialog.Save | Dialog.Discard | Dialog.Cancel
+        onAccepted: {
+            if (TimelineBridge) {
+                if (TimelineBridge.currentProjectUrl === "") {
+                    // 名前を付けて保存 → 完了後に pendingAction を実行
+                    saveDialog._nextAction = pendingAction;
+                    saveDialog.open();
+                } else {
+                    TimelineBridge.saveProject("");
+                    if (pendingAction)
+                        pendingAction();
+
+                }
+            }
+            pendingAction = null;
+        }
+        onDiscarded: {
+            if (pendingAction)
+                pendingAction();
+
+            pendingAction = null;
+        }
+        onRejected: {
+            pendingAction = null;
+        }
+
+        Label {
+            text: qsTr("プロジェクトに保存されていない変更があります。\n続行する前に保存しますか？")
+            wrapMode: Text.Wrap
+        }
+
+    }
+
     Connections {
         function onErrorOccurred(message) {
             errorDialog.text = message;
@@ -416,6 +483,8 @@ ApplicationWindow {
     Platform.FileDialog {
         id: saveDialog
 
+        property var _nextAction: null
+
         title: qsTr("名前を付けて保存")
         fileMode: Platform.FileDialog.SaveFile
         nameFilters: ["Rina Project files (*.rina)", "JSON files (*.json)"]
@@ -424,6 +493,13 @@ ApplicationWindow {
             if (TimelineBridge)
                 TimelineBridge.saveProject(file);
 
+            if (_nextAction)
+                _nextAction();
+
+            _nextAction = null;
+        }
+        onRejected: {
+            _nextAction = null;
         }
     }
 
@@ -799,6 +875,7 @@ ApplicationWindow {
     }
 
     menuBar: MenuBar {
+        // ─── ファイル ───
         Menu {
             title: qsTr("ファイル")
 
@@ -843,19 +920,6 @@ ApplicationWindow {
             }
 
             Common.IconMenuItem {
-                text: qsTr("環境設定")
-                iconName: "settings_3_line"
-                onTriggered: {
-                    if (WindowManager)
-                        WindowManager.systemSettingsVisible = true;
-
-                }
-            }
-
-            MenuSeparator {
-            }
-
-            Common.IconMenuItem {
                 text: qsTr("終了")
                 action: quitAction
                 iconName: "close_circle_line"
@@ -863,60 +927,7 @@ ApplicationWindow {
 
         }
 
-        Menu {
-            title: qsTr("フィルタ")
-
-            Common.IconMenuItem {
-                text: qsTr("エフェクトの追加")
-                iconName: "magic_line"
-                enabled: TimelineBridge && TimelineBridge.selection && TimelineBridge.selection.selectedClipId >= 0
-                onTriggered: {
-                    if (WindowManager)
-                        WindowManager.objectSettingsVisible = true;
-
-                }
-            }
-
-        }
-
-        Menu {
-            title: qsTr("設定")
-
-            Common.IconMenuItem {
-                text: qsTr("サイズの変更")
-                iconName: "aspect_ratio_line"
-                onTriggered: {
-                    if (WindowManager)
-                        WindowManager.projectSettingsVisible = true;
-
-                }
-            }
-
-            Common.IconMenuItem {
-                text: qsTr("フレームレートの変更")
-                iconName: "speed_line"
-                onTriggered: {
-                    if (WindowManager)
-                        WindowManager.projectSettingsVisible = true;
-
-                }
-            }
-
-            MenuSeparator {
-            }
-
-            Common.IconMenuItem {
-                text: qsTr("環境設定")
-                iconName: "settings_3_line"
-                onTriggered: {
-                    if (WindowManager)
-                        WindowManager.systemSettingsVisible = true;
-
-                }
-            }
-
-        }
-
+        // ─── 編集 ───
         Menu {
             title: qsTr("編集")
 
@@ -932,14 +943,38 @@ ApplicationWindow {
 
         }
 
+        // ─── 設定 ───
         Menu {
-            title: qsTr("表示")
+            title: qsTr("設定")
 
             Common.IconMenuItem {
-                text: qsTr("再生ウィンドウの表示")
-                iconName: "play_circle_line"
-                onTriggered: mainWin.requestActivate()
+                text: qsTr("プロジェクト設定")
+                iconName: "settings_4_line"
+                onTriggered: {
+                    if (WindowManager)
+                        WindowManager.projectSettingsVisible = true;
+
+                }
             }
+
+            MenuSeparator {
+            }
+
+            Common.IconMenuItem {
+                text: qsTr("環境設定")
+                iconName: "settings_3_line"
+                onTriggered: {
+                    if (WindowManager)
+                        WindowManager.systemSettingsVisible = true;
+
+                }
+            }
+
+        }
+
+        // ─── 表示 ───
+        Menu {
+            title: qsTr("表示")
 
             Common.IconMenuItem {
                 text: qsTr("タイムラインの表示")
@@ -963,8 +998,20 @@ ApplicationWindow {
 
         }
 
+        // ─── ツール ───
         Menu {
-            title: qsTr("その他")
+            title: qsTr("ツール")
+
+            Common.IconMenuItem {
+                text: qsTr("パッケージマネージャー")
+                iconName: "archive_line"
+                enabled: false // 後で実装
+                onTriggered: {
+                } // TODO: PackageManager window
+            }
+
+            MenuSeparator {
+            }
 
             Common.IconMenuItem {
                 text: qsTr("バージョン情報")

@@ -568,7 +568,40 @@ ScrollView {
             case "edit.paste":
                 TimelineBridge.pasteClip(contextClickFrame, contextClickLayer);
                 break;
-            case "view.gridsettings":
+            case "view.scenesettings":
+                var win = WindowManager.getWindow("sceneSettings");
+                if (win && TimelineBridge && TimelineBridge.scenes) {
+                    var scenes = TimelineBridge.scenes;
+                    var curId = TimelineBridge.currentSceneId;
+                    var curScene = null;
+                    for (var i = 0; i < scenes.length; i++) {
+                        if (scenes[i].id === curId) {
+                            curScene = scenes[i];
+                            break;
+                        }
+                    }
+                    if (curScene) {
+                        win.openForScene(curScene.id, curScene.name, curScene.width !== undefined ? curScene.width : 1920, curScene.height !== undefined ? curScene.height : 1080, curScene.fps !== undefined ? curScene.fps : 60, curScene.totalFrames !== undefined ? curScene.totalFrames : 300, curScene.gridMode || "Auto", curScene.gridBpm !== undefined ? curScene.gridBpm : 120, curScene.gridOffset !== undefined ? curScene.gridOffset : 0, curScene.gridInterval !== undefined ? curScene.gridInterval : 10, curScene.gridSubdivision !== undefined ? curScene.gridSubdivision : 4, curScene.enableSnap !== undefined ? curScene.enableSnap : true, curScene.magneticSnapRange !== undefined ? curScene.magneticSnapRange : 10);
+                    } else {
+                        win.show();
+                        win.raise();
+                        win.requestActivate();
+                    }
+                } else if (win) {
+                    win.show();
+                    win.raise();
+                    win.requestActivate();
+                }
+                break;
+            case "view.projectsettings":
+                if (WindowManager)
+                    WindowManager.projectSettingsVisible = true;
+
+                break;
+            case "view.systemsettings":
+                if (WindowManager)
+                    WindowManager.systemSettingsVisible = true;
+
                 break;
             default:
                 console.log("Unknown command:", cmd);
@@ -623,7 +656,9 @@ ScrollView {
                 contextMenu.addItem(createMenuItem(qsTr("やり直す"), "edit.redo", "arrow_go_forward_line"));
                 contextMenu.addItem(createMenuItem(qsTr("貼り付け"), "edit.paste", "clipboard_line"));
                 addSeparator();
-                contextMenu.addItem(createMenuItem(qsTr("グリッド設定..."), "view.gridsettings", "grid_line"));
+                contextMenu.addItem(createMenuItem(qsTr("シーン設定..."), "view.scenesettings", "settings_6_line"));
+                contextMenu.addItem(createMenuItem(qsTr("プロジェクト設定..."), "view.projectsettings", "settings_4_line"));
+                contextMenu.addItem(createMenuItem(qsTr("環境設定..."), "view.systemsettings", "settings_3_line"));
             } else if (targetType === "clip") {
                 contextMenu.addItem(createMenuItem(qsTr("削除"), "clip.delete", "delete_bin_line"));
                 contextMenu.addItem(createMenuItem(qsTr("分割"), "clip.split", "scissors_cut_line"));

@@ -5,8 +5,6 @@ import "common" as Common
 import "timeline" // サブフォルダのモジュールをインポート
 
 Common.RinaWindow {
-    // グリッド設定ウィンドウ
-
     id: timelineWindow
 
     // 定数・設定

@@ -13,6 +13,7 @@
 #include "video_decoder.hpp"
 #include "video_frame_store.hpp"
 #include <QFile>
+#include <QUndoStack>
 #include <QUrl>
 #include <QtGlobal>
 #include <algorithm>
@@ -98,6 +99,8 @@ void TimelineController::setupConnections() {
     // QML(VideoObject)からのフレーム要求をMediaManagerへ中継
     connect(this, &TimelineController::videoFrameRequested, m_mediaManager, &TimelineMediaManager::requestVideoFrame);
     connect(this, &TimelineController::imageLoadRequested, m_mediaManager, &TimelineMediaManager::requestImageLoad);
+
+    connect(m_timeline->undoStack(), &QUndoStack::cleanChanged, this, [this](bool) { emit hasUnsavedChangesChanged(); });
 }
 
 void TimelineController::onPlayingChanged() { m_mediaManager->onPlayingChanged(); }
@@ -177,5 +180,12 @@ void TimelineController::requestVideoFrame(int clipId, int relFrame) {
 }
 
 void TimelineController::requestImageLoad(int clipId, const QString &path) { emit imageLoadRequested(clipId, path); }
+
+bool TimelineController::hasUnsavedChanges() const {
+    if (m_timeline && m_timeline->undoStack()) {
+        return !m_timeline->undoStack()->isClean();
+    }
+    return false;
+}
 
 } // namespace Rina::UI
