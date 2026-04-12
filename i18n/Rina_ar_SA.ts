@@ -681,8 +681,8 @@
     </message>
     <message>
         <location filename="../ui/qml/MainWindow.qml" line="115"/>
-        <location filename="../ui/qml/MainWindow.qml" line="1014"/>
-        <location filename="../ui/qml/MainWindow.qml" line="1014"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1013"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1013"/>
         <source>終了</source>
         <translation type="unfinished"></translation>
     </message>
@@ -803,67 +803,67 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="782"/>
+        <location filename="../ui/qml/MainWindow.qml" line="781"/>
         <source>速度</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="971"/>
+        <location filename="../ui/qml/MainWindow.qml" line="970"/>
         <source>ファイル</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1000"/>
+        <location filename="../ui/qml/MainWindow.qml" line="999"/>
         <source>メディアの書き出し...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1042"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1041"/>
         <source>プロジェクト設定</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1055"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1054"/>
         <source>環境設定</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1094"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1093"/>
         <source>ツール</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1097"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1096"/>
         <source>パッケージマネージャー</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1039"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1038"/>
         <source>設定</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1023"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1022"/>
         <source>編集</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1068"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1067"/>
         <source>表示</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1071"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1070"/>
         <source>タイムラインの表示</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1081"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1080"/>
         <source>設定ダイアログの表示</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1108"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1107"/>
         <source>バージョン情報</source>
         <translation type="unfinished"></translation>
     </message>
@@ -873,6 +873,29 @@
     <message>
         <location filename="../ui/qml/common/NodeLoader.qml" line="61"/>
         <source>[NodeLoader] コンポーネントエラー: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>PackageManagerWindow</name>
+    <message>
+        <location filename="../ui/qml/PackageManagerWindow.qml" line="9"/>
+        <source>パッケージマネージャー</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/PackageManagerWindow.qml" line="24"/>
+        <source>リポジトリを同期</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/PackageManagerWindow.qml" line="35"/>
+        <source>検索...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/PackageManagerWindow.qml" line="50"/>
+        <source>（後で実装: パッケージリスト）</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -1289,6 +1312,34 @@
     </message>
 </context>
 <context>
+    <name>Rina::Core::PackageManager</name>
+    <message>
+        <location filename="../core/src/package_manager.cpp" line="11"/>
+        <source>待機中</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../core/src/package_manager.cpp" line="38"/>
+        <source>リポジトリを同期中...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../core/src/package_manager.cpp" line="45"/>
+        <source>同期完了</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../core/src/package_manager.cpp" line="55"/>
+        <source>パッケージのインストール中: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../core/src/package_manager.cpp" line="61"/>
+        <source>インストール完了: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>Rina::UI::TimelineController</name>
     <message>
         <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="80"/>
@@ -1308,6 +1359,11 @@
     <message>
         <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="156"/>
         <source>レイヤー変更</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="309"/>
+        <source>複数クリップリサイズ: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1379,6 +1435,11 @@
     <message>
         <location filename="../ui/src/window_manager.cpp" line="58"/>
         <source>補間設定</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/src/window_manager.cpp" line="60"/>
+        <source>パッケージマネージャー</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

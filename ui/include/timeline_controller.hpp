@@ -259,6 +259,9 @@ class TimelineController : public QObject {
     void onPlayingChanged();
     void onCurrentFrameChanged();
 
+    // メディア制約（素材長）を考慮し duration を上限クランプして返す
+    int clampedDuration(int clipId, int newStart, int requestedDuration) const;
+
     void updateClipActiveState();
     double m_timelineScale = 1.0; // タイムラインの表示倍率 (1.0 = 1フレームあたり1ピクセル)
 

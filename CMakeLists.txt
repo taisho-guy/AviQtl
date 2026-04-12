@@ -157,6 +157,7 @@ qt_add_qml_module(Rina
         ui/qml/CompositeView.qml
         ui/qml/ExportDialog.qml
         ui/qml/AboutWindow.qml
+        ui/qml/PackageManagerWindow.qml
 
         ui/qml/common/RinaWindow.qml
         ui/qml/common/ParamControl.qml

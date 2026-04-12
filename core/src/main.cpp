@@ -4,10 +4,12 @@
 #include "color_scheme_controller.hpp"
 #include "compute_effect.hpp"
 #include "effect_registry.hpp"
+#include "package_manager.hpp"
 #include "rina_context.hpp"
 #include "settings_manager.hpp"
 #include "theme_controller.hpp"
 #include "timeline_controller.hpp"
+#include "version.hpp"
 #include "video_encoder.hpp"
 #include "video_frame_provider.hpp"
 #include "video_frame_store.hpp"
@@ -98,6 +100,10 @@ auto main(int argc, char *argv[]) -> int {
     engine.rootContext()->setContextProperty(QStringLiteral("SettingsManager"), &Rina::Core::SettingsManager::instance());
     engine.rootContext()->setContextProperty(QStringLiteral("ColorSchemeController"), colorSchemeController);
     qmlRegisterUncreatableType<Rina::UI::TimelineController>("Rina.UI", 1, 0, "TimelineController", "Managed by C++");
+
+    engine.rootContext()->setContextProperty(QStringLiteral("RinaVersion"), QString::fromUtf8(Rina::VERSION_STRING));
+    engine.rootContext()->setContextProperty(QStringLiteral("RinaVersionCodename"), QString::fromUtf8(Rina::VERSION_CODENAME));
+    engine.rootContext()->setContextProperty(QStringLiteral("PackageManager"), &Rina::Core::PackageManager::instance());
     auto *workspace = new Rina::UI::Workspace(&app);
     engine.rootContext()->setContextProperty(QStringLiteral("Workspace"), workspace);
     QObject::connect(workspace, &Rina::UI::Workspace::currentTimelineChanged, &app, [&modEngine, workspace]() {

@@ -38,14 +38,14 @@ Common.RinaWindow {
                 Layout.fillWidth: true
 
                 Label {
-                    text: "Rina"
+                    text: "Rina " + (typeof RinaVersion !== "undefined" ? RinaVersion : "")
                     font.pixelSize: 28
                     font.bold: true
                     color: palette.text
                 }
 
                 Label {
-                    text: "Rolling Release"
+                    text: typeof RinaVersionCodename !== "undefined" ? RinaVersionCodename : "Rolling Release"
                     font.pixelSize: 14
                     color: palette.highlight
                     font.bold: true

@@ -1,4 +1,6 @@
 #include "workspace.hpp"
+#include "package_manager.hpp"
+#include "version.hpp"
 #include <QFileInfo>
 #include <QUrl>
 

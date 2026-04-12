@@ -520,8 +520,8 @@ ApplicationWindow {
         RowLayout {
             Layout.fillWidth: true
             Layout.preferredHeight: SettingsManager && SettingsManager.settings ? (SettingsManager.settings.timelineHeaderHeight || 28) : 28
-            Layout.maximumHeight: SettingsManager && SettingsManager.settings ? (SettingsManager.settings.timelineHeaderHeight || 28) : 28
-            Layout.minimumHeight: SettingsManager && SettingsManager.settings ? (SettingsManager.settings.timelineHeaderHeight || 28) : 28
+            Layout.minimumHeight: Layout.preferredHeight
+            Layout.maximumHeight: Layout.preferredHeight
             spacing: 0
             z: 1
 
@@ -543,7 +543,7 @@ ApplicationWindow {
                         model: Workspace ? Workspace.tabs : []
 
                         TabButton {
-                            id: tabBtn
+                            id: projectTabBtn
 
                             checked: Workspace && Workspace.currentIndex === index
                             onClicked: {
@@ -557,7 +557,7 @@ ApplicationWindow {
 
                                 Text {
                                     text: modelData.name + (modelData.hasUnsavedChanges ? " *" : "")
-                                    font: tabBtn.font
+                                    font: projectTabBtn.font
                                     color: palette.text
                                     horizontalAlignment: Text.AlignHCenter
                                     verticalAlignment: Text.AlignVCenter
@@ -593,7 +593,6 @@ ApplicationWindow {
 
             }
 
-            // 新規プロジェクト追加ボタン
             Button {
                 flat: true
                 Layout.preferredWidth: 40
