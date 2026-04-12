@@ -545,53 +545,58 @@ ApplicationWindow {
                 ScrollBar.vertical.policy: ScrollBar.AlwaysOff
                 clip: true
 
-                TabBar {
-                    id: projectTabBar
+                Loader {
+                    active: Workspace && Workspace.tabs && Workspace.tabs.length > 0
+                    width: parent ? parent.width : 0
+                    height: parent ? parent.height : 0
 
-                    width: Math.max(parent ? parent.width : 0, contentWidth || 0)
+                    sourceComponent: TabBar {
+                        width: Math.max(parent ? parent.width : 0, contentWidth || 0)
 
-                    Repeater {
-                        id: projectRepeater
+                        Repeater {
+                            id: projectRepeater
 
-                        model: Workspace ? Workspace.tabs : []
+                            model: Workspace ? Workspace.tabs : []
 
-                        TabButton {
-                            id: projectTabBtn
+                            TabButton {
+                                id: projectTabBtn
 
-                            checked: Workspace && Workspace.currentIndex === index
-                            onClicked: {
-                                if (Workspace)
-                                    Workspace.currentIndex = index;
+                                checked: Workspace && Workspace.currentIndex === index
+                                onClicked: {
+                                    if (Workspace)
+                                        Workspace.currentIndex = index;
 
-                            }
-
-                            contentItem: RowLayout {
-                                spacing: 4
-
-                                Text {
-                                    text: modelData.name + (modelData.hasUnsavedChanges ? " *" : "")
-                                    font: projectTabBtn.font
-                                    color: palette.text
-                                    horizontalAlignment: Text.AlignHCenter
-                                    verticalAlignment: Text.AlignVCenter
-                                    elide: Text.ElideRight
-                                    Layout.maximumWidth: 200
                                 }
 
-                                Button {
-                                    flat: true
-                                    Layout.preferredWidth: 20
-                                    Layout.preferredHeight: 20
-                                    onClicked: {
-                                        if (Workspace)
-                                            Workspace.closeProject(index);
+                                contentItem: RowLayout {
+                                    spacing: 4
 
+                                    Text {
+                                        text: modelData.name + (modelData.hasUnsavedChanges ? " *" : "")
+                                        font: projectTabBtn.font
+                                        color: palette.text
+                                        horizontalAlignment: Text.AlignHCenter
+                                        verticalAlignment: Text.AlignVCenter
+                                        elide: Text.ElideRight
+                                        Layout.maximumWidth: 200
                                     }
 
-                                    contentItem: Common.RinaIcon {
-                                        iconName: "close_line"
-                                        size: 14
-                                        color: parent.hovered ? parent.palette.highlight : parent.palette.text
+                                    Button {
+                                        flat: true
+                                        Layout.preferredWidth: 20
+                                        Layout.preferredHeight: 20
+                                        onClicked: {
+                                            if (Workspace)
+                                                Workspace.closeProject(index);
+
+                                        }
+
+                                        contentItem: Common.RinaIcon {
+                                            iconName: "close_line"
+                                            size: 14
+                                            color: parent.hovered ? parent.palette.highlight : parent.palette.text
+                                        }
+
                                     }
 
                                 }

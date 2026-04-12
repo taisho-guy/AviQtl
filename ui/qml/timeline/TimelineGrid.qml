@@ -22,8 +22,13 @@ Canvas {
     onGridIntervalChanged: requestPaint()
     onGridSettingsChanged: requestPaint()
     onScaleChanged: requestPaint()
+    onWidthChanged: requestPaint()
+    onHeightChanged: requestPaint()
     anchors.fill: parent
     onPaint: {
+        if (width <= 0 || height <= 0 || scale <= 0)
+            return ;
+
         var ctx = getContext("2d");
         ctx.clearRect(0, 0, width, height);
         ctx.lineWidth = 1;
@@ -47,6 +52,9 @@ Canvas {
         var currentScale = scale;
         var currentContentX = contentX;
         var step = gridInterval;
+        if (step <= 0)
+            return ;
+
         var offsetF = (gridSettings.mode === "BPM" && Workspace.currentTimeline.project) ? gridSettings.offset * Workspace.currentTimeline.project.fps : 0;
         var isBpm = (gridSettings.mode === "BPM");
         var bpmDiv = isBpm ? (currentScale > 3 ? 4 : currentScale > 1.5 ? 2 : 1) : 1;
@@ -78,4 +86,13 @@ Canvas {
             ctx.stroke();
         }
     }
+
+    Connections {
+        function onCurrentTimelineChanged() {
+            timelineGrid.requestPaint();
+        }
+
+        target: Workspace
+    }
+
 }
