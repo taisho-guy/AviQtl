@@ -25,9 +25,9 @@ class WindowManager : public QObject {
     void spawnWindow(QQmlEngine *engine, const QString &id, const QString &urlStr, const QString &title, int w, int h, int x, int y, bool visible = true);
 
   public slots:
-    void onProjectSelected(const QString &path, int width, int height, double fps);
+    // タブ 0 / 新規作成要求でランチャーを表示する
+    Q_INVOKABLE void showLauncher();
 
-    // moved to Q_INVOKABLE: Q_INVOKABLE bool isVisible(const QString &id) const;
     Q_INVOKABLE void setVisible(const QString &id, bool visible);
     Q_INVOKABLE void toggleVisible(const QString &id);
     Q_INVOKABLE void raiseWindow(const QString &id);

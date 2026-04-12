@@ -6,7 +6,8 @@
 
 namespace Rina::UI {
 
-Workspace::Workspace(QObject *parent) : QObject(parent) { newProject(); }
+// 起動時はタブなしで開始。プロジェクトランチャーが tabsChanged で自動起動する
+Workspace::Workspace(QObject *parent) : QObject(parent) {}
 
 void Workspace::setCurrentIndex(int index) {
     if (m_currentIndex == index || index < 0 || index >= m_timelines.size())
@@ -73,8 +74,11 @@ void Workspace::closeProject(int index) {
     tc->deleteLater();
 
     if (m_timelines.isEmpty()) {
+        // タブが 0 になったら自動で newProject() せず tabsChanged を emit して
+        // QML 側のランチャー起動に委ねる
         m_currentIndex = -1;
-        newProject();
+        emit currentTimelineChanged();
+        emit tabsChanged();
     } else {
         if (m_currentIndex >= m_timelines.size()) {
             m_currentIndex = m_timelines.size() - 1;

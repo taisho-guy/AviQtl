@@ -64,9 +64,8 @@ ApplicationWindow {
 
         text: qsTr("新規プロジェクト")
         onTriggered: {
-            if (Workspace)
-                Workspace.newProject();
-
+            // ランチャーで幅・高さ・fps を選ばせてから新規タブを作成する
+            WindowManager.showLauncher();
         }
     }
 
@@ -512,16 +511,30 @@ ApplicationWindow {
         id: exportDialog
     }
 
+    // タブが 0 になったとき（最後のプロジェクトを閉じた時）にランチャーを自動表示
+    Connections {
+        function onTabsChanged() {
+            if (Workspace.tabs.length === 0)
+                WindowManager.showLauncher();
+
+        }
+
+        target: Workspace
+    }
+
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
 
-        // プロジェクトタブバー
+        // プロジェクトタブバー（タブが 0 のときは非表示にして KDE TabBar の null アクセスを防ぐ）
         RowLayout {
+            readonly property int _tabH: SettingsManager && SettingsManager.settings ? (SettingsManager.settings.timelineHeaderHeight || 28) : 28
+
             Layout.fillWidth: true
-            Layout.preferredHeight: SettingsManager && SettingsManager.settings ? (SettingsManager.settings.timelineHeaderHeight || 28) : 28
-            Layout.minimumHeight: Layout.preferredHeight
-            Layout.maximumHeight: Layout.preferredHeight
+            visible: Workspace && Workspace.tabs && Workspace.tabs.length > 0
+            Layout.preferredHeight: visible ? _tabH : 0
+            Layout.minimumHeight: 0
+            Layout.maximumHeight: visible ? _tabH : 0
             spacing: 0
             z: 1
 
@@ -535,7 +548,7 @@ ApplicationWindow {
                 TabBar {
                     id: projectTabBar
 
-                    width: Math.max(parent.width, contentWidth)
+                    width: Math.max(parent ? parent.width : 0, contentWidth || 0)
 
                     Repeater {
                         id: projectRepeater
@@ -598,9 +611,8 @@ ApplicationWindow {
                 Layout.preferredWidth: 40
                 Layout.fillHeight: true
                 onClicked: {
-                    if (Workspace)
-                        Workspace.newProject();
-
+                    // ランチャーで幅・高さ・fps を選ばせてから新規タブを作成する
+                    WindowManager.showLauncher();
                 }
 
                 contentItem: Common.RinaIcon {
