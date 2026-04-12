@@ -10,7 +10,33 @@ ApplicationWindow {
 
     id: mainWin
 
-    function checkSaveAndExecute(action) {
+    // 全タブ横断で未保存確認し、全て処理済みになってから finalAction を実行
+    function checkAllUnsavedAndExecute(finalAction) {
+        if (!Workspace || !Workspace.tabs) {
+            finalAction();
+            return ;
+        }
+        for (var i = 0; i < Workspace.tabs.length; i++) {
+            if (Workspace.tabs[i].hasUnsavedChanges) {
+                // 対象タブをアクティブにしてダイアログを出す
+                Workspace.currentIndex = i;
+                saveConfirmDialog.pendingAction = function() {
+                    // 保存/破棄が完了したら次の未保存タブへ進む
+                    checkAllUnsavedAndExecute(finalAction);
+                };
+                saveConfirmDialog.open();
+                return ; // ダイアログ完了を待つ（Cancelは pendingAction=null で自然停止）
+            }
+        }
+        // 未保存タブが 0 なら即実行
+        finalAction();
+    }
+
+    // 単一タブを対象にした確認（tabIndex が指定されたらそのタブをアクティブにする）
+    function checkSaveAndExecute(action, tabIndex) {
+        if (tabIndex !== undefined && Workspace.currentIndex !== tabIndex)
+            Workspace.currentIndex = tabIndex;
+
         if (Workspace.currentTimeline && Workspace.currentTimeline.hasUnsavedChanges) {
             saveConfirmDialog.pendingAction = action;
             saveConfirmDialog.open();
@@ -27,10 +53,13 @@ ApplicationWindow {
     title: qsTr("Rina - プレビュー")
     // お前はこれで死ねぇ！！！！！
     onClosing: (close) => {
-        if (WindowManager)
-            WindowManager.requestQuit();
+        // 一旦クローズをキャンセルし、全タブの未保存確認を行ってから終了する
+        close.accepted = false;
+        checkAllUnsavedAndExecute(function() {
+            if (WindowManager)
+                WindowManager.requestQuit();
 
-        close.accepted = true;
+        });
     }
     // 起動時に自分自身(Window)をコントローラーに渡す
     Component.onCompleted: {
@@ -113,7 +142,7 @@ ApplicationWindow {
 
         text: qsTr("終了")
         onTriggered: {
-            checkSaveAndExecute(function() {
+            checkAllUnsavedAndExecute(function() {
                 if (WindowManager)
                     WindowManager.requestQuit();
 
@@ -405,25 +434,27 @@ ApplicationWindow {
         parent: Overlay.overlay
         standardButtons: Dialog.Save | Dialog.Discard | Dialog.Cancel
         onAccepted: {
+            var action = pendingAction;
+            pendingAction = null; // 先にリセット（再入防止）
             if (Workspace.currentTimeline) {
                 if (Workspace.currentTimeline.currentProjectUrl === "") {
-                    // 名前を付けて保存 → 完了後に pendingAction を実行
-                    saveDialog._nextAction = pendingAction;
+                    // 名前を付けて保存 → saveDialog 完了後に action を実行
+                    saveDialog._nextAction = action;
                     saveDialog.open();
                 } else {
                     Workspace.currentTimeline.saveProject("");
-                    if (pendingAction)
-                        pendingAction();
+                    if (action)
+                        action();
 
                 }
             }
-            pendingAction = null;
         }
         onDiscarded: {
-            if (pendingAction)
-                pendingAction();
-
+            var action = pendingAction;
             pendingAction = null;
+            if (action)
+                action();
+
         }
         onRejected: {
             pendingAction = null;
@@ -586,9 +617,12 @@ ApplicationWindow {
                                         Layout.preferredWidth: 20
                                         Layout.preferredHeight: 20
                                         onClicked: {
-                                            if (Workspace)
-                                                Workspace.closeProject(index);
+                                            // 未保存確認後にタブを閉じる
+                                            checkSaveAndExecute(function() {
+                                                if (Workspace)
+                                                    Workspace.closeProject(index);
 
+                                            }, index);
                                         }
 
                                         contentItem: Common.RinaIcon {
