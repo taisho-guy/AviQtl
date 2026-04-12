@@ -143,7 +143,7 @@ ScrollView {
                     from: 0
                     to: 10000
                     stepSize: 100
-                    value: root.valueOr("splashDuration", 512)
+                    value: root.valueOr("splashDuration", 1024)
                     onValueModified: root.setValue("splashDuration", value)
                 }
 
@@ -155,7 +155,7 @@ ScrollView {
                     from: 128
                     to: 2048
                     stepSize: 64
-                    value: root.valueOr("splashSize", 128)
+                    value: root.valueOr("splashSize", 1024)
                     onValueModified: root.setValue("splashSize", value)
                 }
 

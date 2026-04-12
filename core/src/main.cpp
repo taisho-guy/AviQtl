@@ -76,7 +76,7 @@ auto main(int argc, char *argv[]) -> int {
     QApplication::setWindowIcon(QIcon(QStringLiteral(":/assets/icon.svg")));
 
     // スプラッシュ画面をヒープ領域に確保する
-    int splashSize = settings.value(QStringLiteral("splashSize"), 128).toInt();
+    int splashSize = settings.value(QStringLiteral("splashSize"), 1024).toInt();
     QPixmap splashPixmap = QIcon(QStringLiteral(":/assets/splash.webp")).pixmap(splashSize, splashSize);
     auto *splash = new QSplashScreen(splashPixmap);
     splash->show();
