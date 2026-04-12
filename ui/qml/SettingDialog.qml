@@ -95,7 +95,6 @@ Common.RinaWindow {
 
         reloading = true;
         var id = Workspace.currentTimeline.selection.selectedClipId;
-        targetClipId = id;
         // 選択状態をオブジェクト参照で保存（インデックスずれ防止）
         var oldModel = sidebarList.model;
         var oldSelectedObjects = [];
@@ -246,6 +245,21 @@ Common.RinaWindow {
         }
 
         target: Workspace.currentTimeline
+    }
+
+    // タブ切り替えでプロジェクトが変わった際にモデルをリセットして再ロード
+    Connections {
+        function onCurrentTimelineChanged() {
+            // 旧プロジェクトのサイドバー選択状態をクリア
+            sidebarList.selectedIndices = [];
+            sidebarList.currentIndex = -1;
+            // エフェクトモデルを即座に空にしてから新プロジェクト向けに再ロード
+            effectsModel = [];
+            audioEffectsModel = [];
+            Qt.callLater(reload);
+        }
+
+        target: Workspace
     }
 
     SplitView {
