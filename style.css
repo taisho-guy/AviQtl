@@ -177,31 +177,52 @@ code:active { background: #b366ff; color: #0d0b14; }
     display: inline-block;
     white-space: nowrap;
     transform: translateX(-100%);
-    transition: transform 0.6s cubic-bezier(0.33, 1, 0.68, 1), color 0.6s cubic-bezier(0.33, 1, 0.68, 1);
+    filter: blur(4px);
+    transition: transform 0.6s cubic-bezier(0.33, 1, 0.68, 1), 
+                color 0.6s cubic-bezier(0.33, 1, 0.68, 1),
+                filter 0.6s cubic-bezier(0.33, 1, 0.68, 1);
 }
 .hero-title .a-letter-wrapper {
     position: relative;
 }
 .hero-title .a-lower, .hero-title .a-upper {
-    transition: opacity 0.6s cubic-bezier(0.33, 1, 0.68, 1);
+    transition: opacity 0.6s cubic-bezier(0.33, 1, 0.68, 1), filter 0.6s cubic-bezier(0.33, 1, 0.68, 1);
 }
 .hero-title .a-lower { color: #e0d7f0; }
-.hero-title .a-upper { color: #b366ff; }
+.hero-title .a-upper { color: inherit; }
 .hero-title .a-upper {
     position: absolute;
     left: 0;
     top: 0;
     opacity: 0;
+    filter: blur(8px);
 }
 
 .hero-title:hover .expand {
-    max-width: 6rem;
+    max-width: 10rem;
 }
 .hero-title:hover .expand-inner {
     transform: translateX(0);
+    filter: blur(0px);
 }
-.hero-title:hover .a-lower { opacity: 0; }
-.hero-title:hover .a-upper { opacity: 1; }
+.hero-title:hover .a-lower { opacity: 0; filter: blur(8px); }
+.hero-title:hover .a-upper { opacity: 1; filter: blur(0px); }
+
+.hero-title > .word-group:last-child {
+    transition: opacity 0.6s cubic-bezier(0.33, 1, 0.68, 1),
+                max-width 0.6s cubic-bezier(0.33, 1, 0.68, 1),
+                transform 0.6s cubic-bezier(0.33, 1, 0.68, 1),
+                filter 0.6s cubic-bezier(0.33, 1, 0.68, 1);
+    max-width: 10rem;
+    overflow: hidden;
+    filter: blur(0px);
+}
+.hero-title:hover > .word-group:last-child {
+    opacity: 0;
+    max-width: 0;
+    transform: translateX(-50px);
+    filter: blur(8px);
+}
 
 .hero-title a { display: contents; color: inherit; text-decoration: none; }
 .hero-title:hover a .letter, .hero-title:hover a .expand-inner {
@@ -210,6 +231,6 @@ code:active { background: #b366ff; color: #0d0b14; }
 
 @media (max-width: 600px) {
     .hero-title {
-        font-size: clamp(1rem, 4.5vw, 1.5em);
+        font-size: clamp(0.9rem, 4vw, 1.4em);
     }
 }
