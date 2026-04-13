@@ -19,7 +19,7 @@ body {
     margin: 0;
     padding: 20px;
 }
-a { color: #b366ff; text-decoration: underline; transition: color 0.2s; }
+a { color: #b366ff; text-decoration: none; transition: color 0.2s; }
 a:hover { color: #d199ff; }
 a:visited { color: #9044d9; }
 

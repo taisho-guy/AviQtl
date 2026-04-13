@@ -1,7 +1,7 @@
 async function fetchReleases() {
     const repo = 'taisho-guy/Rina';
-    const tagsUrl = `https://codeberg.org/api/v1/repos/${repo}/tags?limit=32`;
-    const releasesUrl = `https://codeberg.org/api/v1/repos/${repo}/releases?limit=32`;
+    const tagsUrl = `https://codeberg.org/api/v1/repos/${repo}/tags?limit=11`;
+    const releasesUrl = `https://codeberg.org/api/v1/repos/${repo}/releases?limit=10`;
     const tbody = document.getElementById('release-list');
 
     try {
@@ -25,7 +25,7 @@ async function fetchReleases() {
         }
 
         tbody.innerHTML = '';
-        tags.forEach((tagObj, index) => {
+        tags.slice(0, 10).forEach((tagObj, index) => {
             const tag = tagObj.name;
             const prevTag = tags[index + 1] ? tags[index + 1].name : null;
             const assets = releaseMap[tag] || [];
@@ -73,6 +73,16 @@ async function fetchReleases() {
             tr.appendChild(tdDate);
             tbody.appendChild(tr);
         });
+
+        // 表の最後に「過去のリリース情報」の行を追加
+        const footTr = document.createElement('tr');
+        footTr.innerHTML = `
+            <td colspan="5" style="text-align: center; padding: 8px; vertical-align: middle;">
+                <a href="https://codeberg.org/taisho-guy/Rina/releases" target="_blank" style="font-weight: bold;">
+                    過去のリリース情報
+                </a>
+            </td>`;
+        tbody.appendChild(footTr);
     } catch (error) {
         tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #8C1D18;">リリースの取得に失敗しました。</td></tr>';
         console.error(error);
