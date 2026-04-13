@@ -173,7 +173,7 @@ class BuildWorker(QtCore.QThread):
 
             # 正しいURLで tap を実行
             try:
-                self._run_cmd(["brew", "tap", tap_name, tap_url, "--force-auto-update"])
+                self._run_cmd(["brew", "tap", tap_name, tap_url, "-f"])
                 
                 # ECMやKF6のリンク問題を解決するための caveat スクリプトを実行
                 repo_path = subprocess.check_output(["brew", "--repo", tap_name], text=True).strip()
@@ -188,7 +188,11 @@ class BuildWorker(QtCore.QThread):
                 "cmake", "ninja", "qt6", "ffmpeg", "luajit", "vulkan-headers", "vulkan-loader",
                 "pkg-config", "lilv", "kf6-kirigami", "kf6-kcolorscheme", "extra-cmake-modules", "carla"
             ]
-            self._run_cmd(["brew", "install"] + deps)
+            for dep in deps:
+                try:
+                    self._run_cmd(["brew", "install", dep])
+                except subprocess.CalledProcessError:
+                    self.log_signal.emit(f"  情報: {dep} は既にインストールされているか、スキップされました。")
             
             if not (self.source_dir / "clap").exists():
                 self._run_cmd(["git", "clone", "https://github.com/free-audio/clap.git", "--depth", "1"])
