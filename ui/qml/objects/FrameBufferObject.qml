@@ -6,6 +6,7 @@ import "qrc:/qt/qml/Rina/ui/qml/common" as Common
 Common.BaseObject {
     id: root
 
+    property bool is3DObject: true
     // CompositeView から注入 (properties ではなく onItemChanged で動的セット)
     property var sceneRootRef: null
     // onItemChanged で item.clipLayer = model.layer される

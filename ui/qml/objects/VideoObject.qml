@@ -6,6 +6,7 @@ import "qrc:/qt/qml/Rina/ui/qml/common" as Common
 Common.BaseObject {
     id: base
 
+    property bool is3DObject: true
     property string path: String(evalParam("video", "path", ""))
     property string playMode: String(evalParam("video", "playMode", "開始フレーム＋再生速度"))
     property int startFrame: Number(evalParam("video", "startFrame", 0))

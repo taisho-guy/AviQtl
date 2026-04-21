@@ -6,6 +6,7 @@ import "qrc:/qt/qml/Rina/ui/qml/common" as Common
 Common.BaseObject {
     id: base
 
+    property bool is3DObject: true
     property string imagePath: String(evalParam("image", "path", ""))
     property int fillMode: Number(evalParam("image", "fillMode", VideoOutput.PreserveAspectFit))
     property real imageOpacity: Number(evalParam("image", "opacity", 1))

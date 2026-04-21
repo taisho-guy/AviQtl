@@ -7,6 +7,7 @@ import "qrc:/qt/qml/Rina/ui/qml/common" as Common
 Common.BaseObject {
     id: root
 
+    property bool is3DObject: true
     property int targetSceneId: evalParam("scene", "targetSceneId", 0)
     property real speed: evalParam("scene", "speed", 1)
     property int offset: evalParam("scene", "offset", 0)
