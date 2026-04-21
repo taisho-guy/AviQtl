@@ -112,11 +112,16 @@ class TimelineService : public QObject {
     void setKeyframeInternal(int clipId, int effectIndex, const QString &paramName, int frame, const QVariant &value, const QVariantMap &options);
     void removeKeyframeInternal(int clipId, int effectIndex, const QString &paramName, int frame);
     void setLayerStateInternal(int sceneId, int layer, bool value, int type);
+
+    // --- Phase 1: DOD Migration Helpers ---
+    Q_INVOKABLE Rina::UI::ClipData packClipData(int clipId) const;
+    Q_INVOKABLE void unpackClipData(const Rina::UI::ClipData &clip);
+
     ClipData *findClipById(int clipId);
     const ClipData *findClipById(int clipId) const;
 
     // ヘルパー
-    ClipData deepCopyClip(const ClipData &source);
+    ClipData deepCopyClip(const ClipData &source) const;
 
     // 状態管理
     int nextClipId() const { return m_nextClipId; }

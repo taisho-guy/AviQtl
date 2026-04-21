@@ -1261,7 +1261,7 @@
     </message>
     <message>
         <location filename="../ui/src/timeline/timeline_scene.cpp" line="60"/>
-        <location filename="../ui/src/timeline_service.cpp" line="17"/>
+        <location filename="../ui/src/timeline_service.cpp" line="64"/>
         <source>ルート</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1342,27 +1342,27 @@
 <context>
     <name>Rina::UI::TimelineController</name>
     <message>
-        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="80"/>
+        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="83"/>
         <source>プロパティ変更: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="122"/>
+        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="125"/>
         <source>開始フレーム変更</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="139"/>
+        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="142"/>
         <source>長さ変更</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="156"/>
+        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="159"/>
         <source>レイヤー変更</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="309"/>
+        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="312"/>
         <source>複数クリップリサイズ: %1</source>
         <translation type="unfinished"></translation>
     </message>

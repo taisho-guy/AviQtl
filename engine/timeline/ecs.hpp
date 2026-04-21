@@ -110,6 +110,7 @@ struct AudioComponent {
 };
 
 struct TransformComponent {
+    int clipId = -1; // Added for collision checking and DOD iteration
     int layer = 0;
     double timePosition = 0.0;
     int startFrame = 0;
@@ -129,12 +130,35 @@ struct RenderComponent {
     QString effectChain;
 };
 
+struct SelectionComponent {
+    int clipId = -1;
+    bool isSelected = false;
+};
+
+// 前方宣言または不完全型の回避のため、実体が定義されている timeline_types.hpp をインクルードするか、void* で保持する手もあるが、
+// プロジェクトの構造上 QList<T> は前方宣言でもポインタなら持てる。
+// 実際の利用時には effect_model.hpp などが必要。
+struct EffectStackComponent {
+    int clipId = -1;
+    QVariantList effects; // UIへの伝播を容易にするため、ここでは QVariant またはポインタのリストを想定
+    // フェーズ1では QList<EffectModel*> の代替として QVariantList を利用 (TimelineController 等の既存処理と互換を持たせる)
+};
+
+struct AudioStackComponent {
+    int clipId = -1;
+    QVariantList audioPlugins;
+};
+
 struct ECSState {
     bool renderGraphDirty = false;
     DenseComponentMap<TransformComponent> transforms;
     DenseComponentMap<RenderComponent> renderStates;
     DenseComponentMap<AudioComponent> audioStates;
     DenseComponentMap<MetadataComponent> metadataStates;
+
+    DenseComponentMap<SelectionComponent> selections;
+    DenseComponentMap<EffectStackComponent> effectStacks;
+    DenseComponentMap<AudioStackComponent> audioStacks;
 };
 
 class ECS {

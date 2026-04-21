@@ -512,4 +512,4 @@ void ComputeEffect::geometryChange(const QRectF &newGeometry, const QRectF &oldG
 
 } // namespace Rina::UI::Effects
 
-#include "compute_effect.moc"
+// #include "compute_effect.moc" // Removed to fix AutoMoc warning

@@ -34,6 +34,24 @@ auto ClipModel::data(const QModelIndex &index, int role) const -> QVariant {
     }
     const ClipData *clip = m_activeClips.value(index.row());
 
+    // Phase 1 DOD Integration: Get values from ECS Snapshot directly if possible
+    // This allows UI to be decoupled from ClipData pointers over time
+    const auto *ecsState = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    if (ecsState) {
+        if (const auto *transform = ecsState->transforms.find(clip->id)) {
+            if (role == StartFrameRole)
+                return transform->startFrame;
+            if (role == DurationRole)
+                return transform->durationFrames;
+            if (role == LayerRole)
+                return transform->layer;
+        }
+        if (const auto *metadata = ecsState->metadataStates.find(clip->id)) {
+            if (role == TypeRole)
+                return metadata->type;
+        }
+    }
+
     switch (role) {
     case IdRole:
         return clip->id;

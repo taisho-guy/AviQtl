@@ -11,6 +11,9 @@
 #include <QtGlobal>
 #include <algorithm>
 
+#include "engine/timeline/clip_effect_system.hpp"
+#include "engine/timeline/ecs.hpp"
+
 namespace Rina::UI {
 
 void TimelineController::handleClipClick(int clipId, int modifiers) { // NOLINT(bugprone-easily-swappable-parameters)
@@ -692,16 +695,16 @@ void TimelineController::splitSelectedClips(int frame) {
     }
 }
 
-#include "engine/timeline/ecs.hpp"
-
 auto TimelineController::evaluateClipParams(int clipId, int relFrame) const -> QVariantMap {
-    QVariantMap out;
-    if (const auto *clip = m_timeline->findClipById(clipId)) {
-        for (auto *eff : clip->effects) {
-            out.insert(eff->id(), eff->evaluatedParams(relFrame));
-        }
-    }
-    return out;
+    // --- Phase 4: DOD Effect Evaluation ---
+    // QObject (EffectModel) のメソッド呼び出しを回避し、ECSのコンポーネントから直接パラメータを評価
+    const auto *ecsState = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    if (!ecsState)
+        return QVariantMap{};
+
+    return Rina::Engine::Timeline::ClipEffectSystem::evaluateParams(ecsState->effectStacks, clipId, relFrame);
+
+    // (フェーズ4の完全移行前は元のロジックと併用)
 }
 void TimelineController::copyClip(int clipId) { m_timeline->copyClip(clipId); }
 
