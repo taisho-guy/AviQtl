@@ -31,31 +31,15 @@ Common.BaseObject {
     // 縁取りがはみ出さないようにパディングを確保
     readonly property real _pad: outlineEnabled ? Math.ceil(outlineWidth) + 2 : 2
 
-    Model {
-        source: "#Rectangle"
-        scale: Qt.vector3d((renderer.output.sourceItem ? renderer.output.sourceItem.width : 1) / 100, (renderer.output.sourceItem ? renderer.output.sourceItem.height : 1) / 100, 1)
-
-        materials: DefaultMaterial {
-            lighting: DefaultMaterial.NoLighting
-            blendMode: root.blendMode
-            cullMode: root.cullMode
-
-            diffuseMap: Texture {
-                sourceItem: renderer.output
-            }
-
-        }
-
-    }
-
     sourceItem: Item {
         // 【修正】width/height をコンテンツの implicitSize から直接算出し、
         // 親(renderHost)のサイズに一切依存しない自律サイズにする。
         // adopt2D で親が 1920x1080 の renderHost に変わっても再レイアウトが起きない。
         width: Math.max(textItem.implicitWidth + root._pad * 2 + (root.bgEnabled ? root.bgPaddingX * 2 : 0), 1)
         height: Math.max(textItem.implicitHeight + root._pad * 2 + (root.bgEnabled ? root.bgPaddingY * 2 : 0), 1)
+        // opacity/visible は BaseObject.onSourceItemChanged が設定する
         visible: true
-        opacity: 0
+        opacity: 1
 
         Rectangle {
             x: 0

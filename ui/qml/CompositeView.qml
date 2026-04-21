@@ -307,16 +307,12 @@ Item {
 
                 // レイヤーが非表示の場合は描画しない
                 visible: {
-                    // 1. レイヤー自体の表示設定
-                    // QMLエンジンのバインディングシステムに検知させるため、layerStatesを直接参照する
+                    // DOD Sync が IntervalTree でアクティブクリップのみを ClipModel に送るため、
+                    // フレーム範囲チェックは不要かつ有害（currentFrame タイミングズレで false になる）。
+                    // レイヤーの visible フラグのみで制御する。
                     var states = root.layerStates;
                     var layerInfo = states ? states[clipLayerRole] : null;
-                    var layerVisible = (layerInfo !== null && layerInfo !== undefined) ? layerInfo.visible : true;
-                    if (!layerVisible)
-                        return false;
-
-                    // 2. 再生ヘッドがクリップの範囲内にあるか（プリロードされたオブジェクトを隠す）
-                    return root.currentFrame >= clipStartFrameRole && root.currentFrame < (clipStartFrameRole + clipDurationFramesRole);
+                    return (layerInfo !== null && layerInfo !== undefined) ? layerInfo.visible : true;
                 }
                 // 座標変換: 中心(0,0)、Y軸下プラス(AviUtl互換)
                 // Qt3DはY上がプラスなので、入力を反転させる
@@ -335,16 +331,35 @@ Item {
                 // 不透明度 (全体)
                 opacity: effectiveTransform.opacity
                 // params 変化 (scale/pos/rot/opacity) → BaseObject の fbCaptureItem を同期
-                onPxChanged: objectContainer._syncTransformToItem()
-                onPyChanged: objectContainer._syncTransformToItem()
-                onPRotZChanged: objectContainer._syncTransformToItem()
-                onBaseScaleChanged: objectContainer._syncTransformToItem()
-                onAspectXChanged: objectContainer._syncTransformToItem()
-                onAspectYChanged: objectContainer._syncTransformToItem()
-                onPOpacityChanged: objectContainer._syncTransformToItem()
+                // tParamsが変化したとき(位置/回転/スケール/不透明度すべて含む)に1回だけ同期する
+                onTParamsChanged: objectContainer._syncTransformToItem()
+                Component.onCompleted: objectContainer._syncTransformToItem()
 
                 // Loader (2D) は 3D シーン内では機能しないため、
                 // Qt.createComponent を使用して Node 派生クラスを動的に生成する
+                // --- 方針A: 2Dレンダー結果(fbRendererOutput)を板ポリとして3D空間に配置 ---
+                // is3DObject=true のオブジェクトはこの板ポリをスキップし、オブジェクト自身の Node/Model ツリーで描画する
+                Model {
+                    source: "#Rectangle"
+                    // QtQuick3D の #Rectangle は 100x100 基準のため /100 でスケール換算
+                    scale: Qt.vector3d((clipNode.fbRendererOutput ? clipNode.fbRendererOutput.width : 100) / 100, (clipNode.fbRendererOutput ? clipNode.fbRendererOutput.height : 100) / 100, 1)
+                    position: Qt.vector3d(0, 0, 0)
+                    pickable: false
+                    // is3DObject=true のときは板ポリを非表示にしてオブジェクト自身に委ねる
+                    visible: (clipNode.fbRendererOutput !== null) && !(objectContainer.item && objectContainer.item.is3DObject)
+
+                    materials: DefaultMaterial {
+                        lighting: DefaultMaterial.NoLighting
+                        cullMode: DefaultMaterial.NoCulling
+
+                        diffuseMap: Texture {
+                            sourceItem: clipNode.fbRendererOutput
+                        }
+
+                    }
+
+                }
+
                 Common.NodeLoader {
                     id: objectContainer
 

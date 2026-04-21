@@ -318,10 +318,8 @@ void TimelineController::resizeSelectedClips(int deltaStartFrame, int deltaDurat
     m_timeline->undoStack()->endMacro();
 }
 
-// ----------------------------------------------------------------
 // clampedDuration: video/audio/scene の素材長に合わせて duration を上限クランプ
 // updateClip と resizeSelectedClips の共通ロジックとして抽出
-// ----------------------------------------------------------------
 int TimelineController::clampedDuration(int clipId, int newStart, int requestedDuration) const {
     Q_UNUSED(newStart);
     const auto *clip = m_timeline->findClipById(clipId);
@@ -435,9 +433,7 @@ int TimelineController::clampedDuration(int clipId, int newStart, int requestedD
     return duration;
 }
 
-// ----------------------------------------------------------------
 // updateClip: clampedDuration() に委譲して DRY を維持
-// ----------------------------------------------------------------
 void TimelineController::updateClip(int id, int layer, int startFrame, int duration) {
     const auto *clip = m_timeline->findClipById(id);
     if (clip == nullptr) {

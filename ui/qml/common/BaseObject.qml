@@ -11,6 +11,9 @@ Node {
     // property var の配列要素に対する直接依存は QML エンジンが追跡できないため、
     // _tmRev と同じカウンタ方式を採用する。
     // getBlurPadding は ObjectRenderer.totalExpansion に置換済みのため削除
+    // ─── 2D変換済みキャプチャアイテム ─────────────────────────────
+    // View3D の clipNode が持つ transform を 2D 空間で再現し、
+    // FB が「変換後の最終見た目」を収集できるようにする
 
     id: base
 
@@ -32,8 +35,9 @@ Node {
     // CompositeView の clipNode から直接セット
     // FB 収集対象: 変換済み2Dキャプチャアイテム
     // FB 収集対象: 変換済み2Dキャプチャアイテム (外部から item.fbCaptureItem でアクセス可能)
-    property alias fbCaptureItem: _fbCaptureItemImpl
-    property Item fbRendererOutput: _fbCaptureItemImpl
+    // 【修正】3D板ポリ用: 2D変換済の1920x1080ではなく、元サイズの rendererInstance.output を返す
+    property alias fbCaptureItem: rendererInstance.output
+    property Item fbRendererOutput: rendererInstance.output
     // 座標変換のモジュール化
     // transformエフェクトのモデルを探す
     readonly property var transformModel: {
@@ -89,6 +93,8 @@ Node {
     }
     // padding は ObjectRenderer の totalExpansion に委譲したため削除済み
     // 子クラスがオーバーライドするプロパティ
+    // 3Dオブジェクト（MeshObject等）はtrue。板ポリ描画をスキップしてオブジェクト自身のModelで描画する
+    property bool is3DObject: false
     property Item sourceItem
     property alias renderer: rendererInstance
 
@@ -160,7 +166,6 @@ Node {
         Qt.callLater(function() {
             adopt2D(base.sourceItem);
             adopt2D(rendererInstance);
-            adopt2D(_fbCaptureItemImpl);
         });
     }
     Component.onCompleted: {
@@ -169,7 +174,6 @@ Node {
             adopt2D(base.sourceItem);
             // ObjectRenderer(= ShaderEffectSource/effectsチェーン)も移す
             adopt2D(rendererInstance);
-            adopt2D(_fbCaptureItemImpl);
         });
     }
     Component.onDestruction: {
@@ -185,37 +189,23 @@ Node {
     }
     // sourceItem は常に非表示（renderer.output のみ表示）
     onSourceItemChanged: {
-        // サイズ確定後にのみ adopt2D を実行する。
-        // Qt/QML では onCompleted 時点でも width/height が 0 のケースがあるため
-        // Timer でポーリングして確定を待つ。
-
-        if (sourceItem)
-            _adoptTimer.restart();
-
+        if (sourceItem) {
+            // 【修正】adopt2D を即時実行する。
+            // 以前は width > 0 を待つ Timer を使っていたが、TextObject 等では
+            // renderHost に reparent されるまで implicitWidth が 0 のまま（鶏卵問題）。
+            // ObjectRenderer の textureSource が width <= 0 のとき fallbackItem を
+            // 返す設計で既に保護されているため、ここでの遅延は不要かつ有害。
+            sourceItem.visible = true;
+            sourceItem.opacity = 1;
+            Qt.callLater(function() {
+                adopt2D(base.sourceItem);
+            });
+        }
     }
     onRelFrameChanged: {
         if (hasTransform)
             transformLoader.item.frame = relFrame;
 
-    }
-
-    Timer {
-        id: _adoptTimer
-
-        interval: 8
-        repeat: true
-        onTriggered: {
-            if (!base.sourceItem) {
-                stop();
-                return ;
-            }
-            if (base.sourceItem.width > 0 && base.sourceItem.height > 0) {
-                stop();
-                base.sourceItem.visible = true;
-                base.sourceItem.opacity = 1;
-                adopt2D(base.sourceItem);
-            }
-        }
     }
 
     Instantiator {
@@ -275,42 +265,6 @@ Node {
         }
 
         target: Workspace.currentTimeline
-    }
-
-    // ─── 2D変換済みキャプチャアイテム ─────────────────────────────
-    // View3D の clipNode が持つ transform を 2D 空間で再現し、
-    // FB が「変換後の最終見た目」を収集できるようにする
-    Item {
-        id: _fbCaptureItemImpl
-
-        width: (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.width : 1920
-        height: (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.height : 1080
-        visible: true // SceneGraph に残すため true (opacity は renderHost 側で 0)
-
-        Item {
-            id: fbTransformItem
-
-            // Transform.qmlのインスタンスから値を取得
-            readonly property var _ti: base.hasTransform ? transformLoader.item : null
-
-            // テクスチャサイズをスケール適用後のサイズに設定
-            width: (rendererInstance && rendererInstance.output && rendererInstance.output.sourceItem ? rendererInstance.output.sourceItem.width : 1) * (_ti ? _ti.output2dScale : 1)
-            height: (rendererInstance && rendererInstance.output && rendererInstance.output.sourceItem ? rendererInstance.output.sourceItem.height : 1) * (_ti ? _ti.output2dScale : 1)
-            // AviUtl 座標系: 中心(0,0)、Y下プラス → Qt2D: 中心 = parent の center + offset
-            x: _fbCaptureItemImpl.width / 2 + (_ti ? _ti.output2dX : 0) - width / 2
-            y: _fbCaptureItemImpl.height / 2 - (_ti ? _ti.output2dY : 0) - height / 2
-            rotation: -(_ti ? _ti.output2dRotationZ : 0)
-            opacity: _ti ? _ti.outputOpacity : 1
-
-            ShaderEffectSource {
-                anchors.fill: parent
-                sourceItem: renderer.finalItem
-                live: true
-                hideSource: true // finalItem (opacity:0 かもしれないが) を隠す
-            }
-
-        }
-
     }
 
     // レンダラー自動配置

@@ -1,6 +1,5 @@
 <div align="center">
-    <img src="./assets/icon2.svg" alt="" width="256"/>
-    <h1>Rina: I'm not AviUtl</h1>
+    <img src="./assets/splash.svg" alt="" width="256"/>
     <p>AviUtlを踏襲し凌駕する次世代動画編集ソフト</p>
 </div>
 

@@ -52,7 +52,7 @@ Item {
         width: 1
         height: 1
         visible: true
-        opacity: 0
+        opacity: 1 // 【修正】3D Texture キャプチャのため実体は不透明にする
     }
 
     // originalSource をオフセット付きでキャンバス内に配置するプロキシ
@@ -63,7 +63,7 @@ Item {
         width: renderer.width
         height: renderer.height
         visible: true
-        opacity: 0
+        opacity: 1 // 【修正】3D Texture キャプチャのため実体は不透明にする
 
         // originalSource 自体は ShaderEffectSource でテクスチャ化してオフセット配置する
         ShaderEffectSource {
@@ -174,8 +174,16 @@ Item {
             return defaultSource;
         }
 
+        // 【修正】FBOサイズを拡張済みキャンバスに明示バインドする。
+        // サイズ未指定だと fallbackItem(1x1) の間に FBO が 1x1 で固定される。
+        width: renderer.width
+        height: renderer.height
         sourceItem: {
-            if (!renderer.originalSource || renderer.originalSource.width <= 0 || renderer.originalSource.height <= 0)
+            // originalSource の null チェックのみ行う
+            // width<=0 による fallback は廃止: adopt2D タイミングの問題で
+            // sourceItem.width が 0 のまま fallbackItem(1x1) に固定されるのを防ぐ
+            // contentWidth は Math.max(w,1) で既に最低1pxが保証されているため安全
+            if (!renderer.originalSource)
                 return fallbackItem;
 
             if (effectChain.count > 0)
@@ -183,7 +191,8 @@ Item {
 
             return contentProxy;
         }
-        visible: false
+        visible: true // QQuick3DのTextureに渡す場合、visible=trueでないと更新されない(opacity=0は親で制御)
+        opacity: 1 // 【修正】3D Texture がキャプチャできるように 1 にする。2D 画面では親の offscreenRenderHost が opacity:0 なので見えない
         live: true
         hideSource: true
         recursive: false
