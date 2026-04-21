@@ -41,7 +41,7 @@ ScrollView {
         pluginPathsChanged(formatName, textValue);
     }
 
-    // --- ページ本体 ---
+    // ページ本体
     Layout.fillWidth: true
     Layout.fillHeight: true
     contentWidth: availableWidth

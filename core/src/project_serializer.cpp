@@ -27,7 +27,7 @@ auto ProjectSerializer::save(const QString &fileUrl, const UI::TimelineService *
     settings.insert(QStringLiteral("sampleRate"), project->sampleRate());
     root.insert(QStringLiteral("settings"), settings);
 
-    // --- シーン情報の保存 ---
+    // シーン情報の保存
     QJsonArray scenesArray;
     for (const auto &scene : timeline->getAllScenes()) {
         QJsonObject sObj;
@@ -43,7 +43,7 @@ auto ProjectSerializer::save(const QString &fileUrl, const UI::TimelineService *
     }
     root.insert(QStringLiteral("scenes"), scenesArray);
 
-    // --- 全シーンのクリップをフラットに保存 ---
+    // 全シーンのクリップをフラットに保存
     QJsonArray clipsArray;
     for (const auto &scene : timeline->getAllScenes()) {
         for (const auto &clip : std::as_const(scene.clips)) {
@@ -121,7 +121,7 @@ auto ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
     }
     QJsonObject root = doc.object();
 
-    // --- 1. 一時的な構造体にパース (検証フェーズ) ---
+    // 1. 一時的な構造体にパース (検証フェーズ)
 
     // Project Settings
     bool hasSettings = root.contains(QStringLiteral("settings"));
@@ -233,7 +233,7 @@ auto ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
         }
     }
 
-    // --- 2. 変更を適用 (コミットフェーズ) ---
+    // 2. 変更を適用 (コミットフェーズ)
 
     if (hasSettings) {
         project->setWidth(pWidth);

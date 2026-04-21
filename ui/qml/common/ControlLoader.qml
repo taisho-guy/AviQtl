@@ -77,7 +77,7 @@ Loader {
         };
     }
 
-    // === コンポーネント選択 ===
+    // コンポーネント選択
     sourceComponent: {
         if (!definition)
             return unknownComponent;

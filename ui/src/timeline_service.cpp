@@ -13,7 +13,7 @@
 
 namespace Rina::UI {
 
-// --- Phase 1: DOD Migration Helpers ---
+// Phase 1: DOD Migration Helpers
 ClipData TimelineService::packClipData(int clipId) const {
     ClipData result;
     result.id = clipId;

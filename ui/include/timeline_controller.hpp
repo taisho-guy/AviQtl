@@ -37,12 +37,12 @@ namespace Rina::UI { // 元のnamespaceに戻す
 class TimelineController : public QObject {
     Q_OBJECT
 
-    // === サービス (サブコントローラ) ===
+    // サービス (サブコントローラ)
     Q_PROPERTY(Rina::UI::ProjectService *project READ project CONSTANT)
     Q_PROPERTY(Rina::UI::TransportService *transport READ transport CONSTANT)
     Q_PROPERTY(Rina::UI::SelectionService *selection READ selection CONSTANT)
 
-    // === レガシー / ファサードプロパティ ===
+    // レガシー / ファサードプロパティ
     Q_PROPERTY(double timelineScale READ timelineScale WRITE setTimelineScale NOTIFY timelineScaleChanged)
     Q_PROPERTY(int clipStartFrame READ clipStartFrame WRITE setClipStartFrame NOTIFY clipStartFrameChanged)
     Q_PROPERTY(int clipDurationFrames READ clipDurationFrames WRITE setClipDurationFrames NOTIFY clipDurationFramesChanged)

@@ -169,6 +169,7 @@ class ECS {
     void updateClipState(int clipId, int layer, double time);
     void updateAudioClipState(int clipId, int startFrame, int durationFrames, float volume, float pan, bool mute);
     void updateMetadata(int clipId, const QString &name, const QString &source, const QString &type, const QString &color);
+    void updateEffectStack(int clipId, const QVariantList &effects);
 
     void commit();
 

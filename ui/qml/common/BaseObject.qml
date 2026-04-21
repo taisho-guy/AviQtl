@@ -33,7 +33,7 @@ Node {
     // FB 収集対象: 変換済み2Dキャプチャアイテム (外部から item.fbCaptureItem でアクセス可能)
     property alias fbCaptureItem: _fbCaptureItemImpl
     property Item fbRendererOutput: _fbCaptureItemImpl
-    // --- 座標変換のモジュール化 ---
+    // 座標変換のモジュール化
     // transformエフェクトのモデルを探す
     readonly property var transformModel: {
         for (var i = 0; i < rawEffectModels.length; i++) {
@@ -226,7 +226,7 @@ Node {
 
     }
 
-    // --- transformエフェクトのインスタンス化 ---
+    // transformエフェクトのインスタンス化
     Loader {
         id: transformLoader
 

@@ -49,7 +49,7 @@ void ClipLifecycleSystem::restoreClipFromDTO(ECSState &state, const Rina::UI::Cl
     metadata.clipId = dto.id;
     metadata.type = dto.type;
 
-    // --- フェーズ1〜4の過渡期におけるハイブリッド復元 ---
+    // フェーズ1〜4の過渡期におけるハイブリッド復元
     // effectStacks, audioStacks などへのポインタの復帰が必要
     // 本来はDOD化されたパラメータ配列へ復元するが、現状はリストをそのまま載せる
     // (unpackClipData から呼ばれる想定)

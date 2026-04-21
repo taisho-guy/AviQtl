@@ -93,6 +93,18 @@ void ECS::updateMetadata(int clipId, const QString &name, const QString &source,
     }
 }
 
+void ECS::updateEffectStack(int clipId, const QVariantList &effects) {
+    auto &state = m_buffers[m_editIndex];
+
+    // operator[] は要素がなければ新規作成し、あれば参照を返す (ensureSparseSize等も内部で実行される)
+    state.effectStacks[clipId].effects = effects;
+
+    // 他のバッファにも伝搬させるためのダーティフラグを立てる（必要であれば）
+    m_dirtyForBuffer[(m_editIndex + 1) % 3].insert(clipId);
+    m_dirtyForBuffer[(m_editIndex + 2) % 3].insert(clipId);
+    state.renderGraphDirty = true;
+}
+
 void ECS::commit() {
     // 現在の edit バッファのインデックスを新しい active バッファにする
     int nextActive = m_editIndex;

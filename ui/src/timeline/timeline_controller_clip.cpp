@@ -696,11 +696,14 @@ void TimelineController::splitSelectedClips(int frame) {
 }
 
 auto TimelineController::evaluateClipParams(int clipId, int relFrame) const -> QVariantMap {
-    // --- Phase 4: DOD Effect Evaluation ---
-    // QObject (EffectModel) のメソッド呼び出しを回避し、ECSのコンポーネントから直接パラメータを評価
-    const auto *ecsState = Rina::Engine::Timeline::ECS::instance().getSnapshot();
-    if (!ecsState)
-        return QVariantMap{};
+    // --- Phase 5: 100% DOD Effect Evaluation ---
+    // 旧 EffectModel を完全にバイパスし、ECSから直接結果を返す
+    const auto *ecsState = ::Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    if (ecsState && ecsState->effectStacks.contains(clipId)) {
+        return ::Rina::Engine::Timeline::ClipEffectSystem::evaluateParams(ecsState->effectStacks, clipId, relFrame);
+    }
+    return QVariantMap{};
+    return QVariantMap{};
 
     return Rina::Engine::Timeline::ClipEffectSystem::evaluateParams(ecsState->effectStacks, clipId, relFrame);
 
