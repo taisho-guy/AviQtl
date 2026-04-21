@@ -10,6 +10,7 @@ Node {
     // _paramRev を読むことで Connections→onParamsChanged() への依存を確立する。
     // property var の配列要素に対する直接依存は QML エンジンが追跡できないため、
     // _tmRev と同じカウンタ方式を採用する。
+    // getBlurPadding は ObjectRenderer.totalExpansion に置換済みのため削除
 
     id: base
 
@@ -86,7 +87,7 @@ Node {
         }
         return res;
     }
-    readonly property real padding: getBlurPadding()
+    // padding は ObjectRenderer の totalExpansion に委譲したため削除済み
     // 子クラスがオーバーライドするプロパティ
     property Item sourceItem
     property alias renderer: rendererInstance
@@ -144,27 +145,11 @@ Node {
         owned2D.push(item);
     }
 
-    // ぼかしパディング自動計算（全オブジェクト共通）
-    function getBlurPadding() {
-        for (let i = 0; i < rawEffectModels.length; i++) {
-            if ((rawEffectModels[i].id === "blur" || rawEffectModels[i].id === "border_blur" || rawEffectModels[i].id === "glow" || rawEffectModels[i].id === "flash" || rawEffectModels[i].id === "diffuse_light") && rawEffectModels[i].enabled) {
-                var v = rawEffectModels[i].evaluatedParam ? rawEffectModels[i].evaluatedParam("size", relFrame, projectFps) : undefined;
-                if (v === undefined || v === null)
-                    v = rawEffectModels[i].evaluatedParam ? rawEffectModels[i].evaluatedParam("diffusion", relFrame, projectFps) : undefined;
+    onClipIdChanged: {
+        if (clipId >= 0 && Workspace.currentTimeline)
+            rawEffectModels = Workspace.currentTimeline.getClipEffectsModel(clipId);
 
-                if (v === undefined || v === null)
-                    v = rawEffectModels[i].evaluatedParam ? rawEffectModels[i].evaluatedParam("strength", relFrame, projectFps) : undefined;
-
-                if (v === undefined || v === null)
-                    v = rawEffectModels[i].params["size"] || rawEffectModels[i].params["diffusion"] || rawEffectModels[i].params["strength"];
-
-                // FastBlurの特性上、半径の3倍程度の余白がないと端が切れて不自然になるため広めに確保する
-                return Number(v || 0) * 3;
-            }
-        }
-        return 0;
     }
-
     // NodeのプロパティをtransformModelにバインド
     position: hasTransform ? transformLoader.item.outputPosition : Qt.vector3d(0, 0, 0)
     eulerRotation: hasTransform ? transformLoader.item.outputRotation : Qt.vector3d(0, 0, 0)
@@ -172,16 +157,20 @@ Node {
     scale: Qt.vector3d(1, 1, 1) // 下のModelで個別に設定
     // renderHost が後からセットされても確実に移送する
     onRenderHostChanged: {
-        adopt2D(sourceItem);
-        adopt2D(rendererInstance);
-        adopt2D(_fbCaptureItemImpl);
+        Qt.callLater(function() {
+            adopt2D(base.sourceItem);
+            adopt2D(rendererInstance);
+            adopt2D(_fbCaptureItemImpl);
+        });
     }
     Component.onCompleted: {
-        // 各オブジェクト(TextObject/RectObject)が set してくる sourceItem を移す
-        adopt2D(base.sourceItem);
-        // ObjectRenderer(= ShaderEffectSource/effectsチェーン)も移す
-        adopt2D(rendererInstance);
-        adopt2D(_fbCaptureItemImpl);
+        Qt.callLater(function() {
+            // 各オブジェクト(TextObject/RectObject)が set してくる sourceItem を移す
+            adopt2D(base.sourceItem);
+            // ObjectRenderer(= ShaderEffectSource/effectsチェーン)も移す
+            adopt2D(rendererInstance);
+            adopt2D(_fbCaptureItemImpl);
+        });
     }
     Component.onDestruction: {
         for (var i = 0; i < owned2D.length; i++) {
@@ -196,16 +185,37 @@ Node {
     }
     // sourceItem は常に非表示（renderer.output のみ表示）
     onSourceItemChanged: {
-        if (sourceItem) {
-            // キャプチャ安定化のためvisibleは落とさず、不可視化はopacityで行う
-            sourceItem.visible = true;
-            sourceItem.opacity = 1;
-        }
+        // サイズ確定後にのみ adopt2D を実行する。
+        // Qt/QML では onCompleted 時点でも width/height が 0 のケースがあるため
+        // Timer でポーリングして確定を待つ。
+
+        if (sourceItem)
+            _adoptTimer.restart();
+
     }
     onRelFrameChanged: {
         if (hasTransform)
             transformLoader.item.frame = relFrame;
 
+    }
+
+    Timer {
+        id: _adoptTimer
+
+        interval: 8
+        repeat: true
+        onTriggered: {
+            if (!base.sourceItem) {
+                stop();
+                return ;
+            }
+            if (base.sourceItem.width > 0 && base.sourceItem.height > 0) {
+                stop();
+                base.sourceItem.visible = true;
+                base.sourceItem.opacity = 1;
+                adopt2D(base.sourceItem);
+            }
+        }
     }
 
     Instantiator {
@@ -230,13 +240,13 @@ Node {
     Loader {
         id: transformLoader
 
-        source: (root.transformModel && root.transformModel.qmlSource) ? root.transformModel.qmlSource : ""
+        source: (base.transformModel && base.transformModel.qmlSource) ? base.transformModel.qmlSource : ""
         // BaseEffectのプロパティを注入
         onLoaded: {
             item.source = null; // Transformはsourceを持たない
-            item.params = root.transformModel.params;
-            item.effectModel = root.transformModel;
-            item.frame = root.relFrame;
+            item.params = base.transformModel.params;
+            item.effectModel = base.transformModel;
+            item.frame = base.relFrame;
         }
     }
 

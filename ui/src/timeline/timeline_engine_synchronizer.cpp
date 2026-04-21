@@ -60,11 +60,13 @@ void TimelineEngineSynchronizer::queryIntervalTree(int nodeIdx, int frame, QList
 }
 
 void TimelineEngineSynchronizer::updateActiveClipsList() {
+    qDebug() << "[DOD Sync] updateActiveClipsList: frame=" << m_controller->transport()->currentFrame();
     int current = m_controller->transport()->currentFrame();
 
     QList<ClipData *> active;
     // 厳密な O(log n + k) 区間検索 (Interval Tree)
     queryIntervalTree(m_treeRoot, current, active);
+    qDebug() << "[DOD Sync] IntervalTree query result count:" << active.size();
 
     // レイヤー番号が小さいほど背面、大きいほど前面になるようソート
     std::ranges::sort(active, [](const ClipData *a, const ClipData *b) -> bool { return a->layer > b->layer; });
@@ -75,6 +77,16 @@ void TimelineEngineSynchronizer::updateActiveClipsList() {
         int relFrame = current - clip->startFrame;
 
         Rina::Engine::Timeline::ECS::instance().updateClipState(clip->id, clip->layer, relFrame);
+
+        QVariantList effectDataList;
+        for (const auto *eff : clip->effects) {
+            QVariantMap effMap;
+            effMap.insert(QStringLiteral("id"), eff->id());
+            effMap.insert(QStringLiteral("name"), eff->name());
+            effMap.insert(QStringLiteral("params"), eff->params());
+            effectDataList.append(effMap);
+        }
+        Rina::Engine::Timeline::ECS::instance().updateEffectStack(clip->id, effectDataList);
 
         if (clip->type == QLatin1String("audio") || clip->type == QLatin1String("video")) {
             float vol = 1.0F;
@@ -96,10 +108,12 @@ void TimelineEngineSynchronizer::updateActiveClipsList() {
     }
 
     Rina::Engine::Timeline::ECS::instance().commit();
+    qDebug() << "[DOD Sync] Sending to ClipModel. Size=" << active.size();
     m_clipModel->updateClips(active);
 }
 
 void TimelineEngineSynchronizer::rebuildClipIndex() {
+    qDebug() << "[DOD Sync] rebuildClipIndex called.";
     m_sortedClips.clear();
     m_intervalTree.clear();
     m_treeRoot = -1;
@@ -125,6 +139,7 @@ void TimelineEngineSynchronizer::rebuildClipIndex() {
 
     // Interval Tree の構築 (O(n))
     if (!m_sortedClips.isEmpty()) {
+        qDebug() << "[DOD Sync] m_sortedClips size:" << m_sortedClips.size();
         m_intervalTree.resize(m_sortedClips.size());
         m_treeRoot = buildIntervalTree(0, static_cast<int>(m_sortedClips.size()) - 1);
     }

@@ -42,32 +42,32 @@
 <context>
     <name>BaseObject</name>
     <message>
-        <location filename="../ui/qml/common/BaseObject.qml" line="52"/>
+        <location filename="../ui/qml/common/BaseObject.qml" line="53"/>
         <source>通常</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/BaseObject.qml" line="53"/>
+        <location filename="../ui/qml/common/BaseObject.qml" line="54"/>
         <source>スクリーン</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/BaseObject.qml" line="56"/>
+        <location filename="../ui/qml/common/BaseObject.qml" line="57"/>
         <source>乗算</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/BaseObject.qml" line="59"/>
+        <location filename="../ui/qml/common/BaseObject.qml" line="60"/>
         <source>オーバーレイ</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/BaseObject.qml" line="62"/>
+        <location filename="../ui/qml/common/BaseObject.qml" line="63"/>
         <source>焼き込み</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/BaseObject.qml" line="65"/>
+        <location filename="../ui/qml/common/BaseObject.qml" line="66"/>
         <source>覆い焼き</source>
         <translation type="unfinished"></translation>
     </message>

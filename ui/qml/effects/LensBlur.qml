@@ -9,6 +9,14 @@ Common.BaseEffect {
     property real lightPower: Math.max(0, root.evalNumber("brightness", 0))
     property bool fixedSize: root.evalParam("fixedSize", false)
 
+    // 描画範囲を radius 分だけ全方向に拡張
+    expansion: ({
+        "top": range,
+        "right": range,
+        "bottom": range,
+        "left": range
+    })
+
     ShaderEffect {
         id: blurPass
 

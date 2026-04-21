@@ -10,6 +10,14 @@ Common.BaseEffect {
     property real yOffset: root.evalNumber("y", 5)
     property real opacityVal: Math.max(0, Math.min(100, root.evalNumber("opacity", 100))) / 100
 
+    // offset 方向と radius 分だけ非対称に拡張
+    expansion: ({
+        "top": Math.max(0, -yOffset) + radius,
+        "right": Math.max(0, xOffset) + radius,
+        "bottom": Math.max(0, yOffset) + radius,
+        "left": Math.max(0, -xOffset) + radius
+    })
+
     ShaderEffect {
         property variant source: root.sourceProxy
         property real radius: root.radius

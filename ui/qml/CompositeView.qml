@@ -175,7 +175,9 @@ Item {
             // 拡大率は親の影響を受けず自身のサイズとして適用（AviUtl仕様依存）
 
             model: root.clipModel
+            onCountChanged: console.log("[QML] CompositeView Instantiator count:", count)
             onObjectAdded: (index, object) => {
+                console.log("[QML] Instantiator Object added at index:", index, "type:", object.clipTypeRole);
                 object.parent = sceneRoot;
             }
             onObjectRemoved: (index, object) => {
@@ -377,10 +379,10 @@ Item {
                         "clipId": clipNode.clipIdRole,
                         "clipStartFrame": clipNode.clipStartFrameRole,
                         "clipDurationFrames": clipNode.clipDurationFramesRole,
-                        "currentFrame": Qt.binding(function() {
+                        "currentFrame": Qt.binding(() => {
                             return root.currentFrame;
                         }),
-                        "rawEffectModels": Qt.binding(function() {
+                        "rawEffectModels": Qt.binding(() => {
                             return clipNode.clipEffectModelsRole;
                         }),
                         "renderHost": offscreenRenderHost
@@ -397,12 +399,12 @@ Item {
                                 item.sceneId = root.sceneId;
 
                             if ("rawEffectModels" in item)
-                                item.rawEffectModels = Qt.binding(function() {
+                                item.rawEffectModels = Qt.binding(() => {
                                 return clipNode.clipEffectModelsRole;
                             });
 
                             if ("currentFrame" in item)
-                                item.currentFrame = Qt.binding(function() {
+                                item.currentFrame = Qt.binding(() => {
                                 return root.currentFrame;
                             });
 

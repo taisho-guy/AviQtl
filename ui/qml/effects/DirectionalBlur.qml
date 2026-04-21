@@ -8,6 +8,15 @@ Common.BaseEffect {
     property real range: Math.max(0, root.evalNumber("length", 10))
     property real angle: root.evalNumber("angle", 0)
     property bool fixedSize: root.evalParam("fixedSize", false)
+    // angle 方向に range 分だけ拡張（水平・垂直分解して非対称余白を計算）
+    readonly property real _rad: angle * Math.PI / 180
+
+    expansion: ({
+        "top": Math.abs(Math.sin(_rad)) * range,
+        "right": Math.abs(Math.cos(_rad)) * range,
+        "bottom": Math.abs(Math.sin(_rad)) * range,
+        "left": Math.abs(Math.cos(_rad)) * range
+    })
 
     ShaderEffect {
         id: blurPass

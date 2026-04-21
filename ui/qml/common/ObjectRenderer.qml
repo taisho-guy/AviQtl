@@ -11,9 +11,40 @@ Item {
     property int _paramRev: 0
     property alias output: textureSource
     readonly property Item finalItem: textureSource.sourceItem
+    // ─── 自動キャンバス拡張 ──────────────────────────────────────
+    // 全エフェクトの expansion を集計して描画キャンバスを動的に決定する。
+    // sourceItem のコンテンツサイズ + 全エフェクトが要求する余白 = 実際の描画領域。
+    readonly property var totalExpansion: {
+        var t = 0, r = 0, b = 0, l = 0;
+        for (var i = 0; i < effectChain.count; i++) {
+            var loader = effectChain.itemAt(i);
+            if (loader && loader.status === Loader.Ready && loader.active && loader.item && "expansion" in loader.item) {
+                var ex = loader.item.expansion;
+                t += (ex.top || 0);
+                r += (ex.right || 0);
+                b += (ex.bottom || 0);
+                l += (ex.left || 0);
+            }
+        }
+        return {
+            "top": t,
+            "right": r,
+            "bottom": b,
+            "left": l
+        };
+    }
+    // コンテンツ本来のサイズ（拡張前）
+    readonly property real contentWidth: originalSource ? Math.max(originalSource.width, 1) : 1
+    readonly property real contentHeight: originalSource ? Math.max(originalSource.height, 1) : 1
+    // ─── コンテンツオフセット ────────────────────────────────────
+    // 拡張余白の分だけ originalSource のレンダリング開始位置をずらす。
+    // 各エフェクトは anchors.fill: parent により拡張済みキャンバス全体を受け取る。
+    readonly property real contentX: totalExpansion.left
+    readonly property real contentY: totalExpansion.top
 
-    width: originalSource ? originalSource.width : 1
-    height: originalSource ? originalSource.height : 1
+    // 拡張済みキャンバスサイズ（エフェクト込み）
+    width: contentWidth + totalExpansion.left + totalExpansion.right
+    height: contentHeight + totalExpansion.top + totalExpansion.bottom
 
     Item {
         id: fallbackItem
@@ -22,6 +53,30 @@ Item {
         height: 1
         visible: true
         opacity: 0
+    }
+
+    // originalSource をオフセット付きでキャンバス内に配置するプロキシ
+    // エフェクトチェーンはこのプロキシをソースとして受け取る
+    Item {
+        id: contentProxy
+
+        width: renderer.width
+        height: renderer.height
+        visible: true
+        opacity: 0
+
+        // originalSource 自体は ShaderEffectSource でテクスチャ化してオフセット配置する
+        ShaderEffectSource {
+            x: renderer.contentX
+            y: renderer.contentY
+            width: renderer.contentWidth
+            height: renderer.contentHeight
+            sourceItem: renderer.originalSource
+            live: true
+            hideSource: false
+            visible: true
+        }
+
     }
 
     Repeater {
@@ -34,13 +89,13 @@ Item {
 
             property Item inputSource: {
                 if (index === 0)
-                    return renderer.originalSource;
+                    return contentProxy;
 
                 var prev = effectChain.itemAt(index - 1);
                 if (prev && prev.status === Loader.Ready)
                     return prev.item;
 
-                return renderer.originalSource;
+                return contentProxy;
             }
 
             function _syncAll() {
@@ -71,17 +126,15 @@ Item {
 
             }
 
-            // rendererInstance のサイズに追従させ、item (BaseEffect) のサイズを確定させる
+            // 全エフェクトは拡張済みキャンバス全体を受け取る
             anchors.fill: parent
             active: modelData.enabled
             source: modelData.qmlSource
             onLoaded: _syncAll()
             onInputSourceChanged: {
-                if (status === Loader.Ready) {
-                    if ("source" in item)
-                        item.source = inputSource;
+                if (status === Loader.Ready && "source" in item)
+                    item.source = inputSource;
 
-                }
             }
 
             Connections {
@@ -114,8 +167,6 @@ Item {
         function findFinalOutput(defaultSource) {
             for (var i = effectChain.count - 1; i >= 0; i--) {
                 var loader = effectChain.itemAt(i);
-                // width/height チェックを除去: anchors.fill: parent で親に追従するため
-                // サイズが 0 の場合は item が存在することだけを確認する
                 if (loader && loader.status === Loader.Ready && loader.active && loader.item)
                     return loader.item;
 
@@ -128,9 +179,9 @@ Item {
                 return fallbackItem;
 
             if (effectChain.count > 0)
-                return findFinalOutput(renderer.originalSource);
+                return findFinalOutput(contentProxy);
 
-            return renderer.originalSource;
+            return contentProxy;
         }
         visible: false
         live: true

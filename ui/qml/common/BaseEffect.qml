@@ -13,6 +13,15 @@ Item {
     property int frame: 0
     // QMLバインディング再評価用（params/keyframes変更を確実に検知）
     property int _rev: 0
+    // 【自動描画範囲拡張】このエフェクトが必要とする追加余白をピクセル単位で宣言する。
+    // 各エフェクト QML がこのプロパティをオーバーライドして自身の展開量を返す。
+    // ObjectRenderer がこれを集計してキャンバスサイズを自動決定する。
+    property var expansion: ({
+        "top": 0,
+        "right": 0,
+        "bottom": 0,
+        "left": 0
+    })
     property var clipEvalParams: ({
     })
     property int _paramRev: 0

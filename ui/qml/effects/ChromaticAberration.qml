@@ -10,6 +10,16 @@ Common.BaseEffect {
     property real greenY: root.evalNumber("greenY", 0)
     property real blueX: root.evalNumber("blueX", -5)
     property real blueY: root.evalNumber("blueY", 0)
+    // 各チャンネルの最大オフセットで非対称拡張
+    readonly property real _maxX: Math.max(Math.abs(redX), Math.abs(greenX), Math.abs(blueX))
+    readonly property real _maxY: Math.max(Math.abs(redY), Math.abs(greenY), Math.abs(blueY))
+
+    expansion: ({
+        "top": _maxY,
+        "right": _maxX,
+        "bottom": _maxY,
+        "left": _maxX
+    })
 
     ShaderEffect {
         property variant source: root.sourceProxy
