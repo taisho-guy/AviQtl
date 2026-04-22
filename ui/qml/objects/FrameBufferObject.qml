@@ -4,9 +4,10 @@ import QtQuick3D
 import "qrc:/qt/qml/Rina/ui/qml/common" as Common
 
 Common.BaseObject {
+    // visible:false だと ShaderEffectSource の更新が止まる // removed: managed by BaseObject
+
     id: root
 
-    property bool is3DObject: true
     // CompositeView から注入 (properties ではなく onItemChanged で動的セット)
     property var sceneRootRef: null
     // onItemChanged で item.clipLayer = model.layer される
@@ -82,11 +83,13 @@ Common.BaseObject {
 
     // ─── 合成ホスト (offscreenRenderHost へ adopt2D される) ──────
     Item {
+        // SceneGraph に残す (renderHost 側の opacity:0 で非表示にする) // removed: managed by BaseObject
+
         id: flattenHost
 
         width: (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.width : 1920
-        height: (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.height : 1080
-        visible: true // SceneGraph に残す (renderHost 側の opacity:0 で非表示にする)
+        // height: (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.height : 1080
+        visible: true
 
         // 収集した各レイヤーの output をレイヤー順に重ねる
         Repeater {
@@ -105,23 +108,6 @@ Common.BaseObject {
     }
 
     // ─── 3D Model として View3D に配置 ───────────────────────────
-    Model {
-        source: "#Rectangle"
-        scale: Qt.vector3d(flattenHost.width / 100, flattenHost.height / 100, 1)
-
-        materials: DefaultMaterial {
-            lighting: DefaultMaterial.NoLighting
-            blendMode: root.blendMode
-            cullMode: root.cullMode
-
-            diffuseMap: Texture {
-                sourceItem: renderer.output
-            }
-
-        }
-
-    }
-
     // clearBelow: 下位レイヤーを黒でマスク
     Rectangle {
         visible: root.clearBelow
@@ -135,8 +121,8 @@ Common.BaseObject {
         id: fbSourceWrapper
 
         width: flattenHost.width
-        height: flattenHost.height
-        visible: true // visible:false だと ShaderEffectSource の更新が止まる
+        // height: flattenHost.height
+        visible: true
 
         ShaderEffectSource {
             anchors.fill: parent

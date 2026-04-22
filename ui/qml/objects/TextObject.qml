@@ -5,6 +5,8 @@ import QtQuick3D
 import "qrc:/qt/qml/Rina/ui/qml/common" as Common
 
 Common.BaseObject {
+    // removed: managed by BaseObject
+
     id: root
 
     property string textContent: evalString("text", "text", "テキスト")
@@ -38,7 +40,7 @@ Common.BaseObject {
         width: Math.max(textItem.implicitWidth + root._pad * 2 + (root.bgEnabled ? root.bgPaddingX * 2 : 0), 1)
         height: Math.max(textItem.implicitHeight + root._pad * 2 + (root.bgEnabled ? root.bgPaddingY * 2 : 0), 1)
         // opacity/visible は BaseObject.onSourceItemChanged が設定する
-        visible: true
+        // visible: true
         opacity: 1
 
         Rectangle {

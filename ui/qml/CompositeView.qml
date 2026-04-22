@@ -111,6 +111,9 @@ Item {
         // 現在のクリップ内での相対時間 (0.0 ~ 1.0)
         property double currentClipTimeRatio: (Workspace.currentTimeline) ? Math.max(0, Math.min(1, (root.currentFrame - Workspace.currentTimeline.clipStartFrame) / Workspace.currentTimeline.clipDurationFrames)) : 0
 
+        // View3D.Inline: Qt Quick シーングラフと統合し ShaderEffectSource テクスチャを直接共有する
+        // (デフォルトの Offscreen では独立 FBO のため VideoOutput テクスチャの同期が保証されない)
+        renderMode: View3D.Inline
         camera: activeCameraControl ? activeCameraControl.camera : mainCamera
         // 親に収まる最大サイズを計算 (Letterboxing)
         width: root.exportMode ? projW : Math.min(parent.width, parent.height * aspect)
@@ -347,6 +350,7 @@ Item {
                     pickable: false
                     // is3DObject=true のときは板ポリを非表示にしてオブジェクト自身に委ねる
                     visible: (clipNode.fbRendererOutput !== null) && !(objectContainer.item && objectContainer.item.is3DObject)
+                    onVisibleChanged: console.log("[CV] plate visible=" + visible + " fbOut=" + clipNode.fbRendererOutput + " fbW=" + (clipNode.fbRendererOutput ? clipNode.fbRendererOutput.width : -1) + " fbH=" + (clipNode.fbRendererOutput ? clipNode.fbRendererOutput.height : -1))
 
                     materials: DefaultMaterial {
                         lighting: DefaultMaterial.NoLighting
@@ -354,6 +358,7 @@ Item {
 
                         diffuseMap: Texture {
                             sourceItem: clipNode.fbRendererOutput
+                            onSourceItemChanged: console.log("[CV] Texture.sourceItem=" + sourceItem + " w=" + (sourceItem ? sourceItem.width : -1) + " h=" + (sourceItem ? sourceItem.height : -1))
                         }
 
                     }
@@ -407,6 +412,7 @@ Item {
                     onItemChanged: {
                         if (item) {
                             clipNode.fbRendererOutput = item.fbCaptureItem ?? null;
+                            console.log("[CV] fbRendererOutput assigned=" + clipNode.fbRendererOutput + " w=" + (clipNode.fbRendererOutput ? clipNode.fbRendererOutput.width : -1) + " h=" + (clipNode.fbRendererOutput ? clipNode.fbRendererOutput.height : -1));
                             if ("clipLayer" in item)
                                 item.clipLayer = clipNode.clipLayerRole;
 

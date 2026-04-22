@@ -6,7 +6,6 @@ import "qrc:/qt/qml/Rina/ui/qml/common" as Common
 Common.BaseObject {
     id: base
 
-    property bool is3DObject: true
     property string path: String(evalParam("video", "path", ""))
     property string playMode: String(evalParam("video", "playMode", "開始フレーム＋再生速度"))
     property int startFrame: Number(evalParam("video", "startFrame", 0))
@@ -50,29 +49,15 @@ Common.BaseObject {
         target: videoFrameStore
     }
 
-    Model {
-        source: "#Rectangle"
-        scale: Qt.vector3d(base.sourceItem.width / 100, base.sourceItem.height / 100, 1)
-        opacity: base.opacity
-
-        materials: DefaultMaterial {
-            lighting: DefaultMaterial.NoLighting
-            blendMode: DefaultMaterial.SourceOver
-
-            diffuseMap: Texture {
-                sourceItem: renderer.output
-            }
-
-        }
-
-    }
-
     sourceItem: Item {
         id: containerItem
 
-        width: (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.width : 1920
-        height: (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.height : 1080
-        visible: false
+        // Node 内で初期化される際、width は Qt Quick のレイアウトから外れて 0 になることがある。
+        // implicitWidth/Height を明示的に設定し、ObjectRenderer 側でそれをフォールバックとして拾う。
+        implicitWidth: (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.width : 1920
+        implicitHeight: (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.height : 1080
+        width: implicitWidth
+        height: implicitHeight
 
         VideoOutput {
             id: videoOut
@@ -80,9 +65,6 @@ Common.BaseObject {
             anchors.fill: parent
             fillMode: VideoOutput.PreserveAspectFit
             opacity: base.opacity
-            // FBOキャプチャの黒画面制約を突破するGPUレイヤー化
-            layer.enabled: true
-            layer.format: ShaderEffectSource.RGBA
             Component.onCompleted: {
                 if (base.clipId > 0 && typeof videoFrameStore !== "undefined")
                     videoFrameStore.registerSink(base.instanceKey, videoOut.videoSink);

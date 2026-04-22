@@ -34,8 +34,9 @@ Item {
         };
     }
     // コンテンツ本来のサイズ（拡張前）
-    readonly property real contentWidth: originalSource ? Math.max(originalSource.width, 1) : 1
-    readonly property real contentHeight: originalSource ? Math.max(originalSource.height, 1) : 1
+    // width が 0 の場合（Node 内で初期化された Item 等）は implicitWidth にフォールバックする
+    readonly property real contentWidth: originalSource ? Math.max(originalSource.width > 0 ? originalSource.width : (originalSource.implicitWidth > 0 ? originalSource.implicitWidth : 1), 1) : 1
+    readonly property real contentHeight: originalSource ? Math.max(originalSource.height > 0 ? originalSource.height : (originalSource.implicitHeight > 0 ? originalSource.implicitHeight : 1), 1) : 1
     // ─── コンテンツオフセット ────────────────────────────────────
     // 拡張余白の分だけ originalSource のレンダリング開始位置をずらす。
     // 各エフェクトは anchors.fill: parent により拡張済みキャンバス全体を受け取る。
@@ -174,6 +175,8 @@ Item {
             return defaultSource;
         }
 
+        // View3D.Inline モードでは ShaderEffectSource が直接 textureProvider として機能するため
+        // layer.enabled は不要（二重 FBO は Vulkan でテクスチャ同期の不具合を引き起こす）
         // 【修正】FBOサイズを拡張済みキャンバスに明示バインドする。
         // サイズ未指定だと fallbackItem(1x1) の間に FBO が 1x1 で固定される。
         width: renderer.width
@@ -191,9 +194,13 @@ Item {
 
             return contentProxy;
         }
-        visible: true // QQuick3DのTextureに渡す場合、visible=trueでないと更新されない(opacity=0は親で制御)
-        opacity: 1 // 【修正】3D Texture がキャプチャできるように 1 にする。2D 画面では親の offscreenRenderHost が opacity:0 なので見えない
-        live: true
+        visible: true
+        opacity: 1
+        // contentWidth/Height > 1: adopt2D 前の w=0 状態（= 1×1 fallback）では
+        // FBO を焼き付けないよう live=false にして保護する。
+        // adopt2D 後に originalSource のサイズが確定すると contentWidth > 1 になり
+        // live=true に切り替わって FBO が正しいサイズで再生成される。
+        live: renderer.contentWidth > 1 && renderer.contentHeight > 1
         hideSource: true
         recursive: false
     }

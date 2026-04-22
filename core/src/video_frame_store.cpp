@@ -35,9 +35,15 @@ void VideoFrameStore::setVideoFrameSafe(const QString &key, const QVideoFrame &f
         }
     }
 
+    qDebug() << "[VFS] setVideoFrameSafe key=" << key << "frameValid=" << frame.isValid() << "frameSize=" << frame.size() << "pixFmt=" << frame.pixelFormat() << "hasSink=" << (!sink.isNull()) << "sinkPtr=" << (void *)sink.data();
     if (sink && frame.isValid()) {
         sink->setVideoFrame(frame);
+        qDebug() << "[VFS] setVideoFrame -> delivered to sink key=" << key;
     }
+    if (sink.isNull())
+        qDebug() << "[VFS] WARNING no sink registered for key=" << key;
+    if (!frame.isValid())
+        qDebug() << "[VFS] WARNING invalid QVideoFrame for key=" << key;
     emit frameUpdated(key);
 }
 
@@ -51,6 +57,7 @@ auto VideoFrameStore::sink(const QString &key) -> QVideoSink * {
 }
 
 void VideoFrameStore::registerSink(const QString &key, QVideoSink *sink) {
+    qDebug() << "[VFS] registerSink key=" << key << "sinkPtr=" << (void *)sink << "callerThread=" << (void *)QThread::currentThread() << "ownThread=" << (void *)thread();
     if (QThread::currentThread() != thread()) {
         QMetaObject::invokeMethod(this, [this, key, sink]() -> void { registerSink(key, sink); }, Qt::QueuedConnection);
         return;
@@ -87,9 +94,14 @@ void VideoFrameStore::registerSink(const QString &key, QVideoSink *sink) {
     }
 
     if ((sink != nullptr) && last.isValid()) {
+        qDebug() << "[VFS] registerSink: replaying last frame key=" << key << "size=" << last.size() << "pix=" << last.pixelFormat();
         sink->setVideoFrame(last);
         emit frameUpdated(key);
     }
+    if (sink == nullptr)
+        qDebug() << "[VFS] registerSink: sink null for key=" << key;
+    if (!last.isValid())
+        qDebug() << "[VFS] registerSink: no last frame yet for key=" << key;
 }
 
 auto VideoFrameStore::hasFrame(const QString &key) const -> bool {

@@ -146,6 +146,7 @@ Node {
             return ;
 
         item.parent = renderHost;
+        console.log("[BASE] adopt2D: item=" + item + " -> renderHost=" + renderHost + " item.w=" + item.width + " item.h=" + item.height);
         // visible を落とすと SceneGraph から外れてテクスチャ更新が止まり得るので触らない。
         // 表示は CompositeView 側の host opacity と ShaderEffectSource.hideSource に任せる。
         owned2D.push(item);
@@ -187,7 +188,7 @@ Node {
         }
         owned2D = [];
     }
-    // sourceItem は常に非表示（renderer.output のみ表示）
+    // sourceItem の visible/opacity は BaseObject が一元管理する。各オブジェクト側で visible を指定しないこと。
     onSourceItemChanged: {
         if (sourceItem) {
             // 【修正】adopt2D を即時実行する。
@@ -272,12 +273,13 @@ Node {
         id: rendererInstance
 
         originalSource: base.sourceItem
+        onOriginalSourceChanged: console.log("[BASE] ObjectRenderer.originalSource changed=" + originalSource + " w=" + (originalSource ? originalSource.width : -1) + " h=" + (originalSource ? originalSource.height : -1))
         effectModels: base.filterModels
         relFrame: base.relFrame
     }
 
     sourceItem: Item {
-        // デフォルトはダミー（visible: falseは子側で設定）
+        // デフォルトのダミー sourceItem。visible/opacity は onSourceItemChanged で BaseObject が設定する。
         width: 1
         height: 1
     }
