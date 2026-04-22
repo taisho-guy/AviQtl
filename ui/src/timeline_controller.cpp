@@ -70,11 +70,13 @@ void TimelineController::setupConnections() {
     });
     connect(m_timeline, &TimelineService::currentSceneIdChanged, this, &TimelineController::currentSceneIdChanged);
     connect(m_timeline, &TimelineService::clipEffectsChanged, this, [this](int id) -> void {
+        m_mediaManager->updateMediaDecoders();
         m_mediaManager->onCurrentFrameChanged();
         updateActiveClipsList();
         emit clipEffectsChanged(id);
     });
     connect(m_timeline, &TimelineService::effectParamChanged, this, [this]() -> void {
+        m_mediaManager->updateMediaDecoders();
         m_mediaManager->onCurrentFrameChanged();
         updateActiveClipsList();
     });

@@ -381,6 +381,7 @@ void TimelineService::updateEffectParam(int clipId, int effectIndex, const QStri
 }
 
 void TimelineService::updateEffectParamInternal(int clipId, int effectIndex, const QString &paramName, const QVariant &value) {
+    qDebug() << "[TMM] updateEffectParamInternal: clipId=" << clipId << "effectIndex=" << effectIndex << "paramName=" << paramName << "value=" << value;
     for (auto &clip : clipsMutable()) {
         if (clip.id == clipId) {
             if (effectIndex >= 0 && effectIndex < static_cast<int>(clip.effects.size())) {

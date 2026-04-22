@@ -132,6 +132,15 @@ void TimelineMediaManager::updateMediaDecoders() {
                 continue;
             }
 
+            // 診断ログ: path取得失敗の原因特定
+            if (clip.type == QStringLiteral("video")) {
+                QUrl diagUrl = getClipSourceUrl(clip);
+                qDebug() << "[TMM] updateMediaDecoders: clipId=" << clip.id << "type=" << clip.type << "effects.size()=" << clip.effects.size() << "sourceUrl=" << diagUrl;
+                for (const auto *eff : std::as_const(clip.effects)) {
+                    qDebug() << "[TMM]   eff->id()=" << eff->id() << "params[path]=" << eff->params().value(QStringLiteral("path"));
+                }
+            }
+
             currentClipIds.insert(clip.id);
             clipToScene.insert(clip.id, scene.id);
 
@@ -305,7 +314,9 @@ auto TimelineMediaManager::sceneIdForClip(int clipId) const -> int {
 }
 
 void TimelineMediaManager::requestVideoFrame(int clipId, int relFrame) { // NOLINT(bugprone-easily-swappable-parameters)
+    qDebug() << "[TMM] requestVideoFrame clipId=" << clipId << "relFrame=" << relFrame;
     if ((m_controller == nullptr) || (m_controller->timeline() == nullptr)) {
+        qDebug() << "[TMM] requestVideoFrame: early return - controller/timeline null";
         return;
     }
 
@@ -324,11 +335,21 @@ void TimelineMediaManager::requestVideoFrame(int clipId, int relFrame) { // NOLI
     }
 
     if (targetClip == nullptr) {
+        qDebug() << "[TMM] requestVideoFrame: early return - clip not found clipId=" << clipId;
         return;
     }
 
-    auto *vid = qobject_cast<Rina::Core::VideoDecoder *>(decoderForClip(clipId));
+    auto *dec = decoderForClip(clipId);
+    if (dec == nullptr) {
+        qDebug() << "[TMM] requestVideoFrame: decoder missing, rebuilding decoders clipId=" << clipId;
+        updateMediaDecoders();
+        dec = decoderForClip(clipId);
+    }
+
+    auto *vid = qobject_cast<Rina::Core::VideoDecoder *>(dec);
+    qDebug() << "[TMM] requestVideoFrame: decoderForClip=" << dec << "vid=" << vid << "type=" << (dec ? dec->metaObject()->className() : "null");
     if (vid == nullptr) {
+        qDebug() << "[TMM] requestVideoFrame: early return - vid null clipId=" << clipId;
         return;
     }
 

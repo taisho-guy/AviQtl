@@ -28,15 +28,28 @@ Common.BaseObject {
     // ★ ここが一番のキモ:
     // この VideoObject が属しているシーンの時間が進んだとき (relFrame は BaseObject の property)
     // C++ 側に「このクリップのこのローカル時間でデコードして！」と要求を出す
-    onRelFrameChanged: {
-        if (Workspace.currentTimeline && typeof Workspace.currentTimeline.requestVideoFrame === "function" && base.clipId > 0)
+    function _requestFrame() {
+        if (Workspace.currentTimeline && typeof Workspace.currentTimeline.requestVideoFrame === "function" && base.clipId > 0) {
+            console.log("[VID] _requestFrame clipId=" + base.clipId + " relFrame=" + base.relFrame);
             Workspace.currentTimeline.requestVideoFrame(base.clipId, base.relFrame);
+        } else {
+            console.log("[VID] _requestFrame skip clipId=" + base.clipId + " relFrame=" + base.relFrame);
+        }
+    }
 
+    onClipIdChanged: {
+        console.log("[VID] onClipIdChanged clipId=" + base.clipId);
+        Qt.callLater(_requestFrame);
+    }
+    onRelFrameChanged: {
+        _requestFrame();
+    }
+    onCurrentFrameChanged: {
+        _requestFrame();
     }
     Component.onCompleted: {
-        if (Workspace.currentTimeline && typeof Workspace.currentTimeline.requestVideoFrame === "function" && base.clipId > 0)
-            Workspace.currentTimeline.requestVideoFrame(base.clipId, base.relFrame);
-
+        console.log("[VID] onCompleted clipId=" + base.clipId + " relFrame=" + base.relFrame);
+        Qt.callLater(_requestFrame);
     }
 
     Connections {

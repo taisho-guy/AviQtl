@@ -208,7 +208,10 @@ auto TimelineController::getClipEffectsModel(int clipId) const -> QList<QObject 
     return list;
 }
 
-void TimelineController::updateClipEffectParam(int clipId, int effectIndex, const QString &paramName, const QVariant &value) { m_timeline->updateEffectParam(clipId, effectIndex, paramName, value); }
+void TimelineController::updateClipEffectParam(int clipId, int effectIndex, const QString &paramName, const QVariant &value) {
+    qDebug() << "[TMM] updateClipEffectParam: clipId=" << clipId << "effectIndex=" << effectIndex << "paramName=" << paramName << "value=" << value;
+    m_timeline->updateEffectParam(clipId, effectIndex, paramName, value);
+}
 
 auto TimelineController::clips() const -> QVariantList {
     QVariantList list;

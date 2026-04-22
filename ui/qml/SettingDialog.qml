@@ -785,7 +785,9 @@ Common.RinaWindow {
                                     if (!effectModel || !key)
                                         return ;
 
-                                    if (!hasKeyframes) {
+                                    // メディア参照系パラメータはキーフレーム有無に関わらず直接更新
+                                    var isMediaRef = (def && (def.type === "path" || def.type === "file")) || key === "path" || key === "source";
+                                    if (!hasKeyframes || isMediaRef) {
                                         Workspace.currentTimeline.updateClipEffectParam(targetClipId, effIdx, key, val);
                                         return ;
                                     }

@@ -406,10 +406,12 @@ Loader {
                 }
                 onAccepted: {
                     var path = selectedFile.toString();
+                    console.log("[CL] FileDialog onAccepted selectedFile=" + selectedFile + " path=" + path);
                     if (Qt.platform.os === "windows")
                         path = path.replace(/^(file:\/{3})/, "");
                     else
                         path = path.replace(/^(file:\/\/)/, "");
+                    console.log("[CL] FileDialog valueModified path=" + path);
                     controlLoader.valueModified(path);
                 }
             }
@@ -425,6 +427,7 @@ Loader {
                 Layout.fillWidth: true
                 selectByMouse: true
                 onEditingFinished: {
+                    console.log("[CL] TextField onEditingFinished text=" + text);
                     controlLoader.valueModified(text);
                 }
             }
