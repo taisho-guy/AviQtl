@@ -1,4 +1,5 @@
 #pragma once
+#include "clip_snapshot.hpp"
 #include "timeline_types.hpp"
 #include <QObject>
 #include <QPoint>
@@ -6,6 +7,7 @@
 #include <QSet>
 #include <QUndoStack>
 #include <memory>
+#include <optional>
 
 namespace Rina::UI {
 class SelectionService;
@@ -92,19 +94,21 @@ class TimelineService : public QObject {
     void addEffectInternal(int clipId, const QString &effectId);
     void addClipsDirectInternal(const QList<ClipData> &clips);
     void addClipDirectInternal(const ClipData &clip, bool emitSignal = true);
-    void restoreEffectInternal(int clipId, const QVariantMap &data);
+    void restoreClipFromSnapshotInternal(const Rina::UI::ClipSnapshot &snap, bool emitSignal = true);
+    void restoreClipsFromSnapshotInternal(const QList<Rina::UI::ClipSnapshot> &snaps);
+    void setClipboardFromSnapshot(const Rina::UI::ClipSnapshot &snap);
+    void restoreEffectInternal(int clipId, const Rina::UI::EffectData &data);
     void removeEffectInternal(int clipId, int effectIndex);
-    void removeMultipleEffectsInternal(int clipId, const QList<int> &sortedDescIndices, QList<QVariantMap> *outData);
-    void restoreMultipleEffectsInternal(int clipId, const QList<QVariantMap> &ascData);
+    void removeMultipleEffectsInternal(int clipId, const QList<int> &sortedDescIndices, QList<Rina::UI::EffectData> *outData);
+    void restoreMultipleEffectsInternal(int clipId, const QList<Rina::UI::EffectData> &ascData);
     void setEffectEnabledInternal(int clipId, int effectIndex, bool enabled);
-    void pasteEffectInternal(int clipId, int targetIndex, EffectModel *effect);
+    void pasteEffectInternal(int clipId, int targetIndex, const Rina::UI::EffectData &data);
     void setAudioPluginEnabledInternal(int clipId, int index, bool enabled);
     void reorderEffectsInternal(int clipId, int oldIndex, int newIndex);
     void applyPermutationInternal(int clipId, const QList<int> &perm);
     void reorderAudioPluginsInternal(int clipId, int oldIndex, int newIndex);
     void updateEffectParamInternal(int clipId, int effectIndex, const QString &paramName, const QVariant &value);
-    void setClipboard(const ClipData &clip);
-    void setClipboard(const QList<ClipData> &clips);
+    // setClipboard deprecated: use m_clipboardSnapshots directly (Phase3)
     void createSceneInternal(int sceneId, const QString &name);
     void removeSceneInternal(int sceneId);
     void restoreSceneInternal(const SceneData &scene);
@@ -117,11 +121,7 @@ class TimelineService : public QObject {
     Q_INVOKABLE Rina::UI::ClipData packClipData(int clipId) const;
     Q_INVOKABLE void unpackClipData(const Rina::UI::ClipData &clip);
 
-    ClipData *findClipById(int clipId);
-    const ClipData *findClipById(int clipId) const;
-
-    // ヘルパー
-    ClipData deepCopyClip(const ClipData &source) const;
+    // findClipById / deepCopyClip removed in Step 7 — use ECS::getSnapshot()
 
     // 状態管理
     int nextClipId() const { return m_nextClipId; }
@@ -148,8 +148,8 @@ class TimelineService : public QObject {
     int m_nextClipId = 1;
     int m_nextSceneId = 1;
     QUndoStack *m_undoStack;
-    QList<ClipData> m_clipboard;
-    std::unique_ptr<EffectModel> m_effectClipboard;
+    QList<Rina::UI::ClipSnapshot> m_clipboardSnapshots;
+    std::optional<Rina::UI::EffectData> m_effectClipboard;
     SelectionService *m_selection;
     QSet<int> m_batchExcludes;
 };

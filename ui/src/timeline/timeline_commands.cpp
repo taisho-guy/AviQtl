@@ -1,3 +1,5 @@
+#include "clip_effect_system.hpp"
+#include "clip_snapshot.hpp"
 #include "commands.hpp"
 #include "effect_registry.hpp"
 #include "timeline_service.hpp"
@@ -91,8 +93,8 @@ SetAudioPluginEnabledCommand::SetAudioPluginEnabledCommand(TimelineService *serv
 void SetAudioPluginEnabledCommand::undo() { m_service->setAudioPluginEnabledInternal(m_clipId, m_index, !m_enabled); }
 void SetAudioPluginEnabledCommand::redo() { m_service->setAudioPluginEnabledInternal(m_clipId, m_index, m_enabled); }
 
-PasteEffectCommand::PasteEffectCommand(TimelineService *service, int clipId, int targetIndex, EffectModel *templateEffect)
-    : m_service(service), m_clipId(clipId), m_targetIndex(targetIndex), m_effect(templateEffect->clone()) { // NOLINT(bugprone-easily-swappable-parameters)
+PasteEffectCommand::PasteEffectCommand(TimelineService *service, int clipId, int targetIndex, const Rina::UI::EffectData &effectData)
+    : m_service(service), m_clipId(clipId), m_targetIndex(targetIndex), m_effect(effectData) { // NOLINT(bugprone-easily-swappable-parameters)
 
     setText(QObject::tr("エフェクト貼り付け"));
 }
@@ -114,76 +116,89 @@ SplitClipCommand::SplitClipCommand(TimelineService *service, int clipId, int fra
 
 void SplitClipCommand::undo() {
     m_service->deleteClipInternal(m_newClipId);
-    // 元のクリップの長さを復元
-    const auto &clips = m_service->clips();
-    auto it = std::ranges::find_if(clips, [this](const ClipData &c) -> bool { return c.id == m_originalClipId; });
-    if (it != clips.end()) {
-        m_service->updateClipInternal(m_originalClipId, it->layer, it->startFrame, m_originalDuration);
-    }
+    const auto *t = (*Rina::Engine::Timeline::ECS::instance().getSnapshot()).transforms.find(m_originalClipId);
+    if (t)
+        m_service->updateClipInternal(m_originalClipId, t->layer, t->startFrame, m_originalDuration);
 }
 
 void SplitClipCommand::redo() {
-    const auto &clips = m_service->clips();
-    auto it = std::ranges::find_if(clips, [this](const ClipData &c) -> bool { return c.id == m_originalClipId; });
-    if (it == clips.end()) {
+    auto &ecs = Rina::Engine::Timeline::ECS::instance();
+    const auto &snap = *ecs.getSnapshot();
+    const auto *origTransform = snap.transforms.find(m_originalClipId);
+    const auto *origMeta = snap.metadataStates.find(m_originalClipId);
+    const auto *origFxStack = snap.effectStacks.find(m_originalClipId);
+    const auto *origAudio = snap.audioStacks.find(m_originalClipId);
+    if (!origTransform)
         return;
-    }
 
-    // 分割前の状態を保存・計算
     if (m_newClipId == -1) {
         m_newClipId = m_service->nextClipId();
         m_service->setNextClipId(m_newClipId + 1);
-        m_originalDuration = it->durationFrames;
+        m_originalDuration = origTransform->durationFrames;
     }
+    const int firstHalfDuration = m_splitFrame - origTransform->startFrame;
+    const int secondHalfDuration = m_originalDuration - firstHalfDuration;
 
-    int firstHalfDuration = m_splitFrame - it->startFrame;
-    int secondHalfDuration = m_originalDuration - firstHalfDuration;
-
-    // 後半部分のクリップを作成
-    ClipData newClip = m_service->deepCopyClip(*it);
-    newClip.id = m_newClipId;
-    newClip.startFrame = m_splitFrame;
-    newClip.durationFrames = secondHalfDuration;
-
-    for (int i = 0; i < it->effects.size() && i < newClip.effects.size(); ++i) {
-        auto *originalEffect = it->effects.value(i);
-        auto *newEffect = newClip.effects.value(i);
-        if ((originalEffect == nullptr) || (newEffect == nullptr)) {
-            continue;
+    QList<Rina::UI::EffectData> secondHalfEffects;
+    if (origFxStack) {
+        secondHalfEffects = origFxStack->effects;
+        for (int i = 0; i < origFxStack->effects.size(); ++i) {
+            auto [firstTracks, secondTracks] = Rina::Engine::Timeline::ClipEffectSystem::splitKeyframeTracks(origFxStack->effects.at(i).keyframeTracks, origFxStack->effects.at(i).params, firstHalfDuration, m_originalDuration);
+            Rina::Engine::Timeline::ClipEffectSystem::setKeyframeTracksAt(ecs.editState(), m_originalClipId, i, firstTracks, firstHalfDuration);
+            secondHalfEffects[i].keyframeTracks = secondTracks;
         }
-
-        QVariantMap secondHalfTracks = originalEffect->splitTracks(firstHalfDuration, m_originalDuration);
-        originalEffect->syncTrackEndpoints(firstHalfDuration);
-        newEffect->setKeyframeTracks(secondHalfTracks);
-        newEffect->syncTrackEndpoints(secondHalfDuration);
     }
+    m_service->updateClipInternal(m_originalClipId, origTransform->layer, origTransform->startFrame, firstHalfDuration);
 
-    m_service->updateClipInternal(m_originalClipId, it->layer, it->startFrame, firstHalfDuration);
-    m_service->addClipDirectInternal(newClip);
+    Rina::UI::ClipSnapshot newSnap;
+    newSnap.transform.clipId = m_newClipId;
+    newSnap.transform.layer = origTransform->layer;
+    newSnap.transform.startFrame = m_splitFrame;
+    newSnap.transform.durationFrames = secondHalfDuration;
+    if (origMeta) {
+        newSnap.metadata = *origMeta;
+        newSnap.metadata.clipId = m_newClipId;
+    }
+    if (origAudio) {
+        newSnap.audioStack = *origAudio;
+        newSnap.audioStack.clipId = m_newClipId;
+    }
+    newSnap.effectStack.clipId = m_newClipId;
+    newSnap.effectStack.effects = secondHalfEffects;
+    m_service->restoreClipFromSnapshotInternal(newSnap);
 }
 
 DeleteClipCommand::DeleteClipCommand(TimelineService *service, int clipId, const QString &clipName) : m_service(service), m_clipId(clipId) {
-    const auto *clip = service->findClipById(clipId);
-    if (clip != nullptr) {
-        m_snapshot = service->deepCopyClip(*clip);
-    }
+    const auto &s = (*Rina::Engine::Timeline::ECS::instance().getSnapshot());
+    if (const auto *t = s.transforms.find(clipId))
+        m_snapshot.transform = *t;
+    if (const auto *m = s.metadataStates.find(clipId))
+        m_snapshot.metadata = *m;
+    if (const auto *fx = s.effectStacks.find(clipId))
+        m_snapshot.effectStack = *fx;
+    if (const auto *au = s.audioStacks.find(clipId))
+        m_snapshot.audioStack = *au;
+    m_snapshot.transform.clipId = clipId;
     setText(QObject::tr("クリップ削除: %1").arg(clipName));
 }
 void DeleteClipCommand::redo() { m_service->deleteClipInternal(m_clipId); }
-void DeleteClipCommand::undo() {
-    m_snapshot.id = m_clipId;
-    m_service->addClipDirectInternal(m_snapshot);
-}
+void DeleteClipCommand::undo() { m_service->restoreClipFromSnapshotInternal(m_snapshot); }
 
 DeleteClipsCommand::DeleteClipsCommand(TimelineService *service, const QList<int> &clipIds, const QString &macroText) : m_service(service), m_clipIds(clipIds) {
     setText(macroText);
+    const auto &ecs = (*Rina::Engine::Timeline::ECS::instance().getSnapshot());
     for (int id : std::as_const(clipIds)) {
-        const auto *clip = service->findClipById(id);
-        if (clip != nullptr) {
-            ClipData snap = service->deepCopyClip(*clip);
-            snap.id = id; // 重要: 削除前の元のIDをスナップショットに保存
-            m_snapshots.append(snap);
-        }
+        Rina::UI::ClipSnapshot snap;
+        if (const auto *t = ecs.transforms.find(id))
+            snap.transform = *t;
+        if (const auto *m = ecs.metadataStates.find(id))
+            snap.metadata = *m;
+        if (const auto *fx = ecs.effectStacks.find(id))
+            snap.effectStack = *fx;
+        if (const auto *au = ecs.audioStacks.find(id))
+            snap.audioStack = *au;
+        snap.transform.clipId = id;
+        m_snapshots.append(snap);
     }
 }
 void DeleteClipsCommand::redo() {
@@ -192,29 +207,35 @@ void DeleteClipsCommand::redo() {
     }
     emit m_service->clipsChanged();
 }
-void DeleteClipsCommand::undo() { m_service->addClipsDirectInternal(m_snapshots); }
+void DeleteClipsCommand::undo() { m_service->restoreClipsFromSnapshotInternal(m_snapshots); }
 
 CutClipCommand::CutClipCommand(TimelineService *service, int clipId, const QString &clipName) : m_service(service), m_clipId(clipId) {
-    const auto *clip = service->findClipById(clipId);
-    if (clip != nullptr) {
-        m_snapshot = service->deepCopyClip(*clip);
-    }
+    const auto &s = (*Rina::Engine::Timeline::ECS::instance().getSnapshot());
+    if (const auto *t = s.transforms.find(clipId))
+        m_snapshot.transform = *t;
+    if (const auto *m = s.metadataStates.find(clipId))
+        m_snapshot.metadata = *m;
+    if (const auto *fx = s.effectStacks.find(clipId))
+        m_snapshot.effectStack = *fx;
+    if (const auto *au = s.audioStacks.find(clipId))
+        m_snapshot.audioStack = *au;
+    m_snapshot.transform.clipId = clipId;
     setText(QObject::tr("切り取り: %1").arg(clipName));
 }
 void CutClipCommand::redo() {
-    m_service->setClipboard(m_snapshot);
+    m_service->setClipboardFromSnapshot(m_snapshot);
     m_service->deleteClipInternal(m_clipId);
 }
-void CutClipCommand::undo() {
-    m_snapshot.id = m_clipId;
-    m_service->addClipDirectInternal(m_snapshot);
-}
+void CutClipCommand::undo() { m_service->restoreClipFromSnapshotInternal(m_snapshot); }
 
-PasteClipCommand::PasteClipCommand(TimelineService *service, int newClipId, const ClipData &clipData) : m_service(service), m_newClipId(newClipId), m_clipData(clipData) { setText(QObject::tr("貼り付け: %1").arg(clipData.type)); }
+PasteClipCommand::PasteClipCommand(TimelineService *service, int newClipId, const Rina::UI::ClipSnapshot &snap) : m_service(service), m_newClipId(newClipId), m_clipData(snap) { setText(QObject::tr("貼り付け: %1").arg(snap.metadata.type)); }
 void PasteClipCommand::redo() {
-    ClipData c = m_clipData;
-    c.id = m_newClipId;
-    m_service->addClipDirectInternal(c);
+    Rina::UI::ClipSnapshot s = m_clipData;
+    s.transform.clipId = m_newClipId;
+    s.metadata.clipId = m_newClipId;
+    s.effectStack.clipId = m_newClipId;
+    s.audioStack.clipId = m_newClipId;
+    m_service->restoreClipFromSnapshotInternal(s);
 }
 void PasteClipCommand::undo() { m_service->deleteClipInternal(m_newClipId); }
 

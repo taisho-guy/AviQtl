@@ -1,4 +1,6 @@
 #pragma once
+#include "clip_snapshot.hpp"
+#include "effect_data.hpp"
 #include "engine/timeline/ecs.hpp"
 #include "timeline_types.hpp"
 
@@ -14,6 +16,7 @@ class ClipLifecycleSystem {
 
     // スナップショット(DTO)からクリップ状態を復元する
     static void restoreClipFromDTO(ECSState &state, const Rina::UI::ClipData &dto);
+    static void restoreClipFromSnapshot(ECSState &state, const Rina::UI::ClipSnapshot &snap);
 };
 
 } // namespace Rina::Engine::Timeline

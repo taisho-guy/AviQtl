@@ -3,6 +3,7 @@
 #include "commands.hpp"
 #include "effect_registry.hpp"
 #include "engine/plugin/audio_plugin_manager.hpp"
+#include "engine/timeline/ecs.hpp"
 #include "project_serializer.hpp"
 #include "project_service.hpp"
 #include "scripting/lua_host.hpp"
@@ -142,16 +143,17 @@ void TimelineController::log(const QString &msg) { qDebug() << "[TimelineBridge]
 auto TimelineController::resolveDragPosition(int clipId, int targetLayer, int proposedStartFrame, const QVariantList &batchIds) -> QPoint { return m_timeline->resolveDragPosition(clipId, targetLayer, proposedStartFrame, batchIds); }
 
 auto TimelineController::resolveDragDelta(int clipId, int deltaFrame, int deltaLayer, const QVariantList &batchIds, int minFrame, int minLayer, int maxLayer, int totalLayers) -> QPoint {
-    const auto *clip = m_timeline->findClipById(clipId);
-    if (clip == nullptr) {
+    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *tr = snap->transforms.find(clipId);
+    if (tr == nullptr) {
         return {0, 0};
     }
     // NOLINT(bugprone-easily-swappable-parameters)
     // 1. 衝突判定を含めた座標解決
-    QPoint resolved = m_timeline->resolveDragPosition(clipId, clip->layer + deltaLayer, clip->startFrame + deltaFrame, batchIds);
+    QPoint resolved = m_timeline->resolveDragPosition(clipId, tr->layer + deltaLayer, tr->startFrame + deltaFrame, batchIds);
 
-    int dF = resolved.x() - clip->startFrame;
-    int dL = resolved.y() - clip->layer;
+    int dF = resolved.x() - tr->startFrame;
+    int dL = resolved.y() - tr->layer;
 
     // 2. タイムライン境界によるクランプ (QMLから移行)
     if (minFrame + dF < 0) {

@@ -110,7 +110,7 @@ void ECS::updateMetadata(int clipId, const QString &name, const QString &source,
     }
 }
 
-void ECS::updateEffectStack(int clipId, const QVariantList &effects) {
+void ECS::updateEffectStack(int clipId, const QList<Rina::UI::EffectData> &effects) {
     auto &state = m_buffers[m_editIndex];
 
     // operator[] は要素がなければ新規作成し、あれば参照を返す (ensureSparseSize等も内部で実行される)
@@ -158,6 +158,15 @@ void ECS::commit() {
             }
             if (const auto *s = src.metadataStates.find(id)) {
                 dst.metadataStates[id] = *s;
+            }
+            if (const auto *s = src.effectStacks.find(id)) {
+                dst.effectStacks[id] = *s;
+            }
+            if (const auto *s = src.selections.find(id)) {
+                dst.selections[id] = *s;
+            }
+            if (const auto *s = src.audioStacks.find(id)) {
+                dst.audioStacks[id] = *s;
             }
         }
         m_dirtyForBuffer[m_editIndex].clear();

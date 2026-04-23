@@ -1,5 +1,6 @@
 #include "timeline_engine_synchronizer.hpp"
 #include "clip_model.hpp"
+#include "effect_data.hpp"
 #include "engine/timeline/ecs.hpp"
 #include "timeline_controller.hpp"
 #include <algorithm>
@@ -78,13 +79,9 @@ void TimelineEngineSynchronizer::updateActiveClipsList() {
 
         Rina::Engine::Timeline::ECS::instance().updateClipState(clip->id, clip->layer, clip->startFrame, clip->durationFrames, static_cast<double>(relFrame));
 
-        QVariantList effectDataList;
+        QList<Rina::UI::EffectData> effectDataList;
         for (const auto *eff : clip->effects) {
-            QVariantMap effMap;
-            effMap.insert(QStringLiteral("id"), eff->id());
-            effMap.insert(QStringLiteral("name"), eff->name());
-            effMap.insert(QStringLiteral("params"), eff->params());
-            effectDataList.append(effMap);
+            effectDataList.append(Rina::UI::effectDataFromModel(*eff));
         }
         Rina::Engine::Timeline::ECS::instance().updateEffectStack(clip->id, effectDataList);
 
@@ -141,12 +138,12 @@ void TimelineEngineSynchronizer::rebuildClipIndex() {
         if (const auto *meta = ecsState->metadataStates.find(it->clipId)) {
             clip.type = meta->type;
         }
-        // EffectModel* はフェーズ3まで m_scenes 側から補完する（過渡期）
-        if (const ClipData *legacy = m_controller->timeline()->findClipById(it->clipId)) {
-            clip.effects = legacy->effects;
-            clip.audioPlugins = legacy->audioPlugins;
-            clip.sceneId = legacy->sceneId;
+        // フェーズ3完了まで audioPlugins は空、sceneId は -1 で暫定運用
+        // effects/audioPlugins の補完は EffectModel DOD 化（フェーズ3）後に実装
+        if (const auto *fxComp = ecsState->effectStacks.find(it->clipId)) {
+            Q_UNUSED(fxComp)
         }
+        clip.sceneId = -1;
         m_localClips.append(clip);
         aliveIds.insert(clip.id);
     }

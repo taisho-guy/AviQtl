@@ -35,21 +35,24 @@ void TimelineController::updateSelectionPreview(int frameA, int frameB, int laye
     int minL = std::min(layerA, layerB);
     int maxL = std::max(layerA, layerB);
 
-    for (const auto &clip : m_timeline->clips()) {
-        // GroupControlによるレイヤーの拡張分を考慮
+    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    for (const auto &ct : snap->transforms) {
+        const auto *fxUsp = snap->effectStacks.find(ct.clipId);
+        // GroupControl によるレイヤー拡張分を考慮
         int groupLayerCount = 0;
-        for (auto *eff : clip.effects) {
-            if (eff->id() == QLatin1String("GroupControl")) {
-                groupLayerCount = eff->params().value(QStringLiteral("layerCount"), 0).toInt();
-                break;
+        if (fxUsp != nullptr) {
+            for (const auto &eff : std::as_const(fxUsp->effects)) {
+                if (eff.id == QLatin1String("GroupControl")) {
+                    groupLayerCount = eff.params.value(QStringLiteral("layerCount"), 0).toInt();
+                    break;
+                }
             }
         }
-        int clipMaxL = clip.layer + groupLayerCount;
-
-        int clipEnd = clip.startFrame + clip.durationFrames;
-        if (clip.startFrame < maxF && minF < clipEnd && clipMaxL >= minL && clip.layer <= maxL) {
-            if (!ids.contains(clip.id)) {
-                ids.append(clip.id);
+        int clipMaxL = ct.layer + groupLayerCount;
+        int clipEnd = ct.startFrame + ct.durationFrames;
+        if (ct.startFrame < maxF && minF < clipEnd && clipMaxL >= minL && ct.layer <= maxL) {
+            if (!ids.contains(ct.clipId)) {
+                ids.append(ct.clipId);
             }
         }
     }
@@ -84,28 +87,29 @@ void TimelineController::setClipProperty(const QString &name, const QVariant &va
 
     for (const QVariant &vId : ids) {
         int id = vId.toInt();
-        const ClipData *clip = m_timeline->findClipById(id);
-        if (clip == nullptr) {
+        const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+        const auto *fx = snap->effectStacks.find(id);
+        if (fx == nullptr) {
             continue;
         }
 
         int targetEffectIndex = -1;
-        for (int i = 0; i < clip->effects.size(); ++i) {
-            if (clip->effects.value(i)->params().contains(name)) {
+        for (int i = 0; i < fx->effects.size(); ++i) {
+            if (fx->effects.value(i).params.contains(name)) {
                 targetEffectIndex = i;
                 break;
             }
         }
 
-        if (targetEffectIndex == -1 && !clip->effects.isEmpty()) {
+        if (targetEffectIndex == -1 && !fx->effects.isEmpty()) {
             targetEffectIndex = 0;
             static const QStringList transformKeys = {"x", "y", "z", "scale", "aspect", "rotationX", "rotationY", "rotationZ", "opacity"};
-            if (!transformKeys.contains(name) && clip->effects.size() > 1) {
+            if (!transformKeys.contains(name) && fx->effects.size() > 1) {
                 targetEffectIndex = 1;
             }
         }
 
-        if (targetEffectIndex != -1 && targetEffectIndex < clip->effects.size()) {
+        if (targetEffectIndex != -1 && targetEffectIndex < fx->effects.size()) {
             updateClipEffectParam(id, targetEffectIndex, name, value);
         }
     }
@@ -123,9 +127,10 @@ void TimelineController::setClipStartFrame(int frame) {
     }
 
     m_timeline->undoStack()->beginMacro(tr("開始フレーム変更"));
+    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
     for (const QVariant &vId : ids) {
         int id = vId.toInt();
-        if (const auto *c = m_timeline->findClipById(id)) {
+        if (const auto *c = snap->transforms.find(id)) {
             m_timeline->updateClip(id, c->layer, frame, c->durationFrames);
         }
     }
@@ -140,9 +145,10 @@ void TimelineController::setClipDurationFrames(int frames) {
     }
 
     m_timeline->undoStack()->beginMacro(tr("長さ変更"));
+    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
     for (const QVariant &vId : ids) {
         int id = vId.toInt();
-        if (const auto *c = m_timeline->findClipById(id)) {
+        if (const auto *c = snap->transforms.find(id)) {
             m_timeline->updateClip(id, c->layer, c->startFrame, frames);
         }
     }
@@ -157,9 +163,10 @@ void TimelineController::setLayer(int layer) {
     }
 
     m_timeline->undoStack()->beginMacro(tr("レイヤー変更"));
+    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
     for (const QVariant &vId : ids) {
         int id = vId.toInt();
-        if (const auto *c = m_timeline->findClipById(id)) {
+        if (const auto *c = snap->transforms.find(id)) {
             m_timeline->updateClip(id, layer, c->startFrame, c->durationFrames);
         }
     }
@@ -196,8 +203,11 @@ void TimelineController::createObject(const QString &type, int startFrame, int l
 }
 
 auto TimelineController::getClipEffectsModel(int clipId) const -> QList<QObject *> {
+    // Phase3 廃止予定: EffectModel* は UI 通知プロキシとして m_scenes に残存中
+    // ClipData.effects は Phase4 で削除される
     QList<QObject *> list;
-    for (const auto &clip : m_timeline->clips()) {
+    const auto &sceneClips = m_timeline->clips();
+    for (const auto &clip : sceneClips) {
         if (clip.id == clipId) {
             for (auto *eff : clip.effects) {
                 list.append(eff);
@@ -215,46 +225,49 @@ void TimelineController::updateClipEffectParam(int clipId, int effectIndex, cons
 
 auto TimelineController::clips() const -> QVariantList {
     QVariantList list;
-    for (const auto &clip : m_timeline->clips()) {
-        QVariantMap map;
-        map.insert(QStringLiteral("id"), clip.id);
-        map.insert(QStringLiteral("type"), clip.type);
-        map.insert(QStringLiteral("startFrame"), clip.startFrame);
-        map.insert(QStringLiteral("durationFrames"), clip.durationFrames);
-        map.insert(QStringLiteral("layer"), clip.layer);
+    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    for (const auto &ct : snap->transforms) {
+        const auto *m = snap->metadataStates.find(ct.clipId);
+        const auto *fx = snap->effectStacks.find(ct.clipId);
+        if (m == nullptr) {
+            continue;
+        }
 
-        // オブジェクトのQMLパスを取得して追加
-        auto meta = Rina::Core::EffectRegistry::instance().getEffect(clip.type);
-        map.insert(QStringLiteral("name"), !meta.name.isEmpty() ? meta.name : clip.type);
+        QVariantMap map;
+        map.insert(QStringLiteral("id"), ct.clipId);
+        map.insert(QStringLiteral("type"), m->type);
+        map.insert(QStringLiteral("startFrame"), ct.startFrame);
+        map.insert(QStringLiteral("durationFrames"), ct.durationFrames);
+        map.insert(QStringLiteral("layer"), ct.layer);
+
+        auto meta = Rina::Core::EffectRegistry::instance().getEffect(m->type);
+        map.insert(QStringLiteral("name"), !meta.name.isEmpty() ? meta.name : m->type);
         if (!meta.qmlSource.isEmpty()) {
             map.insert(QStringLiteral("qmlSource"), meta.qmlSource);
         }
 
-        // params を構築して追加
         QVariantMap params;
-        // 基本情報もparamsに入れておく（QML側での利便性とBaseObjectでの参照用）
-        params.insert(QStringLiteral("layer"), clip.layer);
-        params.insert(QStringLiteral("startFrame"), clip.startFrame);
-        params.insert(QStringLiteral("durationFrames"), clip.durationFrames);
-        params.insert(QStringLiteral("id"), clip.id);
+        params.insert(QStringLiteral("layer"), ct.layer);
+        params.insert(QStringLiteral("startFrame"), ct.startFrame);
+        params.insert(QStringLiteral("durationFrames"), ct.durationFrames);
+        params.insert(QStringLiteral("id"), ct.clipId);
 
         int groupLayerCount = 0;
-        for (auto *eff : clip.effects) {
-            if (eff->id() == QLatin1String("GroupControl")) {
-                groupLayerCount = eff->params().value(QStringLiteral("layerCount"), 0).toInt();
-                break;
+        if (fx != nullptr) {
+            for (const auto &eff : std::as_const(fx->effects)) {
+                if (eff.id == QLatin1String("GroupControl")) {
+                    groupLayerCount = eff.params.value(QStringLiteral("layerCount"), 0).toInt();
+                    break;
+                }
             }
-        }
-        map.insert(QStringLiteral("groupLayerCount"), groupLayerCount);
-
-        for (auto *eff : clip.effects) {
-            QVariantMap p = eff->params();
-            for (auto it = p.begin(); it != p.end(); ++it) {
-                params.insert(it.key(), it.value());
+            map.insert(QStringLiteral("groupLayerCount"), groupLayerCount);
+            for (const auto &eff : std::as_const(fx->effects)) {
+                for (auto it = eff.params.begin(); it != eff.params.end(); ++it) {
+                    params.insert(it.key(), it.value());
+                }
             }
         }
         map.insert(QStringLiteral("params"), params);
-
         list.append(map);
     }
     return list;
@@ -292,13 +305,14 @@ void TimelineController::resizeSelectedClips(int deltaStartFrame, int deltaDurat
 
     QVector<PendingResize> pending;
     pending.reserve(ids.size());
+    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
     for (const QVariant &vId : std::as_const(ids)) {
         const int id = vId.toInt();
-        const auto *clip = m_timeline->findClipById(id);
-        if (clip == nullptr) {
+        const auto *t = snap->transforms.find(id);
+        if (t == nullptr) {
             continue;
         }
-        pending.push_back({id, clip->layer, clip->startFrame, clip->durationFrames});
+        pending.push_back({id, t->layer, t->startFrame, t->durationFrames});
     }
     if (pending.isEmpty()) {
         return;
@@ -325,33 +339,37 @@ void TimelineController::resizeSelectedClips(int deltaStartFrame, int deltaDurat
 // updateClip と resizeSelectedClips の共通ロジックとして抽出
 int TimelineController::clampedDuration(int clipId, int newStart, int requestedDuration) const {
     Q_UNUSED(newStart);
-    const auto *clip = m_timeline->findClipById(clipId);
-    if (clip == nullptr) {
+    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *m = snap->metadataStates.find(clipId);
+    const auto *fx = snap->effectStacks.find(clipId);
+    if (m == nullptr) {
         return requestedDuration;
     }
 
     const int projectFps = static_cast<int>(project()->fps());
     int duration = requestedDuration;
 
-    if (clip->type == QLatin1String("video")) {
+    if (m->type == QLatin1String("video")) {
         auto *vid = qobject_cast<Rina::Core::VideoDecoder *>(m_mediaManager->decoderForClip(clipId));
         if ((vid != nullptr) && vid->isReady()) {
             int startVideoFrame = 0;
             double speed = 100.0;
             bool isDirectMode = false;
 
-            for (const auto *eff : clip->effects) {
-                if (eff->id() != "video") {
-                    continue;
-                }
-                const QString playMode = eff->params().value(QStringLiteral("playMode"), "開始フレーム＋再生速度").toString();
-                if (playMode == QStringLiteral("フレーム直接指定")) {
-                    isDirectMode = true;
+            if (fx != nullptr) {
+                for (const auto &eff : std::as_const(fx->effects)) {
+                    if (eff.id != QLatin1String("video")) {
+                        continue;
+                    }
+                    const QString playMode = eff.params.value(QStringLiteral("playMode"), "開始フレーム＋再生速度").toString();
+                    if (playMode == QStringLiteral("フレーム直接指定")) {
+                        isDirectMode = true;
+                        break;
+                    }
+                    startVideoFrame = eff.params.value(QStringLiteral("startFrame"), 0).toInt();
+                    speed = eff.params.value(QStringLiteral("speed"), 100.0).toDouble();
                     break;
                 }
-                startVideoFrame = eff->params().value(QStringLiteral("startFrame"), 0).toInt();
-                speed = eff->params().value(QStringLiteral("speed"), 100.0).toDouble();
-                break;
             }
 
             double srcFps = vid->sourceFps();
@@ -374,25 +392,27 @@ int TimelineController::clampedDuration(int clipId, int newStart, int requestedD
                 duration = maxDuration;
             }
         }
-    } else if (clip->type == QLatin1String("audio")) {
+    } else if (m->type == QLatin1String("audio")) {
         auto *aud = qobject_cast<Rina::Core::AudioDecoder *>(m_mediaManager->decoderForClip(clipId));
         if ((aud != nullptr) && aud->isReady()) {
             double startTime = 0.0;
             double speed = 100.0;
             bool isDirectMode = false;
 
-            for (const auto *eff : clip->effects) {
-                if (eff->id() != "audio") {
-                    continue;
-                }
-                const QString playMode = eff->params().value(QStringLiteral("playMode"), "開始時間＋再生速度").toString();
-                if (playMode == QStringLiteral("時間直接指定")) {
-                    isDirectMode = true;
+            if (fx != nullptr) {
+                for (const auto &eff : std::as_const(fx->effects)) {
+                    if (eff.id != QLatin1String("audio")) {
+                        continue;
+                    }
+                    const QString playMode = eff.params.value(QStringLiteral("playMode"), "開始時間＋再生速度").toString();
+                    if (playMode == QStringLiteral("時間直接指定")) {
+                        isDirectMode = true;
+                        break;
+                    }
+                    startTime = eff.params.value(QStringLiteral("startTime"), 0.0).toDouble();
+                    speed = eff.params.value(QStringLiteral("speed"), 100.0).toDouble();
                     break;
                 }
-                startTime = eff->params().value(QStringLiteral("startTime"), 0.0).toDouble();
-                speed = eff->params().value(QStringLiteral("speed"), 100.0).toDouble();
-                break;
             }
 
             const double totalSec = aud->totalDurationSec();
@@ -410,19 +430,21 @@ int TimelineController::clampedDuration(int clipId, int newStart, int requestedD
                 duration = maxDuration;
             }
         }
-    } else if (clip->type == QLatin1String("scene")) {
+    } else if (m->type == QLatin1String("scene")) {
         int targetSceneId = 0;
         double speed = 1.0;
         int offset = 0;
 
-        for (const auto *eff : clip->effects) {
-            if (eff->id() != "scene") {
-                continue;
+        if (fx != nullptr) {
+            for (const auto &eff : std::as_const(fx->effects)) {
+                if (eff.id != QLatin1String("scene")) {
+                    continue;
+                }
+                targetSceneId = eff.params.value(QStringLiteral("targetSceneId"), 0).toInt();
+                speed = eff.params.value(QStringLiteral("speed"), 1.0).toDouble();
+                offset = eff.params.value(QStringLiteral("offset"), 0).toInt();
+                break;
             }
-            targetSceneId = eff->params().value(QStringLiteral("targetSceneId"), 0).toInt();
-            speed = eff->params().value(QStringLiteral("speed"), 1.0).toDouble();
-            offset = eff->params().value(QStringLiteral("offset"), 0).toInt();
-            break;
         }
 
         const int sceneDur = getSceneDuration(targetSceneId);
@@ -438,8 +460,9 @@ int TimelineController::clampedDuration(int clipId, int newStart, int requestedD
 
 // updateClip: clampedDuration() に委譲して DRY を維持
 void TimelineController::updateClip(int id, int layer, int startFrame, int duration) {
-    const auto *clip = m_timeline->findClipById(id);
-    if (clip == nullptr) {
+    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *t = snap->transforms.find(id);
+    if (t == nullptr) {
         return;
     }
 
@@ -448,12 +471,13 @@ void TimelineController::updateClip(int id, int layer, int startFrame, int durat
 }
 
 void TimelineController::moveClipWithCollisionCheck(int clipId, int layer, int startFrame) {
-    const ClipData *clip = m_timeline->findClipById(clipId);
-    if (clip == nullptr) {
+    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *t = snap->transforms.find(clipId);
+    if (t == nullptr) {
         return;
     }
 
-    int duration = clip->durationFrames;
+    int duration = t->durationFrames;
     int fixedStart = m_timeline->findVacantFrame(layer, startFrame, duration, clipId);
     updateClip(clipId, layer, fixedStart, duration);
 }
@@ -553,8 +577,9 @@ void TimelineController::reorderAudioPlugins(int clipId, int oldIndex, int newIn
 }
 
 auto TimelineController::isAudioClip(int clipId) const -> bool {
-    const auto *clip = m_timeline->findClipById(clipId);
-    return (clip != nullptr) && clip->type == QLatin1String("audio");
+    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *m = snap->metadataStates.find(clipId);
+    return (m != nullptr) && m->type == QLatin1String("audio");
 }
 
 auto TimelineController::getWaveformPeaks(int clipId, int pixelWidth, int displayDurationFrames) const -> QVariantList { // NOLINT(bugprone-easily-swappable-parameters)
@@ -562,8 +587,9 @@ auto TimelineController::getWaveformPeaks(int clipId, int pixelWidth, int displa
         return {};
     }
 
-    const auto *clip = m_timeline->findClipById(clipId);
-    if ((clip == nullptr) || clip->type != "audio") {
+    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *m = snap->metadataStates.find(clipId);
+    if ((m == nullptr) || m->type != QLatin1String("audio")) {
         return {};
     }
 

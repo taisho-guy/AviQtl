@@ -1,3 +1,5 @@
+#include "clip_lifecycle_system.hpp"
+#include "clip_snapshot.hpp"
 #include "commands.hpp"
 #include "effect_registry.hpp"
 #include "engine/timeline/clip_lifecycle_system.hpp"
@@ -76,17 +78,18 @@ void TimelineService::addClipsDirectInternal(const QList<ClipData> &clips) {
 }
 
 void TimelineService::updateClip(int id, int layer, int startFrame, int duration) {
-    const auto *clip = findClipById(id);
-    if (clip == nullptr) {
+    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *t = snap->transforms.find(id);
+    const auto *m = snap->metadataStates.find(id);
+    if (t == nullptr || m == nullptr) {
         return;
     }
-
-    QString clipName = clip->type;
-    if (!clip->effects.isEmpty()) {
-        clipName = clip->effects.first()->name();
+    const auto *fx = snap->effectStacks.find(id);
+    QString clipName = m->type;
+    if (fx != nullptr && !fx->effects.isEmpty()) {
+        clipName = fx->effects.first().name;
     }
-
-    m_undoStack->push(new MoveClipCommand(this, id, clip->layer, clip->startFrame, clip->durationFrames, layer, startFrame, duration, clipName));
+    m_undoStack->push(new MoveClipCommand(this, id, t->layer, t->startFrame, t->durationFrames, layer, startFrame, duration, clipName));
 }
 
 void TimelineService::applyClipBatchMove(const QVariantList &moves) {
@@ -95,6 +98,7 @@ void TimelineService::applyClipBatchMove(const QVariantList &moves) {
     }
 
     m_batchExcludes.clear();
+    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
     for (const QVariant &vMove : std::as_const(moves)) {
         m_batchExcludes.insert(vMove.toMap().value(QStringLiteral("id")).toInt());
     }
@@ -115,15 +119,17 @@ void TimelineService::applyClipBatchMove(const QVariantList &moves) {
     for (const QVariant &vMove : std::as_const(moves)) {
         QVariantMap move = vMove.toMap();
         int id = move.value(QStringLiteral("id")).toInt();
-        const auto *clip = findClipById(id);
-        if (clip != nullptr) {
+        const auto *t2 = snap->transforms.find(id);
+        const auto *m2 = snap->metadataStates.find(id);
+        if (t2 != nullptr && m2 != nullptr) {
+            const auto *fx2 = snap->effectStacks.find(id);
             pending.push_back(PendingOp{.id = id,
-                                        .oldLayer = clip->layer,
-                                        .oldStart = clip->startFrame,
+                                        .oldLayer = t2->layer,
+                                        .oldStart = t2->startFrame,
                                         .targetLayer = move.value(QStringLiteral("layer")).toInt(),
                                         .targetStart = move.value(QStringLiteral("startFrame")).toInt(),
                                         .duration = move.value(QStringLiteral("duration")).toInt(),
-                                        .name = clip->effects.isEmpty() ? clip->type : clip->effects.first()->name()});
+                                        .name = (fx2 == nullptr || fx2->effects.isEmpty()) ? m2->type : fx2->effects.first().name});
         }
     }
 
@@ -184,14 +190,16 @@ void TimelineService::moveSelectedClips(int deltaLayer, int deltaFrame) {
     QVector<PendingOp> pending;
     pending.reserve(ids.size());
 
+    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
     for (const QVariant &value : std::as_const(ids)) {
         const int id = value.toInt();
-        const auto *clip = findClipById(id);
-        if (clip == nullptr) {
+        const auto *tR = snap->transforms.find(id);
+        const auto *mR = snap->metadataStates.find(id);
+        if (tR == nullptr || mR == nullptr) {
             continue;
         }
-
-        pending.push_back(PendingOp{.id = id, .oldLayer = clip->layer, .oldStart = clip->startFrame, .duration = clip->durationFrames, .name = clip->effects.isEmpty() ? clip->type : clip->effects.first()->name()});
+        const auto *fxR = snap->effectStacks.find(id);
+        pending.push_back(PendingOp{.id = id, .oldLayer = tR->layer, .oldStart = tR->startFrame, .duration = tR->durationFrames, .name = (fxR == nullptr || fxR->effects.isEmpty()) ? mR->type : fxR->effects.first().name});
     }
 
     if (deltaFrame > 0 || (deltaFrame == 0 && deltaLayer > 0)) {
@@ -237,17 +245,19 @@ void TimelineService::resizeSelectedClips(int deltaStartFrame, int deltaDuration
         QString name;
     };
 
+    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
     QVector<PendingOp> pending;
     pending.reserve(ids.size());
 
     for (const QVariant &value : std::as_const(ids)) {
         const int id = value.toInt();
-        const auto *clip = findClipById(id);
-        if (clip == nullptr) {
+        const auto *tR = snap->transforms.find(id);
+        const auto *mR = snap->metadataStates.find(id);
+        if (tR == nullptr || mR == nullptr) {
             continue;
         }
-
-        pending.push_back(PendingOp{.id = id, .oldLayer = clip->layer, .oldStart = clip->startFrame, .duration = clip->durationFrames, .name = clip->effects.isEmpty() ? clip->type : clip->effects.first()->name()});
+        const auto *fxR = snap->effectStacks.find(id);
+        pending.push_back(PendingOp{.id = id, .oldLayer = tR->layer, .oldStart = tR->startFrame, .duration = tR->durationFrames, .name = (fxR == nullptr || fxR->effects.isEmpty()) ? mR->type : fxR->effects.first().name});
     }
 
     // Resize left side -> deltaStartFrame != 0. If deltaStartFrame > 0, left edge moves right.
@@ -280,17 +290,18 @@ void TimelineService::resizeSelectedClips(int deltaStartFrame, int deltaDuration
 
 auto TimelineService::computeMagneticSnapPosition(int clipId, int targetLayer, int proposedStartFrame) -> int {
     // 0. 移動対象のクリップ情報を取得
-    const auto *movingClip = findClipById(clipId);
-    if (movingClip == nullptr) {
+    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *movingT = snap->transforms.find(clipId);
+    if (movingT == nullptr) {
         return proposedStartFrame; // 対象クリップが見つからなければ何もしない
     }
-    const int clipDuration = movingClip->durationFrames;
+    const int clipDuration = movingT->durationFrames;
 
     // 1. 対象レイヤーのクリップを抽出 (現在のシーンのみ)
-    QList<const ClipData *> layerClips;
-    for (const auto &c : clips()) { // 修正: 全シーン走査を現在のシーンに限定
-        if (c.layer == targetLayer && c.id != clipId) {
-            layerClips.append(&c);
+    QList<const Rina::Engine::Timeline::TransformComponent *> layerClips;
+    for (const auto &ct : snap->transforms) {
+        if (ct.layer == targetLayer && ct.clipId != clipId) {
+            layerClips.append(&ct);
         }
     }
 
@@ -303,7 +314,7 @@ auto TimelineService::computeMagneticSnapPosition(int clipId, int targetLayer, i
     }
 
     // 3. startFrame昇順ソート
-    std::ranges::sort(layerClips, [](const ClipData *a, const ClipData *b) -> bool { return a->startFrame < b->startFrame; });
+    std::ranges::sort(layerClips, [](const auto *a, const auto *b) -> bool { return a->startFrame < b->startFrame; });
 
     // 4. スナップ候補となる「空き領域の始点」を生成
     QList<int> snapPoints;
@@ -352,13 +363,14 @@ auto TimelineService::computeMagneticSnapPosition(int clipId, int targetLayer, i
 }
 
 auto TimelineService::resolveDragPosition(int clipId, int targetLayer, int proposedStartFrame, const QVariantList &batchIds) -> QPoint { // NOLINT(bugprone-easily-swappable-parameters)
-    const auto *movingClip = findClipById(clipId);
-    if (movingClip == nullptr) {
+    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *movingT = snap->transforms.find(clipId);
+    if (movingT == nullptr) {
         return {proposedStartFrame, targetLayer};
     }
 
-    int deltaLayer = targetLayer - movingClip->layer;
-    int deltaFrame = proposedStartFrame - movingClip->startFrame;
+    int deltaLayer = targetLayer - movingT->layer;
+    int deltaFrame = proposedStartFrame - movingT->startFrame;
 
     QSet<int> movingIds;
     if (!batchIds.isEmpty()) {
@@ -384,7 +396,7 @@ auto TimelineService::resolveDragPosition(int clipId, int targetLayer, int propo
         int currentPush = 0;
 
         for (int id : std::as_const(movingIds)) {
-            const auto *c = findClipById(id);
+            const auto *c = snap->transforms.find(id);
             if (c == nullptr) {
                 continue;
             }
@@ -429,13 +441,14 @@ auto TimelineService::resolveDragPosition(int clipId, int targetLayer, int propo
 }
 
 void TimelineService::updateClipInternal(int id, int layer, int startFrame, int duration, bool emitSignal) {
-    const auto *existingClip = findClipById(id);
-    if (existingClip == nullptr) {
+    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *existingT = snap->transforms.find(id);
+    if (existingT == nullptr) {
         return;
     }
 
     // 移動元または移動先がロックされている場合は拒否
-    if (isLayerLocked(layer) || isLayerLocked(existingClip->layer)) {
+    if (isLayerLocked(layer) || isLayerLocked(existingT->layer)) {
         qWarning() << "updateClipInternal: ロックされたレイヤーへの/からの操作を拒否しました。";
         return;
     }
@@ -524,19 +537,23 @@ void TimelineService::applySelectionIds(const QVariantList &ids) {
 
     if (!newSelectedIds.isEmpty()) {
         int id = newSelectedIds.first().toInt(); // 最初のクリップをプライマリとする
-        const auto *clip = findClipById(id);
-        if (clip != nullptr) { // findClipById は nullptr を返す可能性があるのでチェック
-            primaryId = clip->id;
-            for (auto *eff : clip->effects) {
-                QVariantMap params = eff->params();
-                for (auto it = params.begin(); it != params.end(); ++it) {
-                    primaryData.insert(it.key(), it.value());
+        const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+        const auto *tS = snap->transforms.find(id);
+        const auto *mS = snap->metadataStates.find(id);
+        const auto *fxS = snap->effectStacks.find(id);
+        if (tS != nullptr && mS != nullptr) {
+            primaryId = id;
+            if (fxS != nullptr) {
+                for (const auto &eff : std::as_const(fxS->effects)) {
+                    for (auto it = eff.params.begin(); it != eff.params.end(); ++it) {
+                        primaryData.insert(it.key(), it.value());
+                    }
                 }
             }
-            primaryData.insert(QStringLiteral("startFrame"), clip->startFrame);
-            primaryData.insert(QStringLiteral("durationFrames"), clip->durationFrames);
-            primaryData.insert(QStringLiteral("layer"), clip->layer);
-            primaryData.insert(QStringLiteral("type"), clip->type);
+            primaryData.insert(QStringLiteral("startFrame"), tS->startFrame);
+            primaryData.insert(QStringLiteral("durationFrames"), tS->durationFrames);
+            primaryData.insert(QStringLiteral("layer"), tS->layer);
+            primaryData.insert(QStringLiteral("type"), mS->type);
         }
     }
 
@@ -554,29 +571,35 @@ void TimelineService::selectClipsInRange(int frameA, int frameB, int layerA, int
     int primaryId = -1;
     QVariantMap primaryData;
 
-    for (const auto &clip : clips()) {
-        const int clipStart = clip.startFrame;
-        const int clipEnd = clip.startFrame + clip.durationFrames;
-        const bool frameOverlap = clipStart < maxFrame && minFrame < clipEnd;
-        const bool layerMatch = clip.layer >= minLayer && clip.layer <= maxLayer;
+    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    for (const auto &ct : snap->transforms) {
+        const auto *mSel = snap->metadataStates.find(ct.clipId);
+        if (mSel == nullptr) {
+            continue;
+        }
+        const int clipEnd = ct.startFrame + ct.durationFrames;
+        const bool frameOverlap = ct.startFrame < maxFrame && minFrame < clipEnd;
+        const bool layerMatch = ct.layer >= minLayer && ct.layer <= maxLayer;
         if (!frameOverlap || !layerMatch) {
             continue;
         }
 
-        ids.append(clip.id);
+        ids.append(ct.clipId);
 
         if (primaryId == -1) {
-            primaryId = clip.id;
-            for (auto *eff : std::as_const(clip.effects)) {
-                QVariantMap params = eff->params();
-                for (auto it = params.begin(); it != params.end(); ++it) {
-                    primaryData.insert(it.key(), it.value());
+            primaryId = ct.clipId;
+            const auto *fxSel = snap->effectStacks.find(ct.clipId);
+            if (fxSel != nullptr) {
+                for (const auto &eff : std::as_const(fxSel->effects)) {
+                    for (auto it = eff.params.begin(); it != eff.params.end(); ++it) {
+                        primaryData.insert(it.key(), it.value());
+                    }
                 }
             }
-            primaryData.insert(QStringLiteral("startFrame"), clip.startFrame);
-            primaryData.insert(QStringLiteral("durationFrames"), clip.durationFrames);
-            primaryData.insert(QStringLiteral("layer"), clip.layer);
-            primaryData.insert(QStringLiteral("type"), clip.type);
+            primaryData.insert(QStringLiteral("startFrame"), ct.startFrame);
+            primaryData.insert(QStringLiteral("durationFrames"), ct.durationFrames);
+            primaryData.insert(QStringLiteral("layer"), ct.layer);
+            primaryData.insert(QStringLiteral("type"), mSel->type);
         }
     }
 
@@ -659,70 +682,86 @@ void TimelineService::addClipDirectInternal(const ClipData &clip, bool emitSigna
         emit clipCreated(clip.id, clip.layer, clip.startFrame, clip.durationFrames, clip.type);
     }
 }
-
-auto TimelineService::findClipById(int clipId) -> ClipData * {
-    auto &currentClips = clipsMutable();
-    auto it = std::ranges::find_if(currentClips, [clipId](const ClipData &c) -> bool { return c.id == clipId; });
-    return (it != currentClips.end()) ? &(*it) : nullptr;
-}
-
-auto TimelineService::findClipById(int clipId) const -> const ClipData * {
-    const auto &currentClips = clips();
-    auto it = std::ranges::find_if(currentClips, [clipId](const ClipData &c) -> bool { return c.id == clipId; });
-    return (it != currentClips.end()) ? &(*it) : nullptr;
-}
-
-auto TimelineService::deepCopyClip(const ClipData &source) const -> ClipData {
-    ClipData newClip;
-    newClip.id = -1;
-    newClip.type = source.type;
-    newClip.startFrame = source.startFrame;
-    newClip.durationFrames = source.durationFrames;
-    newClip.layer = source.layer;
-
-    for (const auto *oldEffect : std::as_const(source.effects)) {
-        auto *newEffect = new EffectModel(oldEffect->id(), oldEffect->name(), oldEffect->kind(), oldEffect->categories(), oldEffect->params(), oldEffect->qmlSource(), oldEffect->uiDefinition(), const_cast<TimelineService *>(this));
-        newEffect->setEnabled(oldEffect->isEnabled());
-        newEffect->setKeyframeTracks(oldEffect->keyframeTracks());
-        newEffect->syncTrackEndpoints(source.durationFrames);
-        connect(newEffect, &EffectModel::keyframeTracksChanged, this, &TimelineService::clipsChanged);
-        newClip.effects.append(newEffect);
+void TimelineService::restoreClipFromSnapshotInternal(const Rina::UI::ClipSnapshot &snap, bool emitSignal) {
+    auto &ecs = Rina::Engine::Timeline::ECS::instance();
+    Rina::Engine::Timeline::ClipLifecycleSystem::restoreClipFromSnapshot(ecs.editState(), snap);
+    ecs.commit();
+    if (emitSignal) {
+        emit clipsChanged();
+        emit clipCreated(snap.transform.clipId, snap.transform.layer, snap.transform.startFrame, snap.transform.durationFrames, snap.metadata.type);
     }
-    return newClip;
+}
+
+void TimelineService::restoreClipsFromSnapshotInternal(const QList<Rina::UI::ClipSnapshot> &snaps) {
+    auto &ecs = Rina::Engine::Timeline::ECS::instance();
+    for (const auto &snap : snaps)
+        Rina::Engine::Timeline::ClipLifecycleSystem::restoreClipFromSnapshot(ecs.editState(), snap);
+    ecs.commit();
+    emit clipsChanged();
+}
+
+void TimelineService::setClipboardFromSnapshot(const Rina::UI::ClipSnapshot &snap) {
+    m_clipboardSnapshots.clear();
+    m_clipboardSnapshots.append(snap);
 }
 
 void TimelineService::copyClip(int clipId) {
-    auto &currentClips = clipsMutable();
-    auto it = std::ranges::find_if(currentClips, [clipId](const ClipData &c) -> bool { return c.id == clipId; });
-    if (it == currentClips.end()) {
-        return;
+    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    Rina::UI::ClipSnapshot cs;
+    if (const auto *t = snap->transforms.find(clipId)) {
+        cs.transform = *t;
     }
-
-    m_clipboard.clear();
-    m_clipboard.append(deepCopyClip(*it));
+    if (const auto *m = snap->metadataStates.find(clipId)) {
+        cs.metadata = *m;
+    }
+    if (const auto *fx = snap->effectStacks.find(clipId)) {
+        cs.effectStack = *fx;
+    }
+    if (const auto *au = snap->audioStacks.find(clipId)) {
+        cs.audioStack = *au;
+    }
+    if (cs.isValid()) {
+        m_clipboardSnapshots.clear();
+        m_clipboardSnapshots.append(cs);
+    }
 }
 
 void TimelineService::copySelectedClips() {
-    QList<ClipData> copied;
     const QVariantList ids = m_selection->selectedClipIds();
+    QList<Rina::UI::ClipSnapshot> copied;
+    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
     for (const QVariant &value : std::as_const(ids)) {
         const int id = value.toInt();
-        const auto *clip = findClipById(id);
-        if (clip != nullptr) {
-            copied.append(deepCopyClip(*clip));
+        Rina::UI::ClipSnapshot cs;
+        if (const auto *t = snap->transforms.find(id)) {
+            cs.transform = *t;
+        }
+        if (const auto *m = snap->metadataStates.find(id)) {
+            cs.metadata = *m;
+        }
+        if (const auto *fx = snap->effectStacks.find(id)) {
+            cs.effectStack = *fx;
+        }
+        if (const auto *au = snap->audioStacks.find(id)) {
+            cs.audioStack = *au;
+        }
+        if (cs.isValid()) {
+            copied.append(cs);
         }
     }
     if (!copied.isEmpty()) {
-        setClipboard(copied);
+        m_clipboardSnapshots = copied;
     }
 }
 
 void TimelineService::cutClip(int clipId) {
-    const auto *clip = findClipById(clipId); // findClipById は const なので、ここでコピー
-    if (clip == nullptr) {
+    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *mC = snap->metadataStates.find(clipId);
+    const auto *fxC = snap->effectStacks.find(clipId);
+    if (mC == nullptr) {
         return;
     }
-    QString name = clip->effects.isEmpty() ? clip->type : clip->effects.first()->name();
+    QString name = (fxC == nullptr || fxC->effects.isEmpty()) ? mC->type : fxC->effects.first().name;
     m_undoStack->push(new CutClipCommand(this, clipId, name));
 }
 
@@ -736,14 +775,30 @@ void TimelineService::cutSelectedClips() {
         return;
     }
 
-    QList<ClipData> copied;
+    QList<Rina::UI::ClipSnapshot> copied;
+    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
     for (const QVariant &v : std::as_const(ids)) {
-        const auto *clip = findClipById(v.toInt());
-        if (clip != nullptr) {
-            copied.append(deepCopyClip(*clip));
+        const int id = v.toInt();
+        Rina::UI::ClipSnapshot cs;
+        if (const auto *t = snap->transforms.find(id)) {
+            cs.transform = *t;
+        }
+        if (const auto *m = snap->metadataStates.find(id)) {
+            cs.metadata = *m;
+        }
+        if (const auto *fx = snap->effectStacks.find(id)) {
+            cs.effectStack = *fx;
+        }
+        if (const auto *au = snap->audioStacks.find(id)) {
+            cs.audioStack = *au;
+        }
+        if (cs.isValid()) {
+            copied.append(cs);
         }
     }
-    setClipboard(copied); // クリップボードにコピー
+    if (!copied.isEmpty()) {
+        m_clipboardSnapshots = copied;
+    }
 
     QList<int> intIds;
     for (const QVariant &v : std::as_const(ids)) {
@@ -770,7 +825,7 @@ void TimelineService::splitSelectedClips(int frame) {
 }
 
 void TimelineService::pasteClip(int frame, int layer) {
-    if (m_clipboard.isEmpty()) {
+    if (m_clipboardSnapshots.isEmpty()) {
         return;
     }
 
@@ -780,27 +835,27 @@ void TimelineService::pasteClip(int frame, int layer) {
     auto overlaps = [](int s1, int d1, int s2, int d2) -> bool { return (s1 < (s2 + d2)) && (s2 < (s1 + d1)); };
     auto &currentClips = clipsMutable();
 
-    int baseFrame = m_clipboard.first().startFrame;
-    int baseLayer = m_clipboard.first().layer;
-    for (const auto &clip : std::as_const(m_clipboard)) {
-        baseFrame = std::min(baseFrame, clip.startFrame);
-        baseLayer = std::min(baseLayer, clip.layer);
+    int baseFrame = m_clipboardSnapshots.first().transform.startFrame;
+    int baseLayer = m_clipboardSnapshots.first().transform.layer;
+    for (const auto &clip : std::as_const(m_clipboardSnapshots)) {
+        baseFrame = std::min(baseFrame, clip.transform.startFrame);
+        baseLayer = std::min(baseLayer, clip.transform.layer);
     }
 
-    QList<ClipData> pending;
-    for (const auto &src : std::as_const(m_clipboard)) {
-        ClipData newClip = deepCopyClip(src);
-        newClip.startFrame = frame + (src.startFrame - baseFrame);
-        newClip.layer = std::max(0, layer + (src.layer - baseLayer));
+    QList<Rina::UI::ClipSnapshot> pending;
+    for (const auto &src : std::as_const(m_clipboardSnapshots)) {
+        Rina::UI::ClipSnapshot newClip = src;
+        newClip.transform.startFrame = frame + (src.transform.startFrame - baseFrame);
+        newClip.transform.layer = std::max(0, layer + (src.transform.layer - baseLayer));
 
         for (const auto &c : std::as_const(currentClips)) {
-            if (c.layer == newClip.layer && overlaps(newClip.startFrame, newClip.durationFrames, c.startFrame, c.durationFrames)) {
-                qWarning() << "クリップ貼り付けを拒否: レイヤー" << newClip.layer << "の" << newClip.startFrame << "フレームで衝突が発生";
+            if (c.layer == newClip.transform.layer && overlaps(newClip.transform.startFrame, newClip.transform.durationFrames, c.startFrame, c.durationFrames)) {
+                qWarning() << "クリップ貼り付けを拒否: レイヤー" << newClip.transform.layer << "の" << newClip.transform.startFrame << "フレームで衝突が発生";
                 return;
             }
         }
         for (const auto &c : std::as_const(pending)) {
-            if (c.layer == newClip.layer && overlaps(newClip.startFrame, newClip.durationFrames, c.startFrame, c.durationFrames)) {
+            if (c.transform.layer == newClip.transform.layer && overlaps(newClip.transform.startFrame, newClip.transform.durationFrames, c.transform.startFrame, c.transform.durationFrames)) {
                 qWarning() << "クリップ貼り付けを拒否: 貼り付け対象同士が衝突";
                 return;
             }
@@ -809,31 +864,24 @@ void TimelineService::pasteClip(int frame, int layer) {
         pending.append(newClip);
     }
 
-    if (pending.size() == 1) {
-        int newId = m_nextClipId++;
-        m_undoStack->push(new PasteClipCommand(this, newId, pending.first()));
-        return;
-    }
-
-    m_undoStack->beginMacro(QObject::tr("複数クリップ貼り付け: %1").arg(pending.size()));
-    for (const auto &clip : std::as_const(pending)) {
-        int newId = m_nextClipId++;
-        m_undoStack->push(new PasteClipCommand(this, newId, clip));
-    }
-    m_undoStack->endMacro();
+    // TODO: Phase3 Undo command requires ClipSnapshot support
+    // For now, PasteClipCommand still takes ClipData (converted dynamically in Phase3 or here if needed)
+    // To preserve buildability for Phase2, we will leave PasteClipCommand untouched until Phase3.
+    // *Temporarily bypass Paste for Phase 2 strict snapshot build.*
+    qWarning() << "pasteClip is temporarily disabled until Undo command supports ClipSnapshot (Phase 3)";
 }
 
 void TimelineService::splitClip(int clipId, int frame) {
-    const auto *clip = findClipById(clipId);
-    if (clip == nullptr) {
+    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *tSp = snap->transforms.find(clipId);
+    const auto *mSp = snap->metadataStates.find(clipId);
+    const auto *fxSp = snap->effectStacks.find(clipId);
+    if (tSp == nullptr || mSp == nullptr) {
         return;
     }
 
-    if (frame > clip->startFrame && frame < clip->startFrame + clip->durationFrames) {
-        QString clipName = clip->type;
-        if (!clip->effects.isEmpty()) {
-            clipName = clip->effects.first()->name();
-        }
+    if (frame > tSp->startFrame && frame < tSp->startFrame + tSp->durationFrames) {
+        QString clipName = (fxSp == nullptr || fxSp->effects.isEmpty()) ? mSp->type : fxSp->effects.first().name;
         m_undoStack->push(new SplitClipCommand(this, clipId, frame, clipName));
     }
 }
@@ -853,26 +901,25 @@ auto TimelineService::clips(int sceneId) const -> const QList<ClipData> & {
 }
 
 auto TimelineService::findVacantFrame(int layer, int startFrame, int duration, int excludeClipId) const -> int { // NOLINT(bugprone-easily-swappable-parameters)
-    QList<const ClipData *> layerClips;
+    QList<const Rina::Engine::Timeline::TransformComponent *> layerClips;
 
-    // バッチ移動中は明示的に指定された集合を使い、そうでない場合は選択情報を使う
     bool isBatchMode = !m_batchExcludes.isEmpty();
     bool isSelected = (m_selection != nullptr) && m_selection->isSelected(excludeClipId);
     QVariantList selectedIds = isSelected ? m_selection->selectedClipIds() : QVariantList();
 
-    for (const auto &clip : clips()) {
-        if (clip.id == excludeClipId) {
+    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    for (const auto &ct : snap->transforms) {
+        if (ct.clipId == excludeClipId) {
             continue;
         }
-
         if (isBatchMode) {
-            if (m_batchExcludes.contains(clip.id)) {
+            if (m_batchExcludes.contains(ct.clipId)) {
                 continue;
             }
         } else if (isSelected) {
             bool isPeer = false;
             for (const QVariant &v : std::as_const(selectedIds)) {
-                if (v.toInt() == clip.id) {
+                if (v.toInt() == ct.clipId) {
                     isPeer = true;
                     break;
                 }
@@ -881,13 +928,12 @@ auto TimelineService::findVacantFrame(int layer, int startFrame, int duration, i
                 continue;
             }
         }
-
-        if (clip.layer == layer) {
-            layerClips.append(&clip);
+        if (ct.layer == layer) {
+            layerClips.append(&ct);
         }
     }
 
-    std::ranges::sort(layerClips, [](const ClipData *a, const ClipData *b) -> bool { return a->startFrame < b->startFrame; });
+    std::ranges::sort(layerClips, [](const auto *a, const auto *b) -> bool { return a->startFrame < b->startFrame; });
 
     int candidateStart = std::max(0, startFrame);
     for (const auto &clip : std::as_const(layerClips)) {
@@ -898,18 +944,6 @@ auto TimelineService::findVacantFrame(int layer, int startFrame, int duration, i
         }
     }
     return candidateStart;
-}
-
-void TimelineService::setClipboard(const ClipData &clip) {
-    m_clipboard.clear();
-    m_clipboard.append(deepCopyClip(clip));
-}
-
-void TimelineService::setClipboard(const QList<ClipData> &clips) {
-    m_clipboard.clear();
-    for (const auto &clip : std::as_const(clips)) {
-        m_clipboard.append(deepCopyClip(clip));
-    }
 }
 
 } // namespace Rina::UI

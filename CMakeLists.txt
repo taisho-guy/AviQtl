@@ -206,6 +206,7 @@ endif()
 target_include_directories(Rina PRIVATE
     core/include
     ui/include
+    engine/timeline
     ${CARLA_INCLUDE_DIRS}
 )
 

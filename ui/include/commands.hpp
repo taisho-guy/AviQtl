@@ -69,13 +69,13 @@ class RemoveEffectCommand : public QUndoCommand {
     RemoveEffectCommand(TimelineService *service, int clipId, int effectIndex, const QString &effectName);
     void undo() override;
     void redo() override;
-    void setRemovedEffect(const QVariantMap &effectData) { m_removedEffectData = effectData; }
+    void setRemovedEffect(const Rina::UI::EffectData &effectData) { m_removedEffectData = effectData; }
 
   private:
     TimelineService *m_service;
     int m_clipId;
     int m_effectIndex;
-    QVariantMap m_removedEffectData;
+    Rina::UI::EffectData m_removedEffectData;
     QString m_effectName;
 };
 
@@ -84,13 +84,13 @@ class RemoveMultipleEffectsCommand : public QUndoCommand {
     RemoveMultipleEffectsCommand(TimelineService *service, int clipId, const QList<int> &sortedDescIndices, const QString &macroText);
     void undo() override;
     void redo() override;
-    void setRemovedEffects(const QList<QVariantMap> &data) { m_removedEffectsData = data; }
+    void setRemovedEffects(const QList<Rina::UI::EffectData> &data) { m_removedEffectsData = data; }
 
   private:
     TimelineService *m_service;
     int m_clipId;
     QList<int> m_sortedDescIndices;
-    QList<QVariantMap> m_removedEffectsData;
+    QList<Rina::UI::EffectData> m_removedEffectsData;
 };
 
 class ReorderEffectCommand : public QUndoCommand {
@@ -145,14 +145,14 @@ class SetEffectEnabledCommand : public QUndoCommand {
 
 class PasteEffectCommand : public QUndoCommand {
   public:
-    PasteEffectCommand(TimelineService *service, int clipId, int targetIndex, EffectModel *templateEffect);
+    PasteEffectCommand(TimelineService *service, int clipId, int targetIndex, const Rina::UI::EffectData &effectData);
     void undo() override;
     void redo() override;
 
   private:
     TimelineService *m_service;
     int m_clipId, m_targetIndex;
-    EffectModel *m_effect;
+    Rina::UI::EffectData m_effect;
 };
 
 class SetAudioPluginEnabledCommand : public QUndoCommand {
@@ -191,7 +191,7 @@ class DeleteClipCommand : public QUndoCommand {
   private:
     TimelineService *m_service;
     int m_clipId;
-    ClipData m_snapshot;
+    Rina::UI::ClipSnapshot m_snapshot;
 };
 
 class DeleteClipsCommand : public QUndoCommand {
@@ -203,19 +203,19 @@ class DeleteClipsCommand : public QUndoCommand {
   private:
     TimelineService *m_service;
     QList<int> m_clipIds;
-    QList<ClipData> m_snapshots; // 削除されたクリップの復元用スナップショット
+    QList<Rina::UI::ClipSnapshot> m_snapshots; // 削除されたクリップの復元用スナップショット
 };
 
 class PasteClipCommand : public QUndoCommand {
   public:
-    PasteClipCommand(TimelineService *service, int newClipId, const ClipData &clipData);
+    PasteClipCommand(TimelineService *service, int newClipId, const Rina::UI::ClipSnapshot &snap);
     void undo() override;
     void redo() override;
 
   private:
     TimelineService *m_service;
     int m_newClipId;
-    ClipData m_clipData;
+    Rina::UI::ClipSnapshot m_clipData;
 };
 
 class CutClipCommand : public QUndoCommand {
@@ -227,7 +227,7 @@ class CutClipCommand : public QUndoCommand {
   private:
     TimelineService *m_service;
     int m_clipId;
-    ClipData m_snapshot;
+    Rina::UI::ClipSnapshot m_snapshot;
 };
 
 class SetKeyframeCommand : public QUndoCommand {

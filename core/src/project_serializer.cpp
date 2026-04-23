@@ -62,12 +62,25 @@ auto ProjectSerializer::save(const QString &fileUrl, const UI::TimelineService *
                 clipObj.insert(QStringLiteral("type"), meta->type);
             }
 
-            // フェーズ3まで ClipData* から sceneId / effects / audioPlugins を補完
-            if (const UI::ClipData *legacy = timeline->findClipById(clipId)) {
-                clipObj.insert(QStringLiteral("sceneId"), legacy->sceneId);
+            // effects: ECS EffectStackComponent から取得
+            if (const auto *fx = ecsState->effectStacks.find(clipId)) {
+                QJsonArray effArray;
+                for (const auto &eff : std::as_const(fx->effects)) {
+                    QJsonObject eObj;
+                    eObj.insert(QStringLiteral("id"), eff.id);
+                    eObj.insert(QStringLiteral("name"), eff.name);
+                    eObj.insert(QStringLiteral("enabled"), eff.enabled);
+                    eObj.insert(QStringLiteral("params"), QJsonObject::fromVariantMap(eff.params));
+                    eObj.insert(QStringLiteral("keyframes"), QJsonObject::fromVariantMap(eff.keyframeTracks));
+                    effArray.append(eObj);
+                }
+                clipObj.insert(QStringLiteral("effects"), effArray);
+            }
 
+            // audioPlugins: ECS AudioStackComponent から取得
+            if (const auto *audioStack = ecsState->audioStacks.find(clipId)) {
                 QJsonArray audioPluginsArray;
-                for (const auto &plugin : std::as_const(legacy->audioPlugins)) {
+                for (const auto &plugin : std::as_const(audioStack->audioPlugins)) {
                     QJsonObject pObj;
                     pObj.insert(QStringLiteral("id"), plugin.id);
                     pObj.insert(QStringLiteral("enabled"), plugin.enabled);
@@ -75,18 +88,6 @@ auto ProjectSerializer::save(const QString &fileUrl, const UI::TimelineService *
                     audioPluginsArray.append(pObj);
                 }
                 clipObj.insert(QStringLiteral("audioPlugins"), audioPluginsArray);
-
-                QJsonArray effArray;
-                for (const auto *eff : std::as_const(legacy->effects)) {
-                    QJsonObject eObj;
-                    eObj.insert(QStringLiteral("id"), eff->id());
-                    eObj.insert(QStringLiteral("name"), eff->name());
-                    eObj.insert(QStringLiteral("enabled"), eff->isEnabled());
-                    eObj.insert(QStringLiteral("params"), QJsonObject::fromVariantMap(eff->params()));
-                    eObj.insert(QStringLiteral("keyframes"), QJsonObject::fromVariantMap(eff->keyframeTracks()));
-                    effArray.append(eObj);
-                }
-                clipObj.insert(QStringLiteral("effects"), effArray);
             }
             clipsArray.append(clipObj);
         }
