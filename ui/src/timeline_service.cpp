@@ -18,15 +18,7 @@ ClipData TimelineService::packClipData(int clipId) const {
     ClipData result;
     result.id = clipId;
 
-    // Retrieve components from ECS snapshot (or active buffers)
-    // 注意: フェーズ1では既存の m_scenes[0].clips とECSが併存するため、
-    // まず既存の配列から見つけ、無ければECSから構築するフォールバックとして実装します。
-    // (将来的に正本が完全に移行した段階で m_scenes は削除されます)
-    if (const ClipData *existing = findClipById(clipId)) {
-        return deepCopyClip(*existing);
-    }
-
-    // ここから先は完全移行後のECSからの組み立て処理
+    // フェーズ2: ECS が正本。findClipById フォールバックを削除。
     const auto *ecsState = Rina::Engine::Timeline::ECS::instance().getSnapshot();
     if (!ecsState)
         return result;
@@ -38,7 +30,6 @@ ClipData TimelineService::packClipData(int clipId) const {
     }
     if (const auto *metadata = ecsState->metadataStates.find(clipId)) {
         result.type = metadata->type;
-        // name等の復元
     }
 
     return result;
@@ -50,7 +41,7 @@ void TimelineService::unpackClipData(const ClipData &clip) {
     addClipDirectInternal(clip, false);
 
     // ECSへのコンポーネント書き出し
-    ecs.updateClipState(clip.id, clip.layer, 0.0); // startFrame, durationFramesなどは TransformSystem移行時に反映
+    ecs.updateClipState(clip.id, clip.layer, clip.startFrame, clip.durationFrames);
     ecs.updateMetadata(clip.id, clip.type, "", clip.type, "");
 
     // フェーズ1用の拡張コンポーネントがあればここで書き込む

@@ -76,7 +76,7 @@ void TimelineEngineSynchronizer::updateActiveClipsList() {
     for (const ClipData *clip : std::as_const(active)) {
         int relFrame = current - clip->startFrame;
 
-        Rina::Engine::Timeline::ECS::instance().updateClipState(clip->id, clip->layer, relFrame);
+        Rina::Engine::Timeline::ECS::instance().updateClipState(clip->id, clip->layer, clip->startFrame, clip->durationFrames, static_cast<double>(relFrame));
 
         QVariantList effectDataList;
         for (const auto *eff : clip->effects) {
@@ -115,21 +115,46 @@ void TimelineEngineSynchronizer::updateActiveClipsList() {
 void TimelineEngineSynchronizer::rebuildClipIndex() {
     qDebug() << "[DOD Sync] rebuildClipIndex called.";
     m_sortedClips.clear();
+    m_localClips.clear();
     m_intervalTree.clear();
     m_treeRoot = -1;
     m_maxDuration = 0;
     m_timelineDuration = 0;
 
-    auto &clips = m_controller->timeline()->clipsMutable();
-    m_sortedClips.reserve(clips.size());
+    // フェーズ2: m_scenes の直接参照をやめ、ECS スナップショットを走査して
+    // m_localClips（所有バッファ）を構築する。m_sortedClips はそのポインタを持つ。
+    const auto *ecsState = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    if (!ecsState) {
+        qWarning() << "[DOD Sync] rebuildClipIndex: ECS スナップショットが null です。";
+        return;
+    }
 
     QSet<int> aliveIds;
 
-    for (auto &clip : clips) {
+    // ECS の TransformComponent を走査（キャッシュに乗る DOD アクセス）
+    for (auto it = ecsState->transforms.begin(); it != ecsState->transforms.end(); ++it) {
+        ClipData clip;
+        clip.id = it->clipId;
+        clip.layer = it->layer;
+        clip.startFrame = it->startFrame;
+        clip.durationFrames = it->durationFrames;
+        if (const auto *meta = ecsState->metadataStates.find(it->clipId)) {
+            clip.type = meta->type;
+        }
+        // EffectModel* はフェーズ3まで m_scenes 側から補完する（過渡期）
+        if (const ClipData *legacy = m_controller->timeline()->findClipById(it->clipId)) {
+            clip.effects = legacy->effects;
+            clip.audioPlugins = legacy->audioPlugins;
+            clip.sceneId = legacy->sceneId;
+        }
+        m_localClips.append(clip);
         aliveIds.insert(clip.id);
+    }
+
+    m_sortedClips.reserve(m_localClips.size());
+    for (auto &clip : m_localClips) {
         m_sortedClips.push_back(&clip);
         m_maxDuration = std::max(clip.durationFrames, m_maxDuration);
-
         int end = clip.startFrame + clip.durationFrames;
         m_timelineDuration = std::max(end, m_timelineDuration);
     }
@@ -144,7 +169,7 @@ void TimelineEngineSynchronizer::rebuildClipIndex() {
         m_treeRoot = buildIntervalTree(0, static_cast<int>(m_sortedClips.size()) - 1);
     }
 
-    // ECSの不要になったコンポーネントを掃除する
+    // ECS の不要になったコンポーネントを掃除する
     Rina::Engine::Timeline::ECS::instance().syncClipIds(aliveIds);
 }
 } // namespace Rina::UI

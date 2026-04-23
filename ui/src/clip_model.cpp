@@ -32,13 +32,14 @@ auto ClipModel::data(const QModelIndex &index, int role) const -> QVariant {
     if (!index.isValid() || index.row() >= m_activeClips.size()) {
         return {};
     }
-    const ClipData *clip = m_activeClips.value(index.row());
+    // フェーズ2: clipId のみ保持。ClipData* は不参照。
+    const int clipId = m_activeClips.value(index.row());
 
-    // Phase 1 DOD Integration: Get values from ECS Snapshot directly if possible
-    // This allows UI to be decoupled from ClipData pointers over time
     const auto *ecsState = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+
+    // ECS スナップショットから優先的に値を返す
     if (ecsState) {
-        if (const auto *transform = ecsState->transforms.find(clip->id)) {
+        if (const auto *transform = ecsState->transforms.find(clipId)) {
             if (role == StartFrameRole)
                 return transform->startFrame;
             if (role == DurationRole)
@@ -46,34 +47,28 @@ auto ClipModel::data(const QModelIndex &index, int role) const -> QVariant {
             if (role == LayerRole)
                 return transform->layer;
         }
-        if (const auto *metadata = ecsState->metadataStates.find(clip->id)) {
+        if (const auto *metadata = ecsState->metadataStates.find(clipId)) {
             if (role == TypeRole)
                 return metadata->type;
+            if (role == NameRole) {
+                auto meta = Rina::Core::EffectRegistry::instance().getEffect(metadata->type);
+                return meta.name;
+            }
+            if (role == Qt::UserRole + 100) {
+                auto meta = Rina::Core::EffectRegistry::instance().getEffect(metadata->type);
+                return meta.qmlSource;
+            }
         }
     }
 
     switch (role) {
     case IdRole:
-        return clip->id;
-    case TypeRole:
-        return clip->type;
-    case NameRole: {
-        auto meta = Rina::Core::EffectRegistry::instance().getEffect(clip->type);
-        return meta.name;
-    }
-    case StartFrameRole:
-        return clip->startFrame;
-    case DurationRole:
-        return clip->durationFrames;
-    case LayerRole:
-        return clip->layer;
-    case Qt::UserRole + 100: {
-        auto meta = Rina::Core::EffectRegistry::instance().getEffect(clip->type);
-        return meta.qmlSource;
-    }
+        return clipId;
     case EffectsRole: {
+        // フェーズ2: m_effectsCache から EffectModel* を返す（フェーズ3で削除予定）
         QVariantList list;
-        for (auto *eff : clip->effects) {
+        const auto &effects = m_effectsCache.value(clipId);
+        for (auto *eff : effects) {
             list.append(QVariant::fromValue(eff));
         }
         return list;
@@ -84,21 +79,26 @@ auto ClipModel::data(const QModelIndex &index, int role) const -> QVariant {
 }
 
 void ClipModel::updateClips(const QList<ClipData *> &newClips) {
-    bool identical = (m_activeClips.size() == newClips.size());
-    if (identical) {
-        for (int i = 0; i < m_activeClips.size(); ++i) {
-            if (m_activeClips.value(i) != newClips.value(i)) {
-                identical = false;
-                break;
-            }
-        }
+    // フェーズ2: newClips から clipId リストと effectsCache を構築する
+    QList<int> newIds;
+    QHash<int, QList<EffectModel *>> newCache;
+    newIds.reserve(newClips.size());
+    for (const ClipData *clip : newClips) {
+        newIds.append(clip->id);
+        newCache.insert(clip->id, clip->effects);
     }
+
+    // clipId リストの同一性チェック（ポインタ比較より堅牢）
+    const bool identical = (m_activeClips == newIds);
 
     if (!identical) {
         beginResetModel();
-        m_activeClips = newClips;
+        m_activeClips = newIds;
+        m_effectsCache = newCache;
         endResetModel();
-    } else if (!newClips.isEmpty()) {
+    } else if (!newIds.isEmpty()) {
+        // 構成クリップは同じだがエフェクトが変化した可能性があるため常に更新
+        m_effectsCache = newCache;
         QModelIndex topLeft = index(0, 0);
         QModelIndex bottomRight = index(rowCount() - 1, 0);
         QList<int> roles;

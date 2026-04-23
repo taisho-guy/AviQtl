@@ -44,5 +44,9 @@ class TimelineEngineSynchronizer : public QObject {
 
     int m_maxDuration = 0;
     int m_timelineDuration = 0;
+
+    // フェーズ2: ECS スナップショットから再構築したローカルクリップ所有バッファ
+    // ClipData* が m_scenes 内ポインタではなく、ここが所有者となる
+    QList<ClipData> m_localClips;
 };
 } // namespace Rina::UI

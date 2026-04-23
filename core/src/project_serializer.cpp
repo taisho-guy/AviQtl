@@ -1,5 +1,7 @@
 #include "project_serializer.hpp"
 #include "effect_registry.hpp"
+#include "engine/timeline/clip_lifecycle_system.hpp"
+#include "engine/timeline/ecs.hpp"
 #include "project_service.hpp"
 #include "settings_manager.hpp"
 #include "timeline_service.hpp"
@@ -43,39 +45,49 @@ auto ProjectSerializer::save(const QString &fileUrl, const UI::TimelineService *
     }
     root.insert(QStringLiteral("scenes"), scenesArray);
 
-    // 全シーンのクリップをフラットに保存
+    // フェーズ2: ECS スナップショットを正本として clips を保存する
+    // effects / audioPlugins は ClipData* から補完（フェーズ3で ECS 化予定）
     QJsonArray clipsArray;
-    for (const auto &scene : timeline->getAllScenes()) {
-        for (const auto &clip : std::as_const(scene.clips)) {
+    const auto *ecsState = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    if (ecsState) {
+        for (const auto &transform : ecsState->transforms) {
+            const int clipId = transform.clipId;
             QJsonObject clipObj;
-            clipObj.insert(QStringLiteral("id"), clip.id);
-            clipObj.insert(QStringLiteral("sceneId"), clip.sceneId); // シーンIDを保存
-            clipObj.insert(QStringLiteral("type"), clip.type);
-            clipObj.insert(QStringLiteral("start"), clip.startFrame);
-            clipObj.insert(QStringLiteral("duration"), clip.durationFrames);
-            clipObj.insert(QStringLiteral("layer"), clip.layer);
+            clipObj.insert(QStringLiteral("id"), clipId);
+            clipObj.insert(QStringLiteral("start"), transform.startFrame);
+            clipObj.insert(QStringLiteral("duration"), transform.durationFrames);
+            clipObj.insert(QStringLiteral("layer"), transform.layer);
 
-            QJsonArray audioPluginsArray;
-            for (const auto &plugin : std::as_const(clip.audioPlugins)) {
-                QJsonObject pObj;
-                pObj.insert(QStringLiteral("id"), plugin.id);
-                pObj.insert(QStringLiteral("enabled"), plugin.enabled);
-                pObj.insert(QStringLiteral("params"), QJsonObject::fromVariantMap(plugin.params));
-                audioPluginsArray.append(pObj);
+            if (const auto *meta = ecsState->metadataStates.find(clipId)) {
+                clipObj.insert(QStringLiteral("type"), meta->type);
             }
-            clipObj.insert(QStringLiteral("audioPlugins"), audioPluginsArray);
 
-            QJsonArray effArray;
-            for (const auto *eff : std::as_const(clip.effects)) {
-                QJsonObject eObj;
-                eObj.insert(QStringLiteral("id"), eff->id());
-                eObj.insert(QStringLiteral("name"), eff->name());
-                eObj.insert(QStringLiteral("enabled"), eff->isEnabled());
-                eObj.insert(QStringLiteral("params"), QJsonObject::fromVariantMap(eff->params()));
-                eObj.insert(QStringLiteral("keyframes"), QJsonObject::fromVariantMap(eff->keyframeTracks()));
-                effArray.append(eObj);
+            // フェーズ3まで ClipData* から sceneId / effects / audioPlugins を補完
+            if (const UI::ClipData *legacy = timeline->findClipById(clipId)) {
+                clipObj.insert(QStringLiteral("sceneId"), legacy->sceneId);
+
+                QJsonArray audioPluginsArray;
+                for (const auto &plugin : std::as_const(legacy->audioPlugins)) {
+                    QJsonObject pObj;
+                    pObj.insert(QStringLiteral("id"), plugin.id);
+                    pObj.insert(QStringLiteral("enabled"), plugin.enabled);
+                    pObj.insert(QStringLiteral("params"), QJsonObject::fromVariantMap(plugin.params));
+                    audioPluginsArray.append(pObj);
+                }
+                clipObj.insert(QStringLiteral("audioPlugins"), audioPluginsArray);
+
+                QJsonArray effArray;
+                for (const auto *eff : std::as_const(legacy->effects)) {
+                    QJsonObject eObj;
+                    eObj.insert(QStringLiteral("id"), eff->id());
+                    eObj.insert(QStringLiteral("name"), eff->name());
+                    eObj.insert(QStringLiteral("enabled"), eff->isEnabled());
+                    eObj.insert(QStringLiteral("params"), QJsonObject::fromVariantMap(eff->params()));
+                    eObj.insert(QStringLiteral("keyframes"), QJsonObject::fromVariantMap(eff->keyframeTracks()));
+                    effArray.append(eObj);
+                }
+                clipObj.insert(QStringLiteral("effects"), effArray);
             }
-            clipObj.insert(QStringLiteral("effects"), effArray);
             clipsArray.append(clipObj);
         }
     }
@@ -267,6 +279,15 @@ auto ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
     timeline->setScenes(tempScenes);
     timeline->setNextClipId(tempMaxId + 1);
     timeline->setNextSceneId(maxSceneId + 1);
+
+    // フェーズ2: load 後に ECS を初期化する（setScenes は m_scenes のみ更新するため）
+    // commit() は clipsChanged の前に行い、synchronizer がスナップショットを正しく参照できるようにする
+    auto &ecs = Rina::Engine::Timeline::ECS::instance();
+    for (const auto &clip : std::as_const(tempClips)) {
+        Rina::Engine::Timeline::ClipLifecycleSystem::restoreClipFromDTO(ecs.editState(), clip);
+    }
+    ecs.commit();
+
     QMetaObject::invokeMethod(timeline, "clipsChanged");
 
     return true;

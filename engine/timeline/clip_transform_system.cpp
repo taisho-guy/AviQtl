@@ -4,44 +4,37 @@
 namespace Rina::Engine::Timeline {
 
 bool ClipTransformSystem::canPlaceClip(const DenseComponentMap<TransformComponent> &transforms, int targetLayer, int startFrame, int durationFrames, int excludeClipId) {
-    [[maybe_unused]] int endFrame = startFrame + durationFrames;
-
-    // 疎集合のイテレータを用いた高速なデータ指向走査
-    // O(N) だが、キャッシュに乗るため非常に高速
-    for (auto it = transforms.begin(); it != transforms.end(); ++it) {
+    // DOD: TransformComponent の密配列を線形走査 O(N)、キャッシュに乗るため高速
+    const int endFrame = startFrame + durationFrames;
+    for (const auto *it = transforms.begin(); it != transforms.end(); ++it) {
         if (it->layer != targetLayer)
             continue;
+        if (it->clipId == excludeClipId)
+            continue;
 
-        // （DOD最適化: ECS内でEntity IDを逆引きする方法に依存するため、ここでは簡易的に仮定）
-        // ※実際には Transforms の並びと Entity IDs の並びは一致しているため、インデックスから逆引き可能。
-        // ここでは findVacantFrame の用途に絞るか、コンポーネント内に ID を持たせる方が有利。
+        // 区間重複判定: [startFrame, endFrame) が [otherStart, otherEnd) と交差するか
+        const int otherEnd = it->startFrame + it->durationFrames;
+        if (startFrame < otherEnd && endFrame > it->startFrame)
+            return false;
     }
-
-    // 実装を簡単にするため、今回は ECSState の生データを舐める前提で書く
-    return true; // (プレースホルダー)
+    return true;
 }
 
 int ClipTransformSystem::findVacantFrame(const DenseComponentMap<TransformComponent> &transforms, int targetLayer, int startFrame, int durationFrames, int excludeClipId) {
+    // canPlaceClip に委譲してロジックを一元化する
+    // 衝突するたびに衝突相手の末尾へジャンプし、全クリップと衝突しなくなるまで繰り返す
     int currentStart = startFrame;
     bool collision = true;
-
-    // DODの利点: クリップ全体(EffectやAudio含む)ではなく、Transformのみの配列を舐める
     while (collision) {
         collision = false;
-        for (auto it = transforms.begin(); it != transforms.end(); ++it) {
-            if (it->layer != targetLayer)
+        for (const auto *it = transforms.begin(); it != transforms.end(); ++it) {
+            if (it->layer != targetLayer || it->clipId == excludeClipId)
                 continue;
-            if (it->clipId == excludeClipId)
-                continue; // 自身との衝突を無視
 
-            int otherStart = it->startFrame;
-            int otherEnd = otherStart + it->durationFrames;
-            int currentEnd = currentStart + durationFrames;
-
-            // 重なり判定
-            if (currentStart < otherEnd && currentEnd > otherStart) {
+            const int otherEnd = it->startFrame + it->durationFrames;
+            if (currentStart < otherEnd && (currentStart + durationFrames) > it->startFrame) {
                 collision = true;
-                currentStart = otherEnd; // 重なったクリップの直後に移動して再試行
+                currentStart = otherEnd; // 衝突相手の直後へジャンプして再試行
                 break;
             }
         }
@@ -57,7 +50,7 @@ bool ClipTransformSystem::applyBatchMove(ECSState &state, const QList<int> &targ
     for (int id : targetIds) {
         if (const auto *t = state.transforms.find(id)) {
             int newLayer = t->layer + deltaLayer;
-            [[maybe_unused]] int newStart = t->startFrame + deltaFrame;
+            int newStart = t->startFrame + deltaFrame;
             if (newLayer < 0 || newStart < 0 || lockedLayers.contains(newLayer)) {
                 return false; // 1つでも不正なら全体をキャンセル
             }
@@ -65,15 +58,22 @@ bool ClipTransformSystem::applyBatchMove(ECSState &state, const QList<int> &targ
     }
 
     // 2. 他の（非選択）クリップとの衝突判定
+    // excludeIds に移動対象全体を含めることで、対象同士の衝突を正しく無視する
     for (int id : targetIds) {
         if (const auto *t = state.transforms.find(id)) {
-            int newLayer = t->layer + deltaLayer;
-            [[maybe_unused]] int newStart = t->startFrame + deltaFrame;
+            const int newLayer = t->layer + deltaLayer;
+            const int newStart = t->startFrame + deltaFrame;
 
-            for (auto it = state.transforms.begin(); it != state.transforms.end(); ++it) {
+            // canPlaceClip は excludeClipId を1件しか除外できないため、
+            // 移動対象の全 ID を除外しながら判定するために自前で走査する
+            const int newEnd = newStart + t->durationFrames;
+            for (const auto *it = state.transforms.begin(); it != state.transforms.end(); ++it) {
                 if (it->layer != newLayer)
                     continue;
-                // ※ 移動対象同士の衝突は無視する処理が必要
+                if (targetIds.contains(it->clipId))
+                    continue; // 移動対象同士の衝突は無視
+                if (newStart < (it->startFrame + it->durationFrames) && newEnd > it->startFrame)
+                    return false; // 非選択クリップと衝突
             }
         }
     }

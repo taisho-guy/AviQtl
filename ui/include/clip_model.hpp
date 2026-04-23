@@ -1,6 +1,7 @@
 #pragma once
 #include "timeline_types.hpp"
 #include <QAbstractListModel>
+#include <QHash>
 
 namespace Rina::UI {
 class TransportService;
@@ -19,7 +20,10 @@ class ClipModel : public QAbstractListModel {
     void updateClips(const QList<ClipData *> &newClips);
 
   private:
-    QList<ClipData *> m_activeClips;
+    // フェーズ2: clipId のみ保持（ClipData* への依存を解消）
+    QList<int> m_activeClips;
+    // EffectsRole 用の逆引きキャッシュ（フェーズ3で削除予定）
+    QHash<int, QList<EffectModel *>> m_effectsCache;
     TransportService *m_transport;
 };
 } // namespace Rina::UI

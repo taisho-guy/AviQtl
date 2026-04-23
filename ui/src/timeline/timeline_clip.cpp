@@ -1,5 +1,8 @@
 #include "commands.hpp"
 #include "effect_registry.hpp"
+#include "engine/timeline/clip_lifecycle_system.hpp"
+#include "engine/timeline/clip_transform_system.hpp"
+#include "engine/timeline/ecs.hpp"
 #include "selection_service.hpp"
 #include "settings_manager.hpp"
 #include "timeline_service.hpp"
@@ -52,6 +55,12 @@ void TimelineService::createClipInternal(int clipId, const QString &type, int st
     // デフォルトで transform エフェクトを追加
     addEffectInternal(clipId, QStringLiteral("transform"));
     addEffectInternal(clipId, type);
+
+    // ECS への書き込み（フェーズ2: ECS を正本として同時更新する）
+    auto &ecs = Rina::Engine::Timeline::ECS::instance();
+    Rina::Engine::Timeline::ClipLifecycleSystem::createClip(ecs.editState(), clipId, type, layer, startFrame, defaultDuration);
+    ecs.updateMetadata(clipId, type, QStringLiteral(""), type, QStringLiteral(""));
+    ecs.commit();
 
     if (emitSignal) {
         emit clipsChanged();
@@ -469,6 +478,11 @@ void TimelineService::updateClipInternal(int id, int layer, int startFrame, int 
             break;
         }
     }
+
+    // ECS の TransformComponent を更新（フェーズ2: ECS を正本として同時更新する）
+    // safeStartFrame が衝突回避済みの値なので ECS にもその値を書く
+    Rina::Engine::Timeline::ECS::instance().updateClipState(id, layer, startFrame, duration);
+    Rina::Engine::Timeline::ECS::instance().commit();
 }
 
 void TimelineService::selectClip(int id) { applySelectionIds(QVariantList{id}); }
@@ -627,6 +641,11 @@ void TimelineService::deleteClipInternal(int clipId, bool emitSignal) {
             eff->deleteLater();
         }
         currentClips.erase(it);
+
+        // ECS からも削除（フェーズ2: ECS を正本として同時削除する）
+        Rina::Engine::Timeline::ECS::instance().removeClip(clipId);
+        Rina::Engine::Timeline::ECS::instance().commit();
+
         if (emitSignal) {
             emit clipsChanged();
         }

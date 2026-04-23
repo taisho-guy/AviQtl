@@ -1261,42 +1261,42 @@
     </message>
     <message>
         <location filename="../ui/src/timeline/timeline_scene.cpp" line="60"/>
-        <location filename="../ui/src/timeline_service.cpp" line="64"/>
+        <location filename="../ui/src/timeline_service.cpp" line="55"/>
         <source>ルート</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_clip.cpp" line="148"/>
+        <location filename="../ui/src/timeline/timeline_clip.cpp" line="157"/>
         <source>複数クリップ絶対移動: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_clip.cpp" line="204"/>
+        <location filename="../ui/src/timeline/timeline_clip.cpp" line="213"/>
         <source>複数クリップ移動: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_clip.cpp" line="263"/>
+        <location filename="../ui/src/timeline/timeline_clip.cpp" line="272"/>
         <source>複数クリップ変形: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_clip.cpp" line="611"/>
+        <location filename="../ui/src/timeline/timeline_clip.cpp" line="625"/>
         <source>クリップ削除</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_clip.cpp" line="611"/>
+        <location filename="../ui/src/timeline/timeline_clip.cpp" line="625"/>
         <source>複数クリップ削除: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_clip.cpp" line="746"/>
+        <location filename="../ui/src/timeline/timeline_clip.cpp" line="765"/>
         <source>複数クリップ分割: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_clip.cpp" line="799"/>
+        <location filename="../ui/src/timeline/timeline_clip.cpp" line="818"/>
         <source>複数クリップ貼り付け: %1</source>
         <translation type="unfinished"></translation>
     </message>

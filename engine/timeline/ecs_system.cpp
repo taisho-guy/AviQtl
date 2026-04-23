@@ -29,7 +29,7 @@ void ECS::syncClipIds(const QSet<int> &aliveIds) {
     }
 }
 
-void ECS::updateClipState(int clipId, int layer, double time) { // NOLINT(bugprone-easily-swappable-parameters)
+void ECS::updateClipState(int clipId, int layer, int startFrame, int durationFrames, double timePosition) { // NOLINT(bugprone-easily-swappable-parameters)
     auto &editState = m_buffers[m_editIndex];
 
     if (!editState.transforms.contains(clipId)) {
@@ -38,11 +38,14 @@ void ECS::updateClipState(int clipId, int layer, double time) { // NOLINT(bugpro
     }
     auto &transform = editState.transforms[clipId];
 
-    bool changed = (transform.layer != layer || std::abs(transform.timePosition - time) > 0.001);
+    bool changed = (transform.layer != layer || transform.startFrame != startFrame || transform.durationFrames != durationFrames || std::abs(transform.timePosition - timePosition) > 0.001);
 
     if (changed) {
+        transform.clipId = clipId;
         transform.layer = layer;
-        transform.timePosition = time;
+        transform.startFrame = startFrame;
+        transform.durationFrames = durationFrames;
+        transform.timePosition = timePosition;
 
         auto &render = editState.renderStates[clipId];
         render.needsUpdate = true;
@@ -71,6 +74,20 @@ void ECS::updateAudioClipState(int clipId, int startFrame, int durationFrames, f
     // 音声パラメータは頻繁に変わる可能性があるためダーティフラグ処理
     m_dirtyForBuffer[(m_editIndex + 1) % 3].insert(clipId);
     m_dirtyForBuffer[(m_editIndex + 2) % 3].insert(clipId);
+}
+
+void ECS::removeClip(int clipId) {
+    auto &editState = m_buffers[m_editIndex];
+    editState.transforms.erase(clipId);
+    editState.metadataStates.erase(clipId);
+    editState.selections.erase(clipId);
+    editState.effectStacks.erase(clipId);
+    editState.audioStacks.erase(clipId);
+    editState.audioStates.erase(clipId);
+    editState.renderStates.erase(clipId);
+    editState.renderGraphDirty = true;
+    m_fullSyncRequired[(m_editIndex + 1) % 3] = true;
+    m_fullSyncRequired[(m_editIndex + 2) % 3] = true;
 }
 
 void ECS::updateMetadata(int clipId, const QString &name, const QString &source, const QString &type, const QString &color) {

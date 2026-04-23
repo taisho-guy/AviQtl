@@ -166,8 +166,9 @@ class ECS {
     static ECS &instance();
 
     void syncClipIds(const QSet<int> &aliveIds);
-    void updateClipState(int clipId, int layer, double time);
+    void updateClipState(int clipId, int layer, int startFrame, int durationFrames, double timePosition = 0.0);
     void updateAudioClipState(int clipId, int startFrame, int durationFrames, float volume, float pan, bool mute);
+    void removeClip(int clipId);
     void updateMetadata(int clipId, const QString &name, const QString &source, const QString &type, const QString &color);
     void updateEffectStack(int clipId, const QVariantList &effects);
 
