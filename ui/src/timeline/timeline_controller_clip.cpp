@@ -727,17 +727,17 @@ void TimelineController::splitSelectedClips(int frame) {
 
 auto TimelineController::evaluateClipParams(int clipId, int relFrame) const -> QVariantMap {
     auto &ecs = ::Rina::Engine::Timeline::ECS::instance();
-    auto &state = ecs.editState();
-    if (!state.effectStacks.contains(clipId))
+    const auto *state = ecs.getSnapshot();
+    if (!state || !state->effectStacks.contains(clipId))
         return QVariantMap{};
 
     int durationFrames = 0;
-    if (const auto *tr = state.transforms.find(clipId))
+    if (const auto *tr = state->transforms.find(clipId))
         durationFrames = tr->durationFrames;
 
     const double fps = (m_project && m_project->fps() > 0.0) ? m_project->fps() : 60.0;
 
-    return ::Rina::Engine::Timeline::ClipEffectSystem::evaluateParamsCached(state, clipId, relFrame, durationFrames, fps);
+    return ::Rina::Engine::Timeline::ClipEffectSystem::evaluateParamsCached(*state, ecs.interpCache(), clipId, relFrame, durationFrames, fps);
 }
 void TimelineController::copyClip(int clipId) { m_timeline->copyClip(clipId); }
 

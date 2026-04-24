@@ -52,6 +52,9 @@ Node {
     readonly property bool hasTransform: transformLoader.status === Loader.Ready && transformLoader.item
     // transformModelの変更検知用
     property int _tmRev: 0
+    // ECS 直接評価キャッシュ（relFrame / _tmRev 変化時に更新）
+    property var _ecsParamCache: ({
+    })
     // 合成モードの計算 (Transform.qmlを変更できないためここで処理)
     readonly property int blendMode: {
         var m = evalString("transform", "blendMode", qsTr("通常"));
@@ -100,22 +103,26 @@ Node {
 
     function evalParam(effectId, paramName, fallback) {
         var _ = base._tmRev; // リアクティブ依存
-        if (base.rawEffectModels) {
-            for (var i = 0; i < base.rawEffectModels.length; i++) {
-                if (base.rawEffectModels[i].id === effectId) {
-                    if (base.rawEffectModels[i].evaluatedParam) {
-                        var v = base.rawEffectModels[i].evaluatedParam(paramName, base.relFrame, base.projectFps);
-                        if (v !== undefined && v !== null)
-                            return v;
+        // ECS キャッシュから取得（優先）
+        var effMap = base._ecsParamCache[effectId];
+        if (effMap !== undefined && effMap[paramName] !== undefined)
+            return effMap[paramName];
 
-                    }
-                    if (base.rawEffectModels[i].params && base.rawEffectModels[i].params[paramName] !== undefined)
-                        return base.rawEffectModels[i].params[paramName];
+        // フォールバック: ECS 未同期の瞬間は rawEffectModels の params を参照
+        for (var i = 0; i < base.rawEffectModels.length; i++) {
+            if (base.rawEffectModels[i].id === effectId && base.rawEffectModels[i].params && base.rawEffectModels[i].params[paramName] !== undefined)
+                return base.rawEffectModels[i].params[paramName];
 
-                }
-            }
         }
         return fallback;
+    }
+
+    // ECS キャッシュを更新する（relFrame・_tmRev・clipId 変化時に呼ぶ）
+    function _refreshEcsCache() {
+        if (clipId < 0 || !Workspace.currentTimeline)
+            return ;
+
+        _ecsParamCache = Workspace.currentTimeline.evaluateClipParams(clipId, relFrame);
     }
 
     function evalString(effectId, paramName, fallback) {
@@ -153,9 +160,10 @@ Node {
     }
 
     onClipIdChanged: {
-        if (clipId >= 0 && Workspace.currentTimeline)
+        if (clipId >= 0 && Workspace.currentTimeline) {
             rawEffectModels = Workspace.currentTimeline.getClipEffectsModel(clipId);
-
+            Qt.callLater(_refreshEcsCache);
+        }
     }
     // NodeのプロパティをtransformModelにバインド
     position: hasTransform ? transformLoader.item.outputPosition : Qt.vector3d(0, 0, 0)
@@ -207,6 +215,7 @@ Node {
         if (hasTransform)
             transformLoader.item.frame = relFrame;
 
+        Qt.callLater(_refreshEcsCache);
     }
 
     Instantiator {
@@ -270,9 +279,10 @@ Node {
         // onParamsChanged が発火しない。_tmRev を increment して evalParam の依存グラフを
         // invalidate し、ObjectRenderer が再評価されてプレビューが更新される。
         function onEffectParamChanged(changedClipId, effectIndex, paramName, value) {
-            if (changedClipId === clipId)
+            if (changedClipId === clipId) {
+                Qt.callLater(base._refreshEcsCache);
                 base._tmRev++;
-
+            }
         }
 
         target: Workspace.currentTimeline
@@ -286,6 +296,7 @@ Node {
         onOriginalSourceChanged: console.log("[BASE] ObjectRenderer.originalSource changed=" + originalSource + " w=" + (originalSource ? originalSource.width : -1) + " h=" + (originalSource ? originalSource.height : -1))
         effectModels: base.filterModels
         relFrame: base.relFrame
+        clipEvalParams: base._ecsParamCache
     }
 
     sourceItem: Item {

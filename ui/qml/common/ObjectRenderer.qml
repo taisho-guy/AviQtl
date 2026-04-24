@@ -43,6 +43,7 @@ Item {
     readonly property real contentX: totalExpansion.left
     readonly property real contentY: totalExpansion.top
 
+    onClipEvalParamsChanged: _paramRev++
     // 拡張済みキャンバスサイズ（エフェクト込み）
     width: contentWidth + totalExpansion.left + totalExpansion.right
     height: contentHeight + totalExpansion.top + totalExpansion.bottom

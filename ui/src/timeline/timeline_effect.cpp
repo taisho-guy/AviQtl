@@ -317,12 +317,13 @@ void TimelineService::removeKeyframeInternal(int clipId, int effectIndex, // NOL
 }
 
 QVariant TimelineService::evaluateEffectParam(int clipId, int effectIndex, const QString &paramName, int relFrame) const {
-    auto &state = Rina::Engine::Timeline::ECS::instance().editState();
-    if (!state.effectStacks.contains(clipId))
+    auto &ecs = Rina::Engine::Timeline::ECS::instance();
+    const auto *state = ecs.getSnapshot();
+    if (!state || !state->effectStacks.contains(clipId))
         return {};
 
     int durationFrames = 0;
-    if (const auto *tr = state.transforms.find(clipId))
+    if (const auto *tr = state->transforms.find(clipId))
         durationFrames = tr->durationFrames;
 
     double fps = 60.0;
@@ -330,7 +331,7 @@ QVariant TimelineService::evaluateEffectParam(int clipId, int effectIndex, const
     if (sc && sc->fps > 0.0)
         fps = sc->fps;
 
-    return Rina::Engine::Timeline::ClipEffectSystem::evaluateParamCached(state, clipId, effectIndex, paramName, relFrame, durationFrames, fps);
+    return Rina::Engine::Timeline::ClipEffectSystem::evaluateParamCached(*state, ecs.interpCache(), clipId, effectIndex, paramName, relFrame, durationFrames, fps);
 }
 
 } // namespace Rina::UI

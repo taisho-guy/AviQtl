@@ -86,6 +86,7 @@ void ECS::removeClip(int clipId) {
     editState.audioStates.erase(clipId);
     editState.renderStates.erase(clipId);
     editState.renderGraphDirty = true;
+    m_interpCache.remove(clipId);
     m_fullSyncRequired[(m_editIndex + 1) % 3] = true;
     m_fullSyncRequired[(m_editIndex + 2) % 3] = true;
 }
@@ -182,22 +183,9 @@ auto ECS::isRenderGraphDirty() const -> bool { return m_buffers[m_editIndex].ren
 
 void ECS::markRenderGraphClean() { m_buffers[m_editIndex].renderGraphDirty = false; }
 
-void ECS::invalidateEffectCache(int clipId, int effectIndex, const QString &paramName) {
-    auto &state = m_buffers[m_editIndex];
-    auto *cache = state.effectCaches.find(clipId);
-    if (!cache || effectIndex < 0 || effectIndex >= cache->perEffect.size())
-        return;
-    cache->perEffect[effectIndex].resolvedTracks.remove(paramName);
-}
+void ECS::invalidateEffectCache(int clipId, int effectIndex, const QString &paramName) { m_interpCache.invalidateParam(clipId, effectIndex, paramName); }
 
-void ECS::invalidateAllEffectCaches(int clipId) {
-    auto &state = m_buffers[m_editIndex];
-    auto *cache = state.effectCaches.find(clipId);
-    if (!cache)
-        return;
-    for (auto &pc : cache->perEffect)
-        pc.resolvedTracks.clear();
-}
+void ECS::invalidateAllEffectCaches(int clipId) { m_interpCache.invalidateAll(clipId); }
 
 } // namespace Rina::Engine::Timeline
 

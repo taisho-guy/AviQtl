@@ -54,6 +54,9 @@ void ClipEffectSystem::updateParam(ECSState &state, int clipId, int effectIndex,
     if (effectIndex < 0 || effectIndex >= stack->effects.size())
         return;
     stack->effects[effectIndex].params.insert(paramName, value);
+
+    // fallback 値が変わるため、該当パラメータのキャッシュを無効化
+    ECS::instance().interpCache().invalidateParam(clipId, effectIndex, paramName);
 }
 
 // ── 新規追加関数 ──────────────────────────────────────────────────────
@@ -67,7 +70,7 @@ void ClipEffectSystem::addEffect(ECSState &state, int clipId, const Rina::UI::Ef
         stack->effects.prepend(data);
     else
         stack->effects.append(data);
-    state.effectCaches[clipId].perEffect.resize(stack->effects.size());
+    ECS::instance().interpCache().resize(clipId, stack->effects.size());
 }
 
 void ClipEffectSystem::restoreEffect(ECSState &state, int clipId, const Rina::UI::EffectData &data) {
@@ -76,7 +79,7 @@ void ClipEffectSystem::restoreEffect(ECSState &state, int clipId, const Rina::UI
     if (!stack)
         return;
     stack->effects.append(data);
-    state.effectCaches[clipId].perEffect.resize(stack->effects.size());
+    ECS::instance().interpCache().resize(clipId, stack->effects.size());
 }
 
 bool ClipEffectSystem::removeEffect(ECSState &state, int clipId, int effectIndex, Rina::UI::EffectData *outRemoved) {
@@ -98,9 +101,7 @@ bool ClipEffectSystem::removeEffect(ECSState &state, int clipId, int effectIndex
         *outRemoved = stack->effects.at(idx);
 
     stack->effects.removeAt(idx);
-    if (auto *cache = state.effectCaches.find(clipId))
-        if (idx < cache->perEffect.size())
-            cache->perEffect.removeAt(idx);
+    ECS::instance().interpCache().removeAt(clipId, idx);
     return true;
 }
 
@@ -122,7 +123,7 @@ bool ClipEffectSystem::removeMultipleEffects(ECSState &state, int clipId, const 
         }
     }
     if (anyRemoved)
-        state.effectCaches[clipId].perEffect.resize(state.effectStacks[clipId].effects.size());
+        ECS::instance().interpCache().resize(clipId, state.effectStacks[clipId].effects.size());
     return anyRemoved;
 }
 
@@ -132,7 +133,7 @@ void ClipEffectSystem::restoreMultipleEffects(ECSState &state, int clipId, const
         return;
     for (const auto &d : ascData)
         stack->effects.append(d);
-    state.effectCaches[clipId].perEffect.resize(stack->effects.size());
+    ECS::instance().interpCache().resize(clipId, stack->effects.size());
 }
 
 void ClipEffectSystem::setEffectEnabled(ECSState &state, int clipId, int effectIndex, bool enabled) {
@@ -152,9 +153,7 @@ bool ClipEffectSystem::reorderEffects(ECSState &state, int clipId, int oldIndex,
     if (oldIndex < 0 || oldIndex >= n || newIndex < 0 || newIndex >= n)
         return false;
     stack->effects.move(oldIndex, newIndex);
-    if (auto *cache = state.effectCaches.find(clipId))
-        if (cache->perEffect.size() == stack->effects.size())
-            cache->perEffect.move(oldIndex, newIndex);
+    ECS::instance().interpCache().move(clipId, oldIndex, newIndex);
     return true;
 }
 
@@ -169,7 +168,7 @@ bool ClipEffectSystem::applyPermutation(ECSState &state, int clipId, const QList
     for (int idx : perm)
         reordered.append(stack->effects.at(idx));
     stack->effects = std::move(reordered);
-    state.effectCaches[clipId].perEffect.assign(stack->effects.size(), EffectParamCache{});
+    ECS::instance().interpCache().resetAll(clipId, stack->effects.size());
     return true;
 }
 
@@ -179,7 +178,7 @@ void ClipEffectSystem::pasteEffect(ECSState &state, int clipId, int targetIndex,
         return;
     const int idx = std::clamp(targetIndex, 0, static_cast<int>(stack->effects.size()));
     stack->effects.insert(idx, data);
-    state.effectCaches[clipId].perEffect.resize(stack->effects.size());
+    ECS::instance().interpCache().resize(clipId, stack->effects.size());
 }
 
 void ClipEffectSystem::setKeyframe(ECSState &state, int clipId, int effectIndex, const QString &paramName, int frame, const QVariant &value, const QVariantMap &options) {
@@ -231,10 +230,7 @@ void ClipEffectSystem::setKeyframe(ECSState &state, int clipId, int effectIndex,
     eff.keyframeTracks[paramName] = track;
 
     // キャッシュ無効化：このパラメータのフラットポイント列が変わった
-    if (auto *cache = state.effectCaches.find(clipId)) {
-        if (effectIndex < cache->perEffect.size())
-            cache->perEffect[effectIndex].resolvedTracks.remove(paramName);
-    }
+    ECS::instance().interpCache().invalidateParam(clipId, effectIndex, paramName);
 }
 
 void ClipEffectSystem::removeKeyframe(ECSState &state, int clipId, int effectIndex, const QString &paramName, int frame) {
@@ -263,10 +259,7 @@ void ClipEffectSystem::removeKeyframe(ECSState &state, int clipId, int effectInd
     eff.keyframeTracks[paramName] = track;
 
     // キャッシュ無効化
-    if (auto *cache = state.effectCaches.find(clipId)) {
-        if (effectIndex < cache->perEffect.size())
-            cache->perEffect[effectIndex].resolvedTracks.remove(paramName);
-    }
+    ECS::instance().interpCache().invalidateParam(clipId, effectIndex, paramName);
 }
 
 std::pair<QVariantMap, QVariantMap> ClipEffectSystem::splitKeyframeTracks(const QVariantMap &tracks, const QVariantMap &params, int firstHalfDuration, int originalDuration) {
@@ -339,15 +332,12 @@ void ClipEffectSystem::setKeyframeTracksAt(ECSState &state, int clipId, int effe
         eff.keyframeTracks[key] = t;
     }
     // キャッシュ全無効化（tracks が丸ごと差し替わった）
-    if (auto *cache = state.effectCaches.find(clipId)) {
-        if (effectIndex < cache->perEffect.size())
-            cache->perEffect[effectIndex].resolvedTracks.clear();
-    }
+    ECS::instance().interpCache().invalidateAll(clipId);
 }
 
 // ── キャッシュあり評価 ────────────────────────────────────────────────────
 
-QVariant ClipEffectSystem::evaluateParamCached(ECSState &state, int clipId, int effectIndex, const QString &paramName, int relFrame, int durationFrames, double fps) {
+QVariant ClipEffectSystem::evaluateParamCached(const ECSState &state, InterpolationCache &cache, int clipId, int effectIndex, const QString &paramName, int relFrame, int durationFrames, double fps) {
     const auto *stack = state.effectStacks.find(clipId);
     if (!stack || effectIndex < 0 || effectIndex >= stack->effects.size())
         return {};
@@ -369,31 +359,27 @@ QVariant ClipEffectSystem::evaluateParamCached(ECSState &state, int clipId, int 
         return fallback;
 
     // キャッシュコンポーネントを取得（なければ新規作成）
-    auto &cacheComp = state.effectCaches[clipId];
-    if (cacheComp.perEffect.size() != stack->effects.size())
-        cacheComp.perEffect.resize(stack->effects.size());
-
-    auto &cache = cacheComp.perEffect[effectIndex];
+    auto &entry = cache.getOrCreate(clipId, effectIndex, stack->effects.size());
     // durationFrames が変化したらキャッシュ全体を無効化
-    if (cache.lastDuration != durationFrames) {
-        cache.resolvedTracks.clear();
-        cache.lastDuration = durationFrames;
+    if (entry.lastDuration != durationFrames) {
+        entry.resolvedTracks.clear();
+        entry.lastDuration = durationFrames;
     }
 
-    if (!cache.resolvedTracks.contains(paramName)) {
+    if (!entry.resolvedTracks.contains(paramName)) {
         const QVariant raw = eff.keyframeTracks.value(paramName);
         if (Interp::isStructuredTrack(raw)) {
             const auto normalized = Interp::normalizeTrackForDuration(raw, fallback, durationFrames);
-            cache.resolvedTracks.insert(paramName, Interp::flattenStructuredTrack(normalized));
+            entry.resolvedTracks.insert(paramName, Interp::flattenStructuredTrack(normalized));
         } else {
-            cache.resolvedTracks.insert(paramName, Interp::sortPoints(raw.toList()));
+            entry.resolvedTracks.insert(paramName, Interp::sortPoints(raw.toList()));
         }
     }
 
-    return Interp::evaluateTrack(cache.resolvedTracks.value(paramName), relFrame, fallback);
+    return Interp::evaluateTrack(entry.resolvedTracks.value(paramName), relFrame, fallback);
 }
 
-QVariantMap ClipEffectSystem::evaluateParamsCached(ECSState &state, int clipId, int relFrame, int durationFrames, double fps) {
+QVariantMap ClipEffectSystem::evaluateParamsCached(const ECSState &state, InterpolationCache &cache, int clipId, int relFrame, int durationFrames, double fps) {
     QVariantMap out;
     const auto *stack = state.effectStacks.find(clipId);
     if (!stack)
@@ -404,7 +390,7 @@ QVariantMap ClipEffectSystem::evaluateParamsCached(ECSState &state, int clipId, 
             continue;
         QVariantMap evaluated;
         for (auto it = eff.params.cbegin(); it != eff.params.cend(); ++it) {
-            evaluated.insert(it.key(), evaluateParamCached(state, clipId, ei, it.key(), relFrame, durationFrames, fps));
+            evaluated.insert(it.key(), evaluateParamCached(state, cache, clipId, ei, it.key(), relFrame, durationFrames, fps));
         }
         out.insert(eff.id, evaluated);
     }

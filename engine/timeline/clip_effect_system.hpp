@@ -20,10 +20,10 @@ class ClipEffectSystem {
     static QVariant evaluateParam(const DenseComponentMap<EffectStackComponent> &effectStacks, int clipId, int effectIndex, const QString &paramName, int relFrame, int durationFrames, double fps = 60.0);
 
     // キャッシュあり版（レンダリングループ・UI リアルタイム評価用）
-    // effectCaches は ECSState::effectCaches を渡す（mutable）
-    static QVariantMap evaluateParamsCached(ECSState &state, int clipId, int relFrame, int durationFrames, double fps = 60.0);
+    // state は読み取り専用。キャッシュは ECS::interpCache()（バッファ外）を渡す。
+    static QVariantMap evaluateParamsCached(const ECSState &state, InterpolationCache &cache, int clipId, int relFrame, int durationFrames, double fps = 60.0);
 
-    static QVariant evaluateParamCached(ECSState &state, int clipId, int effectIndex, const QString &paramName, int relFrame, int durationFrames, double fps = 60.0);
+    static QVariant evaluateParamCached(const ECSState &state, InterpolationCache &cache, int clipId, int effectIndex, const QString &paramName, int relFrame, int durationFrames, double fps = 60.0);
 
     static void addEffect(ECSState &state, int clipId, const Rina::UI::EffectData &data);
     static void restoreEffect(ECSState &state, int clipId, const Rina::UI::EffectData &data);

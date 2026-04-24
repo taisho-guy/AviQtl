@@ -145,8 +145,8 @@ struct EffectStackComponent {
     QList<Rina::UI::EffectData> effects;
 };
 
-// キーフレームトラックの解決済みフラットポイント列キャッシュ（エフェクト 1 つ分）
-struct EffectParamCache {
+// エフェクト 1 つ分の補間キャッシュ（paramName → フラットポイント列）
+struct InterpEffectCache {
     // paramName → flattenStructuredTrack() の結果（ソート済みポイント列）
     QHash<QString, QVariantList> resolvedTracks;
     // このキャッシュを構築した時の durationFrames
@@ -154,10 +154,96 @@ struct EffectParamCache {
     int lastDuration = -1;
 };
 
-// クリップ 1 つ分の全エフェクトキャッシュ（EffectStackComponent::effects と 1:1 対応）
-struct EffectCacheComponent {
+// clipId 1 つ分の補間キャッシュ（EffectStackComponent::effects と 1:1 対応）
+struct InterpolationCacheComponent {
     int clipId = -1;
-    QList<EffectParamCache> perEffect;
+    QList<InterpEffectCache> perEffect;
+};
+
+// ── トリプルバッファ外のキャッシュストア ──────────────────────────────────
+// ECSState には含まれず commit() のコピー対象にならない。
+// ECS シングルトンが直接所有する。
+class InterpolationCache {
+  public:
+    // clipId × effectIndex のキャッシュを取得（なければ nullptr）
+    InterpEffectCache *findEffect(int clipId, int effectIndex) noexcept {
+        auto it = m_store.find(clipId);
+        if (it == m_store.end())
+            return nullptr;
+        if (effectIndex < 0 || effectIndex >= it->perEffect.size())
+            return nullptr;
+        return &it->perEffect[effectIndex];
+    }
+
+    // clipId × effectIndex のキャッシュを取得（なければ生成）
+    // effectsCount: EffectStackComponent::effects.size() を渡す
+    InterpEffectCache &getOrCreate(int clipId, int effectIndex, int effectsCount) {
+        auto &comp = m_store[clipId];
+        comp.clipId = clipId;
+        if (comp.perEffect.size() != effectsCount)
+            comp.perEffect.resize(effectsCount);
+        return comp.perEffect[effectIndex];
+    }
+
+    // 単一パラメータを無効化（setKeyframe / removeKeyframe 後）
+    void invalidateParam(int clipId, int effectIndex, const QString &paramName) noexcept {
+        auto it = m_store.find(clipId);
+        if (it == m_store.end())
+            return;
+        if (effectIndex < 0 || effectIndex >= it->perEffect.size())
+            return;
+        it->perEffect[effectIndex].resolvedTracks.remove(paramName);
+    }
+
+    // クリップの全エフェクトキャッシュを無効化（エフェクト追加・削除・並び替え後）
+    void invalidateAll(int clipId) noexcept {
+        auto it = m_store.find(clipId);
+        if (it == m_store.end())
+            return;
+        for (auto &e : it->perEffect)
+            e.resolvedTracks.clear();
+    }
+
+    // クリップ削除時にエントリ自体を除去
+    void remove(int clipId) { m_store.remove(clipId); }
+
+    // effects サイズ変化に追従（addEffect / restoreEffect 等）
+    void resize(int clipId, int newSize) {
+        m_store[clipId].clipId = clipId;
+        m_store[clipId].perEffect.resize(newSize);
+    }
+
+    // 特定インデックスのエントリを削除（removeEffect 後）
+    void removeAt(int clipId, int effectIndex) {
+        auto it = m_store.find(clipId);
+        if (it == m_store.end())
+            return;
+        if (effectIndex < 0 || effectIndex >= it->perEffect.size())
+            return;
+        it->perEffect.removeAt(effectIndex);
+    }
+
+    // エントリを移動（reorderEffects 後）
+    void move(int clipId, int oldIndex, int newIndex) {
+        auto it = m_store.find(clipId);
+        if (it == m_store.end())
+            return;
+        if (oldIndex < 0 || oldIndex >= it->perEffect.size())
+            return;
+        if (newIndex < 0 || newIndex >= it->perEffect.size())
+            return;
+        it->perEffect.move(oldIndex, newIndex);
+    }
+
+    // 全エントリをリセット（applyPermutation 後の安全クリア）
+    void resetAll(int clipId, int effectsCount) {
+        auto &comp = m_store[clipId];
+        comp.clipId = clipId;
+        comp.perEffect.assign(effectsCount, InterpEffectCache{});
+    }
+
+  private:
+    QHash<int, InterpolationCacheComponent> m_store;
 };
 
 struct AudioStackComponent {
@@ -175,9 +261,8 @@ struct ECSState {
     DenseComponentMap<SelectionComponent> selections;
     DenseComponentMap<EffectStackComponent> effectStacks;
     DenseComponentMap<AudioStackComponent> audioStacks;
-    // SoA 分離キャッシュ：effectStacks と同じ clipId をキーとして管理する
-    // Undo スナップショットには含まれない（ECS 内部で再構築可能）
-    DenseComponentMap<EffectCacheComponent> effectCaches;
+    // 補間キャッシュは ECSState に含めない。
+    // ECS::interpCache() （トリプルバッファ外）を使うこと。
 };
 
 class ECS {
@@ -198,6 +283,10 @@ class ECS {
         m_dirtyForBuffer[(m_editIndex + 1) % 3].insert(clipId);
         m_dirtyForBuffer[(m_editIndex + 2) % 3].insert(clipId);
     }
+
+    // 補間キャッシュアクセサ（トリプルバッファ外・コピー非対象）
+    InterpolationCache &interpCache() noexcept { return m_interpCache; }
+    const InterpolationCache &interpCache() const noexcept { return m_interpCache; }
 
     // 特定パラメータのキャッシュを無効化する（setKeyframe / removeKeyframe から呼ぶ）
     void invalidateEffectCache(int clipId, int effectIndex, const QString &paramName);
@@ -227,6 +316,9 @@ class ECS {
     std::array<QSet<int>, 3> m_dirtyForBuffer;
     // 構造変更（追加・削除）があったため、フルコピーが必要かどうか
     std::array<bool, 3> m_fullSyncRequired{};
+
+    // トリプルバッファ外の補間キャッシュ（commit() でコピーされない）
+    InterpolationCache m_interpCache;
 };
 
 } // namespace Rina::Engine::Timeline
