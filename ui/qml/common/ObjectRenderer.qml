@@ -108,7 +108,10 @@ Item {
                     item.source = inputSource;
 
                 if ("params" in item)
-                    item.params = modelData.params;
+                    item.params = Qt.binding(function() {
+                    var ep = renderer.clipEvalParams[modelData.id];
+                    return ep !== undefined ? ep : modelData.params;
+                });
 
                 if ("effectModel" in item)
                     item.effectModel = modelData;
@@ -147,16 +150,6 @@ Item {
                 }
 
                 target: renderer
-            }
-
-            Connections {
-                function onParamsChanged() {
-                    if (effectLoader.status === Loader.Ready && effectLoader.item && "params" in effectLoader.item)
-                        effectLoader.item.params = modelData.params;
-
-                }
-
-                target: modelData
             }
 
         }
