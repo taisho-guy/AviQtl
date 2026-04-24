@@ -213,9 +213,10 @@ QVariantList TimelineController::getClipEffectsModel(int clipId) const {
     if (!fx)
         return list;
 
+    // SettingDialog 専用: evaluatedParam / keyframeTracks / setKeyframe 等
+    // EffectModel* の全メソッドが必要な場合のみ使用する。
+    // レンダリングパスには getClipEffectsMeta() を使うこと。
     for (const auto &data : fx->effects) {
-        // [DEBUG LOG #3] kind / qmlSource がレンダラーに届いているか確認
-        qDebug() << "[getClipEffectsModel] id=" << data.id << " kind=" << data.kind << " qmlSource=" << data.qmlSource << " enabled=" << data.enabled << " paramKeys=" << data.params.keys();
         // parent=nullptr + JavaScriptOwnership: QML 参照消失時に GC が delete する
         auto *model = Rina::UI::effectModelFromData(data);
         list.append(QVariant::fromValue(model));

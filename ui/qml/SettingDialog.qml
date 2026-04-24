@@ -120,14 +120,26 @@ Common.RinaWindow {
         // 保存したオブジェクト参照から新インデックスを復元
         var newModel = (Workspace.currentTimeline && Workspace.currentTimeline.isAudioClip(id)) ? audioEffectsModel : effectsModel;
         if (newModel && oldSelectedObjects.length > 0) {
+            // getClipEffectsModel は毎回 new するためポインタ比較が常に失敗する。
+            // id プロパティで照合して選択状態を復元する。
+            var oldIds = oldSelectedObjects.map(function(o) {
+                return o ? o.id : null;
+            });
+            var oldCurrentId = oldCurrentObject ? oldCurrentObject.id : null;
             var newSel = [];
             for (var j = 0; j < newModel.length; j++) {
-                if (oldSelectedObjects.indexOf(newModel[j]) !== -1)
+                if (oldIds.indexOf(newModel[j].id) !== -1)
                     newSel.push(j);
 
             }
             sidebarList.selectedIndices = newSel;
-            var newCurrentIdx = newModel.indexOf(oldCurrentObject);
+            var newCurrentIdx = -1;
+            for (var k = 0; k < newModel.length; k++) {
+                if (newModel[k].id === oldCurrentId) {
+                    newCurrentIdx = k;
+                    break;
+                }
+            }
             if (newCurrentIdx !== -1)
                 sidebarList.currentIndex = newCurrentIdx;
             else if (newSel.length > 0)
