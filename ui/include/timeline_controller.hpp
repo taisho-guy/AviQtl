@@ -113,11 +113,11 @@ class TimelineController : public QObject {
     Q_INVOKABLE void moveClipWithCollisionCheck(int clipId, int layer, int startFrame);
 
     Q_INVOKABLE QVariantMap evaluateClipParams(int clipId, int relFrame) const;
-    // effectId 名指し版（QML から毎フレーム呼び出し可能）
-    Q_INVOKABLE QVariant evaluateEffectParam(int clipId, const QString &effectId, const QString &paramName, int relFrame) const;
 
     // エフェクト操作
     Q_INVOKABLE QVariantList getClipEffectsModel(int clipId) const;
+    // 軽量 meta 版: id/name/kind/qmlSource/enabled のみ（params/keyframeTracks を含まない）
+    Q_INVOKABLE QVariantList getClipEffectsMeta(int clipId) const;
     Q_INVOKABLE void updateClipEffectParam(int clipId, int effectIndex, const QString &paramName, const QVariant &value);
 
     // エフェクト・オブジェクトの利用可能リスト取得

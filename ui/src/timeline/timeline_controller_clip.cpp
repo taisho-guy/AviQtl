@@ -223,6 +223,27 @@ QVariantList TimelineController::getClipEffectsModel(int clipId) const {
     return list;
 }
 
+auto TimelineController::getClipEffectsMeta(int clipId) const -> QVariantList {
+    QVariantList list;
+    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    if (!snap)
+        return list;
+    const auto *fx = snap->effectStacks.find(clipId);
+    if (!fx)
+        return list;
+
+    for (const auto &data : fx->effects) {
+        QVariantMap meta;
+        meta[QStringLiteral("id")] = data.id;
+        meta[QStringLiteral("name")] = data.name;
+        meta[QStringLiteral("kind")] = data.kind;
+        meta[QStringLiteral("qmlSource")] = data.qmlSource;
+        meta[QStringLiteral("enabled")] = data.enabled;
+        list.append(meta);
+    }
+    return list;
+}
+
 void TimelineController::updateClipEffectParam(int clipId, int effectIndex, const QString &paramName, const QVariant &value) {
     qDebug() << "[TMM] updateClipEffectParam: clipId=" << clipId << "effectIndex=" << effectIndex << "paramName=" << paramName << "value=" << value;
     m_timeline->updateEffectParam(clipId, effectIndex, paramName, value);
@@ -738,35 +759,6 @@ auto TimelineController::evaluateClipParams(int clipId, int relFrame) const -> Q
     const double fps = (m_project && m_project->fps() > 0.0) ? m_project->fps() : 60.0;
 
     return ::Rina::Engine::Timeline::ClipEffectSystem::evaluateParamsCached(*state, ecs.interpCache(), clipId, relFrame, durationFrames, fps);
-}
-
-auto TimelineController::evaluateEffectParam(int clipId, const QString &effectId, const QString &paramName, int relFrame) const -> QVariant {
-    auto &ecs = ::Rina::Engine::Timeline::ECS::instance();
-    const auto *state = ecs.getSnapshot();
-    if (!state)
-        return {};
-    const auto *stack = state->effectStacks.find(clipId);
-    if (!stack)
-        return {};
-
-    // effectId → effectIndex の線形探索（エフェクト数は通常 < 10）
-    int effectIndex = -1;
-    for (int i = 0; i < stack->effects.size(); ++i) {
-        if (stack->effects[i].id == effectId) {
-            effectIndex = i;
-            break;
-        }
-    }
-    if (effectIndex == -1)
-        return {};
-
-    int durationFrames = 0;
-    if (const auto *tr = state->transforms.find(clipId))
-        durationFrames = tr->durationFrames;
-
-    const double fps = (m_project && m_project->fps() > 0.0) ? m_project->fps() : 60.0;
-
-    return ::Rina::Engine::Timeline::ClipEffectSystem::evaluateParamCached(*state, ecs.interpCache(), clipId, effectIndex, paramName, relFrame, durationFrames, fps);
 }
 void TimelineController::copyClip(int clipId) { m_timeline->copyClip(clipId); }
 

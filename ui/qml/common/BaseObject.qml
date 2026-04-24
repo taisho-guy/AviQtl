@@ -108,12 +108,6 @@ Node {
         if (effMap !== undefined && effMap[paramName] !== undefined)
             return effMap[paramName];
 
-        // フォールバック: ECS 未同期の瞬間は rawEffectModels の params を参照
-        for (var i = 0; i < base.rawEffectModels.length; i++) {
-            if (base.rawEffectModels[i].id === effectId && base.rawEffectModels[i].params && base.rawEffectModels[i].params[paramName] !== undefined)
-                return base.rawEffectModels[i].params[paramName];
-
-        }
         return fallback;
     }
 
@@ -161,7 +155,7 @@ Node {
 
     onClipIdChanged: {
         if (clipId >= 0 && Workspace.currentTimeline) {
-            rawEffectModels = Workspace.currentTimeline.getClipEffectsModel(clipId);
+            rawEffectModels = Workspace.currentTimeline.getClipEffectsMeta(clipId);
             Qt.callLater(_refreshEcsCache);
         }
     }
@@ -218,24 +212,6 @@ Node {
         Qt.callLater(_refreshEcsCache);
     }
 
-    Instantiator {
-        model: base.rawEffectModels
-
-        Connections {
-            function onParamsChanged() {
-                base._tmRev++;
-            }
-
-            function onKeyframeTracksChanged() {
-                base._tmRev++;
-            }
-
-            target: modelData
-            ignoreUnknownSignals: true
-        }
-
-    }
-
     // transformエフェクトのインスタンス化
     Loader {
         id: transformLoader
@@ -244,7 +220,6 @@ Node {
         // BaseEffectのプロパティを注入
         onLoaded: {
             item.source = null; // Transformはsourceを持たない
-            item.params = base.transformModel.params;
             item.effectModel = base.transformModel;
             item.frame = base.relFrame;
         }
@@ -266,12 +241,12 @@ Node {
     Connections {
         function onClipEffectsChanged(changedClipId) {
             if (changedClipId === clipId)
-                rawEffectModels = Workspace.currentTimeline.getClipEffectsModel(clipId);
+                rawEffectModels = Workspace.currentTimeline.getClipEffectsMeta(clipId);
 
         }
 
         function onClipsChanged() {
-            rawEffectModels = Workspace.currentTimeline.getClipEffectsModel(clipId);
+            rawEffectModels = Workspace.currentTimeline.getClipEffectsMeta(clipId);
         }
 
         // [BUG FIX #2] パラメーター変更 → プレビュー反映。

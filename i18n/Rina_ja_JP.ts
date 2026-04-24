@@ -1357,7 +1357,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="334"/>
+        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="355"/>
         <source>複数クリップリサイズ: %1</source>
         <translation type="unfinished"></translation>
     </message>
