@@ -145,6 +145,21 @@ struct EffectStackComponent {
     QList<Rina::UI::EffectData> effects;
 };
 
+// キーフレームトラックの解決済みフラットポイント列キャッシュ（エフェクト 1 つ分）
+struct EffectParamCache {
+    // paramName → flattenStructuredTrack() の結果（ソート済みポイント列）
+    QHash<QString, QVariantList> resolvedTracks;
+    // このキャッシュを構築した時の durationFrames
+    // durationFrames が変化したらキャッシュ全体を無効化する
+    int lastDuration = -1;
+};
+
+// クリップ 1 つ分の全エフェクトキャッシュ（EffectStackComponent::effects と 1:1 対応）
+struct EffectCacheComponent {
+    int clipId = -1;
+    QList<EffectParamCache> perEffect;
+};
+
 struct AudioStackComponent {
     int clipId = -1;
     QList<Rina::UI::AudioPluginState> audioPlugins;
@@ -160,6 +175,9 @@ struct ECSState {
     DenseComponentMap<SelectionComponent> selections;
     DenseComponentMap<EffectStackComponent> effectStacks;
     DenseComponentMap<AudioStackComponent> audioStacks;
+    // SoA 分離キャッシュ：effectStacks と同じ clipId をキーとして管理する
+    // Undo スナップショットには含まれない（ECS 内部で再構築可能）
+    DenseComponentMap<EffectCacheComponent> effectCaches;
 };
 
 class ECS {
@@ -180,6 +198,11 @@ class ECS {
         m_dirtyForBuffer[(m_editIndex + 1) % 3].insert(clipId);
         m_dirtyForBuffer[(m_editIndex + 2) % 3].insert(clipId);
     }
+
+    // 特定パラメータのキャッシュを無効化する（setKeyframe / removeKeyframe から呼ぶ）
+    void invalidateEffectCache(int clipId, int effectIndex, const QString &paramName);
+    // クリップのエフェクトキャッシュ全体を無効化する（エフェクト追加・削除・並び替え時）
+    void invalidateAllEffectCaches(int clipId);
 
     // スナップショットのポインタを返す。戻り値は呼び出し側スレッドで安全に利用できる。
     const ECSState *getSnapshot() const;

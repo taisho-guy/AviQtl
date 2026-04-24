@@ -207,6 +207,7 @@ target_include_directories(Rina PRIVATE
     core/include
     ui/include
     engine/timeline
+    scripting
     ${CARLA_INCLUDE_DIRS}
 )
 

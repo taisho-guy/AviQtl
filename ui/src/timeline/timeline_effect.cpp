@@ -3,6 +3,7 @@
 #include "commands.hpp"
 #include "effect_data.hpp"
 #include "effect_registry.hpp"
+#include "engine/timeline/ecs.hpp"
 #include "selection_service.hpp"
 #include "timeline_service.hpp"
 #include <QDebug>
@@ -313,6 +314,23 @@ void TimelineService::removeKeyframeInternal(int clipId, int effectIndex, // NOL
     ecs.commit();
     emit clipsChanged();
     emit clipEffectsChanged(clipId);
+}
+
+QVariant TimelineService::evaluateEffectParam(int clipId, int effectIndex, const QString &paramName, int relFrame) const {
+    auto &state = Rina::Engine::Timeline::ECS::instance().editState();
+    if (!state.effectStacks.contains(clipId))
+        return {};
+
+    int durationFrames = 0;
+    if (const auto *tr = state.transforms.find(clipId))
+        durationFrames = tr->durationFrames;
+
+    double fps = 60.0;
+    const SceneData *sc = currentScene();
+    if (sc && sc->fps > 0.0)
+        fps = sc->fps;
+
+    return Rina::Engine::Timeline::ClipEffectSystem::evaluateParamCached(state, clipId, effectIndex, paramName, relFrame, durationFrames, fps);
 }
 
 } // namespace Rina::UI

@@ -77,6 +77,9 @@ class TimelineService : public QObject {
     void setKeyframe(int clipId, int effectIndex, const QString &paramName, int frame, const QVariant &value, const QVariantMap &options);
     void removeKeyframe(int clipId, int effectIndex, const QString &paramName, int frame);
 
+    // キーフレーム補間済みパラメータ値を評価（QML の BaseObject から呼ぶ）
+    Q_INVOKABLE QVariant evaluateEffectParam(int clipId, int effectIndex, const QString &paramName, int relFrame) const;
+
     // クリップボード
     void copyClip(int clipId);
     void cutClip(int clipId);

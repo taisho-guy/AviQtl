@@ -182,6 +182,23 @@ auto ECS::isRenderGraphDirty() const -> bool { return m_buffers[m_editIndex].ren
 
 void ECS::markRenderGraphClean() { m_buffers[m_editIndex].renderGraphDirty = false; }
 
+void ECS::invalidateEffectCache(int clipId, int effectIndex, const QString &paramName) {
+    auto &state = m_buffers[m_editIndex];
+    auto *cache = state.effectCaches.find(clipId);
+    if (!cache || effectIndex < 0 || effectIndex >= cache->perEffect.size())
+        return;
+    cache->perEffect[effectIndex].resolvedTracks.remove(paramName);
+}
+
+void ECS::invalidateAllEffectCaches(int clipId) {
+    auto &state = m_buffers[m_editIndex];
+    auto *cache = state.effectCaches.find(clipId);
+    if (!cache)
+        return;
+    for (auto &pc : cache->perEffect)
+        pc.resolvedTracks.clear();
+}
+
 } // namespace Rina::Engine::Timeline
 
 extern "C" {

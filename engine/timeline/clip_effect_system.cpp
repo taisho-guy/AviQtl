@@ -1,110 +1,28 @@
 #include "clip_effect_system.hpp"
+#include "effect_interpolation.hpp"
+#include "lua_host.hpp"
 #include <QColor>
 #include <algorithm>
 #include <cmath>
 
 namespace {
 
-// ── キーフレームトラック操作ヘルパー（EffectModel の private static を純粋関数として移植）──
+// splitKeyframeTracks 境界値計算用
+using namespace Rina::Engine::Timeline::Interp;
 
-bool isStructuredTrack(const QVariant &raw) {
-    const QVariantMap m = raw.toMap();
-    return m.contains(QStringLiteral("start")) && m.contains(QStringLiteral("points"));
-}
+QVariantMap ensureStructuredTrackLocal(const QVariant &raw, const QVariant &fallback) { return normalizeTrackForDuration(raw, fallback, inferredDurationForTrack(raw)); }
 
-QVariantList sortPoints(QVariantList points) {
-    std::sort(points.begin(), points.end(), [](const QVariant &a, const QVariant &b) { return a.toMap().value(QStringLiteral("frame")).toInt() < b.toMap().value(QStringLiteral("frame")).toInt(); });
-    return points;
-}
+QVariantList flatPointsLocal(const QVariantMap &track) { return flattenStructuredTrack(track); }
 
-QVariantMap makePoint(int frame, const QVariant &value, const QString &interp = QStringLiteral("none")) {
-    QVariantMap p;
-    p[QStringLiteral("frame")] = frame;
-    p[QStringLiteral("value")] = value;
-    p[QStringLiteral("interp")] = interp;
-    return p;
-}
-
-int inferredDurationForTrack(const QVariant &raw) {
-    if (isStructuredTrack(raw)) {
-        const QVariantList points = raw.toMap().value(QStringLiteral("points")).toList();
-        int maxFrame = 0;
-        for (const auto &v : std::as_const(points))
-            maxFrame = std::max(maxFrame, v.toMap().value(QStringLiteral("frame")).toInt());
-        return std::max(1, maxFrame + 1);
-    }
-    const QVariantList list = raw.toList();
-    if (list.isEmpty())
-        return 1;
-    int maxFrame = 0;
-    for (const auto &v : std::as_const(list))
-        maxFrame = std::max(maxFrame, v.toMap().value(QStringLiteral("frame")).toInt());
-    return std::max(1, maxFrame + 1);
-}
-
-// レガシーリスト形式でのフレーム線形補間（normalizeTrackForDuration 内部で使用）
-QVariant evaluateTrackLinear(const QVariantList &track, int frame, const QVariant &fallback) {
-    if (track.isEmpty())
-        return fallback;
-    auto getFrame = [](const QVariant &v) { return v.toMap().value(QStringLiteral("frame")).toInt(); };
-    auto getValue = [](const QVariant &v) { return v.toMap().value(QStringLiteral("value")); };
-    if (frame <= getFrame(track.front()))
-        return getValue(track.front());
-    if (frame >= getFrame(track.back()))
-        return getValue(track.back());
-    for (int i = 0; i < track.size() - 1; ++i) {
-        const int f0 = getFrame(track[i]), f1 = getFrame(track[i + 1]);
-        if (frame < f0 || frame > f1)
-            continue;
-        const QVariant v0 = getValue(track[i]), v1 = getValue(track[i + 1]);
-        if (!v0.canConvert<double>() || !v1.canConvert<double>())
-            return v0;
-        const double t = (frame - f0) / double(f1 - f0);
-        return v0.toDouble() + (v1.toDouble() - v0.toDouble()) * t;
-    }
-    return getValue(track.back());
-}
-
-QVariantMap normalizeTrackForDuration(const QVariant &rawTrack, const QVariant &fallback, int durationFrames) {
-    if (isStructuredTrack(rawTrack)) {
-        QVariantMap raw = rawTrack.toMap();
-        QVariantMap start = raw.value(QStringLiteral("start")).toMap();
-        QVariantList points = raw.value(QStringLiteral("points")).toList(), nextPoints;
-        start[QStringLiteral("frame")] = 0;
-        if (!start.contains(QStringLiteral("value")))
-            start[QStringLiteral("value")] = fallback;
-
-        for (const auto &v : std::as_const(points)) {
-            const int f = v.toMap().value(QStringLiteral("frame")).toInt();
-            if (f > 0 && f <= durationFrames)
-                nextPoints.append(v);
-        }
-        QVariantMap out;
-        out[QStringLiteral("start")] = start;
-        out[QStringLiteral("points")] = sortPoints(nextPoints);
-        return out;
-    }
-    // レガシーリスト形式
-    QVariantList legacy = sortPoints(rawTrack.toList()), points;
-    QVariantMap start = makePoint(0, legacy.isEmpty() ? fallback : evaluateTrackLinear(legacy, 0, fallback), QStringLiteral("linear"));
-    for (const auto &v : std::as_const(legacy)) {
-        const int f = v.toMap().value(QStringLiteral("frame")).toInt();
-        if (f > 0 && f < durationFrames)
-            points.append(v);
-    }
-    QVariantMap out;
-    out[QStringLiteral("start")] = start;
-    out[QStringLiteral("points")] = sortPoints(points);
-    return out;
-}
+QVariant evalTrackLocal(const QVariantList &flat, int frame, const QVariant &fallback) { return evaluateTrack(flat, frame, fallback); }
 
 } // anonymous namespace
 
 namespace Rina::Engine::Timeline {
 
-// ── 既存関数（STEP 2 から継続）────────────────────────────────────────
+// ── 実装 ──────────────────────────────────────────────────────────
 
-QVariantMap ClipEffectSystem::evaluateParams(const DenseComponentMap<EffectStackComponent> &effectStacks, int clipId, int relFrame) {
+QVariantMap ClipEffectSystem::evaluateParams(const DenseComponentMap<EffectStackComponent> &effectStacks, int clipId, int relFrame, int durationFrames, double fps) {
     QVariantMap out;
     const auto *stack = effectStacks.find(clipId);
     if (!stack)
@@ -112,10 +30,21 @@ QVariantMap ClipEffectSystem::evaluateParams(const DenseComponentMap<EffectStack
     for (const auto &eff : stack->effects) {
         if (!eff.enabled)
             continue;
-        // relFrame を使ったキーフレーム補間は将来実装
-        out.insert(eff.id, eff.params);
+        QVariantMap evaluated;
+        for (auto it = eff.params.cbegin(); it != eff.params.cend(); ++it) {
+            evaluated.insert(it.key(), Interp::evaluateParam(eff.keyframeTracks, eff.params, it.key(), relFrame, durationFrames, fps));
+        }
+        out.insert(eff.id, evaluated);
     }
     return out;
+}
+
+QVariant ClipEffectSystem::evaluateParam(const DenseComponentMap<EffectStackComponent> &effectStacks, int clipId, int effectIndex, const QString &paramName, int relFrame, int durationFrames, double fps) {
+    const auto *stack = effectStacks.find(clipId);
+    if (!stack || effectIndex < 0 || effectIndex >= stack->effects.size())
+        return {};
+    const auto &eff = stack->effects[effectIndex];
+    return Interp::evaluateParam(eff.keyframeTracks, eff.params, paramName, relFrame, durationFrames, fps);
 }
 
 void ClipEffectSystem::updateParam(ECSState &state, int clipId, int effectIndex, const QString &paramName, const QVariant &value) {
@@ -138,6 +67,7 @@ void ClipEffectSystem::addEffect(ECSState &state, int clipId, const Rina::UI::Ef
         stack->effects.prepend(data);
     else
         stack->effects.append(data);
+    state.effectCaches[clipId].perEffect.resize(stack->effects.size());
 }
 
 void ClipEffectSystem::restoreEffect(ECSState &state, int clipId, const Rina::UI::EffectData &data) {
@@ -146,6 +76,7 @@ void ClipEffectSystem::restoreEffect(ECSState &state, int clipId, const Rina::UI
     if (!stack)
         return;
     stack->effects.append(data);
+    state.effectCaches[clipId].perEffect.resize(stack->effects.size());
 }
 
 bool ClipEffectSystem::removeEffect(ECSState &state, int clipId, int effectIndex, Rina::UI::EffectData *outRemoved) {
@@ -167,6 +98,9 @@ bool ClipEffectSystem::removeEffect(ECSState &state, int clipId, int effectIndex
         *outRemoved = stack->effects.at(idx);
 
     stack->effects.removeAt(idx);
+    if (auto *cache = state.effectCaches.find(clipId))
+        if (idx < cache->perEffect.size())
+            cache->perEffect.removeAt(idx);
     return true;
 }
 
@@ -187,6 +121,8 @@ bool ClipEffectSystem::removeMultipleEffects(ECSState &state, int clipId, const 
             anyRemoved = true;
         }
     }
+    if (anyRemoved)
+        state.effectCaches[clipId].perEffect.resize(state.effectStacks[clipId].effects.size());
     return anyRemoved;
 }
 
@@ -196,6 +132,7 @@ void ClipEffectSystem::restoreMultipleEffects(ECSState &state, int clipId, const
         return;
     for (const auto &d : ascData)
         stack->effects.append(d);
+    state.effectCaches[clipId].perEffect.resize(stack->effects.size());
 }
 
 void ClipEffectSystem::setEffectEnabled(ECSState &state, int clipId, int effectIndex, bool enabled) {
@@ -215,6 +152,9 @@ bool ClipEffectSystem::reorderEffects(ECSState &state, int clipId, int oldIndex,
     if (oldIndex < 0 || oldIndex >= n || newIndex < 0 || newIndex >= n)
         return false;
     stack->effects.move(oldIndex, newIndex);
+    if (auto *cache = state.effectCaches.find(clipId))
+        if (cache->perEffect.size() == stack->effects.size())
+            cache->perEffect.move(oldIndex, newIndex);
     return true;
 }
 
@@ -229,6 +169,7 @@ bool ClipEffectSystem::applyPermutation(ECSState &state, int clipId, const QList
     for (int idx : perm)
         reordered.append(stack->effects.at(idx));
     stack->effects = std::move(reordered);
+    state.effectCaches[clipId].perEffect.assign(stack->effects.size(), EffectParamCache{});
     return true;
 }
 
@@ -238,6 +179,7 @@ void ClipEffectSystem::pasteEffect(ECSState &state, int clipId, int targetIndex,
         return;
     const int idx = std::clamp(targetIndex, 0, static_cast<int>(stack->effects.size()));
     stack->effects.insert(idx, data);
+    state.effectCaches[clipId].perEffect.resize(stack->effects.size());
 }
 
 void ClipEffectSystem::setKeyframe(ECSState &state, int clipId, int effectIndex, const QString &paramName, int frame, const QVariant &value, const QVariantMap &options) {
@@ -250,7 +192,7 @@ void ClipEffectSystem::setKeyframe(ECSState &state, int clipId, int effectIndex,
     auto &eff = stack->effects[effectIndex];
     const QVariant fallback = eff.params.value(paramName);
     const QVariant rawTrack = eff.keyframeTracks.value(paramName);
-    QVariantMap track = normalizeTrackForDuration(rawTrack, fallback, inferredDurationForTrack(rawTrack));
+    QVariantMap track = Interp::normalizeTrackForDuration(rawTrack, fallback, Interp::inferredDurationForTrack(rawTrack));
 
     QVariantMap startPt = track.value(QStringLiteral("start")).toMap();
     QVariantList points = track.value(QStringLiteral("points")).toList();
@@ -285,8 +227,14 @@ void ClipEffectSystem::setKeyframe(ECSState &state, int clipId, int effectIndex,
     if (!updated)
         points.append(kf);
 
-    track[QStringLiteral("points")] = sortPoints(points);
+    track[QStringLiteral("points")] = Interp::sortPoints(points);
     eff.keyframeTracks[paramName] = track;
+
+    // キャッシュ無効化：このパラメータのフラットポイント列が変わった
+    if (auto *cache = state.effectCaches.find(clipId)) {
+        if (effectIndex < cache->perEffect.size())
+            cache->perEffect[effectIndex].resolvedTracks.remove(paramName);
+    }
 }
 
 void ClipEffectSystem::removeKeyframe(ECSState &state, int clipId, int effectIndex, const QString &paramName, int frame) {
@@ -299,7 +247,7 @@ void ClipEffectSystem::removeKeyframe(ECSState &state, int clipId, int effectInd
     auto &eff = stack->effects[effectIndex];
     const QVariant fallback = eff.params.value(paramName);
     const QVariant rawTrack = eff.keyframeTracks.value(paramName);
-    QVariantMap track = normalizeTrackForDuration(rawTrack, fallback, inferredDurationForTrack(rawTrack));
+    QVariantMap track = Interp::normalizeTrackForDuration(rawTrack, fallback, Interp::inferredDurationForTrack(rawTrack));
 
     const int startFrame = track.value(QStringLiteral("start")).toMap().value(QStringLiteral("frame")).toInt();
     // 開始点は削除不可
@@ -313,56 +261,13 @@ void ClipEffectSystem::removeKeyframe(ECSState &state, int clipId, int effectInd
 
     track[QStringLiteral("points")] = next;
     eff.keyframeTracks[paramName] = track;
-}
 
-namespace {
-
-bool isStructuredTrackLocal(const QVariant &v) { return v.toMap().contains(QStringLiteral("start")); }
-
-QVariantMap ensureStructuredTrackLocal(const QVariant &raw, const QVariant &fallback) {
-    if (isStructuredTrackLocal(raw))
-        return raw.toMap();
-    QVariantMap s;
-    s[QStringLiteral("frame")] = 0;
-    s[QStringLiteral("value")] = fallback;
-    s[QStringLiteral("interp")] = QStringLiteral("none");
-    QVariantMap t;
-    t[QStringLiteral("start")] = s;
-    t[QStringLiteral("points")] = QVariantList();
-    return t;
-}
-
-QVariantList flatPointsLocal(const QVariantMap &track) {
-    QVariantList r;
-    r.append(track.value(QStringLiteral("start")));
-    r.append(track.value(QStringLiteral("points")).toList());
-    return r;
-}
-
-QVariant evalTrackLocal(const QVariantList &flat, int frame, const QVariant &fallback) {
-    if (flat.isEmpty())
-        return fallback;
-    QVariantMap prev = flat.first().toMap();
-    for (int i = 1; i < flat.size(); ++i) {
-        const QVariantMap cur = flat.at(i).toMap();
-        const int cf = cur.value(QStringLiteral("frame")).toInt();
-        if (frame <= cf) {
-            const int pf = prev.value(QStringLiteral("frame")).toInt();
-            if (pf == cf)
-                return prev.value(QStringLiteral("value"));
-            const double t = static_cast<double>(frame - pf) / (cf - pf);
-            const QVariant pv = prev.value(QStringLiteral("value"));
-            const QVariant cv2 = cur.value(QStringLiteral("value"));
-            if (pv.typeId() == QMetaType::Double || pv.typeId() == QMetaType::Int || pv.typeId() == QMetaType::LongLong)
-                return pv.toDouble() + (cv2.toDouble() - pv.toDouble()) * t;
-            return pv;
-        }
-        prev = cur;
+    // キャッシュ無効化
+    if (auto *cache = state.effectCaches.find(clipId)) {
+        if (effectIndex < cache->perEffect.size())
+            cache->perEffect[effectIndex].resolvedTracks.remove(paramName);
     }
-    return prev.value(QStringLiteral("value"));
 }
-
-} // anonymous namespace
 
 std::pair<QVariantMap, QVariantMap> ClipEffectSystem::splitKeyframeTracks(const QVariantMap &tracks, const QVariantMap &params, int firstHalfDuration, int originalDuration) {
     QVariantMap firstHalfTracks, secondHalfTracks;
@@ -422,7 +327,7 @@ void ClipEffectSystem::setKeyframeTracksAt(ECSState &state, int clipId, int effe
     eff.keyframeTracks = tracks;
     for (auto it = eff.params.begin(); it != eff.params.end(); ++it) {
         const QString &key = it.key();
-        if (isStructuredTrackLocal(eff.keyframeTracks.value(key)))
+        if (Rina::Engine::Timeline::Interp::isStructuredTrack(eff.keyframeTracks.value(key)))
             continue;
         QVariantMap s;
         s[QStringLiteral("frame")] = 0;
@@ -433,7 +338,77 @@ void ClipEffectSystem::setKeyframeTracksAt(ECSState &state, int clipId, int effe
         t[QStringLiteral("points")] = QVariantList();
         eff.keyframeTracks[key] = t;
     }
-    (void)durationFrames;
+    // キャッシュ全無効化（tracks が丸ごと差し替わった）
+    if (auto *cache = state.effectCaches.find(clipId)) {
+        if (effectIndex < cache->perEffect.size())
+            cache->perEffect[effectIndex].resolvedTracks.clear();
+    }
+}
+
+// ── キャッシュあり評価 ────────────────────────────────────────────────────
+
+QVariant ClipEffectSystem::evaluateParamCached(ECSState &state, int clipId, int effectIndex, const QString &paramName, int relFrame, int durationFrames, double fps) {
+    const auto *stack = state.effectStacks.find(clipId);
+    if (!stack || effectIndex < 0 || effectIndex >= stack->effects.size())
+        return {};
+    const auto &eff = stack->effects[effectIndex];
+    if (!eff.enabled)
+        return eff.params.value(paramName);
+
+    const QVariant fallback = eff.params.value(paramName);
+
+    // エクスプレッション（Lua）は毎回評価
+    const QString strVal = fallback.toString();
+    if (strVal.startsWith(QStringLiteral("="))) {
+        std::string expr = strVal.mid(1).toStdString();
+        const double time = (fps > 0.0) ? relFrame / fps : 0.0;
+        return Rina::Scripting::LuaHost::instance().evaluate(expr, time, 0, fallback.toDouble());
+    }
+
+    if (!eff.keyframeTracks.contains(paramName))
+        return fallback;
+
+    // キャッシュコンポーネントを取得（なければ新規作成）
+    auto &cacheComp = state.effectCaches[clipId];
+    if (cacheComp.perEffect.size() != stack->effects.size())
+        cacheComp.perEffect.resize(stack->effects.size());
+
+    auto &cache = cacheComp.perEffect[effectIndex];
+    // durationFrames が変化したらキャッシュ全体を無効化
+    if (cache.lastDuration != durationFrames) {
+        cache.resolvedTracks.clear();
+        cache.lastDuration = durationFrames;
+    }
+
+    if (!cache.resolvedTracks.contains(paramName)) {
+        const QVariant raw = eff.keyframeTracks.value(paramName);
+        if (Interp::isStructuredTrack(raw)) {
+            const auto normalized = Interp::normalizeTrackForDuration(raw, fallback, durationFrames);
+            cache.resolvedTracks.insert(paramName, Interp::flattenStructuredTrack(normalized));
+        } else {
+            cache.resolvedTracks.insert(paramName, Interp::sortPoints(raw.toList()));
+        }
+    }
+
+    return Interp::evaluateTrack(cache.resolvedTracks.value(paramName), relFrame, fallback);
+}
+
+QVariantMap ClipEffectSystem::evaluateParamsCached(ECSState &state, int clipId, int relFrame, int durationFrames, double fps) {
+    QVariantMap out;
+    const auto *stack = state.effectStacks.find(clipId);
+    if (!stack)
+        return out;
+    for (int ei = 0; ei < stack->effects.size(); ++ei) {
+        const auto &eff = stack->effects[ei];
+        if (!eff.enabled)
+            continue;
+        QVariantMap evaluated;
+        for (auto it = eff.params.cbegin(); it != eff.params.cend(); ++it) {
+            evaluated.insert(it.key(), evaluateParamCached(state, clipId, ei, it.key(), relFrame, durationFrames, fps));
+        }
+        out.insert(eff.id, evaluated);
+    }
+    return out;
 }
 
 } // namespace Rina::Engine::Timeline
