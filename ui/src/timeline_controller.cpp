@@ -76,10 +76,11 @@ void TimelineController::setupConnections() {
         updateActiveClipsList();
         emit clipEffectsChanged(id);
     });
-    connect(m_timeline, &TimelineService::effectParamChanged, this, [this]() -> void {
+    connect(m_timeline, &TimelineService::effectParamChanged, this, [this](int clipId, int effectIndex, const QString &paramName, const QVariant &value) -> void {
         m_mediaManager->updateMediaDecoders();
         m_mediaManager->onCurrentFrameChanged();
         updateActiveClipsList();
+        emit effectParamChanged(clipId, effectIndex, paramName, value);
     });
 
     // 画像や動画の準備ができたらUI側に再描画を促す

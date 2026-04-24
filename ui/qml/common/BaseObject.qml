@@ -222,6 +222,13 @@ Node {
             item.source = null; // Transformはsourceを持たない
             item.effectModel = base.transformModel;
             item.frame = base.relFrame;
+            // ECS評価キャッシュをTransform.qmlへバインド（標準描画パラメーター反映）
+            item.clipEvalParams = Qt.binding(function() {
+                return base._ecsParamCache;
+            });
+            item._paramRev = Qt.binding(function() {
+                return base._tmRev;
+            });
         }
     }
 
