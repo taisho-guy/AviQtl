@@ -14,8 +14,6 @@
 #include "effect_data.hpp"
 #include "engine/timeline/clip_effect_system.hpp"
 #include "engine/timeline/ecs.hpp"
-#include <QQmlEngine>
-#include <QVariant>
 
 namespace Rina::UI {
 
@@ -205,18 +203,21 @@ void TimelineController::createObject(const QString &type, int startFrame, int l
     }
 }
 
-auto TimelineController::getClipEffectsModel(int clipId) const -> QVariantList {
+QVariantList TimelineController::getClipEffectsModel(int clipId) const {
     QVariantList list;
     const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
-    const auto *fx = snap->effectStacks.find(clipId);
-    if (fx == nullptr) {
+    if (!snap)
         return list;
-    }
-    for (const auto &data : std::as_const(fx->effects)) {
-        auto *model = Rina::UI::effectModelFromData(data, nullptr);
-        // JavaScriptOwnership による即時GC収集を防ぐため CppOwnership を明示する
-        // QML は QVariantList 要素として参照するが所有権は C++ 側が持つ
-        QQmlEngine::setObjectOwnership(model, QQmlEngine::CppOwnership);
+
+    const auto *fx = snap->effectStacks.find(clipId);
+    if (!fx)
+        return list;
+
+    for (const auto &data : fx->effects) {
+        // [DEBUG LOG #3] kind / qmlSource がレンダラーに届いているか確認
+        qDebug() << "[getClipEffectsModel] id=" << data.id << " kind=" << data.kind << " qmlSource=" << data.qmlSource << " enabled=" << data.enabled << " paramKeys=" << data.params.keys();
+        // parent=nullptr + JavaScriptOwnership: QML 参照消失時に GC が delete する
+        auto *model = Rina::UI::effectModelFromData(data);
         list.append(QVariant::fromValue(model));
     }
     return list;

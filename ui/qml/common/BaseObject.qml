@@ -265,6 +265,16 @@ Node {
             rawEffectModels = Workspace.currentTimeline.getClipEffectsModel(clipId);
         }
 
+        // [BUG FIX #2] パラメーター変更 → プレビュー反映。
+        // effectParamChanged は ECS にしか書き込まないため EffectModel* の params は更新されず
+        // onParamsChanged が発火しない。_tmRev を increment して evalParam の依存グラフを
+        // invalidate し、ObjectRenderer が再評価されてプレビューが更新される。
+        function onEffectParamChanged(changedClipId, effectIndex, paramName, value) {
+            if (changedClipId === clipId)
+                base._tmRev++;
+
+        }
+
         target: Workspace.currentTimeline
     }
 

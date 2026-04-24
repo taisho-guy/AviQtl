@@ -241,11 +241,9 @@ void TimelineService::updateEffectParamInternal(int clipId, int effectIndex, con
     if (paramName == QLatin1String("path") || paramName == QLatin1String("source") || paramName == QStringLiteral("targetSceneId"))
         emit clipsChanged();
     emit effectParamChanged(clipId, effectIndex, paramName, value);
-    if (m_selection->selectedClipId() == clipId) {
-        QVariantMap data = m_selection->selectedClipData();
-        data.insert(paramName, value);
-        m_selection->refreshSelectionData(clipId, data);
-    }
+    // [BUG FIX #1] refreshSelectionData 削除。
+    // selectedClipDataChanged が emit される → QML SettingDialog がスライダー value を再セット
+    // → onValueChanged 再発火 → updateEffectParamInternal 2重呼び出し（重さの根本原因）。
 }
 
 void TimelineService::setKeyframe(int clipId, int effectIndex, const QString &paramName, int frame, const QVariant &value, const QVariantMap &options) {

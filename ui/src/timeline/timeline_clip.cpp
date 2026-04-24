@@ -71,6 +71,9 @@ void TimelineService::createClipInternal(int clipId, const QString &type, int st
         data.uiDefinition = meta.uiDefinition;
         data.enabled = true;
         data.params = meta.defaultParams;
+        // [DEBUG LOG #3] エフェクト追加時の qmlSource / kind / params を確認
+        // プレビューに反映されない場合は qmlSource が空か kind が "effect" でないことが多い
+        qDebug() << "[AddEffect] effectId=" << effectId << " kind=" << data.kind << " qmlSource=" << data.qmlSource << " params=" << data.params.keys();
         Rina::Engine::Timeline::ClipEffectSystem::addEffect(state, clipId, data);
     };
 

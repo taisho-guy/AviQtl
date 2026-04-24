@@ -1266,32 +1266,32 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_clip.cpp" line="180"/>
+        <location filename="../ui/src/timeline/timeline_clip.cpp" line="183"/>
         <source>複数クリップ絶対移動: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_clip.cpp" line="238"/>
+        <location filename="../ui/src/timeline/timeline_clip.cpp" line="241"/>
         <source>複数クリップ移動: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_clip.cpp" line="299"/>
+        <location filename="../ui/src/timeline/timeline_clip.cpp" line="302"/>
         <source>複数クリップ変形: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_clip.cpp" line="659"/>
+        <location filename="../ui/src/timeline/timeline_clip.cpp" line="662"/>
         <source>クリップ削除</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_clip.cpp" line="659"/>
+        <location filename="../ui/src/timeline/timeline_clip.cpp" line="662"/>
         <source>複数クリップ削除: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_clip.cpp" line="827"/>
+        <location filename="../ui/src/timeline/timeline_clip.cpp" line="830"/>
         <source>複数クリップ分割: %1</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1337,27 +1337,27 @@
 <context>
     <name>Rina::UI::TimelineController</name>
     <message>
-        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="89"/>
+        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="87"/>
         <source>プロパティ変更: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="132"/>
+        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="130"/>
         <source>開始フレーム変更</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="150"/>
+        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="148"/>
         <source>長さ変更</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="168"/>
+        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="166"/>
         <source>レイヤー変更</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="333"/>
+        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="334"/>
         <source>複数クリップリサイズ: %1</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1501,14 +1501,6 @@
     <message>
         <location filename="../ui/qml/settings/ShortcutSettingsPage.qml" line="78"/>
         <source>未設定</source>
-        <translation type="unfinished"></translation>
-    </message>
-</context>
-<context>
-    <name>SplashWindow</name>
-    <message>
-        <location filename="../ui/qml/SplashWindow.qml" line="7"/>
-        <source>Rina を起動中...</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
