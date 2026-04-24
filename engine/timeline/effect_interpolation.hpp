@@ -374,4 +374,200 @@ inline QVariant evaluateParam(const QVariantMap &keyframeTracks, const QVariantM
     return evaluateTrack(resolved, relFrame, fallback);
 }
 
+// ── クリップ分割時のベジェ曲線 de Casteljau 分割ヘルパー ──────────────────────
+
+// 単一ベジェセグメントを正規化パラメータ t で de Casteljau 分割する
+// 入力: P0=(p0x,p0y) P1=(cp1x,cp1y) P2=(cp2x,cp2y) P3=(p3x,p3y), t∈[0,1]
+// 出力: 前半 [p0..mid] の CP 配列 {q1x,q1y,r1x,r1y,midX,midY}
+//       後半 [mid..p3] の CP 配列 {r2x,r2y,q3x,q3y,p3x,p3y}
+inline std::pair<std::array<double, 6>, std::array<double, 6>> splitBezierSegment(double p0x, double p0y, double p1x, double p1y, double p2x, double p2y, double p3x, double p3y, double t) noexcept {
+    auto lp = [](double a, double b, double t) noexcept { return a + (b - a) * t; };
+    const double q1x = lp(p0x, p1x, t), q1y = lp(p0y, p1y, t);
+    const double q2x = lp(p1x, p2x, t), q2y = lp(p1y, p2y, t);
+    const double q3x = lp(p2x, p3x, t), q3y = lp(p2y, p3y, t);
+    const double r1x = lp(q1x, q2x, t), r1y = lp(q1y, q2y, t);
+    const double r2x = lp(q2x, q3x, t), r2y = lp(q2y, q3y, t);
+    const double mx = lp(r1x, r2x, t), my = lp(r1y, r2y, t);
+    return {std::array<double, 6>{q1x, q1y, r1x, r1y, mx, my}, std::array<double, 6>{r2x, r2y, q3x, q3y, p3x, p3y}};
+}
+
+// custom bezier の points[] を分割点 t_split(0〜1, 正規化) で分割する
+// 入力:  pts = [cp1x,cp1y,cp2x,cp2y,endX,endY, ...]  (6要素/セグメント, x/y 全て正規化)
+// 出力:  {前半 points[], 後半 points[]}
+//        前半は x を [0, t_split] に再正規化
+//        後半は x を [0, 1-t_split] に再正規化
+inline std::pair<QList<double>, QList<double>> splitCustomBezierPoints(const QList<double> &pts, double t_split) noexcept {
+    QList<double> first, second;
+    if (pts.size() < 6 || t_split <= 0.0 || t_split >= 1.0)
+        return {first, second};
+
+    double prevX = 0.0, prevY = 0.0;
+    bool splitDone = false;
+
+    for (int i = 0; i + 5 < pts.size(); i += 6) {
+        const double cp1x = pts[i], cp1y = pts[i + 1];
+        const double cp2x = pts[i + 2], cp2y = pts[i + 3];
+        const double endX = pts[i + 4], endY = pts[i + 5];
+
+        if (!splitDone && t_split <= endX + 1e-9) {
+            // このセグメントが分割点を含む
+            const double segRange = endX - prevX;
+            if (segRange < 1e-9) {
+                // 縮退セグメント: 評価値のみ
+                splitDone = true;
+                prevX = endX;
+                prevY = endY;
+                continue;
+            }
+            // セグメント内での t を計算
+            const double t_seg = std::clamp((t_split - prevX) / segRange, 0.0, 1.0);
+            auto [fArr, sArr] = splitBezierSegment(prevX, prevY, cp1x, cp1y, cp2x, cp2y, endX, endY, t_seg);
+            // 前半セグメントを [0, t_split] に再正規化して追加
+            if (t_split > 1e-9) {
+                const double invFirst = 1.0 / t_split;
+                first.append(fArr[0] * invFirst);
+                first.append(fArr[1]);
+                first.append(fArr[2] * invFirst);
+                first.append(fArr[3]);
+                first.append(fArr[4] * invFirst);
+                first.append(fArr[5]);
+            }
+            // 後半セグメントを [0, 1-t_split] に再正規化して追加
+            const double secondRange = 1.0 - t_split;
+            if (secondRange > 1e-9) {
+                const double invSecond = 1.0 / secondRange;
+                second.append((sArr[0] - t_split) * invSecond);
+                second.append(sArr[1]);
+                second.append((sArr[2] - t_split) * invSecond);
+                second.append(sArr[3]);
+                second.append((sArr[4] - t_split) * invSecond);
+                second.append(sArr[5]);
+            }
+            splitDone = true;
+        } else if (!splitDone) {
+            // 分割点より前のセグメント → 前半へ（x を [0,t_split] に再正規化）
+            if (t_split > 1e-9) {
+                const double inv = 1.0 / t_split;
+                first.append(cp1x * inv);
+                first.append(cp1y);
+                first.append(cp2x * inv);
+                first.append(cp2y);
+                first.append(endX * inv);
+                first.append(endY);
+            }
+        } else {
+            // 分割点より後のセグメント → 後半へ（x を [0,1-t_split] に再正規化）
+            const double secondRange = 1.0 - t_split;
+            if (secondRange > 1e-9) {
+                const double inv = 1.0 / secondRange;
+                second.append((cp1x - t_split) * inv);
+                second.append(cp1y);
+                second.append((cp2x - t_split) * inv);
+                second.append(cp2y);
+                second.append((endX - t_split) * inv);
+                second.append(endY);
+            }
+        }
+        prevX = endX;
+        prevY = endY;
+    }
+    return {first, second};
+}
+
+// キーフレームトラック 1 本を firstHalfDuration フレームで正確に分割する
+// 戻り値: {前半トラック, 後半トラック}
+// custom bezier 区間は de Casteljau 分割、標準 easing 区間は分割点での評価値を使用する
+inline std::pair<QVariantMap, QVariantMap> splitTrackAt(const QVariantMap &track, const QVariant &fallback, int splitF) {
+    const QVariantList flat = flattenStructuredTrack(track);
+    const QVariantMap startKf = track.value(QStringLiteral("start")).toMap();
+
+    // 前半トラック
+    QVariantMap firstStart = startKf;
+    QVariantList firstPoints;
+
+    // 後半トラック
+    QVariantMap secondStart;
+    secondStart[QStringLiteral("frame")] = 0;
+    secondStart[QStringLiteral("value")] = evaluateTrack(flat, splitF, fallback);
+
+    // 後半先頭の interp は分割点を含む区間の interp を引き継ぐ
+    QString splitInterp = startKf.value(QStringLiteral("interp"), QStringLiteral("none")).toString();
+
+    QVariantList secondPoints;
+    const int n = flat.size();
+
+    for (int i = 0; i < n - 1; ++i) {
+        const QVariantMap m0 = flat[i].toMap();
+        const QVariantMap m1 = flat[i + 1].toMap();
+        const int f0 = m0.value(QStringLiteral("frame")).toInt();
+        const int f1 = m1.value(QStringLiteral("frame")).toInt();
+        const QString interp = m0.value(QStringLiteral("interp"), QStringLiteral("none")).toString();
+
+        if (f1 <= splitF) {
+            // 区間全体が前半側: 次のキーフレーム（i+1 が末尾でない場合）を前半 points に追加
+            if (i + 1 < n - 1)
+                firstPoints.append(flat[i + 1]);
+        } else if (f0 >= splitF) {
+            // 区間全体が後半側: i>0 かつ f0>splitF の点を後半 points に追加
+            if (f0 > splitF) {
+                QVariantMap pt = m0;
+                pt[QStringLiteral("frame")] = f0 - splitF;
+                secondPoints.append(pt);
+            }
+        } else {
+            // 分割点が区間内 (f0 < splitF < f1)
+            splitInterp = interp;
+            if (interp == QStringLiteral("custom")) {
+                // de Casteljau 分割
+                const double t_split = (f1 > f0) ? std::clamp(double(splitF - f0) / (f1 - f0), 0.0, 1.0) : 0.5;
+                const QVariant rawPts = m0.value(QStringLiteral("points"), m0.value(QStringLiteral("bzx1")));
+                QList<double> pts;
+                if (m0.contains(QStringLiteral("points"))) {
+                    for (const auto &v : m0.value(QStringLiteral("points")).toList())
+                        pts.append(v.toDouble());
+                } else {
+                    // legacy 4点形式をセグメント形式に変換
+                    pts = {m0.value(QStringLiteral("bzx1"), 0.33).toDouble(), m0.value(QStringLiteral("bzy1"), 0.0).toDouble(), m0.value(QStringLiteral("bzx2"), 0.66).toDouble(), m0.value(QStringLiteral("bzy2"), 1.0).toDouble(), 1.0, 1.0};
+                }
+                auto [firstPts, secondPts] = splitCustomBezierPoints(pts, t_split);
+                // 前半末尾に分割点を追加
+                if (!firstPts.isEmpty()) {
+                    QVariantMap fp = m0;
+                    fp[QStringLiteral("frame")] = splitF; // 前半末尾（後で firstEndFrame でクリップ）
+                    QVariantList fPtsList;
+                    for (double v : firstPts)
+                        fPtsList.append(v);
+                    fp[QStringLiteral("points")] = fPtsList;
+                    fp.remove(QStringLiteral("bzx1"));
+                    fp.remove(QStringLiteral("bzy1"));
+                    fp.remove(QStringLiteral("bzx2"));
+                    fp.remove(QStringLiteral("bzy2"));
+                    // 分割点の value を設定
+                    fp[QStringLiteral("value")] = evaluateTrack(flat, splitF, fallback);
+                    firstPoints.append(fp);
+                }
+                // 後半先頭の interp は後半の制御点を持つ
+                if (!secondPts.isEmpty()) {
+                    QVariantList sPtsList;
+                    for (double v : secondPts)
+                        sPtsList.append(v);
+                    secondStart[QStringLiteral("points")] = sPtsList;
+                }
+            } else {
+                // 標準 easing: 分割点で値を確定。前半末尾は追加不要（startKf〜splitF まで）
+                // 後半先頭の interp を引き継ぐ
+            }
+        }
+    }
+
+    secondStart[QStringLiteral("interp")] = splitInterp;
+
+    QVariantMap ft, st;
+    ft[QStringLiteral("start")] = firstStart;
+    ft[QStringLiteral("points")] = firstPoints;
+    st[QStringLiteral("start")] = secondStart;
+    st[QStringLiteral("points")] = secondPoints;
+    return {ft, st};
+}
+
 } // namespace Rina::Engine::Timeline::Interp

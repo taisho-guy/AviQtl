@@ -345,6 +345,142 @@ class EffectModel : public QObject {
         return out;
     }
 
+    // ── クリップ分割: de Casteljau ヘルパー ──────────────────────────────────
+
+    static std::pair<std::array<double, 6>, std::array<double, 6>> splitBezierSegmentEM(double p0x, double p0y, double p1x, double p1y, double p2x, double p2y, double p3x, double p3y, double t) noexcept {
+        auto lp = [](double a, double b, double t_) noexcept { return a + (b - a) * t_; };
+        const double q1x = lp(p0x, p1x, t), q1y = lp(p0y, p1y, t);
+        const double q2x = lp(p1x, p2x, t), q2y = lp(p1y, p2y, t);
+        const double q3x = lp(p2x, p3x, t), q3y = lp(p2y, p3y, t);
+        const double r1x = lp(q1x, q2x, t), r1y = lp(q1y, q2y, t);
+        const double r2x = lp(q2x, q3x, t), r2y = lp(q2y, q3y, t);
+        const double mx = lp(r1x, r2x, t), my = lp(r1y, r2y, t);
+        return {std::array<double, 6>{q1x, q1y, r1x, r1y, mx, my}, std::array<double, 6>{r2x, r2y, q3x, q3y, p3x, p3y}};
+    }
+
+    static std::pair<QList<double>, QList<double>> splitCustomBezierPointsEM(const QList<double> &pts, double t_split) noexcept {
+        QList<double> first, second;
+        if (pts.size() < 6 || t_split <= 0.0 || t_split >= 1.0)
+            return {first, second};
+        double prevX = 0.0, prevY = 0.0;
+        bool splitDone = false;
+        for (int i = 0; i + 5 < pts.size(); i += 6) {
+            const double cp1x = pts[i], cp1y = pts[i + 1], cp2x = pts[i + 2], cp2y = pts[i + 3], endX = pts[i + 4], endY = pts[i + 5];
+            if (!splitDone && t_split <= endX + 1e-9) {
+                const double seg = endX - prevX;
+                if (seg < 1e-9) {
+                    splitDone = true;
+                    prevX = endX;
+                    prevY = endY;
+                    continue;
+                }
+                const double ts = std::clamp((t_split - prevX) / seg, 0.0, 1.0);
+                auto [fA, sA] = splitBezierSegmentEM(prevX, prevY, cp1x, cp1y, cp2x, cp2y, endX, endY, ts);
+                if (t_split > 1e-9) {
+                    const double inv = 1.0 / t_split;
+                    first << fA[0] * inv << fA[1] << fA[2] * inv << fA[3] << fA[4] * inv << fA[5];
+                }
+                const double sr = 1.0 - t_split;
+                if (sr > 1e-9) {
+                    const double inv = 1.0 / sr;
+                    second << (sA[0] - t_split) * inv << sA[1] << (sA[2] - t_split) * inv << sA[3] << (sA[4] - t_split) * inv << sA[5];
+                }
+                splitDone = true;
+            } else if (!splitDone) {
+                if (t_split > 1e-9) {
+                    const double inv = 1.0 / t_split;
+                    first << cp1x * inv << cp1y << cp2x * inv << cp2y << endX * inv << endY;
+                }
+            } else {
+                const double sr = 1.0 - t_split;
+                if (sr > 1e-9) {
+                    const double inv = 1.0 / sr;
+                    second << (cp1x - t_split) * inv << cp1y << (cp2x - t_split) * inv << cp2y << (endX - t_split) * inv << endY;
+                }
+            }
+            prevX = endX;
+            prevY = endY;
+        }
+        return {first, second};
+    }
+    // 1本のトラックを splitF フレームで正確に分割する（EffectModel 内部用）
+    // custom bezier: de Casteljau 分割 / 標準 easing: 分割点での評価値を使用
+    static std::pair<QVariantMap, QVariantMap> splitTrackAtEM(const QVariantMap &track, const QVariant &fallback, int splitF) {
+        const QVariantList flat = flattenStructuredTrack(track);
+        const QVariantMap startKf = track.value(QStringLiteral("start")).toMap();
+        QVariantMap firstStart = startKf;
+        QVariantList firstPoints;
+        QVariantMap secondStart;
+        secondStart[QStringLiteral("frame")] = 0;
+        secondStart[QStringLiteral("value")] = evaluateTrack(flat, splitF, fallback);
+        QString splitInterp = startKf.value(QStringLiteral("interp"), QStringLiteral("none")).toString();
+        QVariantList secondPoints;
+        const int n = flat.size();
+
+        for (int i = 0; i < n - 1; ++i) {
+            const QVariantMap m0 = flat[i].toMap();
+            const QVariantMap m1 = flat[i + 1].toMap();
+            const int f0 = m0.value(QStringLiteral("frame")).toInt();
+            const int f1 = m1.value(QStringLiteral("frame")).toInt();
+            const QString interp = m0.value(QStringLiteral("interp"), QStringLiteral("none")).toString();
+
+            if (f1 <= splitF) {
+                // 区間全体が前半側
+                if (i + 1 < n - 1)
+                    firstPoints.append(flat[i + 1]);
+            } else if (f0 >= splitF) {
+                // 区間全体が後半側
+                if (f0 > splitF) {
+                    QVariantMap pt = m0;
+                    pt[QStringLiteral("frame")] = f0 - splitF;
+                    secondPoints.append(pt);
+                }
+            } else {
+                // 分割点が区間内 (f0 < splitF < f1)
+                splitInterp = interp;
+                if (interp == QStringLiteral("custom")) {
+                    const double t_split = (f1 > f0) ? std::clamp(double(splitF - f0) / (f1 - f0), 0.0, 1.0) : 0.5;
+                    QList<double> pts;
+                    if (m0.contains(QStringLiteral("points"))) {
+                        for (const auto &v : m0.value(QStringLiteral("points")).toList())
+                            pts.append(v.toDouble());
+                    } else {
+                        pts = {m0.value(QStringLiteral("bzx1"), 0.33).toDouble(), m0.value(QStringLiteral("bzy1"), 0.0).toDouble(), m0.value(QStringLiteral("bzx2"), 0.66).toDouble(), m0.value(QStringLiteral("bzy2"), 1.0).toDouble(), 1.0, 1.0};
+                    }
+                    auto [firstPts, secondPts] = splitCustomBezierPointsEM(pts, t_split);
+                    if (!firstPts.isEmpty()) {
+                        QVariantMap fp = m0;
+                        fp[QStringLiteral("frame")] = splitF;
+                        fp[QStringLiteral("value")] = evaluateTrack(flat, splitF, fallback);
+                        QVariantList fpl;
+                        for (double v : firstPts)
+                            fpl.append(v);
+                        fp[QStringLiteral("points")] = fpl;
+                        fp.remove(QStringLiteral("bzx1"));
+                        fp.remove(QStringLiteral("bzy1"));
+                        fp.remove(QStringLiteral("bzx2"));
+                        fp.remove(QStringLiteral("bzy2"));
+                        firstPoints.append(fp);
+                    }
+                    if (!secondPts.isEmpty()) {
+                        QVariantList spl;
+                        for (double v : secondPts)
+                            spl.append(v);
+                        secondStart[QStringLiteral("points")] = spl;
+                    }
+                }
+                // 標準 easing は secondStart.value が評価済みのため追加処理不要
+            }
+        }
+        secondStart[QStringLiteral("interp")] = splitInterp;
+        QVariantMap ft, st;
+        ft[QStringLiteral("start")] = firstStart;
+        ft[QStringLiteral("points")] = firstPoints;
+        st[QStringLiteral("start")] = secondStart;
+        st[QStringLiteral("points")] = secondPoints;
+        return {ft, st};
+    }
+
   public:
     Q_PROPERTY(QString id READ id CONSTANT)
     Q_PROPERTY(QString name READ name CONSTANT)
@@ -447,53 +583,19 @@ class EffectModel : public QObject {
     Q_INVOKABLE QVariantMap splitTracks(int firstHalfDuration, int originalDuration) {
         m_resolvedCache.clear();
         QVariantMap secondHalfTracks;
-        if (originalDuration < 1)
+        if (originalDuration < 1 || firstHalfDuration <= 0 || firstHalfDuration >= originalDuration)
             return secondHalfTracks;
 
-        const int firstEndFrame = std::max(0, firstHalfDuration - 1);
-        const int secondHalfDur = std::max(1, originalDuration - firstHalfDuration);
-        const int secondEndFrame = std::max(0, secondHalfDur - 1);
+        const int splitF = firstHalfDuration;
         QVariantMap currentTracks = m_keyframeTracks;
 
         for (auto it = m_params.begin(); it != m_params.end(); ++it) {
             const QString key = it.key();
             const QVariant fallback = it.value();
-            QVariantMap track = normalizeTrackForDuration(currentTracks.value(key), fallback, originalDuration);
-            QVariantList flat = flattenStructuredTrack(track);
-            QVariantMap start = track.value(QStringLiteral("start")).toMap();
-            QVariantList points = track.value(QStringLiteral("points")).toList();
-            // 前半トラック
-            QVariantMap firstTrack;
-            QVariantList firstPoints;
-            for (const auto &v : std::as_const(points)) {
-                const int f = v.toMap().value(QStringLiteral("frame")).toInt();
-                if (f > 0 && f < firstEndFrame)
-                    firstPoints.append(v.toMap());
-            }
-            firstTrack[QStringLiteral("start")] = start;
-            firstTrack[QStringLiteral("points")] = firstPoints;
-            currentTracks[key] = firstTrack;
-
-            // 後半トラック
-            QVariantMap secondTrack;
-            QVariantMap secondStart;
-            secondStart[QStringLiteral("frame")] = 0;
-            secondStart[QStringLiteral("value")] = evaluateTrack(flat, firstHalfDuration, fallback);
-            secondStart[QStringLiteral("interp")] = start.value(QStringLiteral("interp"), QStringLiteral("none"));
-            QVariantList secondPoints;
-            for (const auto &v : std::as_const(points)) {
-                auto m = v.toMap();
-                const int f = m.value(QStringLiteral("frame")).toInt();
-                if (f > firstHalfDuration && f < std::max(0, originalDuration - 1)) {
-                    m[QStringLiteral("frame")] = f - firstHalfDuration;
-                    const int nf = m.value(QStringLiteral("frame")).toInt();
-                    if (nf > 0 && nf < secondEndFrame)
-                        secondPoints.append(m);
-                }
-            }
-            secondTrack[QStringLiteral("start")] = secondStart;
-            secondTrack[QStringLiteral("points")] = secondPoints;
-            secondHalfTracks[key] = secondTrack;
+            const QVariantMap track = normalizeTrackForDuration(currentTracks.value(key), fallback, originalDuration);
+            auto [ft, st] = splitTrackAtEM(track, fallback, splitF);
+            currentTracks[key] = ft;
+            secondHalfTracks[key] = st;
         }
         m_keyframeTracks = currentTracks;
         emit keyframeTracksChanged();

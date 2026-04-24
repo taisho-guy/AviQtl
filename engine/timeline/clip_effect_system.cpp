@@ -12,10 +12,6 @@ using namespace Rina::Engine::Timeline::Interp;
 
 QVariantMap ensureStructuredTrackLocal(const QVariant &raw, const QVariant &fallback) { return normalizeTrackForDuration(raw, fallback, inferredDurationForTrack(raw)); }
 
-QVariantList flatPointsLocal(const QVariantMap &track) { return flattenStructuredTrack(track); }
-
-QVariant evalTrackLocal(const QVariantList &flat, int frame, const QVariant &fallback) { return evaluateTrack(flat, frame, fallback); }
-
 } // anonymous namespace
 
 namespace Rina::Engine::Timeline {
@@ -264,50 +260,19 @@ void ClipEffectSystem::removeKeyframe(ECSState &state, int clipId, int effectInd
 
 std::pair<QVariantMap, QVariantMap> ClipEffectSystem::splitKeyframeTracks(const QVariantMap &tracks, const QVariantMap &params, int firstHalfDuration, int originalDuration) {
     QVariantMap firstHalfTracks, secondHalfTracks;
-    if (originalDuration < 1)
+    if (originalDuration < 1 || firstHalfDuration <= 0 || firstHalfDuration >= originalDuration)
         return {firstHalfTracks, secondHalfTracks};
 
-    const int firstEndFrame = std::max(0, firstHalfDuration - 1);
-    const int secondEndFrame = std::max(0, originalDuration - firstHalfDuration - 1);
+    const int splitF = firstHalfDuration;
 
     for (auto it = params.begin(); it != params.end(); ++it) {
         const QString key = it.key();
         const QVariant fallback = it.value();
         const QVariantMap track = ensureStructuredTrackLocal(tracks.value(key), fallback);
-        const QVariantList flat = flatPointsLocal(track);
-        const QVariantMap startKf = track.value(QStringLiteral("start")).toMap();
-        const QVariantList points = track.value(QStringLiteral("points")).toList();
-
-        QVariantList firstPoints;
-        for (const auto &v : points) {
-            const int f = v.toMap().value(QStringLiteral("frame")).toInt();
-            if (f > 0 && f < firstEndFrame)
-                firstPoints.append(v);
-        }
-        QVariantMap firstTrack;
-        firstTrack[QStringLiteral("start")] = startKf;
-        firstTrack[QStringLiteral("points")] = firstPoints;
-        firstHalfTracks[key] = firstTrack;
-
-        QVariantMap secondStart;
-        secondStart[QStringLiteral("frame")] = 0;
-        secondStart[QStringLiteral("value")] = evalTrackLocal(flat, firstHalfDuration, fallback);
-        secondStart[QStringLiteral("interp")] = startKf.value(QStringLiteral("interp"), QStringLiteral("none"));
-        QVariantList secondPoints;
-        for (const auto &v : points) {
-            auto m = v.toMap();
-            const int f = m.value(QStringLiteral("frame")).toInt();
-            if (f > firstHalfDuration && f < std::max(0, originalDuration - 1)) {
-                m[QStringLiteral("frame")] = f - firstHalfDuration;
-                const int nf = m.value(QStringLiteral("frame")).toInt();
-                if (nf > 0 && nf < secondEndFrame)
-                    secondPoints.append(m);
-            }
-        }
-        QVariantMap secondTrack;
-        secondTrack[QStringLiteral("start")] = secondStart;
-        secondTrack[QStringLiteral("points")] = secondPoints;
-        secondHalfTracks[key] = secondTrack;
+        // splitTrackAt: custom bezier は de Casteljau 分割、標準 easing は評価値を使用
+        auto [ft, st] = Interp::splitTrackAt(track, fallback, splitF);
+        firstHalfTracks[key] = ft;
+        secondHalfTracks[key] = st;
     }
     return {firstHalfTracks, secondHalfTracks};
 }
