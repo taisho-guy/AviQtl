@@ -74,30 +74,33 @@ void TimelineEngineSynchronizer::updateActiveClipsList() {
 
     double fps = m_controller->project()->fps();
 
+    // ECS が正本: m_localClips の clip->effects (EffectModel*) は空のため使わない
+    // ECS effectStacks から直接 vol/pan/mute を取得し、updateEffectStack は呼ばない
+    const auto *ecsSnap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+
     for (const ClipData *clip : std::as_const(active)) {
         int relFrame = current - clip->startFrame;
 
         Rina::Engine::Timeline::ECS::instance().updateClipState(clip->id, clip->layer, clip->startFrame, clip->durationFrames, static_cast<double>(relFrame));
 
-        QList<Rina::UI::EffectData> effectDataList;
-        for (const auto *eff : clip->effects) {
-            effectDataList.append(Rina::UI::effectDataFromModel(*eff));
-        }
-        Rina::Engine::Timeline::ECS::instance().updateEffectStack(clip->id, effectDataList);
+        // ECS effectStacks が正本のため updateEffectStack による上書きは行わない
 
         if (clip->type == QLatin1String("audio") || clip->type == QLatin1String("video")) {
             float vol = 1.0F;
             float pan = 0.0F;
             bool mute = false;
-            for (auto *eff : clip->effects) {
-                if (eff->id() == clip->type) {
-                    QVariant vVol = eff->evaluatedParam(QStringLiteral("volume"), relFrame, fps);
-                    if (vVol.isValid()) {
-                        vol = vVol.toFloat();
+            // ECS effectStacks から対象エフェクトの params を直接参照する
+            if (const auto *fxSnap = ecsSnap->effectStacks.find(clip->id)) {
+                for (const auto &eff : std::as_const(fxSnap->effects)) {
+                    if (eff.id == clip->type) {
+                        const QVariant vVol = eff.params.value(QStringLiteral("volume"));
+                        if (vVol.isValid()) {
+                            vol = vVol.toFloat();
+                        }
+                        pan = eff.params.value(QStringLiteral("pan")).toFloat();
+                        mute = eff.params.value(QStringLiteral("mute")).toBool();
+                        break;
                     }
-                    pan = eff->evaluatedParam(QStringLiteral("pan"), relFrame, fps).toFloat();
-                    mute = eff->evaluatedParam(QStringLiteral("mute"), relFrame, fps).toBool();
-                    break;
                 }
             }
             Rina::Engine::Timeline::ECS::instance().updateAudioClipState(clip->id, clip->startFrame, clip->durationFrames, vol, pan, mute);

@@ -11,8 +11,11 @@
 #include <QtGlobal>
 #include <algorithm>
 
+#include "effect_data.hpp"
 #include "engine/timeline/clip_effect_system.hpp"
 #include "engine/timeline/ecs.hpp"
+#include <QQmlEngine>
+#include <QVariant>
 
 namespace Rina::UI {
 
@@ -202,18 +205,19 @@ void TimelineController::createObject(const QString &type, int startFrame, int l
     }
 }
 
-auto TimelineController::getClipEffectsModel(int clipId) const -> QList<QObject *> {
-    // Phase3 廃止予定: EffectModel* は UI 通知プロキシとして m_scenes に残存中
-    // ClipData.effects は Phase4 で削除される
-    QList<QObject *> list;
-    const auto &sceneClips = m_timeline->clips();
-    for (const auto &clip : sceneClips) {
-        if (clip.id == clipId) {
-            for (auto *eff : clip.effects) {
-                list.append(eff);
-            }
-            break;
-        }
+auto TimelineController::getClipEffectsModel(int clipId) const -> QVariantList {
+    QVariantList list;
+    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *fx = snap->effectStacks.find(clipId);
+    if (fx == nullptr) {
+        return list;
+    }
+    for (const auto &data : std::as_const(fx->effects)) {
+        auto *model = Rina::UI::effectModelFromData(data, nullptr);
+        // JavaScriptOwnership による即時GC収集を防ぐため CppOwnership を明示する
+        // QML は QVariantList 要素として参照するが所有権は C++ 側が持つ
+        QQmlEngine::setObjectOwnership(model, QQmlEngine::CppOwnership);
+        list.append(QVariant::fromValue(model));
     }
     return list;
 }

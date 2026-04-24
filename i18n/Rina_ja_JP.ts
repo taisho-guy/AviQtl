@@ -1266,32 +1266,32 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_clip.cpp" line="163"/>
+        <location filename="../ui/src/timeline/timeline_clip.cpp" line="180"/>
         <source>複数クリップ絶対移動: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_clip.cpp" line="221"/>
+        <location filename="../ui/src/timeline/timeline_clip.cpp" line="238"/>
         <source>複数クリップ移動: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_clip.cpp" line="282"/>
+        <location filename="../ui/src/timeline/timeline_clip.cpp" line="299"/>
         <source>複数クリップ変形: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_clip.cpp" line="648"/>
+        <location filename="../ui/src/timeline/timeline_clip.cpp" line="659"/>
         <source>クリップ削除</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_clip.cpp" line="648"/>
+        <location filename="../ui/src/timeline/timeline_clip.cpp" line="659"/>
         <source>複数クリップ削除: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_clip.cpp" line="820"/>
+        <location filename="../ui/src/timeline/timeline_clip.cpp" line="827"/>
         <source>複数クリップ分割: %1</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1337,27 +1337,27 @@
 <context>
     <name>Rina::UI::TimelineController</name>
     <message>
-        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="86"/>
+        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="89"/>
         <source>プロパティ変更: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="129"/>
+        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="132"/>
         <source>開始フレーム変更</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="147"/>
+        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="150"/>
         <source>長さ変更</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="165"/>
+        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="168"/>
         <source>レイヤー変更</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="329"/>
+        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="333"/>
         <source>複数クリップリサイズ: %1</source>
         <translation type="unfinished"></translation>
     </message>

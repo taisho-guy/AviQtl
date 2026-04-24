@@ -1,7 +1,9 @@
+#include "clip_effect_system.hpp"
 #include "clip_lifecycle_system.hpp"
 #include "clip_snapshot.hpp"
 #include "commands.hpp"
 #include "effect_registry.hpp"
+#include "engine/timeline/clip_effect_system.hpp"
 #include "engine/timeline/clip_lifecycle_system.hpp"
 #include "engine/timeline/clip_transform_system.hpp"
 #include "engine/timeline/ecs.hpp"
@@ -36,37 +38,52 @@ void TimelineService::createClipInternal(int clipId, const QString &type, int st
 
     const int defaultDuration = Rina::Core::SettingsManager::instance().settings().value(QStringLiteral("defaultClipDuration"), 100).toInt();
     auto overlaps = [](int s1, int d1, int s2, int d2) -> bool { return (s1 < (s2 + d2)) && (s2 < (s1 + d1)); };
-    auto &currentClips = clipsMutable();
-    for (const auto &c : std::as_const(currentClips)) {
-        if (c.layer == layer && overlaps(startFrame, defaultDuration, c.startFrame, c.durationFrames)) {
+    // 衝突チェック: ECS スナップショットを正本として走査
+    const auto *createSnap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    for (const auto &ct : createSnap->transforms) {
+        if (ct.layer == layer && overlaps(startFrame, defaultDuration, ct.startFrame, ct.durationFrames)) {
             qWarning() << "クリップ作成を拒否: レイヤー" << layer << "の" << startFrame << "フレームで衝突が発生";
             return;
         }
     }
 
-    ClipData newClip;
-    newClip.id = clipId;
-    newClip.sceneId = m_currentSceneId;
-    newClip.type = type;
-    newClip.startFrame = startFrame;
-    newClip.durationFrames = defaultDuration;
-    newClip.layer = layer;
-
-    currentClips.append(newClip);
-
-    // デフォルトで transform エフェクトを追加
-    addEffectInternal(clipId, QStringLiteral("transform"));
-    addEffectInternal(clipId, type);
-
-    // ECS への書き込み（フェーズ2: ECS を正本として同時更新する）
+    // 全書き込みを同じ editState に対して行い、最後に1回だけ commit する
+    // 途中で commit すると editState が新バッファに進み effectStacks[clipId] が
+    // 次バッファに伝搬しないため addEffect が find(clipId)==nullptr で空振りする
     auto &ecs = Rina::Engine::Timeline::ECS::instance();
-    Rina::Engine::Timeline::ClipLifecycleSystem::createClip(ecs.editState(), clipId, type, layer, startFrame, defaultDuration);
+    auto &state = ecs.editState();
+
+    Rina::Engine::Timeline::ClipLifecycleSystem::createClip(state, clipId, type, layer, startFrame, defaultDuration);
     ecs.updateMetadata(clipId, type, QStringLiteral(""), type, QStringLiteral(""));
+
+    // addEffectInternal は内部で commit を挟むため使用不可
+    // 同じ state に直接書き込むラムダで代替する
+    const auto addEffectToState = [&](const QString &effectId) {
+        const auto meta = Rina::Core::EffectRegistry::instance().getEffect(effectId);
+        if (meta.id.isEmpty())
+            return;
+        Rina::UI::EffectData data;
+        data.id = meta.id;
+        data.name = meta.name;
+        data.kind = meta.kind;
+        data.categories = meta.categories;
+        data.qmlSource = meta.qmlSource;
+        data.uiDefinition = meta.uiDefinition;
+        data.enabled = true;
+        data.params = meta.defaultParams;
+        Rina::Engine::Timeline::ClipEffectSystem::addEffect(state, clipId, data);
+    };
+
+    addEffectToState(QStringLiteral("transform"));
+    addEffectToState(type);
+
+    // 全書き込み完了後に1回だけ commit して activeIndex に公開する
     ecs.commit();
 
     if (emitSignal) {
         emit clipsChanged();
-        emit clipCreated(newClip.id, newClip.layer, newClip.startFrame, newClip.durationFrames, newClip.type);
+        emit clipEffectsChanged(clipId);
+        emit clipCreated(clipId, layer, startFrame, defaultDuration, type);
     }
 }
 
@@ -465,17 +482,12 @@ void TimelineService::updateClipInternal(int id, int layer, int startFrame, int 
         startFrame = safeStartFrame;
     }
 
-    for (auto &clip : clipsMutable()) {
-        if (clip.id == id) {
-            if (clip.layer != layer || clip.startFrame != startFrame || clip.durationFrames != duration) {
-                clip.layer = layer;
-                clip.startFrame = startFrame;
-                clip.durationFrames = duration;
-                for (auto *effect : std::as_const(clip.effects)) {
-                    if (effect != nullptr) {
-                        effect->syncTrackEndpoints(duration);
-                    }
-                }
+    // m_scenes ループを廃止: ECS を正本として更新し、選択キャッシュのみ同期する
+    {
+        const auto *updSnap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+        const auto *updTr = updSnap->transforms.find(id);
+        if (updTr != nullptr) {
+            if (updTr->layer != layer || updTr->startFrame != startFrame || updTr->durationFrames != duration) {
                 if (emitSignal) {
                     emit clipsChanged();
                 }
@@ -488,7 +500,6 @@ void TimelineService::updateClipInternal(int id, int layer, int startFrame, int 
                     m_selection->refreshSelectionData(id, data);
                 }
             }
-            break;
         }
     }
 
@@ -657,18 +668,11 @@ void TimelineService::deleteClipsByIds(const QVariantList &ids) {
 void TimelineService::deleteClip(int clipId) { deleteClipsByIds({clipId}); }
 
 void TimelineService::deleteClipInternal(int clipId, bool emitSignal) {
-    auto &currentClips = clipsMutable();
-    auto it = std::ranges::find_if(currentClips, [clipId](const ClipData &c) -> bool { return c.id == clipId; });
-    if (it != currentClips.end()) {
-        for (auto *eff : it->effects) {
-            eff->deleteLater();
-        }
-        currentClips.erase(it);
-
-        // ECS からも削除（フェーズ2: ECS を正本として同時削除する）
-        Rina::Engine::Timeline::ECS::instance().removeClip(clipId);
-        Rina::Engine::Timeline::ECS::instance().commit();
-
+    // m_scenes ループを廃止: ECS を正本として削除する
+    auto &delEcs = Rina::Engine::Timeline::ECS::instance();
+    if (delEcs.getSnapshot()->transforms.find(clipId) != nullptr) {
+        Rina::Engine::Timeline::ClipLifecycleSystem::destroyClip(delEcs.editState(), clipId);
+        delEcs.commit();
         if (emitSignal) {
             emit clipsChanged();
         }
@@ -676,7 +680,10 @@ void TimelineService::deleteClipInternal(int clipId, bool emitSignal) {
 }
 
 void TimelineService::addClipDirectInternal(const ClipData &clip, bool emitSignal) {
-    clipsMutable().append(clip);
+    // m_scenes.append 廃止: ECS へ直接復元する
+    auto &addEcs = Rina::Engine::Timeline::ECS::instance();
+    Rina::Engine::Timeline::ClipLifecycleSystem::restoreClipFromDTO(addEcs.editState(), clip);
+    addEcs.commit();
     if (emitSignal) {
         emit clipsChanged();
         emit clipCreated(clip.id, clip.layer, clip.startFrame, clip.durationFrames, clip.type);
@@ -833,7 +840,8 @@ void TimelineService::pasteClip(int frame, int layer) {
     layer = std::max(layer, 0);
 
     auto overlaps = [](int s1, int d1, int s2, int d2) -> bool { return (s1 < (s2 + d2)) && (s2 < (s1 + d1)); };
-    auto &currentClips = clipsMutable();
+    // 衝突チェック: ECS スナップショットを正本として走査（m_scenes廃止）
+    const auto *pasteSnap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
 
     int baseFrame = m_clipboardSnapshots.first().transform.startFrame;
     int baseLayer = m_clipboardSnapshots.first().transform.layer;
@@ -848,8 +856,8 @@ void TimelineService::pasteClip(int frame, int layer) {
         newClip.transform.startFrame = frame + (src.transform.startFrame - baseFrame);
         newClip.transform.layer = std::max(0, layer + (src.transform.layer - baseLayer));
 
-        for (const auto &c : std::as_const(currentClips)) {
-            if (c.layer == newClip.transform.layer && overlaps(newClip.transform.startFrame, newClip.transform.durationFrames, c.startFrame, c.durationFrames)) {
+        for (const auto &ct : pasteSnap->transforms) {
+            if (ct.layer == newClip.transform.layer && overlaps(newClip.transform.startFrame, newClip.transform.durationFrames, ct.startFrame, ct.durationFrames)) {
                 qWarning() << "クリップ貼り付けを拒否: レイヤー" << newClip.transform.layer << "の" << newClip.transform.startFrame << "フレームで衝突が発生";
                 return;
             }
@@ -886,9 +894,7 @@ void TimelineService::splitClip(int clipId, int frame) {
     }
 }
 
-auto TimelineService::clips() const -> const QList<ClipData> & { return currentScene()->clips; }
-
-auto TimelineService::clipsMutable() -> QList<ClipData> & { return currentScene()->clips; }
+// clips() / clipsMutable() は ECS 正本化に伴い廃止（フェーズ3完了）
 
 auto TimelineService::clips(int sceneId) const -> const QList<ClipData> & {
     for (const auto &scene : std::as_const(m_scenes)) {

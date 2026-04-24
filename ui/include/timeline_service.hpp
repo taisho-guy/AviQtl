@@ -18,8 +18,7 @@ class TimelineService : public QObject {
     explicit TimelineService(SelectionService *selection, QObject *parent = nullptr);
 
     // データアクセス
-    const QList<ClipData> &clips() const;
-    QList<ClipData> &clipsMutable();                 // シリアライザ用
+    // clips() / clipsMutable() は ECS 正本化に伴い廃止（フェーズ3完了）
     const QList<ClipData> &clips(int sceneId) const; // 特定シーンのクリップ取得
 
     // ネストを解決した「フレーム時点のアクティブクリップ」を返す
