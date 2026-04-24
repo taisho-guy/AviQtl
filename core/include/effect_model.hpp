@@ -528,6 +528,17 @@ class EffectModel : public QObject {
         }
     }
 
+    // ECS 側の変更を EffectModel* に同期する（SettingDialog の Undo スナップショット精度維持）
+    // 呼び出し元: SettingDialog の onEffectParamChanged
+    Q_INVOKABLE void updateParam(const QString &key, const QVariant &val) {
+        invalidateCache(key);
+        if (m_params[key] != val) {
+            m_params[key] = val;
+            emit paramsChanged();
+            emit paramChanged(key, val);
+        }
+    }
+
     Q_INVOKABLE void setKeyframe(const QString &paramName, int frame, const QVariant &value, const QVariantMap &options) {
         invalidateCache(paramName);
         const QVariant fallback = m_params.value(paramName);

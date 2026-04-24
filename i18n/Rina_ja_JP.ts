@@ -1446,42 +1446,42 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="518"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="524"/>
         <source>削除</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="518"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="524"/>
         <source>選択した %1 件を削除</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="832"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="833"/>
         <source> (直線)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="833"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="834"/>
         <source> (加速)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="834"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="835"/>
         <source> (減速)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="835"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="836"/>
         <source> (加減速)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="836"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="837"/>
         <source> (ベジェ)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="1297"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="1298"/>
         <source>エフェクトを追加</source>
         <translation type="unfinished"></translation>
     </message>

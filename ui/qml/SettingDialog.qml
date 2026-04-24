@@ -239,13 +239,6 @@ Common.RinaWindow {
             reload();
         }
 
-        // パラメータ変更時の反映用（入力中はリロードしない）
-        function onSelectedClipDataChanged() {
-            if (!inputting && !root.isDeleting)
-                reload();
-
-        }
-
         target: Workspace.currentTimeline ? Workspace.currentTimeline.selection : null
     }
 
@@ -254,6 +247,19 @@ Common.RinaWindow {
             if (clipId === targetClipId && !root.isDeleting)
                 reload();
 
+        }
+
+        // reload() を呼ばず _effectRev++ のみで startVal/endVal/effVal を再評価させる
+        function onEffectParamChanged(changedClipId, effectIndex, paramName, value) {
+            if (changedClipId !== targetClipId)
+                return ;
+
+            var item = videoEffectsRepeater.itemAt(effectIndex);
+            if (item) {
+                // EffectModel*.m_params を ECS 値で同期する（setKeyframe fallback 精度維持）
+                item.effectModel.updateParam(paramName, value);
+                item._effectRev++;
+            }
         }
 
         target: Workspace.currentTimeline
@@ -648,14 +654,9 @@ Common.RinaWindow {
                                     if (!effectModel)
                                         return undefined;
 
-                                    var v = effectModel.evaluatedParam(key, curRelFrame, root._projectFps);
-                                    if (v !== undefined && v !== null)
-                                        return v;
-
-                                    if (effectModel.params)
-                                        return effectModel.params[key];
-
-                                    return undefined;
+                                    // onEffectParamChanged → _effectRev++ の時点では
+                                    // ECS に値が書き込まれているため evaluatedParam で確定値が取れる
+                                    return effectModel.evaluatedParam(key, curRelFrame, root._projectFps);
                                 }
                                 property bool isNumber: typeof effVal === "number" && (!def.type || ["float", "number", "slider", "spinner", "int", "integer"].indexOf(def.type) !== -1)
                                 property bool isColor: !!def && (def.type === "color" || def.type === "colour")
