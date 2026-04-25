@@ -138,6 +138,8 @@ class TimelineService : public QObject {
     void clipEffectsChanged(int clipId);
     void layerStateChanged(int layer);
     void effectParamChanged(int clipId, int effectIndex, const QString &paramName, const QVariant &value);
+    // キーフレーム構造変化（追加・削除・移動）の通知
+    void effectKeyframesChanged(int clipId, int effectIndex, const QString &paramName);
     void clipCreated(int id, int layer, int startFrame, int duration, const QString &type);
 
   private:

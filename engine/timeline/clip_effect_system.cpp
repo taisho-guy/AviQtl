@@ -362,4 +362,17 @@ QVariantMap ClipEffectSystem::evaluateParamsCached(const ECSState &state, Interp
     return out;
 }
 
+QVariantList ClipEffectSystem::keyframeListForUi(const ECSState &state, int clipId, int effectIndex, const QString &paramName) {
+    const auto *stack = state.effectStacks.find(clipId);
+    if (!stack || effectIndex < 0 || effectIndex >= stack->effects.size())
+        return {};
+    const auto &eff = stack->effects[effectIndex];
+    const QVariant rawTrack = eff.keyframeTracks.value(paramName);
+    if (!Interp::isStructuredTrack(rawTrack))
+        return {};
+    const QVariant fallback = eff.params.value(paramName);
+    const QVariantMap track = Interp::normalizeTrackForDuration(rawTrack, fallback, Interp::inferredDurationForTrack(rawTrack));
+    return Interp::flattenStructuredTrack(track);
+}
+
 } // namespace Rina::Engine::Timeline

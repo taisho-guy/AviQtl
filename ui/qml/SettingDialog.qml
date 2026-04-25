@@ -287,11 +287,19 @@ Common.RinaWindow {
                 return ;
 
             var item = videoEffectsRepeater.itemAt(effectIndex);
-            if (item) {
-                // EffectModel*.m_params を ECS 値で同期する（setKeyframe fallback 精度維持）
-                item.effectModel.updateParam(paramName, value);
+            if (item)
                 item._effectRev++;
-            }
+
+        }
+
+        function onEffectKeyframesChanged(changedClipId, effectIndex, paramName) {
+            if (changedClipId !== targetClipId)
+                return ;
+
+            var item = videoEffectsRepeater.itemAt(effectIndex);
+            if (item)
+                item._effectRev++;
+
         }
 
         target: Workspace.currentTimeline
@@ -620,15 +628,6 @@ Common.RinaWindow {
                         width: root.width
                         spacing: 0
 
-                        Connections {
-                            function onKeyframeTracksChanged() {
-                                effectRoot._effectRev++;
-                            }
-
-                            target: effectRoot.effectModel
-                            ignoreUnknownSignals: true
-                        }
-
                         // エフェクトヘッダー
                         Rectangle {
                             Layout.fillWidth: true
@@ -694,10 +693,12 @@ Common.RinaWindow {
                                 // キーフレーム
                                 property int curRelFrame: (Workspace.currentTimeline && Workspace.currentTimeline.transport) ? Math.max(0, Workspace.currentTimeline.transport.currentFrame - Workspace.currentTimeline.clipStartFrame) : 0
                                 property int clipDur: Workspace.currentTimeline ? Workspace.currentTimeline.clipDurationFrames : 100
-                                property var tracks: effectModel ? effectModel.keyframeTracks : null
                                 property var kfs: {
-                                    var _ = tracks;
-                                    return effectModel ? effectModel.keyframeListForUi(key) : [];
+                                    var _ = effectRoot._effectRev;
+                                    if (!Workspace.currentTimeline || !key)
+                                        return [];
+
+                                    return Workspace.currentTimeline.keyframeListForUi(root.targetClipId, effIdx, key) || [];
                                 }
                                 property bool hasKeyframes: kfs.length > 0
                                 property var interval: findInterval(kfs, curRelFrame, clipDur)
@@ -741,7 +742,7 @@ Common.RinaWindow {
                                     var raw = root._evalECS(effectModel.id, f, key);
                                     var v = (raw !== undefined && raw !== null) ? raw : effVal;
                                     var interp = "linear";
-                                    paramDelegate.effectModel.setKeyframe(paramDelegate.key, f, v, {
+                                    Workspace.currentTimeline.setKeyframe(root.targetClipId, paramDelegate.effIdx, paramDelegate.key, f, v, {
                                         "interp": interp
                                     });
                                 }
@@ -1042,7 +1043,7 @@ Common.RinaWindow {
                                                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                                                 onClicked: function(mouse) {
                                                     if (mouse.button === Qt.RightButton && kfItem.originalFrame !== 0)
-                                                        kfItem.targetModel.removeKeyframe(kfItem.targetKey, kfItem.originalFrame);
+                                                        Workspace.currentTimeline.removeKeyframe(root.targetClipId, paramDelegate.effIdx, kfItem.targetKey, kfItem.originalFrame);
 
                                                 }
                                                 onDoubleClicked: function(mouse) {
@@ -1084,8 +1085,8 @@ Common.RinaWindow {
                                                             paramDelegate.activeDragOriginal = -1;
 
                                                         if (kfItem.currentFrame !== kfItem.originalFrame) {
-                                                            var val = root._evalECS(kfItem.targetModel.id, kfItem.originalFrame, kfItem.targetKey);
-                                                            var track = kfItem.targetModel.keyframeListForUi(kfItem.targetKey) || [];
+                                                            var val = root._evalECS(paramDelegate.effectModel.id, kfItem.originalFrame, kfItem.targetKey);
+                                                            var track = Workspace.currentTimeline.keyframeListForUi(root.targetClipId, paramDelegate.effIdx, kfItem.targetKey) || [];
                                                             var interp = "linear";
                                                             var pts = [];
                                                             for (let i = 0; i < track.length; i++) {
@@ -1098,14 +1099,14 @@ Common.RinaWindow {
                                                                     break;
                                                                 }
                                                             }
-                                                            kfItem.targetModel.removeKeyframe(kfItem.targetKey, kfItem.originalFrame);
+                                                            Workspace.currentTimeline.removeKeyframe(root.targetClipId, paramDelegate.effIdx, kfItem.targetKey, kfItem.originalFrame);
                                                             let options = {
                                                                 "interp": interp
                                                             };
                                                             if (pts.length > 0)
                                                                 options.points = pts;
 
-                                                            kfItem.targetModel.setKeyframe(kfItem.targetKey, kfItem.currentFrame, val, options);
+                                                            Workspace.currentTimeline.setKeyframe(root.targetClipId, paramDelegate.effIdx, kfItem.targetKey, kfItem.currentFrame, val, options);
                                                         }
                                                         kfItem.rootWindow.inputting = false;
                                                     }
@@ -1150,7 +1151,7 @@ Common.RinaWindow {
                                             let options = {
                                                 "interp": "linear"
                                             };
-                                            effectModel.setKeyframe(key, f, val, options);
+                                            Workspace.currentTimeline.setKeyframe(root.targetClipId, effIdx, key, f, val, options);
                                         }
                                     }
 

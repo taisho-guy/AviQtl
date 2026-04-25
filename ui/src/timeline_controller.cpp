@@ -3,6 +3,7 @@
 #include "commands.hpp"
 #include "effect_registry.hpp"
 #include "engine/plugin/audio_plugin_manager.hpp"
+#include "engine/timeline/clip_effect_system.hpp"
 #include "engine/timeline/ecs.hpp"
 #include "project_serializer.hpp"
 #include "project_service.hpp"
@@ -82,6 +83,7 @@ void TimelineController::setupConnections() {
         updateActiveClipsList();
         emit effectParamChanged(clipId, effectIndex, paramName, value);
     });
+    connect(m_timeline, &TimelineService::effectKeyframesChanged, this, &TimelineController::effectKeyframesChanged);
 
     // 画像や動画の準備ができたらUI側に再描画を促す
     connect(m_mediaManager, &TimelineMediaManager::frameUpdated, this, &TimelineController::clipEffectsChanged);
@@ -191,6 +193,12 @@ bool TimelineController::hasUnsavedChanges() const {
         return !m_timeline->undoStack()->isClean();
     }
     return false;
+}
+
+QVariantList TimelineController::keyframeListForUi(int clipId, int effectIndex, const QString &paramName) const {
+    using Rina::Engine::Timeline::ClipEffectSystem;
+    using Rina::Engine::Timeline::ECS;
+    return ClipEffectSystem::keyframeListForUi(ECS::instance().editState(), clipId, effectIndex, paramName);
 }
 
 } // namespace Rina::UI

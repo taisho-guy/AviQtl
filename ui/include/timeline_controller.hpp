@@ -156,6 +156,8 @@ class TimelineController : public QObject {
     Q_INVOKABLE void setEffectParameter(int clipId, int effectIndex, int paramIndex, float value);
     Q_INVOKABLE void setKeyframe(int clipId, int effectIndex, const QString &paramName, int frame, const QVariant &value, const QVariantMap &options);
     Q_INVOKABLE void removeKeyframe(int clipId, int effectIndex, const QString &paramName, int frame);
+    // UI表示用キーフレーム一覧をECSから直接取得（QML→ECSの読み取りパス）
+    Q_INVOKABLE QVariantList keyframeListForUi(int clipId, int effectIndex, const QString &paramName) const;
 
     // シーン操作
     QVariantList scenes() const;
@@ -239,6 +241,7 @@ class TimelineController : public QObject {
     void activeObjectTypeChanged(); // 選択中クリップの種別 (text, rectなど)
     void clipsChanged();
     void effectParamChanged(int clipId, int effectIndex, const QString &paramName, const QVariant &value); // 追加
+    void effectKeyframesChanged(int clipId, int effectIndex, const QString &paramName);
     void scenesChanged();
     void currentSceneIdChanged();
     void currentProjectUrlChanged();

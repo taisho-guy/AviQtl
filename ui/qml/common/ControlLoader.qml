@@ -208,17 +208,28 @@ Loader {
             property real _fps: (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.fps : 60
             property int _curFrame: (Workspace.currentTimeline && Workspace.currentTimeline.transport) ? Workspace.currentTimeline.transport.currentFrame - Workspace.currentTimeline.clipStartFrame : 0
             property int _rev: 0
+            property string _em_id: (_em && _em.id !== undefined) ? _em.id : ""
             property int _startFrame: controlLoader.startFrameState
             property int _endFrame: controlLoader.endFrameState
             property bool _rightInteractive: controlLoader.rightInteractiveState
             property bool _hasKf: true
             property var _startVal: {
                 var _ = colorRow._rev;
-                return (_em) ? (_em.evaluatedParam(_key, _startFrame, _fps) || controlLoader.value || "#ffffff") : (controlLoader.value || "#ffffff");
+                return (Workspace.currentTimeline && colorRow._em_id) ? (() => {
+                    var _cid = Workspace.currentTimeline.selection ? Workspace.currentTimeline.selection.selectedClipId : -1;
+                    var _c = (_cid >= 0) ? Workspace.currentTimeline.evaluateClipParams(_cid, _startFrame) : null;
+                    var _ep = _c ? _c[colorRow._em_id] : undefined;
+                    return (_ep && _ep[_key] !== undefined) ? _ep[_key] : (controlLoader.value || "#ffffff");
+                })() : (controlLoader.value || "#ffffff");
             }
             property var _endVal: {
                 var _ = colorRow._rev;
-                return (_em) ? (_em.evaluatedParam(_key, _endFrame, _fps) || controlLoader.value || "#ffffff") : (controlLoader.value || "#ffffff");
+                return (Workspace.currentTimeline && colorRow._em_id) ? (() => {
+                    var _cid = Workspace.currentTimeline.selection ? Workspace.currentTimeline.selection.selectedClipId : -1;
+                    var _c = (_cid >= 0) ? Workspace.currentTimeline.evaluateClipParams(_cid, _endFrame) : null;
+                    var _ep = _c ? _c[colorRow._em_id] : undefined;
+                    return (_ep && _ep[_key] !== undefined) ? _ep[_key] : (controlLoader.value || "#ffffff");
+                })() : (controlLoader.value || "#ffffff");
             }
 
             function _commit(frame, val) {
@@ -234,10 +245,6 @@ Loader {
 
             Connections {
                 function onKeyframeTracksChanged() {
-                    colorRow._rev++;
-                }
-
-                function onParamsChanged() {
                     colorRow._rev++;
                 }
 

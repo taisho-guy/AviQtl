@@ -46,6 +46,8 @@ class ClipEffectSystem {
     static void removeKeyframe(ECSState &state, int clipId, int effectIndex, const QString &paramName, int frame);
     static std::pair<QVariantMap, QVariantMap> splitKeyframeTracks(const QVariantMap &tracks, const QVariantMap &params, int firstHalfDuration, int originalDuration);
     static void setKeyframeTracksAt(ECSState &state, int clipId, int effectIndex, const QVariantMap &tracks, int durationFrames);
+    // UI表示用キーフレーム一覧（frame昇順、start+pointsをフラット化して返す）
+    static QVariantList keyframeListForUi(const ECSState &state, int clipId, int effectIndex, const QString &paramName);
 };
 
 } // namespace Rina::Engine::Timeline

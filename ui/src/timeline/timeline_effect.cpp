@@ -302,18 +302,22 @@ void TimelineService::setKeyframeInternal(int clipId, int effectIndex, // NOLINT
                                           const QString &paramName, int frame, const QVariant &value, const QVariantMap &options) {
     auto &ecs = Rina::Engine::Timeline::ECS::instance();
     Rina::Engine::Timeline::ClipEffectSystem::setKeyframe(ecs.editState(), clipId, effectIndex, paramName, frame, value, options);
+    ecs.invalidateEffectCache(clipId, effectIndex, paramName);
     ecs.commit();
     emit clipsChanged();
     emit clipEffectsChanged(clipId);
+    emit effectKeyframesChanged(clipId, effectIndex, paramName);
 }
 
 void TimelineService::removeKeyframeInternal(int clipId, int effectIndex, // NOLINT(bugprone-easily-swappable-parameters)
                                              const QString &paramName, int frame) {
     auto &ecs = Rina::Engine::Timeline::ECS::instance();
     Rina::Engine::Timeline::ClipEffectSystem::removeKeyframe(ecs.editState(), clipId, effectIndex, paramName, frame);
+    ecs.invalidateEffectCache(clipId, effectIndex, paramName);
     ecs.commit();
     emit clipsChanged();
     emit clipEffectsChanged(clipId);
+    emit effectKeyframesChanged(clipId, effectIndex, paramName);
 }
 
 QVariant TimelineService::evaluateEffectParam(int clipId, int effectIndex, const QString &paramName, int relFrame) const {

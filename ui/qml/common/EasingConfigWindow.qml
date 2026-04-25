@@ -284,12 +284,14 @@ ApplicationWindow {
             const _clipDur = Workspace.currentTimeline ? Workspace.currentTimeline.clipDurationFrames : 100;
             const _fps = (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.fps : 60;
             const _endFrame = _clipDur;
-            const _track = effectModel.keyframeListForUi(paramName) || [];
+            const _track = Workspace.currentTimeline ? Workspace.currentTimeline.keyframeListForUi(clipId, effectIndex, paramName) : [];
             const _hasKfAtEnd = _track.some(function(kf) {
                 return kf.frame === _endFrame;
             });
             if (!_hasKfAtEnd) {
-                const _endVal = effectModel.evaluatedParam(paramName, _endFrame, _fps);
+                const _ecCache = Workspace.currentTimeline ? Workspace.currentTimeline.evaluateClipParams(clipId, _endFrame) : null;
+                const _ecEff = (_ecCache && effectModel) ? _ecCache[effectModel.id] : null;
+                const _endVal = (_ecEff && _ecEff[paramName] !== undefined) ? _ecEff[paramName] : undefined;
                 // 末尾の既存キーフレーム（= 末尾セグメントの左端）の interp を linear に更新
                 // これにより 左端フレーム→endFrame が直線補間になる
                 if (_track.length > 0) {
@@ -311,8 +313,7 @@ ApplicationWindow {
             }
         };
         typeCombo.model = effectModel.availableEasings();
-        const tracks = effectModel.keyframeTracks;
-        const track = effectModel ? effectModel.keyframeListForUi(paramName) : undefined;
+        const track = Workspace.currentTimeline ? Workspace.currentTimeline.keyframeListForUi(clipId, effectIndex, paramName) : undefined;
         if (!track)
             return ;
 
@@ -347,7 +348,7 @@ ApplicationWindow {
         if (!effectModel)
             return ;
 
-        const kf = effectModel.keyframeListForUi(paramName).find((k) => {
+        const kf = (Workspace.currentTimeline ? Workspace.currentTimeline.keyframeListForUi(clipId, effectIndex, paramName) : []).find((k) => {
             return k.frame === keyframeFrame;
         });
         if (!kf)
