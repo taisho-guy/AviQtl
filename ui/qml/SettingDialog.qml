@@ -14,6 +14,7 @@ Common.RinaWindow {
     property var audioEffectsModel: []
     // NOTE: inputting フラグは外部読み取り用に残存（内部では非参照）
     property bool inputting: false
+    property int _updateDepth: 0
     property bool reloading: false // onClipEffectsChanged → reload() の再入防止専用
     property bool isDeleting: false // 複数エフェクト削除中フラグ（途中reload抑制用）
     property bool enableSnap: SettingsManager && SettingsManager.settings ? SettingsManager.settings.enableSnap : true
@@ -705,17 +706,15 @@ Common.RinaWindow {
                                 property int startFrame: interval.start
                                 property int endFrame: interval.end
                                 property var startVal: {
-                                    var _t = tracks;
                                     var _r = effectRoot._effectRev;
                                     return effectModel ? (root._evalECS(effectModel.id, startFrame, key) ?? effVal) : effVal;
                                 }
                                 property var endVal: {
-                                    var _t = tracks;
                                     var _r = effectRoot._effectRev;
                                     return effectModel ? (root._evalECS(effectModel.id, endFrame, key) ?? effVal) : effVal;
                                 }
                                 property string interpType: {
-                                    var _ = tracks;
+                                    var _ = effectRoot._effectRev;
                                     return hasKeyframes ? getInterpAt(startFrame) : "constant";
                                 }
                                 property bool isMoving: supportsRangeUi && (hasKeyframes || interpType !== "constant")
@@ -827,10 +826,15 @@ Common.RinaWindow {
                                     if (!effectModel || !key)
                                         return ;
 
+                                    if (root._updateDepth > 0)
+                                        return ;
+
+                                    root._updateDepth++;
                                     // メディア参照系パラメータはキーフレーム有無に関わらず直接更新
                                     var isMediaRef = (def && (def.type === "path" || def.type === "file")) || key === "path" || key === "source";
                                     if (!hasKeyframes || isMediaRef) {
                                         Workspace.currentTimeline.updateClipEffectParam(targetClipId, effIdx, key, val);
+                                        root._updateDepth--;
                                         return ;
                                     }
                                     let type = "linear";
@@ -844,6 +848,7 @@ Common.RinaWindow {
                                     Workspace.currentTimeline.setKeyframe(targetClipId, effIdx, paramDelegate.key, frame, val, {
                                         "interp": type
                                     });
+                                    root._updateDepth--;
                                 }
 
                                 Layout.fillWidth: true

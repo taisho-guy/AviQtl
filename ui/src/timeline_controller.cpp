@@ -78,9 +78,12 @@ void TimelineController::setupConnections() {
         emit clipEffectsChanged(id);
     });
     connect(m_timeline, &TimelineService::effectParamChanged, this, [this](int clipId, int effectIndex, const QString &paramName, const QVariant &value) -> void {
-        m_mediaManager->updateMediaDecoders();
-        m_mediaManager->onCurrentFrameChanged();
-        updateActiveClipsList();
+        // path/source 変更時のみデコーダーと表示を更新。
+        // パラメータ変更はクリップ位置に影響しないため updateActiveClipsList は不要。
+        if (paramName == QLatin1String("path") || paramName == QLatin1String("source") || paramName == QStringLiteral("targetSceneId")) {
+            m_mediaManager->updateMediaDecoders();
+            m_mediaManager->onCurrentFrameChanged();
+        }
         emit effectParamChanged(clipId, effectIndex, paramName, value);
     });
     connect(m_timeline, &TimelineService::effectKeyframesChanged, this, &TimelineController::effectKeyframesChanged);

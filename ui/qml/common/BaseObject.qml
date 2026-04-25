@@ -191,7 +191,6 @@ Node {
         source: (base.transformModel && base.transformModel.qmlSource) ? base.transformModel.qmlSource : ""
         onLoaded: {
             item.source = null;
-            item.effectModel = base.transformModel;
             item.frame = base.relFrame;
             // ecsCache["transform"] を params に注入。
             // base.ecsCache が再評価されると Qt.binding が追跡する依存経由で自動再評価。
