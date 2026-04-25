@@ -15,7 +15,7 @@
 #include "engine/timeline/clip_effect_system.hpp"
 #include "engine/timeline/ecs.hpp"
 
-namespace Rina::UI {
+namespace AviQtl::UI {
 
 void TimelineController::handleClipClick(int clipId, int modifiers) { // NOLINT(bugprone-easily-swappable-parameters)
     if ((modifiers & Qt::ControlModifier) != 0U) {
@@ -36,7 +36,7 @@ void TimelineController::updateSelectionPreview(int frameA, int frameB, int laye
     int minL = std::min(layerA, layerB);
     int maxL = std::max(layerA, layerB);
 
-    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
     for (const auto &ct : snap->transforms) {
         const auto *fxUsp = snap->effectStacks.find(ct.clipId);
         // GroupControl によるレイヤー拡張分を考慮
@@ -88,7 +88,7 @@ void TimelineController::setClipProperty(const QString &name, const QVariant &va
 
     for (const QVariant &vId : ids) {
         int id = vId.toInt();
-        const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+        const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
         const auto *fx = snap->effectStacks.find(id);
         if (fx == nullptr) {
             continue;
@@ -128,7 +128,7 @@ void TimelineController::setClipStartFrame(int frame) {
     }
 
     m_timeline->undoStack()->beginMacro(tr("開始フレーム変更"));
-    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
     for (const QVariant &vId : ids) {
         int id = vId.toInt();
         if (const auto *c = snap->transforms.find(id)) {
@@ -146,7 +146,7 @@ void TimelineController::setClipDurationFrames(int frames) {
     }
 
     m_timeline->undoStack()->beginMacro(tr("長さ変更"));
-    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
     for (const QVariant &vId : ids) {
         int id = vId.toInt();
         if (const auto *c = snap->transforms.find(id)) {
@@ -164,7 +164,7 @@ void TimelineController::setLayer(int layer) {
     }
 
     m_timeline->undoStack()->beginMacro(tr("レイヤー変更"));
-    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
     for (const QVariant &vId : ids) {
         int id = vId.toInt();
         if (const auto *c = snap->transforms.find(id)) {
@@ -205,7 +205,7 @@ void TimelineController::createObject(const QString &type, int startFrame, int l
 
 QVariantList TimelineController::getClipEffectsModel(int clipId) const {
     QVariantList list;
-    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
     if (!snap)
         return list;
 
@@ -218,7 +218,7 @@ QVariantList TimelineController::getClipEffectsModel(int clipId) const {
     // レンダリングパスには getClipEffectsMeta() を使うこと。
     for (const auto &data : fx->effects) {
         // parent=nullptr + JavaScriptOwnership: QML 参照消失時に GC が delete する
-        auto *model = Rina::UI::effectModelFromData(data);
+        auto *model = AviQtl::UI::effectModelFromData(data);
         list.append(QVariant::fromValue(model));
     }
     return list;
@@ -226,7 +226,7 @@ QVariantList TimelineController::getClipEffectsModel(int clipId) const {
 
 auto TimelineController::getClipEffectsMeta(int clipId) const -> QVariantList {
     QVariantList list;
-    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
     if (!snap)
         return list;
     const auto *fx = snap->effectStacks.find(clipId);
@@ -252,7 +252,7 @@ void TimelineController::updateClipEffectParam(int clipId, int effectIndex, cons
 
 auto TimelineController::clips() const -> QVariantList {
     QVariantList list;
-    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
     for (const auto &ct : snap->transforms) {
         const auto *m = snap->metadataStates.find(ct.clipId);
         const auto *fx = snap->effectStacks.find(ct.clipId);
@@ -267,7 +267,7 @@ auto TimelineController::clips() const -> QVariantList {
         map.insert(QStringLiteral("durationFrames"), ct.durationFrames);
         map.insert(QStringLiteral("layer"), ct.layer);
 
-        auto meta = Rina::Core::EffectRegistry::instance().getEffect(m->type);
+        auto meta = AviQtl::Core::EffectRegistry::instance().getEffect(m->type);
         map.insert(QStringLiteral("name"), !meta.name.isEmpty() ? meta.name : m->type);
         if (!meta.qmlSource.isEmpty()) {
             map.insert(QStringLiteral("qmlSource"), meta.qmlSource);
@@ -332,7 +332,7 @@ void TimelineController::resizeSelectedClips(int deltaStartFrame, int deltaDurat
 
     QVector<PendingResize> pending;
     pending.reserve(ids.size());
-    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
     for (const QVariant &vId : std::as_const(ids)) {
         const int id = vId.toInt();
         const auto *t = snap->transforms.find(id);
@@ -366,7 +366,7 @@ void TimelineController::resizeSelectedClips(int deltaStartFrame, int deltaDurat
 // updateClip と resizeSelectedClips の共通ロジックとして抽出
 int TimelineController::clampedDuration(int clipId, int newStart, int requestedDuration) const {
     Q_UNUSED(newStart);
-    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
     const auto *m = snap->metadataStates.find(clipId);
     const auto *fx = snap->effectStacks.find(clipId);
     if (m == nullptr) {
@@ -377,7 +377,7 @@ int TimelineController::clampedDuration(int clipId, int newStart, int requestedD
     int duration = requestedDuration;
 
     if (m->type == QLatin1String("video")) {
-        auto *vid = qobject_cast<Rina::Core::VideoDecoder *>(m_mediaManager->decoderForClip(clipId));
+        auto *vid = qobject_cast<AviQtl::Core::VideoDecoder *>(m_mediaManager->decoderForClip(clipId));
         if ((vid != nullptr) && vid->isReady()) {
             int startVideoFrame = 0;
             double speed = 100.0;
@@ -420,7 +420,7 @@ int TimelineController::clampedDuration(int clipId, int newStart, int requestedD
             }
         }
     } else if (m->type == QLatin1String("audio")) {
-        auto *aud = qobject_cast<Rina::Core::AudioDecoder *>(m_mediaManager->decoderForClip(clipId));
+        auto *aud = qobject_cast<AviQtl::Core::AudioDecoder *>(m_mediaManager->decoderForClip(clipId));
         if ((aud != nullptr) && aud->isReady()) {
             double startTime = 0.0;
             double speed = 100.0;
@@ -487,7 +487,7 @@ int TimelineController::clampedDuration(int clipId, int newStart, int requestedD
 
 // updateClip: clampedDuration() に委譲して DRY を維持
 void TimelineController::updateClip(int id, int layer, int startFrame, int duration) {
-    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
     const auto *t = snap->transforms.find(id);
     if (t == nullptr) {
         return;
@@ -498,7 +498,7 @@ void TimelineController::updateClip(int id, int layer, int startFrame, int durat
 }
 
 void TimelineController::moveClipWithCollisionCheck(int clipId, int layer, int startFrame) {
-    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
     const auto *t = snap->transforms.find(clipId);
     if (t == nullptr) {
         return;
@@ -576,7 +576,7 @@ void TimelineController::cutEffect(int clipId, int effectIndex) {
 }
 
 void TimelineController::addAudioPlugin(int clipId, const QString &pluginId) {
-    auto plugin = Rina::Engine::Plugin::AudioPluginManager::instance().createPlugin(pluginId);
+    auto plugin = AviQtl::Engine::Plugin::AudioPluginManager::instance().createPlugin(pluginId);
     if (plugin) {
         qInfo() << "Adding audio plugin:" << plugin->name() << "to clip" << clipId;
         m_mediaManager->audioMixer()->getChain(clipId).add(std::move(plugin));
@@ -604,7 +604,7 @@ void TimelineController::reorderAudioPlugins(int clipId, int oldIndex, int newIn
 }
 
 auto TimelineController::isAudioClip(int clipId) const -> bool {
-    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
     const auto *m = snap->metadataStates.find(clipId);
     return (m != nullptr) && m->type == QLatin1String("audio");
 }
@@ -614,13 +614,13 @@ auto TimelineController::getWaveformPeaks(int clipId, int pixelWidth, int displa
         return {};
     }
 
-    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
     const auto *m = snap->metadataStates.find(clipId);
     if ((m == nullptr) || m->type != QLatin1String("audio")) {
         return {};
     }
 
-    auto *decoder = qobject_cast<Rina::Core::AudioDecoder *>((m_mediaManager != nullptr) ? m_mediaManager->decoderForClip(clipId) : nullptr);
+    auto *decoder = qobject_cast<AviQtl::Core::AudioDecoder *>((m_mediaManager != nullptr) ? m_mediaManager->decoderForClip(clipId) : nullptr);
     if ((decoder == nullptr) || !decoder->isReady()) {
         return QVariantList(pixelWidth, 0.0);
     }
@@ -748,7 +748,7 @@ void TimelineController::splitSelectedClips(int frame) {
 }
 
 auto TimelineController::evaluateClipParams(int clipId, int relFrame) const -> QVariantMap {
-    auto &ecs = ::Rina::Engine::Timeline::ECS::instance();
+    auto &ecs = ::AviQtl::Engine::Timeline::ECS::instance();
     const auto *state = ecs.getSnapshot();
     if (!state || !state->effectStacks.contains(clipId))
         return QVariantMap{};
@@ -759,7 +759,7 @@ auto TimelineController::evaluateClipParams(int clipId, int relFrame) const -> Q
 
     const double fps = (m_project && m_project->fps() > 0.0) ? m_project->fps() : 60.0;
 
-    return ::Rina::Engine::Timeline::ClipEffectSystem::evaluateParamsCached(*state, ecs.interpCache(), clipId, relFrame, durationFrames, fps);
+    return ::AviQtl::Engine::Timeline::ClipEffectSystem::evaluateParamsCached(*state, ecs.interpCache(), clipId, relFrame, durationFrames, fps);
 }
 void TimelineController::copyClip(int clipId) { m_timeline->copyClip(clipId); }
 
@@ -781,4 +781,4 @@ void TimelineController::cutSelectedClips() {
 
 void TimelineController::deleteSelectedClips() { requestDelete(-1); }
 
-} // namespace Rina::UI
+} // namespace AviQtl::UI

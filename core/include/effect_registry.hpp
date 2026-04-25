@@ -5,7 +5,7 @@
 #include <QVariantMap>
 #include <vector>
 
-namespace Rina::Core {
+namespace AviQtl::Core {
 
 struct EffectMetadata {
     QString id;
@@ -56,4 +56,4 @@ class EffectRegistry {
 // 標準エフェクト初期化関数
 void initializeStandardEffects();
 
-} // namespace Rina::Core
+} // namespace AviQtl::Core

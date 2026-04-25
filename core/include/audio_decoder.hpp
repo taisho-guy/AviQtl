@@ -13,7 +13,7 @@ extern "C" {
 #include <libswresample/swresample.h>
 }
 
-namespace Rina::Core {
+namespace AviQtl::Core {
 
 class AudioDecoder : public MediaDecoder {
     Q_OBJECT
@@ -62,4 +62,4 @@ class AudioDecoder : public MediaDecoder {
     std::atomic<bool> m_isPlaying{false}; // インターリーブされたPCMデータ (L, R, L, R...)
 };
 
-} // namespace Rina::Core
+} // namespace AviQtl::Core

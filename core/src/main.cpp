@@ -1,11 +1,11 @@
 #include "../../engine/plugin/audio_plugin_manager.hpp"
 #include "../../engine/timeline/ecs.hpp"
 #include "../../scripting/mod_engine.hpp"
+#include "aviqtl_context.hpp"
 #include "color_scheme_controller.hpp"
 #include "compute_effect.hpp"
 #include "effect_registry.hpp"
 #include "package_manager.hpp"
-#include "rina_context.hpp"
 #include "settings_manager.hpp"
 #include "theme_controller.hpp"
 #include "timeline_controller.hpp"
@@ -33,7 +33,7 @@ extern "C" {
 #include <libavutil/log.h>
 }
 
-static void rina_ffmpeg_log_callback(void *ptr, int level, const char *fmt, va_list vl) {
+static void aviqtl_ffmpeg_log_callback(void *ptr, int level, const char *fmt, va_list vl) {
     char line[1024];
     va_list vl_copy;
     va_copy(vl_copy, vl);
@@ -52,7 +52,7 @@ auto main(int argc, char *argv[]) -> int {
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 #endif
     QApplication app(argc, argv);
-    QApplication::setApplicationName(QStringLiteral("Rina"));
+    QApplication::setApplicationName(QStringLiteral("AviQtl"));
 
     QString appDir = QCoreApplication::applicationDirPath();
 
@@ -60,7 +60,7 @@ auto main(int argc, char *argv[]) -> int {
     QTranslator translator;
     const QStringList uiLanguages = QLocale::system().uiLanguages();
     for (const QString &locale : uiLanguages) {
-        const QString baseName = QStringLiteral("Rina_") + QLocale(locale).name();
+        const QString baseName = QStringLiteral("AviQtl_") + QLocale(locale).name();
         if (translator.load(baseName, appDir + QStringLiteral("/i18n"))) {
             qDebug() << QStringLiteral("[Main] 翻訳ファイルをロードしました:") << baseName;
             QApplication::installTranslator(&translator);
@@ -69,10 +69,10 @@ auto main(int argc, char *argv[]) -> int {
     }
 
     // メインスレッド上で設定管理を初期化する
-    QVariantMap settings = Rina::Core::SettingsManager::instance().settings();
-    Rina::Core::ThemeController::instance();
+    QVariantMap settings = AviQtl::Core::SettingsManager::instance().settings();
+    AviQtl::Core::ThemeController::instance();
 
-    av_log_set_callback(rina_ffmpeg_log_callback);
+    av_log_set_callback(aviqtl_ffmpeg_log_callback);
     QApplication::setWindowIcon(QIcon(QStringLiteral(":/assets/icon.svg")));
 
     // スプラッシュ画面をヒープ領域に確保する
@@ -83,58 +83,58 @@ auto main(int argc, char *argv[]) -> int {
     QApplication::processEvents();
 
     QTimer luaHookTimer;
-    auto &modEngine = Rina::Scripting::ModEngine::instance();
+    auto &modEngine = AviQtl::Scripting::ModEngine::instance();
     QObject::connect(&luaHookTimer, &QTimer::timeout, [&modEngine]() -> void { modEngine.onUpdate(); });
-    luaHookTimer.start(Rina::Core::SettingsManager::instance().value(QStringLiteral("luaHookIntervalMs"), 16).toInt());
+    luaHookTimer.start(AviQtl::Core::SettingsManager::instance().value(QStringLiteral("luaHookIntervalMs"), 16).toInt());
 
     QQuickStyle::setFallbackStyle(QStringLiteral("Fusion"));
-    auto *colorSchemeController = new Rina::Core::ColorSchemeController(&app);
+    auto *colorSchemeController = new AviQtl::Core::ColorSchemeController(&app);
     QQmlApplicationEngine engine;
 
-    auto *videoFrameStore = new Rina::Core::VideoFrameStore(&app);
-    engine.addImageProvider(QStringLiteral("videoFrame"), new Rina::Core::VideoFrameProvider(videoFrameStore));
+    auto *videoFrameStore = new AviQtl::Core::VideoFrameStore(&app);
+    engine.addImageProvider(QStringLiteral("videoFrame"), new AviQtl::Core::VideoFrameProvider(videoFrameStore));
     engine.rootContext()->setContextProperty(QStringLiteral("videoFrameStore"), videoFrameStore);
 
-    qmlRegisterType<Rina::Core::VideoEncoder>("Rina.Core", 1, 0, "VideoEncoder");
-    qmlRegisterType<Rina::UI::Effects::ComputeEffect>("Rina.Compute", 1, 0, "ComputeEffect");
-    engine.rootContext()->setContextProperty(QStringLiteral("SettingsManager"), &Rina::Core::SettingsManager::instance());
+    qmlRegisterType<AviQtl::Core::VideoEncoder>("AviQtl.Core", 1, 0, "VideoEncoder");
+    qmlRegisterType<AviQtl::UI::Effects::ComputeEffect>("AviQtl.Compute", 1, 0, "ComputeEffect");
+    engine.rootContext()->setContextProperty(QStringLiteral("SettingsManager"), &AviQtl::Core::SettingsManager::instance());
     engine.rootContext()->setContextProperty(QStringLiteral("ColorSchemeController"), colorSchemeController);
-    qmlRegisterUncreatableType<Rina::UI::TimelineController>("Rina.UI", 1, 0, "TimelineController", "Managed by C++");
+    qmlRegisterUncreatableType<AviQtl::UI::TimelineController>("AviQtl.UI", 1, 0, "TimelineController", "Managed by C++");
 
-    engine.rootContext()->setContextProperty(QStringLiteral("RinaVersion"), QString::fromUtf8(Rina::VERSION_STRING));
-    engine.rootContext()->setContextProperty(QStringLiteral("RinaVersionCodename"), QString::fromUtf8(Rina::VERSION_CODENAME));
-    engine.rootContext()->setContextProperty(QStringLiteral("PackageManager"), &Rina::Core::PackageManager::instance());
-    auto *workspace = new Rina::UI::Workspace(&app);
+    engine.rootContext()->setContextProperty(QStringLiteral("AviQtlVersion"), QString::fromUtf8(AviQtl::VERSION_STRING));
+    engine.rootContext()->setContextProperty(QStringLiteral("AviQtlVersionCodename"), QString::fromUtf8(AviQtl::VERSION_CODENAME));
+    engine.rootContext()->setContextProperty(QStringLiteral("PackageManager"), &AviQtl::Core::PackageManager::instance());
+    auto *workspace = new AviQtl::UI::Workspace(&app);
     engine.rootContext()->setContextProperty(QStringLiteral("Workspace"), workspace);
-    QObject::connect(workspace, &Rina::UI::Workspace::currentTimelineChanged, &app, [&modEngine, workspace]() {
+    QObject::connect(workspace, &AviQtl::UI::Workspace::currentTimelineChanged, &app, [&modEngine, workspace]() {
         if (workspace->currentTimeline()) {
             modEngine.registerController(workspace->currentTimeline());
         }
     });
     workspace->setVideoFrameStore(videoFrameStore);
 
-    engine.rootContext()->setContextProperty(QStringLiteral("WindowManager"), static_cast<QObject *>(&Rina::UI::WindowManager::instance()));
+    engine.rootContext()->setContextProperty(QStringLiteral("WindowManager"), static_cast<QObject *>(&AviQtl::UI::WindowManager::instance()));
 
     // 遅延初期化処理を実行する
     QTimer::singleShot(10, &engine, [&engine, workspace, &modEngine, splash]() -> void {
-        Rina::Core::initializeStandardEffects();
+        AviQtl::Core::initializeStandardEffects();
         modEngine.initialize(nullptr);
         modEngine.registerController(workspace->currentTimeline());
         modEngine.loadPlugins();
 
         QString appDir = QCoreApplication::applicationDirPath();
-        Rina::Core::EffectRegistry::instance().loadEffectsFromDirectory(appDir + QStringLiteral("/effects"));
-        Rina::Core::EffectRegistry::instance().loadEffectsFromDirectory(appDir + QStringLiteral("/objects"));
+        AviQtl::Core::EffectRegistry::instance().loadEffectsFromDirectory(appDir + QStringLiteral("/effects"));
+        AviQtl::Core::EffectRegistry::instance().loadEffectsFromDirectory(appDir + QStringLiteral("/objects"));
 
         // 音声プラグインの読み込み完了時にスプラッシュ画面を消去する
-        QObject::connect(&Rina::Engine::Plugin::AudioPluginManager::instance(), &Rina::Engine::Plugin::AudioPluginManager::pluginsReady, splash, [&engine, splash](int) -> void {
-            Rina::UI::WindowManager::instance().spawnInitialWindows(&engine);
+        QObject::connect(&AviQtl::Engine::Plugin::AudioPluginManager::instance(), &AviQtl::Engine::Plugin::AudioPluginManager::pluginsReady, splash, [&engine, splash](int) -> void {
+            AviQtl::UI::WindowManager::instance().spawnInitialWindows(&engine);
             splash->finish(nullptr);
             splash->deleteLater();
         });
 
         // 音声プラグインの初期化とスキャンを開始する
-        Rina::Engine::Plugin::AudioPluginManager::instance().initialize();
+        AviQtl::Engine::Plugin::AudioPluginManager::instance().initialize();
     });
 
     return QApplication::exec();

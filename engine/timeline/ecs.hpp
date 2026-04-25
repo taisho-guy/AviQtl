@@ -13,7 +13,7 @@
 #include <utility>
 #include <vector>
 
-namespace Rina::Engine::Timeline {
+namespace AviQtl::Engine::Timeline {
 
 // Sparse Set (疎集合) パターンによるデータ指向コンテナ
 template <typename T> class DenseComponentMap {
@@ -142,7 +142,7 @@ struct SelectionComponent {
 // 実際の利用時には effect_model.hpp などが必要。
 struct EffectStackComponent {
     int clipId = -1;
-    QList<Rina::UI::EffectData> effects;
+    QList<AviQtl::UI::EffectData> effects;
 };
 
 // エフェクト 1 つ分の補間キャッシュ（paramName → フラットポイント列）
@@ -160,7 +160,7 @@ struct InterpolationCacheComponent {
     QList<InterpEffectCache> perEffect;
 };
 
-// ── トリプルバッファ外のキャッシュストア ──────────────────────────────────
+// ── トリプルバッファ外のキャッシュストア
 // ECSState には含まれず commit() のコピー対象にならない。
 // ECS シングルトンが直接所有する。
 class InterpolationCache {
@@ -248,7 +248,7 @@ class InterpolationCache {
 
 struct AudioStackComponent {
     int clipId = -1;
-    QList<Rina::UI::AudioPluginState> audioPlugins;
+    QList<AviQtl::UI::AudioPluginState> audioPlugins;
 };
 
 struct ECSState {
@@ -274,7 +274,7 @@ class ECS {
     void updateAudioClipState(int clipId, int startFrame, int durationFrames, float volume, float pan, bool mute);
     void removeClip(int clipId);
     void updateMetadata(int clipId, const QString &name, const QString &source, const QString &type, const QString &color);
-    void updateEffectStack(int clipId, const QList<Rina::UI::EffectData> &effects);
+    void updateEffectStack(int clipId, const QList<AviQtl::UI::EffectData> &effects);
 
     void commit();
 
@@ -321,4 +321,4 @@ class ECS {
     InterpolationCache m_interpCache;
 };
 
-} // namespace Rina::Engine::Timeline
+} // namespace AviQtl::Engine::Timeline

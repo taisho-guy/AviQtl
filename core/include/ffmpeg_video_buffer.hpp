@@ -7,7 +7,7 @@ extern "C" {
 #include <libavutil/frame.h>
 }
 
-namespace Rina::Core {
+namespace AviQtl::Core {
 
 class FFmpegVideoBuffer final : public QAbstractVideoBuffer {
   public:
@@ -38,4 +38,4 @@ class FFmpegVideoBuffer final : public QAbstractVideoBuffer {
     QVideoFrameFormat m_format;
 };
 
-} // namespace Rina::Core
+} // namespace AviQtl::Core

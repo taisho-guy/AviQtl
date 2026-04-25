@@ -3,7 +3,7 @@
 #include <QGuiApplication>
 #include <QStyleHints>
 
-namespace Rina::Core {
+namespace AviQtl::Core {
 
 auto ThemeController::instance() -> ThemeController & {
     static ThemeController inst;
@@ -40,4 +40,4 @@ void ThemeController::applyTheme() {
     }
 }
 
-} // namespace Rina::Core
+} // namespace AviQtl::Core

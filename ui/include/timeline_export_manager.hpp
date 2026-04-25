@@ -6,11 +6,11 @@
 #include <QThread>
 #include <atomic>
 
-namespace Rina::Core {
+namespace AviQtl::Core {
 class VideoEncoder;
 }
 
-namespace Rina::UI {
+namespace AviQtl::UI {
 class TimelineController;
 
 class TimelineExportManager : public QObject {
@@ -20,7 +20,7 @@ class TimelineExportManager : public QObject {
 
     ~TimelineExportManager() override;
 
-    void exportVideoAsync(const Rina::Core::VideoEncoder::Config &config);
+    void exportVideoAsync(const AviQtl::Core::VideoEncoder::Config &config);
     void cancelExport();
     bool isExporting() const { return m_exporting.load(); }
 
@@ -33,11 +33,11 @@ class TimelineExportManager : public QObject {
     void exportFinished(bool success, const QString &message);
 
   private:
-    void runExport(const Rina::Core::VideoEncoder::Config &config);
+    void runExport(const AviQtl::Core::VideoEncoder::Config &config);
     bool exportImageSequence(const QString &dir, int quality);
     TimelineController *m_controller;
     QPointer<QThread> m_exportThread;
     std::atomic<bool> m_exporting{false};
     std::atomic<bool> m_cancelRequested{false};
 };
-} // namespace Rina::UI
+} // namespace AviQtl::UI

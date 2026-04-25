@@ -3,7 +3,7 @@
 #include <QAbstractListModel>
 #include <QHash>
 
-namespace Rina::UI {
+namespace AviQtl::UI {
 class TransportService;
 
 class ClipModel : public QAbstractListModel {
@@ -26,4 +26,4 @@ class ClipModel : public QAbstractListModel {
     QHash<int, QList<EffectModel *>> m_effectsCache;
     TransportService *m_transport;
 };
-} // namespace Rina::UI
+} // namespace AviQtl::UI

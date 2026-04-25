@@ -10,11 +10,11 @@
 #include <algorithm>
 #include <cmath>
 
-namespace Rina::UI {
+namespace AviQtl::UI {
 
-TimelineMediaManager::TimelineMediaManager(TimelineController *controller, QObject *parent) : QObject(parent), m_controller(controller), m_audioMixer(new Rina::Engine::AudioMixer(this)) {}
+TimelineMediaManager::TimelineMediaManager(TimelineController *controller, QObject *parent) : QObject(parent), m_controller(controller), m_audioMixer(new AviQtl::Engine::AudioMixer(this)) {}
 
-void TimelineMediaManager::setVideoFrameStore(Rina::Core::VideoFrameStore *store) {
+void TimelineMediaManager::setVideoFrameStore(AviQtl::Core::VideoFrameStore *store) {
     m_videoFrameStore = store;
     updateMediaDecoders();
 }
@@ -38,7 +38,7 @@ void TimelineMediaManager::onCurrentFrameChanged() {
         m_audioMixer->processFrame(nextFrame, fps, static_cast<int>(std::round(static_cast<double>(sampleRate) / fps)));
     }
 
-    const auto *seekSnap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *seekSnap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
     for (auto it = m_decoders.begin(); it != m_decoders.end(); ++it) {
         const int seekCid = it.key();
         const auto *seekTr = seekSnap->transforms.find(seekCid);
@@ -48,15 +48,15 @@ void TimelineMediaManager::onCurrentFrameChanged() {
         }
         const int relFrame = nextFrame - seekTr->startFrame;
 
-        if (auto *vid = qobject_cast<Rina::Core::VideoDecoder *>(it.value())) {
+        if (auto *vid = qobject_cast<AviQtl::Core::VideoDecoder *>(it.value())) {
             updateVideoClipFrameECS(vid, seekCid, relFrame, fps);
         }
 
-        if (auto *img = qobject_cast<Rina::Core::ImageDecoder *>(it.value())) {
+        if (auto *img = qobject_cast<AviQtl::Core::ImageDecoder *>(it.value())) {
             img->seek(0); // 描画を強制
         }
 
-        if (auto *aud = qobject_cast<Rina::Core::AudioDecoder *>(it.value())) {
+        if (auto *aud = qobject_cast<AviQtl::Core::AudioDecoder *>(it.value())) {
             const double relTime = static_cast<double>(relFrame) / fps;
             double audioTime = 0.0;
             if (seekFx) {
@@ -107,7 +107,7 @@ void TimelineMediaManager::updateAudioSampleRate() {
 }
 
 auto TimelineMediaManager::getClipSourceUrl(int clipId) -> QUrl {
-    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
     const auto *m = snap->metadataStates.find(clipId);
     const auto *fx = snap->effectStacks.find(clipId);
     if (m == nullptr || fx == nullptr) {
@@ -129,7 +129,7 @@ void TimelineMediaManager::updateMediaDecoders() {
     QSet<int> currentClipIds;
     QHash<int, int> clipToScene;
 
-    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
     for (const auto &ct : snap->transforms) {
         const auto *m = snap->metadataStates.find(ct.clipId);
         if (m == nullptr) {
@@ -159,7 +159,7 @@ void TimelineMediaManager::updateMediaDecoders() {
         QUrl sourceUrl = getClipSourceUrl(ct.clipId);
         if (!sourceUrl.isValid() || sourceUrl.isEmpty()) {
             if (m_decoders.contains(ct.clipId)) {
-                if (qobject_cast<Rina::Core::AudioDecoder *>(m_decoders.value(ct.clipId)) != nullptr) {
+                if (qobject_cast<AviQtl::Core::AudioDecoder *>(m_decoders.value(ct.clipId)) != nullptr) {
                     m_audioMixer->unregisterDecoder(ct.clipId);
                 }
                 if (m_decoders.value(ct.clipId)) {
@@ -171,10 +171,10 @@ void TimelineMediaManager::updateMediaDecoders() {
         }
 
         if (m_decoders.contains(ct.clipId)) {
-            Rina::Core::MediaDecoder *existingDecoder = m_decoders.value(ct.clipId);
+            AviQtl::Core::MediaDecoder *existingDecoder = m_decoders.value(ct.clipId);
             // If the source has changed, we must recreate the decoder
             if (existingDecoder->source() != sourceUrl) {
-                if (qobject_cast<Rina::Core::AudioDecoder *>(existingDecoder) != nullptr) {
+                if (qobject_cast<AviQtl::Core::AudioDecoder *>(existingDecoder) != nullptr) {
                     m_audioMixer->unregisterDecoder(ct.clipId);
                 }
                 if (existingDecoder != nullptr) {
@@ -186,20 +186,20 @@ void TimelineMediaManager::updateMediaDecoders() {
             }
         }
 
-        Rina::Core::MediaDecoder *decoder = nullptr;
+        AviQtl::Core::MediaDecoder *decoder = nullptr;
         if (m->type == QStringLiteral("video")) {
             if (m_videoFrameStore == nullptr) {
                 continue;
             }
-            decoder = new Rina::Core::VideoDecoder(ct.clipId, sourceUrl, m_videoFrameStore, this);
+            decoder = new AviQtl::Core::VideoDecoder(ct.clipId, sourceUrl, m_videoFrameStore, this);
         } else if (m->type == QStringLiteral("image")) {
             if (m_videoFrameStore == nullptr) {
                 continue;
             }
-            decoder = new Rina::Core::ImageDecoder(ct.clipId, sourceUrl, m_videoFrameStore, this);
+            decoder = new AviQtl::Core::ImageDecoder(ct.clipId, sourceUrl, m_videoFrameStore, this);
         } else if (m->type == QStringLiteral("audio")) {
-            decoder = new Rina::Core::AudioDecoder(ct.clipId, sourceUrl, this);
-            if (auto *audioDecoder = qobject_cast<Rina::Core::AudioDecoder *>(decoder)) {
+            decoder = new AviQtl::Core::AudioDecoder(ct.clipId, sourceUrl, this);
+            if (auto *audioDecoder = qobject_cast<AviQtl::Core::AudioDecoder *>(decoder)) {
                 m_audioMixer->registerDecoder(ct.clipId, audioDecoder);
             }
         }
@@ -208,15 +208,15 @@ void TimelineMediaManager::updateMediaDecoders() {
             m_decoders.insert(ct.clipId, decoder);
             int cid = ct.clipId;
             // 画像や動画のデコード準備ができたらUIへ通知する
-            connect(decoder, &Rina::Core::MediaDecoder::ready, this, [this, cid]() -> void { emit frameUpdated(cid); });
+            connect(decoder, &AviQtl::Core::MediaDecoder::ready, this, [this, cid]() -> void { emit frameUpdated(cid); });
 
-            if (auto *vid = qobject_cast<Rina::Core::VideoDecoder *>(decoder)) {
-                connect(decoder, &Rina::Core::MediaDecoder::frameReady, this, [this, cid](int) -> void { emit frameUpdated(cid); });
+            if (auto *vid = qobject_cast<AviQtl::Core::VideoDecoder *>(decoder)) {
+                connect(decoder, &AviQtl::Core::MediaDecoder::frameReady, this, [this, cid](int) -> void { emit frameUpdated(cid); });
                 // 動画メタ情報が揃った時点でクリップの最大長をクランプする
-                connect(vid, &Rina::Core::VideoDecoder::videoMetaReady, this, [this, cid](int totalFrameCount, double sourceFps) -> void {
-                    const auto *ecsMeta = Rina::Engine::Timeline::ECS::instance().getSnapshot()->metadataStates.find(cid);
-                    const auto *ecsFx = Rina::Engine::Timeline::ECS::instance().getSnapshot()->effectStacks.find(cid);
-                    const auto *ecsTr = Rina::Engine::Timeline::ECS::instance().getSnapshot()->transforms.find(cid);
+                connect(vid, &AviQtl::Core::VideoDecoder::videoMetaReady, this, [this, cid](int totalFrameCount, double sourceFps) -> void {
+                    const auto *ecsMeta = AviQtl::Engine::Timeline::ECS::instance().getSnapshot()->metadataStates.find(cid);
+                    const auto *ecsFx = AviQtl::Engine::Timeline::ECS::instance().getSnapshot()->effectStacks.find(cid);
+                    const auto *ecsTr = AviQtl::Engine::Timeline::ECS::instance().getSnapshot()->transforms.find(cid);
                     if (!ecsMeta || ecsMeta->type != QStringLiteral("video")) {
                         return;
                     }
@@ -261,7 +261,7 @@ void TimelineMediaManager::updateMediaDecoders() {
 
     for (auto it = m_decoders.begin(); it != m_decoders.end();) {
         if (!currentClipIds.contains(it.key())) {
-            if (qobject_cast<Rina::Core::AudioDecoder *>(it.value()) != nullptr) {
+            if (qobject_cast<AviQtl::Core::AudioDecoder *>(it.value()) != nullptr) {
                 m_audioMixer->unregisterDecoder(it.key());
             }
             if (m_videoFrameStore != nullptr) {
@@ -279,7 +279,7 @@ void TimelineMediaManager::updateMediaDecoders() {
 }
 
 // Phase4 廃止予定: evaluatedParam のキーフレーム評価が ClipData* 依存のため暫定残存
-void TimelineMediaManager::updateVideoClipFrame(Rina::Core::VideoDecoder *vid, const ClipData *clip, int relFrame) {
+void TimelineMediaManager::updateVideoClipFrame(AviQtl::Core::VideoDecoder *vid, const ClipData *clip, int relFrame) {
     if ((vid == nullptr) || (clip == nullptr) || (m_controller == nullptr) || (m_controller->project() == nullptr)) {
         return;
     }
@@ -318,7 +318,7 @@ void TimelineMediaManager::updateVideoClipFrame(Rina::Core::VideoDecoder *vid, c
     }
 }
 
-void TimelineMediaManager::updateVideoClipFrameECS(Rina::Core::VideoDecoder *vid, int clipId, int relFrame, double fps) {
+void TimelineMediaManager::updateVideoClipFrameECS(AviQtl::Core::VideoDecoder *vid, int clipId, int relFrame, double fps) {
     if (vid == nullptr || m_controller == nullptr) {
         return;
     }
@@ -328,7 +328,7 @@ void TimelineMediaManager::updateVideoClipFrameECS(Rina::Core::VideoDecoder *vid
     }
     const double relTime = static_cast<double>(relFrame) / fps;
 
-    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
     const auto *fx = snap->effectStacks.find(clipId);
     if (fx == nullptr) {
         return;
@@ -370,7 +370,7 @@ void TimelineMediaManager::requestVideoFrame(int clipId, int relFrame) { // NOLI
         return;
     }
 
-    const auto *rvfSnap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *rvfSnap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
     const auto *rvfTr = rvfSnap->transforms.find(clipId);
 
     if (rvfTr == nullptr) {
@@ -385,7 +385,7 @@ void TimelineMediaManager::requestVideoFrame(int clipId, int relFrame) { // NOLI
         dec = decoderForClip(clipId);
     }
 
-    auto *vid = qobject_cast<Rina::Core::VideoDecoder *>(dec);
+    auto *vid = qobject_cast<AviQtl::Core::VideoDecoder *>(dec);
     qDebug() << "[TMM] requestVideoFrame: decoderForClip=" << dec << "vid=" << vid << "type=" << (dec ? dec->metaObject()->className() : "null");
     if (vid == nullptr) {
         qDebug() << "[TMM] requestVideoFrame: early return - vid null clipId=" << clipId;
@@ -409,10 +409,10 @@ void TimelineMediaManager::requestImageLoad(int clipId, const QString &path) {
         }
     }
 
-    auto *decoder = new Rina::Core::ImageDecoder(clipId, url, m_videoFrameStore, this);
-    connect(decoder, &Rina::Core::MediaDecoder::ready, this, [this, clipId]() -> void { emit frameUpdated(clipId); });
+    auto *decoder = new AviQtl::Core::ImageDecoder(clipId, url, m_videoFrameStore, this);
+    connect(decoder, &AviQtl::Core::MediaDecoder::ready, this, [this, clipId]() -> void { emit frameUpdated(clipId); });
     m_imageDecoders.insert(clipId, decoder);
     decoder->load();
 }
 
-} // namespace Rina::UI
+} // namespace AviQtl::UI

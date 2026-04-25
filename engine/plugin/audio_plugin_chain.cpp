@@ -2,7 +2,7 @@
 
 #include <utility>
 
-namespace Rina::Engine::Plugin {
+namespace AviQtl::Engine::Plugin {
 
 void AudioPluginChain::add(std::unique_ptr<IAudioPlugin> plugin) {
     plugin->prepare(m_sampleRate, m_maxBlockSize);
@@ -35,4 +35,4 @@ auto AudioPluginChain::count() const -> int { return static_cast<int>(m_plugins.
 
 auto AudioPluginChain::get(int index) const -> IAudioPlugin * { return (index >= 0 && std::cmp_less(index, m_plugins.size())) ? m_plugins[index].get() : nullptr; }
 
-} // namespace Rina::Engine::Plugin
+} // namespace AviQtl::Engine::Plugin

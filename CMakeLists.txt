@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 4.0)
-project(Rina LANGUAGES CXX C)
+project(AviQtl LANGUAGES CXX C)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
@@ -83,7 +83,7 @@ file(GLOB_RECURSE QML_SOURCES
 file(GLOB_RECURSE COMMON_SHADERS "ui/qml/common/shaders/*.glsl")
 
 # 実行可能ターゲットの作成
-qt_add_executable(Rina
+qt_add_executable(AviQtl
     ${CPP_SOURCES}
     core/src/settings_manager.cpp
     core/src/color_scheme_controller.cpp
@@ -106,21 +106,21 @@ qt_add_executable(Rina
 )
 
 if(APPLE)
-    set_target_properties(Rina PROPERTIES MACOSX_BUNDLE ON)
+    set_target_properties(AviQtl PROPERTIES MACOSX_BUNDLE ON)
 endif()
 
 # Phase 2.1: シンボルのエクスポート設定 (Lua FFI用)
-set_target_properties(Rina PROPERTIES ENABLE_EXPORTS ON)
+set_target_properties(AviQtl PROPERTIES ENABLE_EXPORTS ON)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    target_link_options(Rina PRIVATE "-rdynamic")
+    target_link_options(AviQtl PRIVATE "-rdynamic")
 endif()
 
 # Qt Policy設定: QMLモジュールのディレクトリ構造に関する警告を抑制・解決
 qt_policy(SET QTP0004 NEW)
 
 # QMLモジュールの定義
-qt_add_qml_module(Rina
-    URI "Rina"
+qt_add_qml_module(AviQtl
+    URI "AviQtl"
     VERSION 1.0
     RESOURCE_PREFIX "/qt/qml"
 
@@ -159,7 +159,7 @@ qt_add_qml_module(Rina
         ui/qml/AboutWindow.qml
         ui/qml/PackageManagerWindow.qml
 
-        ui/qml/common/RinaWindow.qml
+        ui/qml/common/AviQtlWindow.qml
         ui/qml/common/ParamControl.qml
         ui/qml/common/ControlLoader.qml
         ui/qml/common/ObjectRenderer.qml
@@ -170,7 +170,7 @@ qt_add_qml_module(Rina
         ui/qml/common/EasingConfigWindow.qml
         ui/qml/common/NodeLoader.qml
         ui/qml/common/Icons.js
-        ui/qml/common/RinaIcon.qml
+        ui/qml/common/AviQtlIcon.qml
         ui/qml/common/IconMenuItem.qml
         ui/qml/common/AudioPluginMenu.qml
 
@@ -178,32 +178,32 @@ qt_add_qml_module(Rina
         ui/resources.qrc
 )
 
-file(GLOB RINA_TS_FILES "${CMAKE_CURRENT_SOURCE_DIR}/i18n/Rina_*.ts")
+file(GLOB AVIQTL_TS_FILES "${CMAKE_CURRENT_SOURCE_DIR}/i18n/AviQtl_*.ts")
 
-if(RINA_TS_FILES)
-    qt_add_translations(Rina
-        TS_FILES ${RINA_TS_FILES}
+if(AVIQTL_TS_FILES)
+    qt_add_translations(AviQtl
+        TS_FILES ${AVIQTL_TS_FILES}
     )
     # ビルド時に抽出(lupdate)とバイナリ変換(lrelease)を両方実行させる
-    add_dependencies(Rina Rina_lupdate Rina_lrelease)
+    add_dependencies(AviQtl AviQtl_lupdate AviQtl_lrelease)
 endif()
 
 # リンク設定
 target_link_libraries(
-    Rina PRIVATE Qt6::Core Qt6::Gui Qt6::GuiPrivate Qt6::Quick Qt6::QuickControls2 Qt6::Quick3D Qt6::Widgets Qt6::Svg Qt6::Core5Compat Qt6::Multimedia Qt6::Concurrent Qt6::Network Vulkan::Vulkan
+    AviQtl PRIVATE Qt6::Core Qt6::Gui Qt6::GuiPrivate Qt6::Quick Qt6::QuickControls2 Qt6::Quick3D Qt6::Widgets Qt6::Svg Qt6::Core5Compat Qt6::Multimedia Qt6::Concurrent Qt6::Network Vulkan::Vulkan
                    PkgConfig::LUAJIT
                    PkgConfig::FFMPEG
                    ${CARLA_LIBRARIES}
                    KF6::Kirigami KF6::ColorScheme)
 
 # Carlaのライブラリパスを明示（/usr/lib/carla/ 等の非標準ディレクトリ対策）
-target_link_directories(Rina PRIVATE ${CARLA_LIBRARY_DIRS})
+target_link_directories(AviQtl PRIVATE ${CARLA_LIBRARY_DIRS})
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    target_link_libraries(Rina PRIVATE Qt6::WaylandClient)
+    target_link_libraries(AviQtl PRIVATE Qt6::WaylandClient)
 endif()
 
 # ターゲットが定義された後にインクルードを追加
-target_include_directories(Rina PRIVATE
+target_include_directories(AviQtl PRIVATE
     core/include
     ui/include
     engine/timeline
@@ -212,8 +212,8 @@ target_include_directories(Rina PRIVATE
 )
 
 # コンパイルオプション (ジェネレータ式で条件分岐を統合)
-target_compile_features(Rina PRIVATE cxx_std_23)
-target_compile_options(Rina PRIVATE
+target_compile_features(AviQtl PRIVATE cxx_std_23)
+target_compile_options(AviQtl PRIVATE
     $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:GNU>>:
         -Wall -Wextra -Wpedantic
         -Wno-unused-parameter
@@ -230,7 +230,7 @@ target_compile_options(Rina PRIVATE
         -fno-direct-access-external-data
     >
 )
-target_link_options(Rina PRIVATE
+target_link_options(AviQtl PRIVATE
     $<$<AND:$<CXX_COMPILER_ID:Clang>,$<PLATFORM_ID:Linux>>:
         -flto=thin
     >
@@ -257,7 +257,7 @@ file(COPY \"${CMAKE_SOURCE_DIR}/plugins/\" DESTINATION \"${CMAKE_BINARY_DIR}/plu
 ")
 add_custom_target(copy_runtime_assets ALL
     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_BINARY_DIR}/copy_assets.cmake
-    COMMENT \"Copying runtime assets (excluding shader sources)\"
+    COMMENT "Copying runtime assets (excluding shader sources)"
     VERBATIM
 )
 
@@ -296,7 +296,7 @@ function(compile_shaders TARGET_SUFFIX SRC_DIR DEST_DIR)
         # copy_runtime_assets の後にシェーダーをコンパイルすることで
         # .qsb ファイルが生コピーで上書きされる競合を防ぐ
         add_dependencies(CompileShaders_${TARGET_SUFFIX} copy_runtime_assets)
-        add_dependencies(Rina CompileShaders_${TARGET_SUFFIX})
+        add_dependencies(AviQtl CompileShaders_${TARGET_SUFFIX})
     endif()
 endfunction()
 

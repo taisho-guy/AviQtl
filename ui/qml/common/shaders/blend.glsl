@@ -1,6 +1,6 @@
 // ui/qml/common/shaders/blend.glsl
-#ifndef RINA_BLEND_GLSL
-#define RINA_BLEND_GLSL
+#ifndef AVIQTL_BLEND_GLSL
+#define AVIQTL_BLEND_GLSL
 
 // 各ブレンド関数は、base（背景色）と blend（前景色）を受け取り、合成結果を返します。
 // アルファ合成は別途行うことを想定しています。

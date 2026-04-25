@@ -6,7 +6,7 @@
 #include <QVariant>
 #include <bitset>
 
-namespace Rina::UI {
+namespace AviQtl::UI {
 
 // 最適化: ClipIDを導入
 using ClipID = int;
@@ -70,4 +70,4 @@ struct SceneData {
     bool enableSnap = true;
     int magneticSnapRange = 10;
 };
-} // namespace Rina::UI
+} // namespace AviQtl::UI

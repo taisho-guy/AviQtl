@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick3D
-import "qrc:/qt/qml/Rina/ui/qml/common" as Common
+import "qrc:/qt/qml/AviQtl/ui/qml/common" as Common
 
 // Transform エフェクト。
 // BaseEffect を継承し、ecsCache から evalParam 経由でパラメーターを取得する。

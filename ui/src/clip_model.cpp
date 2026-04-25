@@ -4,7 +4,7 @@
 #include "timeline_engine_synchronizer.hpp"
 #include "transport_service.hpp"
 
-namespace Rina::UI {
+namespace AviQtl::UI {
 
 ClipModel::ClipModel(TransportService *transport, QObject *parent) : QAbstractListModel(parent), m_transport(transport) {}
 
@@ -35,7 +35,7 @@ auto ClipModel::data(const QModelIndex &index, int role) const -> QVariant {
     // フェーズ2: clipId のみ保持。ClipData* は不参照。
     const int clipId = m_activeClips.value(index.row());
 
-    const auto *ecsState = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *ecsState = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
 
     // ECS スナップショットから優先的に値を返す
     if (ecsState) {
@@ -51,11 +51,11 @@ auto ClipModel::data(const QModelIndex &index, int role) const -> QVariant {
             if (role == TypeRole)
                 return metadata->type;
             if (role == NameRole) {
-                auto meta = Rina::Core::EffectRegistry::instance().getEffect(metadata->type);
+                auto meta = AviQtl::Core::EffectRegistry::instance().getEffect(metadata->type);
                 return meta.name;
             }
             if (role == Qt::UserRole + 100) {
-                auto meta = Rina::Core::EffectRegistry::instance().getEffect(metadata->type);
+                auto meta = AviQtl::Core::EffectRegistry::instance().getEffect(metadata->type);
                 return meta.qmlSource;
             }
         }
@@ -106,4 +106,4 @@ void ClipModel::updateClips(const QList<ClipData *> &newClips) {
         emit dataChanged(topLeft, bottomRight, roles);
     }
 }
-} // namespace Rina::UI
+} // namespace AviQtl::UI

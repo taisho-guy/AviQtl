@@ -28,19 +28,19 @@
 
 class QUndoStack;
 
-namespace Rina::Core {
+namespace AviQtl::Core {
 class VideoFrameStore;
 class VideoEncoder;
-} // namespace Rina::Core
+} // namespace AviQtl::Core
 
-namespace Rina::UI { // 元のnamespaceに戻す
+namespace AviQtl::UI { // 元のnamespaceに戻す
 class TimelineController : public QObject {
     Q_OBJECT
 
     // サービス (サブコントローラ)
-    Q_PROPERTY(Rina::UI::ProjectService *project READ project CONSTANT)
-    Q_PROPERTY(Rina::UI::TransportService *transport READ transport CONSTANT)
-    Q_PROPERTY(Rina::UI::SelectionService *selection READ selection CONSTANT)
+    Q_PROPERTY(AviQtl::UI::ProjectService *project READ project CONSTANT)
+    Q_PROPERTY(AviQtl::UI::TransportService *transport READ transport CONSTANT)
+    Q_PROPERTY(AviQtl::UI::SelectionService *selection READ selection CONSTANT)
 
     // レガシー / ファサードプロパティ
     Q_PROPERTY(double timelineScale READ timelineScale WRITE setTimelineScale NOTIFY timelineScaleChanged)
@@ -50,8 +50,8 @@ class TimelineController : public QObject {
     Q_PROPERTY(bool isClipActive READ isClipActive NOTIFY isClipActiveChanged)
     Q_PROPERTY(QString activeObjectType READ activeObjectType NOTIFY activeObjectTypeChanged)
     Q_PROPERTY(QVariantList clips READ clips NOTIFY clipsChanged)
-    Q_PROPERTY(Rina::UI::ClipModel *clipModel READ clipModel CONSTANT)
-    Q_PROPERTY(Rina::UI::ClipModel *renderModel READ renderModel CONSTANT)
+    Q_PROPERTY(AviQtl::UI::ClipModel *clipModel READ clipModel CONSTANT)
+    Q_PROPERTY(AviQtl::UI::ClipModel *renderModel READ renderModel CONSTANT)
     Q_PROPERTY(int selectedLayer READ selectedLayer WRITE setSelectedLayer NOTIFY selectedLayerChanged)
     Q_PROPERTY(QVariantList scenes READ scenes NOTIFY scenesChanged)
     Q_PROPERTY(int currentSceneId READ currentSceneId NOTIFY currentSceneIdChanged)
@@ -62,7 +62,7 @@ class TimelineController : public QObject {
   public:
     explicit TimelineController(QObject *parent = nullptr);
 
-    void setVideoFrameStore(Rina::Core::VideoFrameStore *store);
+    void setVideoFrameStore(AviQtl::Core::VideoFrameStore *store);
 
     Q_INVOKABLE void setCompositeView(QQuickItem *view) { m_compositeView = view; }
     QQuickItem *compositeView() const { return m_compositeView; }
@@ -292,4 +292,4 @@ class TimelineController : public QObject {
   private:
     QPointer<QQuickItem> m_compositeView; // CompositeViewへの参照
 };
-} // namespace Rina::UI
+} // namespace AviQtl::UI

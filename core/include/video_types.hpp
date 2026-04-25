@@ -3,7 +3,7 @@
 #include <memory>
 #include <optional>
 
-namespace Rina::Core {
+namespace AviQtl::Core {
 
 enum class PixelFormat : uint8_t {
     Unknown = 0,
@@ -37,4 +37,4 @@ struct ImageBuffer {
     }
 };
 
-} // namespace Rina::Core
+} // namespace AviQtl::Core

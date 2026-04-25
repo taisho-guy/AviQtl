@@ -2,7 +2,7 @@
 
 #include <QQuickImageProvider>
 
-namespace Rina::Core {
+namespace AviQtl::Core {
 
 class VideoFrameStore;
 
@@ -17,4 +17,4 @@ class VideoFrameProvider : public QQuickImageProvider {
   private:
     VideoFrameStore *m_store;
 };
-} // namespace Rina::Core
+} // namespace AviQtl::Core

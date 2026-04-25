@@ -7,11 +7,11 @@
 #include <QVariantMap>
 #include <utility>
 
-namespace Rina::Engine::Timeline {
+namespace AviQtl::Engine::Timeline {
 
 class ClipEffectSystem {
   public:
-    // ── 評価 API ──────────────────────────────────────────────────────────────
+    // ── 評価 API
     // キャッシュなし版（テスト・Undo プレビュー用）
     // durationFrames: クリップ長（TransformComponent.durationFrames を渡す）
     // fps: シーンの fps
@@ -25,22 +25,22 @@ class ClipEffectSystem {
 
     static QVariant evaluateParamCached(const ECSState &state, InterpolationCache &cache, int clipId, int effectIndex, const QString &paramName, int relFrame, int durationFrames, double fps = 60.0);
 
-    static void addEffect(ECSState &state, int clipId, const Rina::UI::EffectData &data);
-    static void restoreEffect(ECSState &state, int clipId, const Rina::UI::EffectData &data);
+    static void addEffect(ECSState &state, int clipId, const AviQtl::UI::EffectData &data);
+    static void restoreEffect(ECSState &state, int clipId, const AviQtl::UI::EffectData &data);
 
     // effectIndex == -1 で末尾。削除成功時 true。outRemoved が非 null なら削除データを格納する。
-    static bool removeEffect(ECSState &state, int clipId, int effectIndex, Rina::UI::EffectData *outRemoved = nullptr);
+    static bool removeEffect(ECSState &state, int clipId, int effectIndex, AviQtl::UI::EffectData *outRemoved = nullptr);
 
     // sortedDescIndices は降順で渡す
-    static bool removeMultipleEffects(ECSState &state, int clipId, const QList<int> &sortedDescIndices, QList<Rina::UI::EffectData> *outRemoved = nullptr);
+    static bool removeMultipleEffects(ECSState &state, int clipId, const QList<int> &sortedDescIndices, QList<AviQtl::UI::EffectData> *outRemoved = nullptr);
 
     // ascData は昇順で渡す
-    static void restoreMultipleEffects(ECSState &state, int clipId, const QList<Rina::UI::EffectData> &ascData);
+    static void restoreMultipleEffects(ECSState &state, int clipId, const QList<AviQtl::UI::EffectData> &ascData);
 
     static void setEffectEnabled(ECSState &state, int clipId, int effectIndex, bool enabled);
     static bool reorderEffects(ECSState &state, int clipId, int oldIndex, int newIndex);
     static bool applyPermutation(ECSState &state, int clipId, const QList<int> &perm);
-    static void pasteEffect(ECSState &state, int clipId, int targetIndex, const Rina::UI::EffectData &data);
+    static void pasteEffect(ECSState &state, int clipId, int targetIndex, const AviQtl::UI::EffectData &data);
     static void updateParam(ECSState &state, int clipId, int effectIndex, const QString &paramName, const QVariant &value);
     static void setKeyframe(ECSState &state, int clipId, int effectIndex, const QString &paramName, int frame, const QVariant &value, const QVariantMap &options);
     static void removeKeyframe(ECSState &state, int clipId, int effectIndex, const QString &paramName, int frame);
@@ -50,4 +50,4 @@ class ClipEffectSystem {
     static QVariantList keyframeListForUi(const ECSState &state, int clipId, int effectIndex, const QString &paramName);
 };
 
-} // namespace Rina::Engine::Timeline
+} // namespace AviQtl::Engine::Timeline

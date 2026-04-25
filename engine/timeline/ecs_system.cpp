@@ -2,7 +2,7 @@
 #include <QDebug>
 #include <cmath>
 
-namespace Rina::Engine::Timeline {
+namespace AviQtl::Engine::Timeline {
 
 ECS::ECS() : m_editIndex(1) {
     m_activeIndex.store(0, std::memory_order_relaxed);
@@ -111,7 +111,7 @@ void ECS::updateMetadata(int clipId, const QString &name, const QString &source,
     }
 }
 
-void ECS::updateEffectStack(int clipId, const QList<Rina::UI::EffectData> &effects) {
+void ECS::updateEffectStack(int clipId, const QList<AviQtl::UI::EffectData> &effects) {
     auto &state = m_buffers[m_editIndex];
 
     // operator[] は要素がなければ新規作成し、あれば参照を返す (ensureSparseSize等も内部で実行される)
@@ -187,11 +187,11 @@ void ECS::invalidateEffectCache(int clipId, int effectIndex, const QString &para
 
 void ECS::invalidateAllEffectCaches(int clipId) { m_interpCache.invalidateAll(clipId); }
 
-} // namespace Rina::Engine::Timeline
+} // namespace AviQtl::Engine::Timeline
 
 extern "C" {
-auto rina_lua_get_audio_volume(int clipId) -> float {
-    const auto *state = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+auto aviqtl_lua_get_audio_volume(int clipId) -> float {
+    const auto *state = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
     if (state == nullptr) {
         return 1.0F;
     }

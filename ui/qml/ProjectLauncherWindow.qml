@@ -4,12 +4,12 @@ import QtQuick.Dialogs
 import QtQuick.Layouts
 import "common" as Common
 
-Common.RinaWindow {
+Common.AviQtlWindow {
     id: root
 
     width: 700
     height: 500
-    title: qsTr("Rina - プロジェクトランチャー")
+    title: qsTr("AviQtl - プロジェクトランチャー")
     Component.onCompleted: {
         // 最近使ったプロジェクトをロード
         if (SettingsManager && SettingsManager.settings) {
@@ -198,7 +198,7 @@ Common.RinaWindow {
                 contentItem: RowLayout {
                     spacing: 8
 
-                    Common.RinaIcon {
+                    Common.AviQtlIcon {
                         iconName: "file_add_line"
                         color: newProjectBtn.palette.buttonText
                     }
@@ -287,7 +287,7 @@ Common.RinaWindow {
                 contentItem: RowLayout {
                     spacing: 8
 
-                    Common.RinaIcon {
+                    Common.AviQtlIcon {
                         iconName: "folder_open_line"
                         color: openProjectBtn.palette.buttonText
                     }
@@ -310,7 +310,7 @@ Common.RinaWindow {
         id: fileDialog
 
         title: qsTr("プロジェクトファイルを開く")
-        nameFilters: ["Rina Project (*.rina)", "All files (*)"]
+        nameFilters: ["AviQtl Project (*.aqp)", "All files (*)"]
         onAccepted: {
             Workspace.loadProject(fileDialog.selectedFile);
             root.close();

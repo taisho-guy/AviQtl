@@ -3,7 +3,7 @@
 #include <QObject>
 #include <QVariantMap>
 
-namespace Rina::Core {
+namespace AviQtl::Core {
 
 class SettingsManager : public QObject {
     Q_OBJECT
@@ -34,4 +34,4 @@ class SettingsManager : public QObject {
     QVariantMap m_settings;
 };
 
-} // namespace Rina::Core
+} // namespace AviQtl::Core

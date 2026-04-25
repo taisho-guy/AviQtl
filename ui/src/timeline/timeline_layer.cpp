@@ -3,7 +3,7 @@
 #include <QDebug>
 #include <bitset>
 
-namespace Rina::UI {
+namespace AviQtl::UI {
 
 auto TimelineService::isLayerLocked(int layer) const -> bool { return currentScene()->lockedLayers.contains(layer); }
 
@@ -127,4 +127,4 @@ auto TimelineService::resolvedActiveClipsAt(int frame) const -> QList<ClipData *
     return result;
 }
 
-} // namespace Rina::UI
+} // namespace AviQtl::UI

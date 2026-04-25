@@ -8,7 +8,7 @@
 #include <QJsonObject>
 #include <QStandardPaths>
 
-namespace Rina::Core {
+namespace AviQtl::Core {
 
 namespace {
 auto getDefaultPluginPaths(const QString &type, const QStringList &envVars, const QStringList &defaultDirs) -> QStringList {
@@ -149,7 +149,7 @@ auto SettingsManager::defaultShortcutSettings() -> QVariantMap {
 auto SettingsManager::getSettingsFilePath() -> QString {
     // 1. 実行ファイルディレクトリを試す (ポータブルモード)
     QString exeDir = QCoreApplication::applicationDirPath();
-    QString portablePath = exeDir + QLatin1String("/rina_settings.json");
+    QString portablePath = exeDir + QLatin1String("/aviqtl_settings.json");
 
     // 書き込み可能かチェック
     QFile file(portablePath);
@@ -244,4 +244,4 @@ auto SettingsManager::shortcut(const QString &actionId, const QString &fallbackV
     return value.isEmpty() ? fallbackValue : value;
 }
 
-} // namespace Rina::Core
+} // namespace AviQtl::Core

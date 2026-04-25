@@ -13,7 +13,7 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
-namespace Rina::Core {
+namespace AviQtl::Core {
 
 VideoEncoder::VideoEncoder(QObject *parent) : QObject(parent) {}
 
@@ -697,4 +697,4 @@ void VideoEncoder::close() {
     qDebug() << "VideoEncoder closed.";
 }
 
-} // namespace Rina::Core
+} // namespace AviQtl::Core

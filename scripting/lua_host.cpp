@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace Rina::Scripting {
+namespace AviQtl::Scripting {
 
 auto LuaHost::instance() -> LuaHost & {
     static LuaHost inst;
@@ -148,4 +148,4 @@ auto LuaHost::evaluate(const std::string &expression, double time, int index, do
     return result;
 }
 
-} // namespace Rina::Scripting
+} // namespace AviQtl::Scripting

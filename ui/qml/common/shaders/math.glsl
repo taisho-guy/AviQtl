@@ -1,6 +1,6 @@
 // ui/qml/common/shaders/math.glsl
-#ifndef RINA_MATH_GLSL
-#define RINA_MATH_GLSL
+#ifndef AVIQTL_MATH_GLSL
+#define AVIQTL_MATH_GLSL
 
 const float PI = 3.14159265359;
 const float TWO_PI = 6.28318530718;

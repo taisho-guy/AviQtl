@@ -15,11 +15,11 @@
 // EffectModel* を持たずにキーフレーム補間を実行するための純粋関数群。
 // clip_effect_system.cpp のみが include する。
 
-namespace Rina::Engine::Timeline::Interp {
+namespace AviQtl::Engine::Timeline::Interp {
 
 using EasingFunction = std::function<double(double, const std::vector<double> &)>;
 
-// ─── ベジェT解（ニュートン法）───────────────────────────────────────
+// ベジェT解（ニュートン法）
 
 inline double solveBezierT(double x, double x1, double x2) {
     if (x1 == x2 && x1 == x)
@@ -39,7 +39,7 @@ inline double solveBezierT(double x, double x1, double x2) {
     return std::clamp(t, 0.0, 1.0);
 }
 
-// ─── イージング関数マップ（static local、スレッドセーフ）────────────
+// イージング関数マップ（static local、スレッドセーフ）
 
 // bounce out コア計算（キャプチャ不可な static ラムダを回避するため自由関数として定義）
 inline double bounceOut(double x) noexcept {
@@ -195,7 +195,7 @@ inline const QHash<QString, EasingFunction> &easingFunctions() {
     return funcs;
 }
 
-// ─── トラックヘルパー ─────────────────────────────────────────────
+// トラックヘルパー
 
 inline bool isStructuredTrack(const QVariant &raw) {
     const QVariantMap m = raw.toMap();
@@ -267,7 +267,7 @@ inline QVariantMap normalizeTrackForDuration(const QVariant &rawTrack, const QVa
     return out;
 }
 
-// ─── キーフレームトラック評価（全イージング対応）───────────────────
+// キーフレームトラック評価（全イージング対応）
 
 inline QVariant evaluateTrack(const QVariantList &track, int frame, const QVariant &fallback) {
     if (track.isEmpty())
@@ -347,7 +347,7 @@ inline QVariant evaluateTrack(const QVariantList &track, int frame, const QVaria
     return getValue(track.back());
 }
 
-// ─── エントリポイント: 単一パラメータ評価 ────────────────────────
+// エントリポイント: 単一パラメータ評価
 
 inline QVariant evaluateParam(const QVariantMap &keyframeTracks, const QVariantMap &params, const QString &paramName, int relFrame, int durationFrames, double fps = 60.0) {
     const QVariant fallback = params.value(paramName);
@@ -356,7 +356,7 @@ inline QVariant evaluateParam(const QVariantMap &keyframeTracks, const QVariantM
     if (strVal.startsWith(QLatin1Char('='))) {
         const std::string expr = strVal.mid(1).toStdString();
         const double time = (fps > 0.0) ? relFrame / fps : 0.0;
-        return Rina::Scripting::LuaHost::instance().evaluate(expr, time, 0, fallback.toDouble());
+        return AviQtl::Scripting::LuaHost::instance().evaluate(expr, time, 0, fallback.toDouble());
     }
 
     if (!keyframeTracks.contains(paramName))
@@ -374,7 +374,7 @@ inline QVariant evaluateParam(const QVariantMap &keyframeTracks, const QVariantM
     return evaluateTrack(resolved, relFrame, fallback);
 }
 
-// ── クリップ分割時のベジェ曲線 de Casteljau 分割ヘルパー ──────────────────────
+// ── クリップ分割時のベジェ曲線 de Casteljau 分割ヘルパー
 
 // 単一ベジェセグメントを正規化パラメータ t で de Casteljau 分割する
 // 入力: P0=(p0x,p0y) P1=(cp1x,cp1y) P2=(cp2x,cp2y) P3=(p3x,p3y), t∈[0,1]
@@ -570,4 +570,4 @@ inline std::pair<QVariantMap, QVariantMap> splitTrackAt(const QVariantMap &track
     return {ft, st};
 }
 
-} // namespace Rina::Engine::Timeline::Interp
+} // namespace AviQtl::Engine::Timeline::Interp

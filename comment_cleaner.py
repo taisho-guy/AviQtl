@@ -1,97 +1,114 @@
 #!/usr/bin/env python3
-import os
-import re
+"""
+AviQtl プロジェクト コメント装飾クリーナー
+対象: .cpp / .hpp / .h / .qml
+動作:
+  - 装飾記号（-=*~+#_| および Unicode 罫線）を除去し本文を保持
+  - 本文が空になった場合のみ行ごと削除
+  - 連続する空行を 1 行に圧縮
+"""
 
-def clean_comments_in_file(filepath):
+import os, re
+
+# ASCII 装飾記号 + Unicode Box Drawing (U+2500–U+257F) + 全角ダッシュ等
+DEC_RE = re.compile(
+    r'[-=*~+#_|]{3,}'
+    r'|[\u2500-\u257F]{3,}'
+    r'|[・•◆◇■□▲▼●○]{3,}'
+)
+
+
+def clean_comments_in_file(filepath: str) -> bool:
     try:
         with open(filepath, 'r', encoding='utf-8') as f:
             content = f.read()
     except UnicodeDecodeError:
         return False
 
-    # 文字列リテラルとコメントを正確に区別するための正規表現
-    # 文字列リテラルにマッチした場合はそのまま、コメントにマッチした場合は置換関数に回す
     token_pattern = re.compile(
-        r'("(?:\\[\s\S]|[^"])*"'             # ダブルクォート文字列
-        r'|\'(?:\\[\s\S]|[^\'])*\''          # シングルクォート文字列
-        r'|//[^\n]*'                         # 1行コメント
-        r'|/\*[\s\S]*?\*/)'                  # ブロックコメント
+        r'("(?:\\[\s\S]|[^"])*"'
+        r"|'(?:\\[\s\S]|[^'])*'"
+        r'|//[^\n]*'
+        r'|/\*[\s\S]*?\*/)'
     )
-    
-    # 3文字以上連続する装飾記号にマッチ（-, =, *, ~, +, #, _）
-    dec_re = re.compile(r'[-=*~+#_]{3,}')
 
     def replacer(match):
         token = match.group(1)
+
         if token.startswith('//'):
-            # 1行コメント内の装飾記号を除去
-            if dec_re.search(token):
-                cleaned = dec_re.sub('', token[2:]).strip()
-                if not cleaned:
-                    return '%%DELETE_ME%%' # 中身が空になったら削除フラグ
-                else:
-                    return '// ' + cleaned
-        elif token.startswith('/*'):
-            # ブロックコメント内の装飾記号を除去
-            if dec_re.search(token):
-                cleaned = dec_re.sub('', token[2:-2]).strip()
+            if DEC_RE.search(token):
+                cleaned = DEC_RE.sub('', token[2:]).strip()
                 if not cleaned:
                     return '%%DELETE_ME%%'
-                else:
-                    # 複数行と1行でフォーマットを変える
-                    return '/*\n ' + cleaned + '\n*/' if '\n' in cleaned else '/* ' + cleaned + ' */'
-        return token # 文字列リテラル等の場合はそのまま
+                return '// ' + cleaned
+            return token
+
+        if token.startswith('/*'):
+            if DEC_RE.search(token):
+                cleaned = DEC_RE.sub('', token[2:-2]).strip()
+                if not cleaned:
+                    return '%%DELETE_ME%%'
+                if '\n' in cleaned:
+                    return '/*\n ' + cleaned + '\n*/'
+                return '/* ' + cleaned + ' */'
+            return token
+
+        return token
 
     new_content = token_pattern.sub(replacer, content)
 
-    # 削除フラグの立った空のコメント行を物理的に消し去る
-    lines = new_content.split('\n')
     final_lines = []
-    for line in lines:
+    for line in new_content.split('\n'):
         if '%%DELETE_ME%%' in line:
             line = line.replace('%%DELETE_ME%%', '').rstrip()
-            if not line.strip(): # 行が完全に空（あるいは空白のみ）になったらスキップ
+            if not line.strip():
                 continue
         final_lines.append(line)
 
-    final_content = '\n'.join(final_lines)
-    
-    # ファイルに変更があった場合のみ上書き保存
+    # 3行以上連続する空行を 1行に圧縮
+    result_lines = []
+    blank_count = 0
+    for line in final_lines:
+        if line.strip() == '':
+            blank_count += 1
+            if blank_count <= 1:
+                result_lines.append(line)
+        else:
+            blank_count = 0
+            result_lines.append(line)
+
+    final_content = '\n'.join(result_lines)
+
     if content != final_content:
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(final_content)
         return True
     return False
 
+
 def main():
     root_dir = os.path.abspath(os.getcwd())
     target_exts = {'.cpp', '.hpp', '.h', '.qml'}
-    
-    # format.fish と同様の除外ディレクトリ
-    exclude_dirs = {'.git', 'build', '.build_tmp', '.qt', 'Rina_autogen'}
+    exclude_dirs = {'.git', 'build', '.build_tmp', '.qt', 'AviQtl_autogen', '__pycache__', '.cache'}
 
     cleaned_files = []
-
-    print("\n\033[34m === コードコメントのクリーニング === \033[0m\n")
+    print("\n\033[34m === コメント装飾クリーナー === \033[0m\n")
 
     for dirpath, dirnames, filenames in os.walk(root_dir):
-        # 除外ディレクトリに該当する場合は探索リストから外す
         dirnames[:] = [d for d in dirnames if d not in exclude_dirs]
-        
-        for file in filenames:
-            ext = os.path.splitext(file)[1].lower()
-            if ext in target_exts:
-                filepath = os.path.join(dirpath, file)
-                if clean_comments_in_file(filepath):
-                    # プロジェクトルートからの相対パスを表示
-                    rel_path = os.path.relpath(filepath, root_dir)
-                    cleaned_files.append(rel_path)
-                    print(f"  → {rel_path}")
+        for fname in filenames:
+            if os.path.splitext(fname)[1].lower() in target_exts:
+                fpath = os.path.join(dirpath, fname)
+                if clean_comments_in_file(fpath):
+                    rel = os.path.relpath(fpath, root_dir)
+                    cleaned_files.append(rel)
+                    print(f"  → {rel}")
 
     if cleaned_files:
-        print(f"\n\033[32m ✓ 合計 {len(cleaned_files)} 個のファイルのコメント装飾を除去しました！ \033[0m\n")
+        print(f"\n\033[32m ✓ {len(cleaned_files)} 個のファイルを処理しました \033[0m\n")
     else:
-        print("\n\033[33m 除去対象のコメントは見つかりませんでした。\033[0m\n")
+        print("\n\033[33m 除去対象は見つかりませんでした \033[0m\n")
+
 
 if __name__ == '__main__':
     main()

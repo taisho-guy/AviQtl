@@ -142,14 +142,14 @@ Rectangle {
                             anchors.margins: 2
                             spacing: 2
 
-                            Common.RinaIcon {
+                            Common.AviQtlIcon {
                                 visible: layerBtn.isLocked
                                 iconName: "lock_fill"
                                 size: 10
                                 color: "#ffcccc"
                             }
 
-                            Common.RinaIcon {
+                            Common.AviQtlIcon {
                                 visible: !layerBtn.isVisible
                                 iconName: "eye_off_line"
                                 size: 10

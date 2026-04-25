@@ -1,7 +1,7 @@
 #include "transport_service.hpp"
 #include <QElapsedTimer>
 
-namespace Rina::UI {
+namespace AviQtl::UI {
 
 TransportService::TransportService(QObject *parent) : QObject(parent), m_timer(new QTimer(this)) {
     m_clock.start(); // ← 追加：プロセス起動直後から単調増加
@@ -68,4 +68,4 @@ void TransportService::updateTimerInterval(double fps) {
     setFps(fps);
 }
 
-} // namespace Rina::UI
+} // namespace AviQtl::UI

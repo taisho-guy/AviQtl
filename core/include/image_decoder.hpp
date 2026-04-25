@@ -4,7 +4,7 @@
 #include <QUrl>
 #include <QVideoFrame>
 
-namespace Rina::Core {
+namespace AviQtl::Core {
 
 class VideoFrameStore;
 
@@ -33,4 +33,4 @@ class ImageDecoder : public MediaDecoder {
     QFuture<void> m_future;
 };
 
-} // namespace Rina::Core
+} // namespace AviQtl::Core

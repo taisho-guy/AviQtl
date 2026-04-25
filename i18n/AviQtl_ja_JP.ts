@@ -5,12 +5,12 @@
     <name>AboutWindow</name>
     <message>
         <location filename="../ui/qml/AboutWindow.qml" line="9"/>
-        <source>Rinaについて</source>
+        <source>AviQtlについて</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../ui/qml/AboutWindow.qml" line="67"/>
-        <source>Rina は AviUtl ではありません。
+        <source>AviQtl は AviUtl ではありません。
 
 このソフトウェアは GNU Affero General Public License Version 3 に基づいて公開されています。</source>
         <translation type="unfinished"></translation>
@@ -36,6 +36,138 @@
     <message>
         <location filename="../ui/qml/settings/AppearanceSettingsPage.qml" line="93"/>
         <source>テーマ変更は再起動後に完全反映される場合があります</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>AviQtl::Core::PackageManager</name>
+    <message>
+        <location filename="../core/src/package_manager.cpp" line="11"/>
+        <source>待機中</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../core/src/package_manager.cpp" line="38"/>
+        <source>リポジトリを同期中...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../core/src/package_manager.cpp" line="45"/>
+        <source>同期完了</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../core/src/package_manager.cpp" line="55"/>
+        <source>パッケージのインストール中: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../core/src/package_manager.cpp" line="61"/>
+        <source>インストール完了: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>AviQtl::UI::TimelineController</name>
+    <message>
+        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="87"/>
+        <source>プロパティ変更: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="130"/>
+        <source>開始フレーム変更</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="148"/>
+        <source>長さ変更</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="166"/>
+        <source>レイヤー変更</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="356"/>
+        <source>複数クリップリサイズ: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/src/timeline/timeline_controller_project.cpp" line="19"/>
+        <source>保存先のファイルパスが不明です</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>AviQtl::UI::TimelineExportManager</name>
+    <message>
+        <location filename="../ui/src/timeline/timeline_export_manager.cpp" line="95"/>
+        <source>エンコーダーの初期化に失敗しました</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/src/timeline/timeline_export_manager.cpp" line="119"/>
+        <source>キャンセルされました</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/src/timeline/timeline_export_manager.cpp" line="153"/>
+        <source>書き出し完了</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>AviQtl::UI::WindowManager</name>
+    <message>
+        <location filename="../ui/src/window_manager.cpp" line="24"/>
+        <source>AviQtl メインプレビュー</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/src/window_manager.cpp" line="25"/>
+        <source>タイムライン</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/src/window_manager.cpp" line="26"/>
+        <source>プロジェクト設定</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/src/window_manager.cpp" line="27"/>
+        <source>オブジェクト設定</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/src/window_manager.cpp" line="28"/>
+        <source>システム設定</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/src/window_manager.cpp" line="29"/>
+        <source>AviQtlについて</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/src/window_manager.cpp" line="30"/>
+        <source>シーン設定</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/src/window_manager.cpp" line="31"/>
+        <source>メディアの書き出し</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/src/window_manager.cpp" line="32"/>
+        <source>補間設定</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/src/window_manager.cpp" line="33"/>
+        <source>パッケージマネージャー</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -653,11 +785,6 @@
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="53"/>
-        <source>Rina - プレビュー</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <location filename="../ui/qml/MainWindow.qml" line="94"/>
         <source>新規プロジェクト</source>
         <translation type="unfinished"></translation>
@@ -843,6 +970,11 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location filename="../ui/qml/MainWindow.qml" line="53"/>
+        <source>AviQtl - プレビュー</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location filename="../ui/qml/MainWindow.qml" line="1073"/>
         <source>編集</source>
         <translation type="unfinished"></translation>
@@ -972,7 +1104,7 @@
     <name>ProjectLauncherWindow</name>
     <message>
         <location filename="../ui/qml/ProjectLauncherWindow.qml" line="12"/>
-        <source>Rina - プロジェクトランチャー</source>
+        <source>AviQtl - プロジェクトランチャー</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1303,138 +1435,6 @@
     <message>
         <location filename="../ui/src/timeline/timeline_effect.cpp" line="171"/>
         <source>エフェクト順序変更 (%1件)</source>
-        <translation type="unfinished"></translation>
-    </message>
-</context>
-<context>
-    <name>Rina::Core::PackageManager</name>
-    <message>
-        <location filename="../core/src/package_manager.cpp" line="11"/>
-        <source>待機中</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../core/src/package_manager.cpp" line="38"/>
-        <source>リポジトリを同期中...</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../core/src/package_manager.cpp" line="45"/>
-        <source>同期完了</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../core/src/package_manager.cpp" line="55"/>
-        <source>パッケージのインストール中: %1</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../core/src/package_manager.cpp" line="61"/>
-        <source>インストール完了: %1</source>
-        <translation type="unfinished"></translation>
-    </message>
-</context>
-<context>
-    <name>Rina::UI::TimelineController</name>
-    <message>
-        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="87"/>
-        <source>プロパティ変更: %1</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="130"/>
-        <source>開始フレーム変更</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="148"/>
-        <source>長さ変更</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="166"/>
-        <source>レイヤー変更</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="356"/>
-        <source>複数クリップリサイズ: %1</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/src/timeline/timeline_controller_project.cpp" line="19"/>
-        <source>保存先のファイルパスが不明です</source>
-        <translation type="unfinished"></translation>
-    </message>
-</context>
-<context>
-    <name>Rina::UI::TimelineExportManager</name>
-    <message>
-        <location filename="../ui/src/timeline/timeline_export_manager.cpp" line="95"/>
-        <source>エンコーダーの初期化に失敗しました</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/src/timeline/timeline_export_manager.cpp" line="119"/>
-        <source>キャンセルされました</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/src/timeline/timeline_export_manager.cpp" line="153"/>
-        <source>書き出し完了</source>
-        <translation type="unfinished"></translation>
-    </message>
-</context>
-<context>
-    <name>Rina::UI::WindowManager</name>
-    <message>
-        <location filename="../ui/src/window_manager.cpp" line="24"/>
-        <source>Rina メインプレビュー</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/src/window_manager.cpp" line="25"/>
-        <source>タイムライン</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/src/window_manager.cpp" line="26"/>
-        <source>プロジェクト設定</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/src/window_manager.cpp" line="27"/>
-        <source>オブジェクト設定</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/src/window_manager.cpp" line="28"/>
-        <source>システム設定</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/src/window_manager.cpp" line="29"/>
-        <source>Rinaについて</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/src/window_manager.cpp" line="30"/>
-        <source>シーン設定</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/src/window_manager.cpp" line="31"/>
-        <source>メディアの書き出し</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/src/window_manager.cpp" line="32"/>
-        <source>補間設定</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/src/window_manager.cpp" line="33"/>
-        <source>パッケージマネージャー</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

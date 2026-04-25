@@ -16,7 +16,7 @@ MenuItem {
         spacing: 6
 
         // チェックマーク (checkableな場合のみ表示・スペース確保)
-        RinaIcon {
+        AviQtlIcon {
             visible: control.checkable
             iconName: "check_line"
             size: 18
@@ -26,7 +26,7 @@ MenuItem {
         }
 
         // アイコン
-        RinaIcon {
+        AviQtlIcon {
             iconName: control.iconName
             size: 18
             color: control.highlighted ? control.palette.highlightedText : control.palette.text

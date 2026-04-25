@@ -4,7 +4,7 @@
 #include <QDebug>
 #include <QGuiApplication>
 
-namespace Rina::Core {
+namespace AviQtl::Core {
 
 ColorSchemeController::ColorSchemeController(QObject *parent) : QObject(parent), m_manager(new KColorSchemeManager(this)) {
 
@@ -55,4 +55,4 @@ void ColorSchemeController::setActiveSchemeId(const QString &schemeId) {
     emit activeSchemeIdChanged();
 }
 
-} // namespace Rina::Core
+} // namespace AviQtl::Core

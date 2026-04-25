@@ -13,7 +13,7 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
-namespace Rina::Core {
+namespace AviQtl::Core {
 
 ImageDecoder::ImageDecoder(int clipId, const QUrl &source, VideoFrameStore *store, QObject *parent) : MediaDecoder(clipId, source, parent), m_store(store) {}
 
@@ -137,4 +137,4 @@ void ImageDecoder::decodeImage(const QString &path) {
     avformat_close_input(&fmtCtx);
 }
 
-} // namespace Rina::Core
+} // namespace AviQtl::Core

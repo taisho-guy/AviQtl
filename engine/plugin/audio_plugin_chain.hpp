@@ -4,12 +4,12 @@
 #include <memory>
 #include <vector>
 
-namespace Rina::Engine::Plugin {
+namespace AviQtl::Engine::Plugin {
 
 class AudioPluginChain {
   public:
     AudioPluginChain() {
-        const auto &sm = Rina::Core::SettingsManager::instance();
+        const auto &sm = AviQtl::Core::SettingsManager::instance();
         m_sampleRate = sm.value(QStringLiteral("defaultProjectSampleRate"), 48000).toDouble();
         m_maxBlockSize = sm.value(QStringLiteral("audioPluginMaxBlockSize"), 4096).toInt();
     }
@@ -31,4 +31,4 @@ class AudioPluginChain {
     int m_maxBlockSize = 4096;
 };
 
-} // namespace Rina::Engine::Plugin
+} // namespace AviQtl::Engine::Plugin

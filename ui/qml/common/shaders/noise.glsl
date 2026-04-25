@@ -1,6 +1,6 @@
 // ui/qml/common/shaders/noise.glsl
-#ifndef RINA_NOISE_GLSL
-#define RINA_NOISE_GLSL
+#ifndef AVIQTL_NOISE_GLSL
+#define AVIQTL_NOISE_GLSL
 
 // 簡易乱数 (0.0 - 1.0)
 float random(vec2 st) {

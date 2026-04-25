@@ -3,7 +3,6 @@ import QtQuick
 import QtQuick3D
 
 Node {
-    // ─────────────────────────────────────────────────────────────────
     // ECS 評価済みパラメーターキャッシュ（唯一の真実）
     // 形式: { effectId: { paramName: value, ... }, ... }
     // _cacheRev（整数）を明示的な依存として持つことで確実な再評価を保証する。
@@ -41,7 +40,6 @@ Node {
     //   relFrame 変化   → binding が relFrame に直接依存しているため自動
     //   clipId 変化     → binding が clipId に直接依存しているため自動 + Qt.callLater
     //   C++ シグナル起点 → _cacheRev++ で強制再評価
-    // ─────────────────────────────────────────────────────────────────
     property int _cacheRev: 0
     readonly property var ecsCache: {
         var _ = _cacheRev; // 整数依存: _cacheRev++ で確実に再評価される

@@ -326,7 +326,7 @@ Item {
 
                 // Loader (2D) は 3D シーン内では機能しないため、
                 // Qt.createComponent を使用して Node 派生クラスを動的に生成する
-                // --- 方針A: 2Dレンダー結果(fbRendererOutput)を板ポリとして3D空間に配置 ---
+                // 方針A: 2Dレンダー結果(fbRendererOutput)を板ポリとして3D空間に配置
                 // is3DObject=true のオブジェクトはこの板ポリをスキップし、オブジェクト自身の Node/Model ツリーで描画する
                 Model {
                     source: "#Rectangle"

@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
 
-namespace Rina::Core {
+namespace AviQtl::Core {
 
 // サポートするグラフィックスAPIの種類
 enum class GpuApiType { Unknown, OpenGL, Vulkan, D3D11, D3D12, Metal };
@@ -16,4 +16,4 @@ struct GpuTextureHandle {
     int format; // API固有のフォーマット値
 };
 
-} // namespace Rina::Core
+} // namespace AviQtl::Core

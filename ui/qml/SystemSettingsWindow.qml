@@ -4,7 +4,7 @@ import QtQuick.Layouts
 import "common" as Common
 import "settings"
 
-Common.RinaWindow {
+Common.AviQtlWindow {
     id: root
 
     property var draftSettings: ({

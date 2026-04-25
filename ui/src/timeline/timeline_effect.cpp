@@ -9,13 +9,13 @@
 #include <QDebug>
 #include <algorithm>
 
-namespace Rina::UI {
+namespace AviQtl::UI {
 
-void TimelineService::addEffect(int clipId, const QString &effectId) { m_undoStack->push(new AddEffectCommand(this, clipId, effectId, Rina::Core::EffectRegistry::instance().getEffect(effectId).name)); }
+void TimelineService::addEffect(int clipId, const QString &effectId) { m_undoStack->push(new AddEffectCommand(this, clipId, effectId, AviQtl::Core::EffectRegistry::instance().getEffect(effectId).name)); }
 
 void TimelineService::addEffectInternal(int clipId, const QString &effectId) {
-    const auto meta = Rina::Core::EffectRegistry::instance().getEffect(effectId);
-    Rina::UI::EffectData data;
+    const auto meta = AviQtl::Core::EffectRegistry::instance().getEffect(effectId);
+    AviQtl::UI::EffectData data;
     data.id = meta.id;
     data.name = meta.name;
     data.kind = meta.kind;
@@ -24,23 +24,23 @@ void TimelineService::addEffectInternal(int clipId, const QString &effectId) {
     data.uiDefinition = meta.uiDefinition;
     data.enabled = true;
     data.params = meta.defaultParams;
-    auto &ecs = Rina::Engine::Timeline::ECS::instance();
-    Rina::Engine::Timeline::ClipEffectSystem::addEffect(ecs.editState(), clipId, data);
+    auto &ecs = AviQtl::Engine::Timeline::ECS::instance();
+    AviQtl::Engine::Timeline::ClipEffectSystem::addEffect(ecs.editState(), clipId, data);
     ecs.commit();
     emit clipsChanged();
     emit clipEffectsChanged(clipId);
 }
 
-void TimelineService::restoreEffectInternal(int clipId, const Rina::UI::EffectData &data) {
-    auto &ecs = Rina::Engine::Timeline::ECS::instance();
-    Rina::Engine::Timeline::ClipEffectSystem::restoreEffect(ecs.editState(), clipId, data);
+void TimelineService::restoreEffectInternal(int clipId, const AviQtl::UI::EffectData &data) {
+    auto &ecs = AviQtl::Engine::Timeline::ECS::instance();
+    AviQtl::Engine::Timeline::ClipEffectSystem::restoreEffect(ecs.editState(), clipId, data);
     ecs.commit();
     emit clipsChanged();
     emit clipEffectsChanged(clipId);
 }
 
 void TimelineService::removeEffect(int clipId, int effectIndex) {
-    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot()->effectStacks.find(clipId);
+    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot()->effectStacks.find(clipId);
     if (!snap)
         return;
     const int n = snap->effects.size();
@@ -53,15 +53,15 @@ void TimelineService::removeEffect(int clipId, int effectIndex) {
 }
 
 void TimelineService::removeEffectInternal(int clipId, int effectIndex) { // NOLINT(bugprone-easily-swappable-parameters)
-    auto &ecs = Rina::Engine::Timeline::ECS::instance();
-    Rina::Engine::Timeline::ClipEffectSystem::removeEffect(ecs.editState(), clipId, effectIndex);
+    auto &ecs = AviQtl::Engine::Timeline::ECS::instance();
+    AviQtl::Engine::Timeline::ClipEffectSystem::removeEffect(ecs.editState(), clipId, effectIndex);
     ecs.commit();
     emit clipsChanged();
     emit clipEffectsChanged(clipId);
 }
 
 void TimelineService::removeMultipleEffects(int clipId, const QList<int> &indices) {
-    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot()->effectStacks.find(clipId);
+    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot()->effectStacks.find(clipId);
     if (!snap)
         return;
     QList<int> sorted;
@@ -77,17 +77,17 @@ void TimelineService::removeMultipleEffects(int clipId, const QList<int> &indice
     m_undoStack->push(cmd);
 }
 
-void TimelineService::removeMultipleEffectsInternal(int clipId, const QList<int> &sortedDescIndices, QList<Rina::UI::EffectData> *outData) {
-    auto &ecs = Rina::Engine::Timeline::ECS::instance();
-    Rina::Engine::Timeline::ClipEffectSystem::removeMultipleEffects(ecs.editState(), clipId, sortedDescIndices, outData);
+void TimelineService::removeMultipleEffectsInternal(int clipId, const QList<int> &sortedDescIndices, QList<AviQtl::UI::EffectData> *outData) {
+    auto &ecs = AviQtl::Engine::Timeline::ECS::instance();
+    AviQtl::Engine::Timeline::ClipEffectSystem::removeMultipleEffects(ecs.editState(), clipId, sortedDescIndices, outData);
     ecs.commit();
     emit clipsChanged();
     emit clipEffectsChanged(clipId);
 }
 
-void TimelineService::restoreMultipleEffectsInternal(int clipId, const QList<Rina::UI::EffectData> &ascData) {
-    auto &ecs = Rina::Engine::Timeline::ECS::instance();
-    Rina::Engine::Timeline::ClipEffectSystem::restoreMultipleEffects(ecs.editState(), clipId, ascData);
+void TimelineService::restoreMultipleEffectsInternal(int clipId, const QList<AviQtl::UI::EffectData> &ascData) {
+    auto &ecs = AviQtl::Engine::Timeline::ECS::instance();
+    AviQtl::Engine::Timeline::ClipEffectSystem::restoreMultipleEffects(ecs.editState(), clipId, ascData);
     ecs.commit();
     emit clipsChanged();
     emit clipEffectsChanged(clipId);
@@ -96,8 +96,8 @@ void TimelineService::restoreMultipleEffectsInternal(int clipId, const QList<Rin
 void TimelineService::setEffectEnabled(int clipId, int effectIndex, bool enabled) { m_undoStack->push(new SetEffectEnabledCommand(this, clipId, effectIndex, enabled)); }
 
 void TimelineService::setEffectEnabledInternal(int clipId, int effectIndex, bool enabled) { // NOLINT(bugprone-easily-swappable-parameters)
-    auto &ecs = Rina::Engine::Timeline::ECS::instance();
-    Rina::Engine::Timeline::ClipEffectSystem::setEffectEnabled(ecs.editState(), clipId, effectIndex, enabled);
+    auto &ecs = AviQtl::Engine::Timeline::ECS::instance();
+    AviQtl::Engine::Timeline::ClipEffectSystem::setEffectEnabled(ecs.editState(), clipId, effectIndex, enabled);
     ecs.commit();
     emit clipEffectsChanged(clipId);
 }
@@ -105,15 +105,15 @@ void TimelineService::setEffectEnabledInternal(int clipId, int effectIndex, bool
 void TimelineService::reorderEffects(int clipId, int oldIndex, int newIndex) { m_undoStack->push(new ReorderEffectCommand(this, clipId, oldIndex, newIndex)); }
 
 void TimelineService::reorderEffectsInternal(int clipId, int oldIndex, int newIndex) { // NOLINT(bugprone-easily-swappable-parameters)
-    auto &ecs = Rina::Engine::Timeline::ECS::instance();
-    Rina::Engine::Timeline::ClipEffectSystem::reorderEffects(ecs.editState(), clipId, oldIndex, newIndex);
+    auto &ecs = AviQtl::Engine::Timeline::ECS::instance();
+    AviQtl::Engine::Timeline::ClipEffectSystem::reorderEffects(ecs.editState(), clipId, oldIndex, newIndex);
     ecs.commit();
     emit clipEffectsChanged(clipId);
     emit clipsChanged();
 }
 
 void TimelineService::reorderMultipleEffects(int clipId, const QVariantList &indicesList, int targetIndex) {
-    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot()->effectStacks.find(clipId);
+    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot()->effectStacks.find(clipId);
     if (!snap)
         return;
     const int n = snap->effects.size();
@@ -172,8 +172,8 @@ void TimelineService::reorderMultipleEffects(int clipId, const QVariantList &ind
 }
 
 void TimelineService::applyPermutationInternal(int clipId, const QList<int> &perm) {
-    auto &ecs = Rina::Engine::Timeline::ECS::instance();
-    Rina::Engine::Timeline::ClipEffectSystem::applyPermutation(ecs.editState(), clipId, perm);
+    auto &ecs = AviQtl::Engine::Timeline::ECS::instance();
+    AviQtl::Engine::Timeline::ClipEffectSystem::applyPermutation(ecs.editState(), clipId, perm);
     ecs.commit();
     emit clipEffectsChanged(clipId);
     emit clipsChanged();
@@ -182,7 +182,7 @@ void TimelineService::applyPermutationInternal(int clipId, const QList<int> &per
 void TimelineService::setAudioPluginEnabled(int clipId, int index, bool enabled) { m_undoStack->push(new SetAudioPluginEnabledCommand(this, clipId, index, enabled)); }
 
 void TimelineService::setAudioPluginEnabledInternal(int clipId, int index, bool enabled) { // NOLINT(bugprone-easily-swappable-parameters)
-    auto &ecs = Rina::Engine::Timeline::ECS::instance();
+    auto &ecs = AviQtl::Engine::Timeline::ECS::instance();
     auto *stack = ecs.editState().audioStacks.find(clipId);
     if (!stack || index < 0 || index >= stack->audioPlugins.size())
         return;
@@ -195,7 +195,7 @@ void TimelineService::setAudioPluginEnabledInternal(int clipId, int index, bool 
 void TimelineService::reorderAudioPlugins(int clipId, int oldIndex, int newIndex) { m_undoStack->push(new ReorderAudioPluginCommand(this, clipId, oldIndex, newIndex)); }
 
 void TimelineService::reorderAudioPluginsInternal(int clipId, int oldIndex, int newIndex) { // NOLINT(bugprone-easily-swappable-parameters)
-    auto &ecs = Rina::Engine::Timeline::ECS::instance();
+    auto &ecs = AviQtl::Engine::Timeline::ECS::instance();
     auto *stack = ecs.editState().audioStacks.find(clipId);
     if (!stack || oldIndex < 0 || oldIndex >= stack->audioPlugins.size() || newIndex < 0 || newIndex >= stack->audioPlugins.size())
         return;
@@ -206,7 +206,7 @@ void TimelineService::reorderAudioPluginsInternal(int clipId, int oldIndex, int 
 }
 
 void TimelineService::copyEffect(int clipId, int effectIndex) { // NOLINT(bugprone-easily-swappable-parameters)
-    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot()->effectStacks.find(clipId);
+    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot()->effectStacks.find(clipId);
     if (snap && effectIndex >= 0 && effectIndex < snap->effects.size())
         m_effectClipboard = snap->effects.at(effectIndex);
 }
@@ -218,16 +218,16 @@ void TimelineService::pasteEffect(int clipId, int targetIndex) {
 }
 
 void TimelineService::pasteEffectInternal(int clipId, int targetIndex, // NOLINT(bugprone-easily-swappable-parameters)
-                                          const Rina::UI::EffectData &data) {
-    auto &ecs = Rina::Engine::Timeline::ECS::instance();
-    Rina::Engine::Timeline::ClipEffectSystem::pasteEffect(ecs.editState(), clipId, targetIndex, data);
+                                          const AviQtl::UI::EffectData &data) {
+    auto &ecs = AviQtl::Engine::Timeline::ECS::instance();
+    AviQtl::Engine::Timeline::ClipEffectSystem::pasteEffect(ecs.editState(), clipId, targetIndex, data);
     ecs.commit();
     emit clipEffectsChanged(clipId);
     emit clipsChanged();
 }
 
 void TimelineService::updateEffectParam(int clipId, int effectIndex, const QString &paramName, const QVariant &value) {
-    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot()->effectStacks.find(clipId);
+    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot()->effectStacks.find(clipId);
     if (!snap || effectIndex >= static_cast<int>(snap->effects.size()))
         return;
     const QVariant oldValue = snap->effects.at(effectIndex).params.value(paramName);
@@ -236,8 +236,8 @@ void TimelineService::updateEffectParam(int clipId, int effectIndex, const QStri
 
 void TimelineService::updateEffectParamInternal(int clipId, int effectIndex, const QString &paramName, const QVariant &value) {
     qDebug() << "[TMM] updateEffectParamInternal: clipId=" << clipId << "effectIndex=" << effectIndex << "paramName=" << paramName << "value=" << value;
-    auto &ecs = Rina::Engine::Timeline::ECS::instance();
-    Rina::Engine::Timeline::ClipEffectSystem::updateParam(ecs.editState(), clipId, effectIndex, paramName, value);
+    auto &ecs = AviQtl::Engine::Timeline::ECS::instance();
+    AviQtl::Engine::Timeline::ClipEffectSystem::updateParam(ecs.editState(), clipId, effectIndex, paramName, value);
     ecs.commit();
     if (paramName == QLatin1String("path") || paramName == QLatin1String("source") || paramName == QStringLiteral("targetSceneId"))
         emit clipsChanged();
@@ -248,7 +248,7 @@ void TimelineService::updateEffectParamInternal(int clipId, int effectIndex, con
 }
 
 void TimelineService::setKeyframe(int clipId, int effectIndex, const QString &paramName, int frame, const QVariant &value, const QVariantMap &options) {
-    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot()->effectStacks.find(clipId);
+    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot()->effectStacks.find(clipId);
     if (!snap || effectIndex >= snap->effects.size())
         return;
     const auto &tracks = snap->effects.at(effectIndex).keyframeTracks;
@@ -275,7 +275,7 @@ void TimelineService::setKeyframe(int clipId, int effectIndex, const QString &pa
 }
 
 void TimelineService::removeKeyframe(int clipId, int effectIndex, const QString &paramName, int frame) {
-    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot()->effectStacks.find(clipId);
+    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot()->effectStacks.find(clipId);
     if (!snap || effectIndex >= snap->effects.size())
         return;
     const QVariant rawTrack = snap->effects.at(effectIndex).keyframeTracks.value(paramName);
@@ -300,8 +300,8 @@ void TimelineService::removeKeyframe(int clipId, int effectIndex, const QString 
 
 void TimelineService::setKeyframeInternal(int clipId, int effectIndex, // NOLINT(bugprone-easily-swappable-parameters)
                                           const QString &paramName, int frame, const QVariant &value, const QVariantMap &options) {
-    auto &ecs = Rina::Engine::Timeline::ECS::instance();
-    Rina::Engine::Timeline::ClipEffectSystem::setKeyframe(ecs.editState(), clipId, effectIndex, paramName, frame, value, options);
+    auto &ecs = AviQtl::Engine::Timeline::ECS::instance();
+    AviQtl::Engine::Timeline::ClipEffectSystem::setKeyframe(ecs.editState(), clipId, effectIndex, paramName, frame, value, options);
     ecs.invalidateEffectCache(clipId, effectIndex, paramName);
     ecs.commit();
     emit clipsChanged();
@@ -311,8 +311,8 @@ void TimelineService::setKeyframeInternal(int clipId, int effectIndex, // NOLINT
 
 void TimelineService::removeKeyframeInternal(int clipId, int effectIndex, // NOLINT(bugprone-easily-swappable-parameters)
                                              const QString &paramName, int frame) {
-    auto &ecs = Rina::Engine::Timeline::ECS::instance();
-    Rina::Engine::Timeline::ClipEffectSystem::removeKeyframe(ecs.editState(), clipId, effectIndex, paramName, frame);
+    auto &ecs = AviQtl::Engine::Timeline::ECS::instance();
+    AviQtl::Engine::Timeline::ClipEffectSystem::removeKeyframe(ecs.editState(), clipId, effectIndex, paramName, frame);
     ecs.invalidateEffectCache(clipId, effectIndex, paramName);
     ecs.commit();
     emit clipsChanged();
@@ -321,7 +321,7 @@ void TimelineService::removeKeyframeInternal(int clipId, int effectIndex, // NOL
 }
 
 QVariant TimelineService::evaluateEffectParam(int clipId, int effectIndex, const QString &paramName, int relFrame) const {
-    auto &ecs = Rina::Engine::Timeline::ECS::instance();
+    auto &ecs = AviQtl::Engine::Timeline::ECS::instance();
     const auto *state = ecs.getSnapshot();
     if (!state || !state->effectStacks.contains(clipId))
         return {};
@@ -335,7 +335,7 @@ QVariant TimelineService::evaluateEffectParam(int clipId, int effectIndex, const
     if (sc && sc->fps > 0.0)
         fps = sc->fps;
 
-    return Rina::Engine::Timeline::ClipEffectSystem::evaluateParamCached(*state, ecs.interpCache(), clipId, effectIndex, paramName, relFrame, durationFrames, fps);
+    return AviQtl::Engine::Timeline::ClipEffectSystem::evaluateParamCached(*state, ecs.interpCache(), clipId, effectIndex, paramName, relFrame, durationFrames, fps);
 }
 
-} // namespace Rina::UI
+} // namespace AviQtl::UI

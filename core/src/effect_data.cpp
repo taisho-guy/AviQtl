@@ -1,7 +1,7 @@
 #include "effect_data.hpp"
 #include "effect_model.hpp"
 
-namespace Rina::UI {
+namespace AviQtl::UI {
 
 EffectData effectDataFromModel(const EffectModel &model) {
     EffectData d;
@@ -25,4 +25,4 @@ EffectModel *effectModelFromData(const EffectData &data, QObject *parent) {
     return m;
 }
 
-} // namespace Rina::UI
+} // namespace AviQtl::UI

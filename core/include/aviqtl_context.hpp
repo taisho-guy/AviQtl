@@ -1,7 +1,7 @@
 #pragma once
 #include <memory>
 
-namespace Rina::Core {
+namespace AviQtl::Core {
 class Context {
   public:
     static Context &instance() {
@@ -12,4 +12,4 @@ class Context {
   private:
     Context() = default;
 };
-} // namespace Rina::Core
+} // namespace AviQtl::Core

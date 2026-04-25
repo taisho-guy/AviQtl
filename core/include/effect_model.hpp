@@ -13,7 +13,7 @@
 #include <limits>
 #include <map>
 
-namespace Rina::UI {
+namespace AviQtl::UI {
 
 // イージング関数シグネチャ: double function(t, params)
 using EasingFunction = std::function<double(double, const std::vector<double> &)>;
@@ -22,7 +22,7 @@ class EffectModel : public QObject {
     Q_OBJECT
 
   private:
-    // ─── Static Helpers (メソッドからの参照のため先頭に配置) ───
+    // Static Helpers (メソッドからの参照のため先頭に配置)
 
     static bool isStructuredTrack(const QVariant &raw) {
         const QVariantMap m = raw.toMap();
@@ -345,7 +345,7 @@ class EffectModel : public QObject {
         return out;
     }
 
-    // ── クリップ分割: de Casteljau ヘルパー ──────────────────────────────────
+    // ── クリップ分割: de Casteljau ヘルパー
 
     static std::pair<std::array<double, 6>, std::array<double, 6>> splitBezierSegmentEM(double p0x, double p0y, double p1x, double p1y, double p2x, double p2y, double p3x, double p3y, double t) noexcept {
         auto lp = [](double a, double b, double t_) noexcept { return a + (b - a) * t_; };
@@ -737,7 +737,7 @@ class EffectModel : public QObject {
             // "=time*100" -> "time*100"
             std::string expr = strVal.mid(1).toStdString();
             double time = (fps > 0.0) ? frame / fps : 0.0;
-            return Rina::Scripting::LuaHost::instance().evaluate(expr, time, 0, baseValue.toDouble());
+            return AviQtl::Scripting::LuaHost::instance().evaluate(expr, time, 0, baseValue.toDouble());
         }
 
         return baseValue;
@@ -774,4 +774,4 @@ class EffectModel : public QObject {
     mutable int m_lastDuration = -1;
     mutable QHash<QString, QVariantList> m_resolvedCache;
 };
-} // namespace Rina::UI
+} // namespace AviQtl::UI

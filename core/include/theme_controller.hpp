@@ -2,7 +2,7 @@
 #include <QObject>
 #include <QString>
 
-namespace Rina::Core {
+namespace AviQtl::Core {
 
 class ThemeController : public QObject {
     Q_OBJECT
@@ -26,4 +26,4 @@ class ThemeController : public QObject {
     QString m_theme;
 };
 
-} // namespace Rina::Core
+} // namespace AviQtl::Core

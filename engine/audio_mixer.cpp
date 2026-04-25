@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <vector>
 
-namespace Rina::Engine {
+namespace AviQtl::Engine {
 
 void AudioMixer::processChain(float *buffer, int samples, const Plugin::AudioPluginChain &chain) {
     for (int i = 0; i < chain.count(); ++i) {
@@ -20,7 +20,7 @@ void AudioMixer::processChain(float *buffer, int samples, const Plugin::AudioPlu
 }
 
 AudioMixer::AudioMixer(QObject *parent) : QObject(parent) {
-    int sampleRate = Rina::Core::SettingsManager::instance().value(QStringLiteral("_runtime_projectSampleRate"), 48000).toInt();
+    int sampleRate = AviQtl::Core::SettingsManager::instance().value(QStringLiteral("_runtime_projectSampleRate"), 48000).toInt();
     m_format.setSampleRate(sampleRate);
     m_format.setChannelCount(2);
     m_format.setSampleFormat(QAudioFormat::Float);
@@ -86,7 +86,7 @@ AudioMixer::~AudioMixer() {
     }
 }
 
-void AudioMixer::registerDecoder(int clipId, Rina::Core::AudioDecoder *decoder) { m_decoders[clipId] = decoder; }
+void AudioMixer::registerDecoder(int clipId, AviQtl::Core::AudioDecoder *decoder) { m_decoders[clipId] = decoder; }
 
 void AudioMixer::unregisterDecoder(int clipId) { m_decoders.erase(clipId); }
 
@@ -241,4 +241,4 @@ auto AudioMixer::getChain(int clipId) -> Plugin::AudioPluginChain & {
 
 void AudioMixer::clearChain(int clipId) { m_chains.remove(clipId); }
 
-} // namespace Rina::Engine
+} // namespace AviQtl::Engine

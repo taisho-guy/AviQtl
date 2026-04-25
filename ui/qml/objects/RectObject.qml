@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Shapes
 import QtQuick3D
-import "qrc:/qt/qml/Rina/ui/qml/common" as Common
+import "qrc:/qt/qml/AviQtl/ui/qml/common" as Common
 
 Common.BaseObject {
     id: root

@@ -5,7 +5,7 @@
 #include "transport_service.hpp"
 #include <QtGlobal>
 
-namespace Rina::UI {
+namespace AviQtl::UI {
 
 auto TimelineController::scenes() const -> QVariantList { return m_timeline->scenes(); }
 
@@ -35,7 +35,7 @@ auto TimelineController::getSceneClips(int sceneId) const -> QVariantList {
         map.insert(QStringLiteral("layer"), clip.layer);
 
         // QMLソースの解決
-        auto meta = Rina::Core::EffectRegistry::instance().getEffect(clip.type);
+        auto meta = AviQtl::Core::EffectRegistry::instance().getEffect(clip.type);
         if (!meta.qmlSource.isEmpty()) {
             map.insert(QStringLiteral("qmlSource"), meta.qmlSource);
         }
@@ -90,4 +90,4 @@ void TimelineController::updateViewport(double x, double y) {
     Q_UNUSED(y)
 } // NOLINT(bugprone-easily-swappable-parameters)
 
-} // namespace Rina::UI
+} // namespace AviQtl::UI

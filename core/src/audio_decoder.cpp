@@ -3,7 +3,7 @@
 #include <QtConcurrent>
 #include <algorithm>
 
-namespace Rina::Core {
+namespace AviQtl::Core {
 
 AudioDecoder::AudioDecoder(int clipId, const QUrl &source, QObject *parent) : MediaDecoder(clipId, source, parent) {
     // 生成とデコード開始を分離: 呼び出し元が scheduleStart() を呼ぶ
@@ -335,4 +335,4 @@ void AudioDecoder::setPlaying(bool playing) {
     m_isPlaying.store(playing, std::memory_order_release);
 }
 
-} // namespace Rina::Core
+} // namespace AviQtl::Core

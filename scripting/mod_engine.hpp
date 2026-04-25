@@ -3,7 +3,7 @@
 #include <QString>
 #include <lua.hpp>
 
-namespace Rina::Scripting {
+namespace AviQtl::Scripting {
 
 struct HostApiTable {
     void (*log)(const char *msg);
@@ -57,4 +57,4 @@ class ModEngine {
     void _registerRinaAPI();
 };
 
-} // namespace Rina::Scripting
+} // namespace AviQtl::Scripting

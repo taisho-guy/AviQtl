@@ -9,11 +9,11 @@
 #include <memory>
 #include <unordered_map>
 
-namespace Rina::Core {
+namespace AviQtl::Core {
 class AudioDecoder;
 }
 
-namespace Rina::Engine {
+namespace AviQtl::Engine {
 
 class AudioMixer : public QObject {
     Q_OBJECT
@@ -21,7 +21,7 @@ class AudioMixer : public QObject {
     explicit AudioMixer(QObject *parent = nullptr);
     ~AudioMixer();
 
-    void registerDecoder(int clipId, Rina::Core::AudioDecoder *decoder);
+    void registerDecoder(int clipId, AviQtl::Core::AudioDecoder *decoder);
     void unregisterDecoder(int clipId);
 
     // 全てのデコーダーが読み込み完了しているか確認
@@ -47,7 +47,7 @@ class AudioMixer : public QObject {
     std::unique_ptr<QAudioSink> m_audioSink;
     QIODevice *m_audioOutput = nullptr;
     QAudioFormat m_format;
-    std::unordered_map<int, Rina::Core::AudioDecoder *> m_decoders;
+    std::unordered_map<int, AviQtl::Core::AudioDecoder *> m_decoders;
     QHash<int, std::shared_ptr<Plugin::AudioPluginChain>> m_chains;
     int m_lastFrame = -1;
     double m_playbackSpeed = 1.0;
@@ -55,4 +55,4 @@ class AudioMixer : public QObject {
     QHash<int, int> m_clipLastFrame;
 };
 
-} // namespace Rina::Engine
+} // namespace AviQtl::Engine

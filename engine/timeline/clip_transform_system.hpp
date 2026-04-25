@@ -3,7 +3,7 @@
 #include <QList>
 #include <QSet>
 
-namespace Rina::Engine::Timeline {
+namespace AviQtl::Engine::Timeline {
 
 class ClipTransformSystem {
   public:
@@ -21,4 +21,4 @@ class ClipTransformSystem {
     static int updateTransform(ECSState &state, int clipId, int layer, int startFrame, int durationFrames, const QSet<int> &lockedLayers);
 };
 
-} // namespace Rina::Engine::Timeline
+} // namespace AviQtl::Engine::Timeline

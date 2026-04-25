@@ -4,7 +4,7 @@
 #include <QVariantList>
 #include <QVariantMap>
 
-namespace Rina::UI {
+namespace AviQtl::UI {
 
 class SelectionService : public QObject {
     Q_OBJECT
@@ -38,4 +38,4 @@ class SelectionService : public QObject {
     QVariantMap m_selectedClipData;
     QList<int> m_selectedClipIds;
 };
-} // namespace Rina::UI
+} // namespace AviQtl::UI

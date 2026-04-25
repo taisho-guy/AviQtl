@@ -4,7 +4,7 @@
 #include "engine/timeline/ecs.hpp"
 #include "timeline_types.hpp"
 
-namespace Rina::Engine::Timeline {
+namespace AviQtl::Engine::Timeline {
 
 class ClipLifecycleSystem {
   public:
@@ -15,8 +15,8 @@ class ClipLifecycleSystem {
     static void destroyClip(ECSState &state, int clipId);
 
     // スナップショット(DTO)からクリップ状態を復元する
-    static void restoreClipFromDTO(ECSState &state, const Rina::UI::ClipData &dto);
-    static void restoreClipFromSnapshot(ECSState &state, const Rina::UI::ClipSnapshot &snap);
+    static void restoreClipFromDTO(ECSState &state, const AviQtl::UI::ClipData &dto);
+    static void restoreClipFromSnapshot(ECSState &state, const AviQtl::UI::ClipSnapshot &snap);
 };
 
-} // namespace Rina::Engine::Timeline
+} // namespace AviQtl::Engine::Timeline

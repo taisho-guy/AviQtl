@@ -3,7 +3,7 @@
 #include <QVariantList>
 #include <QVariantMap>
 
-namespace Rina::Core {
+namespace AviQtl::Core {
 
 class PackageManager : public QObject {
     Q_OBJECT
@@ -46,4 +46,4 @@ class PackageManager : public QObject {
     double m_progress = 0.0;
 };
 
-} // namespace Rina::Core
+} // namespace AviQtl::Core

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Rina プロジェクト ソースコード行数カウンター"""
+"""AviQtl プロジェクト ソースコード行数カウンター"""
 
 import sys
 from pathlib import Path
@@ -72,7 +72,7 @@ def main() -> None:
     root = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else Path(__file__).parent.resolve()
 
     print(f"\n{'=' * 70}")
-    print(f"  Rina プロジェクト ソースコード行数レポート")
+    print(f"  AviQtl プロジェクト ソースコード行数レポート")
     print(f"  スキャン対象: {root}")
     print(f"{'=' * 70}")
 

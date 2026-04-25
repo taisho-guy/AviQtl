@@ -9,7 +9,7 @@
 #include <memory>
 #include <optional>
 
-namespace Rina::UI {
+namespace AviQtl::UI {
 class SelectionService;
 
 class TimelineService : public QObject {
@@ -96,15 +96,15 @@ class TimelineService : public QObject {
     void addEffectInternal(int clipId, const QString &effectId);
     void addClipsDirectInternal(const QList<ClipData> &clips);
     void addClipDirectInternal(const ClipData &clip, bool emitSignal = true);
-    void restoreClipFromSnapshotInternal(const Rina::UI::ClipSnapshot &snap, bool emitSignal = true);
-    void restoreClipsFromSnapshotInternal(const QList<Rina::UI::ClipSnapshot> &snaps);
-    void setClipboardFromSnapshot(const Rina::UI::ClipSnapshot &snap);
-    void restoreEffectInternal(int clipId, const Rina::UI::EffectData &data);
+    void restoreClipFromSnapshotInternal(const AviQtl::UI::ClipSnapshot &snap, bool emitSignal = true);
+    void restoreClipsFromSnapshotInternal(const QList<AviQtl::UI::ClipSnapshot> &snaps);
+    void setClipboardFromSnapshot(const AviQtl::UI::ClipSnapshot &snap);
+    void restoreEffectInternal(int clipId, const AviQtl::UI::EffectData &data);
     void removeEffectInternal(int clipId, int effectIndex);
-    void removeMultipleEffectsInternal(int clipId, const QList<int> &sortedDescIndices, QList<Rina::UI::EffectData> *outData);
-    void restoreMultipleEffectsInternal(int clipId, const QList<Rina::UI::EffectData> &ascData);
+    void removeMultipleEffectsInternal(int clipId, const QList<int> &sortedDescIndices, QList<AviQtl::UI::EffectData> *outData);
+    void restoreMultipleEffectsInternal(int clipId, const QList<AviQtl::UI::EffectData> &ascData);
     void setEffectEnabledInternal(int clipId, int effectIndex, bool enabled);
-    void pasteEffectInternal(int clipId, int targetIndex, const Rina::UI::EffectData &data);
+    void pasteEffectInternal(int clipId, int targetIndex, const AviQtl::UI::EffectData &data);
     void setAudioPluginEnabledInternal(int clipId, int index, bool enabled);
     void reorderEffectsInternal(int clipId, int oldIndex, int newIndex);
     void applyPermutationInternal(int clipId, const QList<int> &perm);
@@ -120,8 +120,8 @@ class TimelineService : public QObject {
     void setLayerStateInternal(int sceneId, int layer, bool value, int type);
 
     // Phase 1: DOD Migration Helpers
-    Q_INVOKABLE Rina::UI::ClipData packClipData(int clipId) const;
-    Q_INVOKABLE void unpackClipData(const Rina::UI::ClipData &clip);
+    Q_INVOKABLE AviQtl::UI::ClipData packClipData(int clipId) const;
+    Q_INVOKABLE void unpackClipData(const AviQtl::UI::ClipData &clip);
 
     // findClipById / deepCopyClip removed in Step 7 — use ECS::getSnapshot()
 
@@ -152,9 +152,9 @@ class TimelineService : public QObject {
     int m_nextClipId = 1;
     int m_nextSceneId = 1;
     QUndoStack *m_undoStack;
-    QList<Rina::UI::ClipSnapshot> m_clipboardSnapshots;
-    std::optional<Rina::UI::EffectData> m_effectClipboard;
+    QList<AviQtl::UI::ClipSnapshot> m_clipboardSnapshots;
+    std::optional<AviQtl::UI::EffectData> m_effectClipboard;
     SelectionService *m_selection;
     QSet<int> m_batchExcludes;
 };
-} // namespace Rina::UI
+} // namespace AviQtl::UI

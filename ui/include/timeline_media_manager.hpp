@@ -6,17 +6,17 @@
 #include <QPointer>
 #include <QUrl>
 
-namespace Rina::Core {
+namespace AviQtl::Core {
 class MediaDecoder;
 class VideoDecoder;
 class ImageDecoder;
 class VideoFrameStore;
-} // namespace Rina::Core
-namespace Rina::Engine {
+} // namespace AviQtl::Core
+namespace AviQtl::Engine {
 class AudioMixer;
 }
 
-namespace Rina::UI {
+namespace AviQtl::UI {
 class TimelineController;
 
 class TimelineMediaManager : public QObject {
@@ -24,7 +24,7 @@ class TimelineMediaManager : public QObject {
   public:
     explicit TimelineMediaManager(TimelineController *controller, QObject *parent = nullptr);
 
-    void setVideoFrameStore(Rina::Core::VideoFrameStore *store);
+    void setVideoFrameStore(AviQtl::Core::VideoFrameStore *store);
     void updateMediaDecoders();
     void onPlayingChanged();
     void onCurrentFrameChanged();
@@ -33,10 +33,10 @@ class TimelineMediaManager : public QObject {
     void requestVideoFrame(int clipId, int relFrame);
     void requestImageLoad(int clipId, const QString &path);
 
-    Rina::Engine::AudioMixer *audioMixer() const { return m_audioMixer; }
+    AviQtl::Engine::AudioMixer *audioMixer() const { return m_audioMixer; }
 
     // 波形取得用: クリップIDに対応するデコーダを返す
-    Rina::Core::MediaDecoder *decoderForClip(int clipId) const { return m_decoders.value(clipId, nullptr); }
+    AviQtl::Core::MediaDecoder *decoderForClip(int clipId) const { return m_decoders.value(clipId, nullptr); }
 
   signals:
     void frameUpdated(int clipId);
@@ -44,14 +44,14 @@ class TimelineMediaManager : public QObject {
   private:
     static QUrl getClipSourceUrl(int clipId);
     // Phase4 廃止予定: ClipData* 依存の旧版。呼び出し元は updateVideoClipFrameECS に移行済み
-    void updateVideoClipFrame(Rina::Core::VideoDecoder *vid, const ClipData *clip, int relFrame);
-    void updateVideoClipFrameECS(Rina::Core::VideoDecoder *vid, int clipId, int relFrame, double fps);
+    void updateVideoClipFrame(AviQtl::Core::VideoDecoder *vid, const ClipData *clip, int relFrame);
+    void updateVideoClipFrameECS(AviQtl::Core::VideoDecoder *vid, int clipId, int relFrame, double fps);
     int sceneIdForClip(int clipId) const;
 
     TimelineController *m_controller;
-    QPointer<Rina::Engine::AudioMixer> m_audioMixer;
-    Rina::Core::VideoFrameStore *m_videoFrameStore = nullptr;
-    QHash<int, QPointer<Rina::Core::MediaDecoder>> m_decoders;
-    QHash<int, QPointer<Rina::Core::ImageDecoder>> m_imageDecoders;
+    QPointer<AviQtl::Engine::AudioMixer> m_audioMixer;
+    AviQtl::Core::VideoFrameStore *m_videoFrameStore = nullptr;
+    QHash<int, QPointer<AviQtl::Core::MediaDecoder>> m_decoders;
+    QHash<int, QPointer<AviQtl::Core::ImageDecoder>> m_imageDecoders;
 };
-} // namespace Rina::UI
+} // namespace AviQtl::UI

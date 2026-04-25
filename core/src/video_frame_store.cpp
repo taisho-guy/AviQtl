@@ -4,7 +4,7 @@
 #include <QPointer>
 #include <QThread>
 
-namespace Rina::Core {
+namespace AviQtl::Core {
 
 VideoFrameStore::VideoFrameStore(QObject *parent) : QObject(parent) {}
 
@@ -161,4 +161,4 @@ auto VideoFrameStore::frame(const QString &key) const -> QImage {
     return m_frames.value(key);
 }
 
-} // namespace Rina::Core
+} // namespace AviQtl::Core

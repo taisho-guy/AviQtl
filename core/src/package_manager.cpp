@@ -1,7 +1,7 @@
 #include "package_manager.hpp"
 #include <QTimer>
 
-namespace Rina::Core {
+namespace AviQtl::Core {
 
 PackageManager &PackageManager::instance() {
     static PackageManager instance;
@@ -78,4 +78,4 @@ QVariantList PackageManager::getInstalledPackages() const {
     return {};
 }
 
-} // namespace Rina::Core
+} // namespace AviQtl::Core

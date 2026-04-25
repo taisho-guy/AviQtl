@@ -8,7 +8,7 @@
 #include <QFile>
 #include <QUrl>
 
-namespace Rina::UI {
+namespace AviQtl::UI {
 
 auto TimelineController::saveProject(const QString &fileUrl) -> bool {
     // 渡されたパスが空の場合は内部で保持しているパスを割り当てる
@@ -21,7 +21,7 @@ auto TimelineController::saveProject(const QString &fileUrl) -> bool {
     }
 
     QString error;
-    bool result = Rina::Core::ProjectSerializer::save(targetUrl, m_timeline, m_project, &error);
+    bool result = AviQtl::Core::ProjectSerializer::save(targetUrl, m_timeline, m_project, &error);
 
     if (result) {
         // 保存に成功したパスを現在のプロジェクトパスとして記憶する
@@ -37,7 +37,7 @@ auto TimelineController::saveProject(const QString &fileUrl) -> bool {
 
 auto TimelineController::loadProject(const QString &fileUrl) -> bool {
     QString error;
-    bool result = Rina::Core::ProjectSerializer::load(fileUrl, m_timeline, m_project, &error);
+    bool result = AviQtl::Core::ProjectSerializer::load(fileUrl, m_timeline, m_project, &error);
 
     if (result) {
         // 読み込みに成功したパスを現在のプロジェクトパスとして記憶する
@@ -119,7 +119,7 @@ void insertIntoCategoryTree(QVariantList &list, const QStringList &path, const Q
 
 auto TimelineController::getAvailableEffects() -> QVariantList {
     QVariantList list;
-    const auto effects = Rina::Core::EffectRegistry::instance().getAllEffects();
+    const auto effects = AviQtl::Core::EffectRegistry::instance().getAllEffects();
     for (const auto &meta : effects) {
         if (meta.kind != "effect") {
             continue;
@@ -138,7 +138,7 @@ auto TimelineController::getAvailableEffects() -> QVariantList {
 
 auto TimelineController::getAvailableObjects() -> QVariantList {
     QVariantList list;
-    const auto effects = Rina::Core::EffectRegistry::instance().getAllEffects();
+    const auto effects = AviQtl::Core::EffectRegistry::instance().getAllEffects();
     for (const auto &meta : effects) {
         if (meta.kind != "object") {
             continue;
@@ -155,18 +155,18 @@ auto TimelineController::getAvailableObjects() -> QVariantList {
     return list;
 }
 
-auto TimelineController::getClipTypeColor(const QString &type) -> QString { return Rina::Core::EffectRegistry::instance().getEffect(type).color; }
+auto TimelineController::getClipTypeColor(const QString &type) -> QString { return AviQtl::Core::EffectRegistry::instance().getEffect(type).color; }
 
-auto TimelineController::getAvailableAudioPlugins() -> QVariantList { return Rina::Engine::Plugin::AudioPluginManager::instance().getPluginList(); }
+auto TimelineController::getAvailableAudioPlugins() -> QVariantList { return AviQtl::Engine::Plugin::AudioPluginManager::instance().getPluginList(); }
 
 auto TimelineController::getPluginCategories() -> QVariantList {
     // AudioPluginManagerから重複のないカテゴリ名リストを抽出
-    return Rina::Engine::Plugin::AudioPluginManager::instance().getCategories();
+    return AviQtl::Engine::Plugin::AudioPluginManager::instance().getCategories();
 }
 
 auto TimelineController::getPluginsByCategory(const QString &category) -> QVariantList {
     // 特定カテゴリに属するプラグインのみを返す
-    return Rina::Engine::Plugin::AudioPluginManager::instance().getPluginsInCategory(category);
+    return AviQtl::Engine::Plugin::AudioPluginManager::instance().getPluginsInCategory(category);
 }
 
-} // namespace Rina::UI
+} // namespace AviQtl::UI

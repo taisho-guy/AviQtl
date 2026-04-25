@@ -19,7 +19,7 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
-namespace Rina::Core {
+namespace AviQtl::Core {
 
 auto VideoDecoder::gethwformat(AVCodecContext *ctx, const enum AVPixelFormat *pixfmts) -> enum AVPixelFormat {
     const enum AVPixelFormat *p = nullptr;
@@ -137,10 +137,10 @@ hwinitdone:
     if (mhwDeviceCtx == nullptr) {
         if ((codec->capabilities & AV_CODEC_CAP_FRAME_THREADS) != 0) {
             mdecCtx->thread_type = FF_THREAD_FRAME;
-            mdecCtx->thread_count = Rina::Core::SettingsManager::instance().value(QStringLiteral("videoDecoderThreads"), 0).toInt();
+            mdecCtx->thread_count = AviQtl::Core::SettingsManager::instance().value(QStringLiteral("videoDecoderThreads"), 0).toInt();
         } else if ((codec->capabilities & AV_CODEC_CAP_SLICE_THREADS) != 0) {
             mdecCtx->thread_type = FF_THREAD_SLICE;
-            mdecCtx->thread_count = Rina::Core::SettingsManager::instance().value(QStringLiteral("videoDecoderThreads"), 0).toInt();
+            mdecCtx->thread_count = AviQtl::Core::SettingsManager::instance().value(QStringLiteral("videoDecoderThreads"), 0).toInt();
         }
     }
 
@@ -488,4 +488,4 @@ void VideoDecoder::setPlaying(bool playing) {
     misPlaying.store(playing, std::memory_order_release);
 }
 
-} // namespace Rina::Core
+} // namespace AviQtl::Core

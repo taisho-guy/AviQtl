@@ -5,7 +5,7 @@
 #include "timeline_service.hpp"
 #include <QObject>
 
-namespace Rina::UI {
+namespace AviQtl::UI {
 
 AddClipCommand::AddClipCommand(TimelineService *service, int clipId, QString type, int startFrame, int layer, const QString &clipName) // NOLINT(bugprone-easily-swappable-parameters)
     : m_service(service), m_clipId(clipId), m_type(std::move(type)), m_startFrame(startFrame), m_layer(layer), m_clipName(clipName) {
@@ -93,7 +93,7 @@ SetAudioPluginEnabledCommand::SetAudioPluginEnabledCommand(TimelineService *serv
 void SetAudioPluginEnabledCommand::undo() { m_service->setAudioPluginEnabledInternal(m_clipId, m_index, !m_enabled); }
 void SetAudioPluginEnabledCommand::redo() { m_service->setAudioPluginEnabledInternal(m_clipId, m_index, m_enabled); }
 
-PasteEffectCommand::PasteEffectCommand(TimelineService *service, int clipId, int targetIndex, const Rina::UI::EffectData &effectData)
+PasteEffectCommand::PasteEffectCommand(TimelineService *service, int clipId, int targetIndex, const AviQtl::UI::EffectData &effectData)
     : m_service(service), m_clipId(clipId), m_targetIndex(targetIndex), m_effect(effectData) { // NOLINT(bugprone-easily-swappable-parameters)
 
     setText(QObject::tr("エフェクト貼り付け"));
@@ -116,13 +116,13 @@ SplitClipCommand::SplitClipCommand(TimelineService *service, int clipId, int fra
 
 void SplitClipCommand::undo() {
     m_service->deleteClipInternal(m_newClipId);
-    const auto *t = (*Rina::Engine::Timeline::ECS::instance().getSnapshot()).transforms.find(m_originalClipId);
+    const auto *t = (*AviQtl::Engine::Timeline::ECS::instance().getSnapshot()).transforms.find(m_originalClipId);
     if (t)
         m_service->updateClipInternal(m_originalClipId, t->layer, t->startFrame, m_originalDuration);
 }
 
 void SplitClipCommand::redo() {
-    auto &ecs = Rina::Engine::Timeline::ECS::instance();
+    auto &ecs = AviQtl::Engine::Timeline::ECS::instance();
     const auto &snap = *ecs.getSnapshot();
     const auto *origTransform = snap.transforms.find(m_originalClipId);
     const auto *origMeta = snap.metadataStates.find(m_originalClipId);
@@ -139,18 +139,18 @@ void SplitClipCommand::redo() {
     const int firstHalfDuration = m_splitFrame - origTransform->startFrame;
     const int secondHalfDuration = m_originalDuration - firstHalfDuration;
 
-    QList<Rina::UI::EffectData> secondHalfEffects;
+    QList<AviQtl::UI::EffectData> secondHalfEffects;
     if (origFxStack) {
         secondHalfEffects = origFxStack->effects;
         for (int i = 0; i < origFxStack->effects.size(); ++i) {
-            auto [firstTracks, secondTracks] = Rina::Engine::Timeline::ClipEffectSystem::splitKeyframeTracks(origFxStack->effects.at(i).keyframeTracks, origFxStack->effects.at(i).params, firstHalfDuration, m_originalDuration);
-            Rina::Engine::Timeline::ClipEffectSystem::setKeyframeTracksAt(ecs.editState(), m_originalClipId, i, firstTracks, firstHalfDuration);
+            auto [firstTracks, secondTracks] = AviQtl::Engine::Timeline::ClipEffectSystem::splitKeyframeTracks(origFxStack->effects.at(i).keyframeTracks, origFxStack->effects.at(i).params, firstHalfDuration, m_originalDuration);
+            AviQtl::Engine::Timeline::ClipEffectSystem::setKeyframeTracksAt(ecs.editState(), m_originalClipId, i, firstTracks, firstHalfDuration);
             secondHalfEffects[i].keyframeTracks = secondTracks;
         }
     }
     m_service->updateClipInternal(m_originalClipId, origTransform->layer, origTransform->startFrame, firstHalfDuration);
 
-    Rina::UI::ClipSnapshot newSnap;
+    AviQtl::UI::ClipSnapshot newSnap;
     newSnap.transform.clipId = m_newClipId;
     newSnap.transform.layer = origTransform->layer;
     newSnap.transform.startFrame = m_splitFrame;
@@ -169,7 +169,7 @@ void SplitClipCommand::redo() {
 }
 
 DeleteClipCommand::DeleteClipCommand(TimelineService *service, int clipId, const QString &clipName) : m_service(service), m_clipId(clipId) {
-    const auto &s = (*Rina::Engine::Timeline::ECS::instance().getSnapshot());
+    const auto &s = (*AviQtl::Engine::Timeline::ECS::instance().getSnapshot());
     if (const auto *t = s.transforms.find(clipId))
         m_snapshot.transform = *t;
     if (const auto *m = s.metadataStates.find(clipId))
@@ -186,9 +186,9 @@ void DeleteClipCommand::undo() { m_service->restoreClipFromSnapshotInternal(m_sn
 
 DeleteClipsCommand::DeleteClipsCommand(TimelineService *service, const QList<int> &clipIds, const QString &macroText) : m_service(service), m_clipIds(clipIds) {
     setText(macroText);
-    const auto &ecs = (*Rina::Engine::Timeline::ECS::instance().getSnapshot());
+    const auto &ecs = (*AviQtl::Engine::Timeline::ECS::instance().getSnapshot());
     for (int id : std::as_const(clipIds)) {
-        Rina::UI::ClipSnapshot snap;
+        AviQtl::UI::ClipSnapshot snap;
         if (const auto *t = ecs.transforms.find(id))
             snap.transform = *t;
         if (const auto *m = ecs.metadataStates.find(id))
@@ -210,7 +210,7 @@ void DeleteClipsCommand::redo() {
 void DeleteClipsCommand::undo() { m_service->restoreClipsFromSnapshotInternal(m_snapshots); }
 
 CutClipCommand::CutClipCommand(TimelineService *service, int clipId, const QString &clipName) : m_service(service), m_clipId(clipId) {
-    const auto &s = (*Rina::Engine::Timeline::ECS::instance().getSnapshot());
+    const auto &s = (*AviQtl::Engine::Timeline::ECS::instance().getSnapshot());
     if (const auto *t = s.transforms.find(clipId))
         m_snapshot.transform = *t;
     if (const auto *m = s.metadataStates.find(clipId))
@@ -228,9 +228,9 @@ void CutClipCommand::redo() {
 }
 void CutClipCommand::undo() { m_service->restoreClipFromSnapshotInternal(m_snapshot); }
 
-PasteClipCommand::PasteClipCommand(TimelineService *service, int newClipId, const Rina::UI::ClipSnapshot &snap) : m_service(service), m_newClipId(newClipId), m_clipData(snap) { setText(QObject::tr("貼り付け: %1").arg(snap.metadata.type)); }
+PasteClipCommand::PasteClipCommand(TimelineService *service, int newClipId, const AviQtl::UI::ClipSnapshot &snap) : m_service(service), m_newClipId(newClipId), m_clipData(snap) { setText(QObject::tr("貼り付け: %1").arg(snap.metadata.type)); }
 void PasteClipCommand::redo() {
-    Rina::UI::ClipSnapshot s = m_clipData;
+    AviQtl::UI::ClipSnapshot s = m_clipData;
     s.transform.clipId = m_newClipId;
     s.metadata.clipId = m_newClipId;
     s.effectStack.clipId = m_newClipId;
@@ -297,4 +297,4 @@ UpdateSceneSettingsCommand::UpdateSceneSettingsCommand(TimelineService *service,
 void UpdateSceneSettingsCommand::redo() { m_service->applySceneSettingsInternal(m_sceneId, m_newData); }
 void UpdateSceneSettingsCommand::undo() { m_service->applySceneSettingsInternal(m_sceneId, m_oldData); }
 
-} // namespace Rina::UI
+} // namespace AviQtl::UI

@@ -3,7 +3,7 @@
 #include <lua.hpp>
 #include <string>
 
-namespace Rina::Scripting {
+namespace AviQtl::Scripting {
 
 class LuaHost {
   public:
@@ -26,4 +26,4 @@ class LuaHost {
     LuaHost &operator=(const LuaHost &) = delete;
 };
 
-} // namespace Rina::Scripting
+} // namespace AviQtl::Scripting

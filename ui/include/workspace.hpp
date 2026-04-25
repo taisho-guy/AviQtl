@@ -5,19 +5,19 @@
 #include <QObject>
 #include <QVariantList>
 
-namespace Rina::UI {
+namespace AviQtl::UI {
 
 class Workspace : public QObject {
     Q_OBJECT
     Q_PROPERTY(int currentIndex READ currentIndex WRITE setCurrentIndex NOTIFY currentIndexChanged)
-    Q_PROPERTY(Rina::UI::TimelineController *currentTimeline READ currentTimeline NOTIFY currentTimelineChanged)
+    Q_PROPERTY(AviQtl::UI::TimelineController *currentTimeline READ currentTimeline NOTIFY currentTimelineChanged)
     Q_PROPERTY(QVariantList tabs READ tabs NOTIFY tabsChanged)
 
   public:
     explicit Workspace(QObject *parent = nullptr);
 
-    void setVideoFrameStore(Rina::Core::VideoFrameStore *store);
-    Rina::Core::VideoFrameStore *videoFrameStore() const { return m_videoFrameStore; }
+    void setVideoFrameStore(AviQtl::Core::VideoFrameStore *store);
+    AviQtl::Core::VideoFrameStore *videoFrameStore() const { return m_videoFrameStore; }
 
     int currentIndex() const { return m_currentIndex; }
     void setCurrentIndex(int index);
@@ -42,7 +42,7 @@ class Workspace : public QObject {
     QList<TimelineController *> m_timelines;
     int m_currentIndex = -1;
     int m_untitledCounter = 1;
-    Rina::Core::VideoFrameStore *m_videoFrameStore = nullptr;
+    AviQtl::Core::VideoFrameStore *m_videoFrameStore = nullptr;
 };
 
-} // namespace Rina::UI
+} // namespace AviQtl::UI

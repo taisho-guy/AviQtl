@@ -4,7 +4,7 @@
 #include <QUrl>
 #include <vector>
 
-namespace Rina::Core {
+namespace AviQtl::Core {
 
 class MediaDecoder : public QObject {
     Q_OBJECT
@@ -43,4 +43,4 @@ class MediaDecoder : public QObject {
     mutable QMutex m_mutex;
 };
 
-} // namespace Rina::Core
+} // namespace AviQtl::Core

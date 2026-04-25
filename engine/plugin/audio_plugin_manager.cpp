@@ -17,7 +17,7 @@
 
 #include <CarlaNativePlugin.h>
 
-namespace Rina::Engine::Plugin {
+namespace AviQtl::Engine::Plugin {
 
 namespace {
 
@@ -113,7 +113,7 @@ class CarlaHostedPlugin final : public IAudioPlugin {
             return false;
         }
 
-        const auto &sm = Rina::Core::SettingsManager::instance();
+        const auto &sm = AviQtl::Core::SettingsManager::instance();
         if (m_sampleRate <= 1.0) {
             m_sampleRate = sm.value(QStringLiteral("defaultProjectSampleRate"), 48000).toDouble();
         }
@@ -510,7 +510,7 @@ auto runDiscovery(const QString &tool, const QString &type, const QString &forma
     proc.setProcessChannelMode(QProcess::SeparateChannels);
     proc.start(tool, {type, target});
 
-    if (!proc.waitForStarted(Rina::Core::SettingsManager::instance().value(QStringLiteral("pluginDiscoveryWaitStartedMs"), 3000).toInt())) {
+    if (!proc.waitForStarted(AviQtl::Core::SettingsManager::instance().value(QStringLiteral("pluginDiscoveryWaitStartedMs"), 3000).toInt())) {
         qWarning() << "[Discovery] 起動失敗:" << target;
         return {};
     }
@@ -518,10 +518,10 @@ auto runDiscovery(const QString &tool, const QString &type, const QString &forma
     QByteArray output;
     QElapsedTimer timer;
     timer.start();
-    const int kTimeoutMs = Rina::Core::SettingsManager::instance().value(QStringLiteral("pluginDiscoveryTimeoutMs"), 5000).toInt();
+    const int kTimeoutMs = AviQtl::Core::SettingsManager::instance().value(QStringLiteral("pluginDiscoveryTimeoutMs"), 5000).toInt();
 
     while (!stopFlag) {
-        proc.waitForReadyRead(Rina::Core::SettingsManager::instance().value(QStringLiteral("pluginDiscoveryWaitReadyReadMs"), 200).toInt());
+        proc.waitForReadyRead(AviQtl::Core::SettingsManager::instance().value(QStringLiteral("pluginDiscoveryWaitReadyReadMs"), 200).toInt());
         output += proc.readAllStandardOutput();
         if (proc.state() == QProcess::NotRunning) {
             break;
@@ -529,7 +529,7 @@ auto runDiscovery(const QString &tool, const QString &type, const QString &forma
         if (timer.elapsed() > kTimeoutMs) {
             qWarning() << "[Discovery] タイムアウト:" << target;
             proc.kill();
-            proc.waitForFinished(Rina::Core::SettingsManager::instance().value(QStringLiteral("pluginDiscoveryWaitFinishedMs"), 1000).toInt());
+            proc.waitForFinished(AviQtl::Core::SettingsManager::instance().value(QStringLiteral("pluginDiscoveryWaitFinishedMs"), 1000).toInt());
             break;
         }
     }
@@ -561,7 +561,7 @@ auto discoverFormat(const QString &tool, const FormatConfig &cfg, std::atomic<bo
         return {};
     }
     QStringList targets;
-    QStringList searchPaths = Rina::Core::SettingsManager::instance().value(QStringLiteral("pluginPaths") + cfg.format, QStringList()).toStringList();
+    QStringList searchPaths = AviQtl::Core::SettingsManager::instance().value(QStringLiteral("pluginPaths") + cfg.format, QStringList()).toStringList();
     QSet<QString> visited;
 
     for (const QString &dirPath : std::as_const(searchPaths)) {
@@ -602,7 +602,7 @@ auto discoverFormat(const QString &tool, const FormatConfig &cfg, std::atomic<bo
     QMutex mutex;
 
     QThreadPool pool;
-    pool.setMaxThreadCount(Rina::Core::SettingsManager::instance().value(QStringLiteral("pluginDiscoveryThreads"), std::max(2, QThread::idealThreadCount() - 1)).toInt());
+    pool.setMaxThreadCount(AviQtl::Core::SettingsManager::instance().value(QStringLiteral("pluginDiscoveryThreads"), std::max(2, QThread::idealThreadCount() - 1)).toInt());
 
     QtConcurrent::blockingMap(&pool, targets, [&](const QString &target) -> void {
         if (stopFlag) {
@@ -677,7 +677,7 @@ void AudioPluginManager::scanPlugins() {
         if (m_stopRequested) {
             break;
         }
-        bool isEnabled = Rina::Core::SettingsManager::instance().value(QStringLiteral("pluginEnable") + cfg.format, true).toBool();
+        bool isEnabled = AviQtl::Core::SettingsManager::instance().value(QStringLiteral("pluginEnable") + cfg.format, true).toBool();
         if (!isEnabled) {
             continue;
         }
@@ -783,4 +783,4 @@ auto AudioPluginManager::createPlugin(const QString &id) -> std::unique_ptr<IAud
     return plugin;
 }
 
-} // namespace Rina::Engine::Plugin
+} // namespace AviQtl::Engine::Plugin

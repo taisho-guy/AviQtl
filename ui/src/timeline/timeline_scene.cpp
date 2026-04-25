@@ -4,7 +4,7 @@
 #include "timeline_service.hpp"
 #include <QDebug>
 
-namespace Rina::UI {
+namespace AviQtl::UI {
 
 auto TimelineService::currentScene() -> SceneData * {
     for (auto &scene : m_scenes) {
@@ -145,7 +145,7 @@ void TimelineService::createSceneInternal(int sceneId, const QString &name) {
     SceneData newScene;
     newScene.id = sceneId;
     newScene.name = name;
-    const auto &settings = Rina::Core::SettingsManager::instance().settings();
+    const auto &settings = AviQtl::Core::SettingsManager::instance().settings();
     newScene.width = settings.value(QStringLiteral("defaultProjectWidth"), 1920).toInt();
     newScene.height = settings.value(QStringLiteral("defaultProjectHeight"), 1080).toInt();
     newScene.fps = settings.value(QStringLiteral("defaultProjectFps"), 60.0).toDouble();
@@ -199,4 +199,4 @@ void TimelineService::applySceneSettingsInternal(int sceneId, const SceneData &d
     }
 }
 
-} // namespace Rina::UI
+} // namespace AviQtl::UI

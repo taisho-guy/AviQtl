@@ -2,7 +2,7 @@
 #include "clip_snapshot.hpp"
 #include "effect_model.hpp"
 
-namespace Rina::Engine::Timeline {
+namespace AviQtl::Engine::Timeline {
 
 void ClipLifecycleSystem::createClip(ECSState &state, int clipId, const QString &type, int layer, int startFrame, int durationFrames) {
     auto &transform = state.transforms[clipId];
@@ -36,7 +36,7 @@ void ClipLifecycleSystem::destroyClip(ECSState &state, int clipId) {
     state.renderStates.erase(clipId);
 }
 
-void ClipLifecycleSystem::restoreClipFromDTO(ECSState &state, const Rina::UI::ClipData &dto) {
+void ClipLifecycleSystem::restoreClipFromDTO(ECSState &state, const AviQtl::UI::ClipData &dto) {
     // TransformComponent
     auto &transform = state.transforms[dto.id];
     transform.clipId = dto.id;
@@ -59,7 +59,7 @@ void ClipLifecycleSystem::restoreClipFromDTO(ECSState &state, const Rina::UI::Cl
     fxStack.clipId = dto.id;
     fxStack.effects.clear();
     for (const auto *eff : std::as_const(dto.effects)) {
-        fxStack.effects.append(Rina::UI::effectDataFromModel(*eff));
+        fxStack.effects.append(AviQtl::UI::effectDataFromModel(*eff));
     }
 
     // AudioStackComponent（AudioPluginState を直接格納）
@@ -74,7 +74,7 @@ void ClipLifecycleSystem::restoreClipFromDTO(ECSState &state, const Rina::UI::Cl
     audio.durationFrames = dto.durationFrames;
 }
 
-void ClipLifecycleSystem::restoreClipFromSnapshot(ECSState &state, const Rina::UI::ClipSnapshot &snap) {
+void ClipLifecycleSystem::restoreClipFromSnapshot(ECSState &state, const AviQtl::UI::ClipSnapshot &snap) {
     const int id = snap.transform.clipId;
     state.transforms[id] = snap.transform;
     state.metadataStates[id] = snap.metadata;
@@ -91,4 +91,4 @@ void ClipLifecycleSystem::restoreClipFromSnapshot(ECSState &state, const Rina::U
     audio.durationFrames = snap.transform.durationFrames;
 }
 
-} // namespace Rina::Engine::Timeline
+} // namespace AviQtl::Engine::Timeline

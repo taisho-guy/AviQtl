@@ -9,7 +9,7 @@
 #include <QQuickItemGrabResult>
 #include <QTimer>
 
-namespace Rina::UI {
+namespace AviQtl::UI {
 
 TimelineExportManager::TimelineExportManager(TimelineController *controller, QObject *parent) : QObject(parent), m_controller(controller) {}
 
@@ -38,9 +38,9 @@ auto TimelineExportManager::exportImageSequence(const QString &dir, int quality)
     if (baseName.endsWith(QLatin1String(".png"))) {
         baseName.chop(4);
     }
-    const int sequencePadding = Rina::Core::SettingsManager::instance().value(QStringLiteral("exportSequencePadding"), 6).toInt();
-    const int timeoutMs = Rina::Core::SettingsManager::instance().value(QStringLiteral("exportFrameGrabTimeoutMs"), 2000).toInt();
-    const int progressInterval = Rina::Core::SettingsManager::instance().value(QStringLiteral("exportProgressInterval"), 5).toInt();
+    const int sequencePadding = AviQtl::Core::SettingsManager::instance().value(QStringLiteral("exportSequencePadding"), 6).toInt();
+    const int timeoutMs = AviQtl::Core::SettingsManager::instance().value(QStringLiteral("exportFrameGrabTimeoutMs"), 2000).toInt();
+    const int progressInterval = AviQtl::Core::SettingsManager::instance().value(QStringLiteral("exportProgressInterval"), 5).toInt();
 
     QQuickItem *view = m_controller->compositeView();
     if (view != nullptr) {
@@ -74,7 +74,7 @@ auto TimelineExportManager::exportImageSequence(const QString &dir, int quality)
     return true;
 }
 
-void TimelineExportManager::exportVideoAsync(const Rina::Core::VideoEncoder::Config &config) {
+void TimelineExportManager::exportVideoAsync(const AviQtl::Core::VideoEncoder::Config &config) {
     if (m_exporting.load()) {
         return;
     }
@@ -87,17 +87,17 @@ void TimelineExportManager::exportVideoAsync(const Rina::Core::VideoEncoder::Con
 
 void TimelineExportManager::cancelExport() { m_cancelRequested = true; }
 
-void TimelineExportManager::runExport(const Rina::Core::VideoEncoder::Config &config) {
+void TimelineExportManager::runExport(const AviQtl::Core::VideoEncoder::Config &config) {
     m_exporting = true;
 
-    Rina::Core::VideoEncoder encoder;
+    AviQtl::Core::VideoEncoder encoder;
     if (!encoder.open(config)) {
         emit exportFinished(false, tr("エンコーダーの初期化に失敗しました"));
         m_exporting = false;
         return;
     }
-    const int sr = Rina::Core::SettingsManager::instance().value(QStringLiteral("defaultProjectSampleRate"), 48000).toInt();
-    const int ch = Rina::Core::SettingsManager::instance().value(QStringLiteral("audioChannels"), 2).toInt();
+    const int sr = AviQtl::Core::SettingsManager::instance().value(QStringLiteral("defaultProjectSampleRate"), 48000).toInt();
+    const int ch = AviQtl::Core::SettingsManager::instance().value(QStringLiteral("audioChannels"), 2).toInt();
     encoder.addAudioStream(sr, ch);
 
     const double fps = m_controller->project()->fps();
@@ -129,7 +129,7 @@ void TimelineExportManager::runExport(const Rina::Core::VideoEncoder::Config &co
             if (grab) {
                 QEventLoop loop;
                 connect(grab.get(), &QQuickItemGrabResult::ready, &loop, &QEventLoop::quit);
-                const int grabTimeout = Rina::Core::SettingsManager::instance().value(QStringLiteral("exportFrameGrabTimeoutMs"), 2000).toInt();
+                const int grabTimeout = AviQtl::Core::SettingsManager::instance().value(QStringLiteral("exportFrameGrabTimeoutMs"), 2000).toInt();
                 QTimer::singleShot(grabTimeout, &loop, &QEventLoop::quit);
                 loop.exec();
                 img = grab->image();
@@ -143,7 +143,7 @@ void TimelineExportManager::runExport(const Rina::Core::VideoEncoder::Config &co
         encoder.pushAudio(audio.data(), samplesNeeded);
 
         const int done = frame - startFrame + 1;
-        const int progInterval = Rina::Core::SettingsManager::instance().value(QStringLiteral("exportProgressInterval"), 5).toInt();
+        const int progInterval = AviQtl::Core::SettingsManager::instance().value(QStringLiteral("exportProgressInterval"), 5).toInt();
         if (done % progInterval == 0 || done == totalFrames) {
             emit exportProgressChanged(done * 100 / totalFrames, done, totalFrames);
         }
@@ -159,4 +159,4 @@ cleanup:
     m_exporting = false;
 }
 
-} // namespace Rina::UI
+} // namespace AviQtl::UI

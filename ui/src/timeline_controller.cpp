@@ -20,7 +20,7 @@
 #include <QtGlobal>
 #include <algorithm>
 
-namespace Rina::UI {
+namespace AviQtl::UI {
 
 TimelineController::TimelineController(QObject *parent) : QObject(parent) {
     initializeServices();
@@ -120,7 +120,7 @@ void TimelineController::onCurrentFrameChanged() {
     updateActiveClipsList();
 }
 
-void TimelineController::setVideoFrameStore(Rina::Core::VideoFrameStore *store) {
+void TimelineController::setVideoFrameStore(AviQtl::Core::VideoFrameStore *store) {
     qDebug() << "TimelineController: VideoFrameStore set. Updating decoders...";
     m_mediaManager->setVideoFrameStore(store);
 }
@@ -149,7 +149,7 @@ void TimelineController::log(const QString &msg) { qDebug() << "[TimelineBridge]
 auto TimelineController::resolveDragPosition(int clipId, int targetLayer, int proposedStartFrame, const QVariantList &batchIds) -> QPoint { return m_timeline->resolveDragPosition(clipId, targetLayer, proposedStartFrame, batchIds); }
 
 auto TimelineController::resolveDragDelta(int clipId, int deltaFrame, int deltaLayer, const QVariantList &batchIds, int minFrame, int minLayer, int maxLayer, int totalLayers) -> QPoint {
-    const auto *snap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
     const auto *tr = snap->transforms.find(clipId);
     if (tr == nullptr) {
         return {0, 0};
@@ -178,7 +178,7 @@ auto TimelineController::resolveDragDelta(int clipId, int deltaFrame, int deltaL
 auto TimelineController::debugRunLua(const QString &script) -> QString {
     // テスト用に time=currentFrame/fps, index=0, value=0 で実行
     double time = (m_transport != nullptr) ? m_transport->currentFrame() / m_project->fps() : 0.0;
-    double result = Rina::Scripting::LuaHost::instance().evaluate(script.toStdString(), time, 0, 0.0);
+    double result = AviQtl::Scripting::LuaHost::instance().evaluate(script.toStdString(), time, 0, 0.0);
     return QString::number(result);
 }
 
@@ -199,9 +199,9 @@ bool TimelineController::hasUnsavedChanges() const {
 }
 
 QVariantList TimelineController::keyframeListForUi(int clipId, int effectIndex, const QString &paramName) const {
-    using Rina::Engine::Timeline::ClipEffectSystem;
-    using Rina::Engine::Timeline::ECS;
+    using AviQtl::Engine::Timeline::ClipEffectSystem;
+    using AviQtl::Engine::Timeline::ECS;
     return ClipEffectSystem::keyframeListForUi(ECS::instance().editState(), clipId, effectIndex, paramName);
 }
 
-} // namespace Rina::UI
+} // namespace AviQtl::UI

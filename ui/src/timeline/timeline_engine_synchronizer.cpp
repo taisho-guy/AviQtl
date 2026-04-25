@@ -5,7 +5,7 @@
 #include "timeline_controller.hpp"
 #include <algorithm>
 
-namespace Rina::UI {
+namespace AviQtl::UI {
 
 TimelineEngineSynchronizer::TimelineEngineSynchronizer(TimelineController *controller, QObject *parent) : QObject(parent), m_controller(controller), m_clipModel(new ClipModel(controller->transport(), this)) {}
 
@@ -76,12 +76,12 @@ void TimelineEngineSynchronizer::updateActiveClipsList() {
 
     // ECS が正本: m_localClips の clip->effects (EffectModel*) は空のため使わない
     // ECS effectStacks から直接 vol/pan/mute を取得し、updateEffectStack は呼ばない
-    const auto *ecsSnap = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *ecsSnap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
 
     for (const ClipData *clip : std::as_const(active)) {
         int relFrame = current - clip->startFrame;
 
-        Rina::Engine::Timeline::ECS::instance().updateClipState(clip->id, clip->layer, clip->startFrame, clip->durationFrames, static_cast<double>(relFrame));
+        AviQtl::Engine::Timeline::ECS::instance().updateClipState(clip->id, clip->layer, clip->startFrame, clip->durationFrames, static_cast<double>(relFrame));
 
         // ECS effectStacks が正本のため updateEffectStack による上書きは行わない
 
@@ -103,11 +103,11 @@ void TimelineEngineSynchronizer::updateActiveClipsList() {
                     }
                 }
             }
-            Rina::Engine::Timeline::ECS::instance().updateAudioClipState(clip->id, clip->startFrame, clip->durationFrames, vol, pan, mute);
+            AviQtl::Engine::Timeline::ECS::instance().updateAudioClipState(clip->id, clip->startFrame, clip->durationFrames, vol, pan, mute);
         }
     }
 
-    Rina::Engine::Timeline::ECS::instance().commit();
+    AviQtl::Engine::Timeline::ECS::instance().commit();
     qDebug() << "[DOD Sync] Sending to ClipModel. Size=" << active.size();
     m_clipModel->updateClips(active);
 }
@@ -123,7 +123,7 @@ void TimelineEngineSynchronizer::rebuildClipIndex() {
 
     // フェーズ2: m_scenes の直接参照をやめ、ECS スナップショットを走査して
     // m_localClips（所有バッファ）を構築する。m_sortedClips はそのポインタを持つ。
-    const auto *ecsState = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *ecsState = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
     if (!ecsState) {
         qWarning() << "[DOD Sync] rebuildClipIndex: ECS スナップショットが null です。";
         return;
@@ -170,6 +170,6 @@ void TimelineEngineSynchronizer::rebuildClipIndex() {
     }
 
     // ECS の不要になったコンポーネントを掃除する
-    Rina::Engine::Timeline::ECS::instance().syncClipIds(aliveIds);
+    AviQtl::Engine::Timeline::ECS::instance().syncClipIds(aliveIds);
 }
-} // namespace Rina::UI
+} // namespace AviQtl::UI

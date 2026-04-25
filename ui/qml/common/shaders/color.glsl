@@ -1,6 +1,6 @@
 // ui/qml/common/shaders/color.glsl
-#ifndef RINA_COLOR_GLSL
-#define RINA_COLOR_GLSL
+#ifndef AVIQTL_COLOR_GLSL
+#define AVIQTL_COLOR_GLSL
 
 // RGB -> HSV 変換
 vec3 rgb2hsv(vec3 c) {

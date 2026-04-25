@@ -1,8 +1,8 @@
+import AviQtl.Core 1.0
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Dialogs as Dialogs
 import QtQuick.Layouts
-import Rina.Core 1.0
 
 Window {
     id: root

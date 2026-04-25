@@ -4,7 +4,7 @@ import QtQuick.Layouts
 import "common" as Common
 import "timeline" // サブフォルダのモジュールをインポート
 
-Common.RinaWindow {
+Common.AviQtlWindow {
     id: timelineWindow
 
     // 定数・設定
@@ -101,7 +101,7 @@ Common.RinaWindow {
 
                                     }
 
-                                    contentItem: Common.RinaIcon {
+                                    contentItem: Common.AviQtlIcon {
                                         iconName: "close_line"
                                         size: 14
                                         color: parent.hovered ? parent.palette.highlight : parent.palette.text
@@ -126,7 +126,7 @@ Common.RinaWindow {
                 Layout.fillHeight: true
                 onClicked: Workspace.currentTimeline.createScene(qsTr("シーン %1").arg(sceneRepeater.count + 1))
 
-                contentItem: Common.RinaIcon {
+                contentItem: Common.AviQtlIcon {
                     iconName: "add_line"
                     size: 20
                     color: parent.hovered ? parent.palette.highlight : parent.palette.text

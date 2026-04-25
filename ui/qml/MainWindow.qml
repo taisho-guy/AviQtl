@@ -50,7 +50,7 @@ ApplicationWindow {
     height: 360
     x: 100
     y: 100
-    title: qsTr("Rina - プレビュー")
+    title: qsTr("AviQtl - プレビュー")
     // お前はこれで死ねぇ！！！！！
     onClosing: (close) => {
         // 一旦クローズをキャンセルし、全タブの未保存確認を行ってから終了する
@@ -510,8 +510,8 @@ ApplicationWindow {
 
         title: qsTr("名前を付けて保存")
         fileMode: Platform.FileDialog.SaveFile
-        nameFilters: ["Rina Project files (*.rina)", "JSON files (*.json)"]
-        defaultSuffix: "rina"
+        nameFilters: ["AviQtl Project files (*.aqp)", "JSON files (*.json)"]
+        defaultSuffix: "aqp"
         onAccepted: {
             if (Workspace.currentTimeline)
                 Workspace.currentTimeline.saveProject(file);
@@ -530,7 +530,7 @@ ApplicationWindow {
         id: loadDialog
 
         title: qsTr("プロジェクトを開く")
-        nameFilters: ["Rina Project files (*.rina)", "JSON files (*.json)"]
+        nameFilters: ["AviQtl Project files (*.aqp)", "JSON files (*.json)"]
         onAccepted: {
             if (Workspace)
                 Workspace.loadProject(file);
@@ -625,7 +625,7 @@ ApplicationWindow {
                                             }, index);
                                         }
 
-                                        contentItem: Common.RinaIcon {
+                                        contentItem: Common.AviQtlIcon {
                                             iconName: "close_line"
                                             size: 14
                                             color: parent.hovered ? parent.palette.highlight : parent.palette.text
@@ -654,7 +654,7 @@ ApplicationWindow {
                     WindowManager.showLauncher();
                 }
 
-                contentItem: Common.RinaIcon {
+                contentItem: Common.AviQtlIcon {
                     iconName: "add_line"
                     size: 16
                     color: parent.hovered ? parent.palette.highlight : parent.palette.text
@@ -778,7 +778,7 @@ ApplicationWindow {
 
                         }
 
-                        contentItem: Common.RinaIcon {
+                        contentItem: Common.AviQtlIcon {
                             iconName: "arrow_left_s_line"
                             size: 24
                             color: parent.hovered ? parent.palette.highlight : parent.palette.text
@@ -796,7 +796,7 @@ ApplicationWindow {
 
                         }
 
-                        contentItem: Common.RinaIcon {
+                        contentItem: Common.AviQtlIcon {
                             iconName: (Workspace.currentTimeline && Workspace.currentTimeline.transport && Workspace.currentTimeline.transport.isPlaying) ? "pause_fill" : "play_fill"
                             size: 24
                             color: parent.hovered ? parent.palette.highlight : parent.palette.text
@@ -814,7 +814,7 @@ ApplicationWindow {
 
                         }
 
-                        contentItem: Common.RinaIcon {
+                        contentItem: Common.AviQtlIcon {
                             iconName: "arrow_right_s_line"
                             size: 24
                             color: parent.hovered ? parent.palette.highlight : parent.palette.text
@@ -1016,7 +1016,7 @@ ApplicationWindow {
     }
 
     menuBar: MenuBar {
-        // ─── ファイル ───
+        // ファイル
         Menu {
             title: qsTr("ファイル")
 
@@ -1068,7 +1068,7 @@ ApplicationWindow {
 
         }
 
-        // ─── 編集 ───
+        // 編集
         Menu {
             title: qsTr("編集")
 
@@ -1084,7 +1084,7 @@ ApplicationWindow {
 
         }
 
-        // ─── 設定 ───
+        // 設定
         Menu {
             title: qsTr("設定")
 
@@ -1113,7 +1113,7 @@ ApplicationWindow {
 
         }
 
-        // ─── 表示 ───
+        // 表示
         Menu {
             title: qsTr("表示")
 
@@ -1139,7 +1139,7 @@ ApplicationWindow {
 
         }
 
-        // ─── ツール ───
+        // ツール
         Menu {
             title: qsTr("ツール")
 

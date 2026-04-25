@@ -5,7 +5,7 @@
 #include <QQmlEngine>
 #include <QQuickWindow>
 
-namespace Rina::UI {
+namespace AviQtl::UI {
 class WindowManager : public QObject {
     Q_OBJECT
     Q_PROPERTY(bool timelineVisible READ timelineVisible WRITE setTimelineVisible NOTIFY timelineVisibleChanged)
@@ -57,4 +57,4 @@ class WindowManager : public QObject {
     QHash<QString, QPointer<QQuickWindow>> m_windows;
     QPointer<QQmlEngine> m_engine;
 };
-} // namespace Rina::UI
+} // namespace AviQtl::UI

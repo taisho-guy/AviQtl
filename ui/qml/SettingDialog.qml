@@ -6,7 +6,7 @@ import QtQuick.Layouts
 import QtQuick.Window
 import "common" as Common
 
-Common.RinaWindow {
+Common.AviQtlWindow {
     id: root
 
     property int targetClipId: (Workspace.currentTimeline && Workspace.currentTimeline.selection) ? Workspace.currentTimeline.selection.selectedClipId : -1
@@ -463,7 +463,7 @@ Common.RinaWindow {
                             spacing: 8
 
                             // ドラッグ用ハンドル
-                            Common.RinaIcon {
+                            Common.AviQtlIcon {
                                 iconName: "drag_move_line" // 適切なアイコン名に変更してください
                                 size: 16
                                 color: palette.text
@@ -654,7 +654,7 @@ Common.RinaWindow {
                                 height: 24
                                 onClicked: Workspace.currentTimeline.removeEffect(targetClipId, effectRoot.effectIndex)
 
-                                contentItem: Common.RinaIcon {
+                                contentItem: Common.AviQtlIcon {
                                     iconName: "close_line"
                                     size: 16
                                     color: parent.hovered ? "red" : parent.palette.text
@@ -1212,7 +1212,7 @@ Common.RinaWindow {
                                     height: 24
                                     onClicked: Workspace.currentTimeline.removeAudioPlugin(targetClipId, audioEffectRoot.effectIndex)
 
-                                    contentItem: Common.RinaIcon {
+                                    contentItem: Common.AviQtlIcon {
                                         iconName: "close_line"
                                         size: 16
                                         color: parent.hovered ? "red" : parent.palette.text

@@ -6,7 +6,7 @@
 
 class KColorSchemeManager;
 
-namespace Rina::Core {
+namespace AviQtl::Core {
 
 class ColorSchemeController : public QObject {
     Q_OBJECT
@@ -34,4 +34,4 @@ class ColorSchemeController : public QObject {
     QString m_activeSchemeId;
 };
 
-} // namespace Rina::Core
+} // namespace AviQtl::Core

@@ -4,7 +4,7 @@
 #include <QTimer>
 #include <cmath>
 
-namespace Rina::UI {
+namespace AviQtl::UI {
 
 class TransportService : public QObject {
     Q_OBJECT
@@ -109,4 +109,4 @@ class TransportService : public QObject {
 
     QTimer *m_timer;
 };
-} // namespace Rina::UI
+} // namespace AviQtl::UI

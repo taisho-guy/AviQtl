@@ -3,10 +3,10 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import "common" as Common
 
-Common.RinaWindow {
+Common.AviQtlWindow {
     id: root
 
-    title: qsTr("Rinaについて")
+    title: qsTr("AviQtlについて")
     width: 420
     height: 260
     minimumWidth: 420
@@ -38,14 +38,14 @@ Common.RinaWindow {
                 Layout.fillWidth: true
 
                 Label {
-                    text: "Rina " + (typeof RinaVersion !== "undefined" ? RinaVersion : "")
+                    text: "AviQtl " + (typeof AviQtlVersion !== "undefined" ? AviQtlVersion : "")
                     font.pixelSize: 28
                     font.bold: true
                     color: palette.text
                 }
 
                 Label {
-                    text: typeof RinaVersionCodename !== "undefined" ? RinaVersionCodename : "Rolling Release"
+                    text: typeof AviQtlVersionCodename !== "undefined" ? AviQtlVersionCodename : "Rolling Release"
                     font.pixelSize: 14
                     color: palette.highlight
                     font.bold: true
@@ -64,7 +64,7 @@ Common.RinaWindow {
 
         Label {
             Layout.fillWidth: true
-            text: qsTr("Rina は AviUtl ではありません。\n\nこのソフトウェアは GNU Affero General Public License Version 3 に基づいて公開されています。")
+            text: qsTr("AviQtl は AviUtl ではありません。\n\nこのソフトウェアは GNU Affero General Public License Version 3 に基づいて公開されています。")
             wrapMode: Text.WordWrap
             font.pixelSize: 13
             color: palette.text
@@ -73,7 +73,7 @@ Common.RinaWindow {
 
         Label {
             Layout.fillWidth: true
-            text: "<a href='https://codeberg.org/taisho-guy/Rina'>https://codeberg.org/taisho-guy/Rina</a>"
+            text: "<a href='https://codeberg.org/taisho-guy/AviQtl'>https://codeberg.org/taisho-guy/AviQtl</a>"
             textFormat: Text.RichText
             font.pixelSize: 13
             onLinkActivated: function(link) {

@@ -1,6 +1,6 @@
 #include "selection_service.hpp"
 
-namespace Rina::UI {
+namespace AviQtl::UI {
 
 SelectionService::SelectionService(QObject *parent) : QObject(parent) {}
 
@@ -101,4 +101,4 @@ void SelectionService::replaceSelection(const QVariantList &ids, int primaryId, 
     }
     updatePrimarySelection(primaryId, primaryId >= 0 ? primaryData : QVariantMap());
 }
-} // namespace Rina::UI
+} // namespace AviQtl::UI

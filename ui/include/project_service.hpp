@@ -2,7 +2,7 @@
 #include "settings_manager.hpp"
 #include <QObject>
 
-namespace Rina::UI {
+namespace AviQtl::UI {
 
 class ProjectService : public QObject {
     Q_OBJECT
@@ -12,12 +12,12 @@ class ProjectService : public QObject {
     Q_PROPERTY(int sampleRate READ sampleRate WRITE setSampleRate NOTIFY sampleRateChanged)
   public:
     explicit ProjectService(QObject *parent = nullptr) : QObject(parent) {
-        const auto &settings = Rina::Core::SettingsManager::instance().settings();
+        const auto &settings = AviQtl::Core::SettingsManager::instance().settings();
         m_width = settings.value(QStringLiteral("defaultProjectWidth"), 1920).toInt();
         m_height = settings.value(QStringLiteral("defaultProjectHeight"), 1080).toInt();
         m_fps = settings.value(QStringLiteral("defaultProjectFps"), 60.0).toDouble();
         m_sampleRate = settings.value(QStringLiteral("defaultProjectSampleRate"), 48000).toInt();
-        Rina::Core::SettingsManager::instance().setValue(QStringLiteral("_runtime_projectSampleRate"), m_sampleRate);
+        AviQtl::Core::SettingsManager::instance().setValue(QStringLiteral("_runtime_projectSampleRate"), m_sampleRate);
     }
 
     int width() const { return m_width; }
@@ -49,7 +49,7 @@ class ProjectService : public QObject {
         if (m_sampleRate == r)
             return;
         m_sampleRate = r;
-        Rina::Core::SettingsManager::instance().setValue(QStringLiteral("_runtime_projectSampleRate"), m_sampleRate);
+        AviQtl::Core::SettingsManager::instance().setValue(QStringLiteral("_runtime_projectSampleRate"), m_sampleRate);
         emit sampleRateChanged();
     }
 
@@ -65,4 +65,4 @@ class ProjectService : public QObject {
     double m_fps;
     int m_sampleRate;
 };
-} // namespace Rina::UI
+} // namespace AviQtl::UI

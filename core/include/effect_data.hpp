@@ -3,7 +3,7 @@
 #include <QStringList>
 #include <QVariantMap>
 
-namespace Rina::UI {
+namespace AviQtl::UI {
 
 // EffectModel の純粋データ表現。値セマンティクス（コピー可）。
 // ECS::EffectStackComponent・Undoスナップショット・Clipboardの正本として使う。
@@ -28,4 +28,4 @@ EffectData effectDataFromModel(const EffectModel &model);
 // syncTrackEndpoints(durationFrames) は呼び出し元で別途呼ぶこと
 EffectModel *effectModelFromData(const EffectData &data, QObject *parent = nullptr);
 
-} // namespace Rina::UI
+} // namespace AviQtl::UI

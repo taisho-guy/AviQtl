@@ -1,6 +1,6 @@
 // ui/qml/common/shaders/utils.glsl
-#ifndef RINA_UTILS_GLSL
-#define RINA_UTILS_GLSL
+#ifndef AVIQTL_UTILS_GLSL
+#define AVIQTL_UTILS_GLSL
 
 // 全てのユーティリティを一括で読み込むためのファイル
 // 個別のシェーダーからは #include "../common/shaders/utils.glsl" で利用可能

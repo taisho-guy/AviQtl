@@ -6,7 +6,7 @@
 #include <QVariantMap>
 #include <vector>
 
-namespace Rina::UI {
+namespace AviQtl::UI {
 class TimelineController;
 class ClipModel;
 
@@ -49,4 +49,4 @@ class TimelineEngineSynchronizer : public QObject {
     // ClipData* が m_scenes 内ポインタではなく、ここが所有者となる
     QList<ClipData> m_localClips;
 };
-} // namespace Rina::UI
+} // namespace AviQtl::UI

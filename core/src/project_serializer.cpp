@@ -13,7 +13,7 @@
 #include <QUrl>
 #include <algorithm>
 
-namespace Rina::Core {
+namespace AviQtl::Core {
 
 auto ProjectSerializer::save(const QString &fileUrl, const UI::TimelineService *timeline, const UI::ProjectService *project, QString *errorMessage) -> bool {
     QString path = QUrl(fileUrl).toLocalFile();
@@ -48,7 +48,7 @@ auto ProjectSerializer::save(const QString &fileUrl, const UI::TimelineService *
     // フェーズ2: ECS スナップショットを正本として clips を保存する
     // effects / audioPlugins は ClipData* から補完（フェーズ3で ECS 化予定）
     QJsonArray clipsArray;
-    const auto *ecsState = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *ecsState = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
     if (ecsState) {
         for (const auto &transform : ecsState->transforms) {
             const int clipId = transform.clipId;
@@ -138,7 +138,7 @@ auto ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
 
     // Project Settings
     bool hasSettings = root.contains(QStringLiteral("settings"));
-    auto defaults = Rina::Core::SettingsManager::instance().settings();
+    auto defaults = AviQtl::Core::SettingsManager::instance().settings();
     int pWidth = defaults.value(QStringLiteral("defaultProjectWidth"), 1920).toInt();
     int pHeight = defaults.value(QStringLiteral("defaultProjectHeight"), 1080).toInt();
     double pFps = defaults.value(QStringLiteral("defaultProjectFps"), 60.0).toDouble();
@@ -283,9 +283,9 @@ auto ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
 
     // フェーズ2: load 後に ECS を初期化する（setScenes は m_scenes のみ更新するため）
     // commit() は clipsChanged の前に行い、synchronizer がスナップショットを正しく参照できるようにする
-    auto &ecs = Rina::Engine::Timeline::ECS::instance();
+    auto &ecs = AviQtl::Engine::Timeline::ECS::instance();
     for (const auto &clip : std::as_const(tempClips)) {
-        Rina::Engine::Timeline::ClipLifecycleSystem::restoreClipFromDTO(ecs.editState(), clip);
+        AviQtl::Engine::Timeline::ClipLifecycleSystem::restoreClipFromDTO(ecs.editState(), clip);
     }
     ecs.commit();
 
@@ -293,4 +293,4 @@ auto ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
 
     return true;
 }
-} // namespace Rina::Core
+} // namespace AviQtl::Core

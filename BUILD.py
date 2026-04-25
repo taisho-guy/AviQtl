@@ -325,7 +325,7 @@ class BuildWorker(QtCore.QThread):
 
             # 2.5 翻訳ソースファイル (.ts) を自動更新 (常に実行)
             self.log_signal.emit("翻訳ソースファイル (.ts) を更新中...")
-            self._run_cmd(["cmake", "--build", str(work_dir), "--target", "Rina_lupdate"], in_container=use_container)
+            self._run_cmd(["cmake", "--build", str(work_dir), "--target", "AviQtl_lupdate"], in_container=use_container)
 
             # 3. Build
             self.log_signal.emit(f"{name} コンパイル中...")
@@ -337,15 +337,15 @@ class BuildWorker(QtCore.QThread):
             self.output_dir.mkdir(parents=True, exist_ok=True)
             self.dist_dir.mkdir(parents=True, exist_ok=True)
             
-            exe_name = "Rina.exe" if self.system == "Windows" else "Rina"
+            exe_name = "AviQtl.exe" if self.system == "Windows" else "AviQtl"
 
             if self.system == "Darwin":
-                src_app = work_dir / "Rina.app"
-                dest_app = self.output_dir / "Rina.app"
+                src_app = work_dir / "AviQtl.app"
+                dest_app = self.output_dir / "AviQtl.app"
                 if dest_app.exists(): shutil.rmtree(dest_app)
                 if src_app.exists():
                     shutil.copytree(src_app, dest_app)
-                    dest_bin = dest_app / "Contents/MacOS/Rina"
+                    dest_bin = dest_app / "Contents/MacOS/AviQtl"
                     asset_dest = dest_app / "Contents/Resources"
                 else:
                     raise FileNotFoundError(f"{src_app} not found")
@@ -434,18 +434,18 @@ class BuildWorker(QtCore.QThread):
 
             # ZIP圧縮
             self.log_signal.emit("アーカイブを作成中...")
-            archive_name = f"Rina-{self.system}-x64"
+            archive_name = f"AviQtl-{self.system}-x64"
             if self.system == "Linux":
-                archive_name = "Rina-Linux-x86_64-v3"
+                archive_name = "AviQtl-Linux-x86_64-v3"
             elif self.system == "Darwin":
-                archive_name = "Rina-macOS-Universal"
+                archive_name = "AviQtl-macOS-Universal"
             
             if self.system == "Darwin":
                 shutil.make_archive(
                     str(self.dist_dir / archive_name),
                     'zip',
                     root_dir=self.output_dir,
-                    base_dir="Rina.app"
+                    base_dir="AviQtl.app"
                 )
             else:
                 shutil.make_archive(

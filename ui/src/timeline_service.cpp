@@ -11,7 +11,7 @@
 #include "engine/timeline/ecs.hpp"
 #include <QVariant>
 
-namespace Rina::UI {
+namespace AviQtl::UI {
 
 // Phase 1: DOD Migration Helpers
 ClipData TimelineService::packClipData(int clipId) const {
@@ -19,7 +19,7 @@ ClipData TimelineService::packClipData(int clipId) const {
     result.id = clipId;
 
     // フェーズ2: ECS が正本。findClipById フォールバックを削除。
-    const auto *ecsState = Rina::Engine::Timeline::ECS::instance().getSnapshot();
+    const auto *ecsState = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
     if (!ecsState)
         return result;
 
@@ -36,7 +36,7 @@ ClipData TimelineService::packClipData(int clipId) const {
 }
 
 void TimelineService::unpackClipData(const ClipData &clip) {
-    auto &ecs = Rina::Engine::Timeline::ECS::instance();
+    auto &ecs = AviQtl::Engine::Timeline::ECS::instance();
     // 既存のリストへ同期する（フェーズ1の過渡期対応）
     addClipDirectInternal(clip, false);
 
@@ -53,7 +53,7 @@ TimelineService::TimelineService(SelectionService *selection, QObject *parent) :
     SceneData rootScene;
     rootScene.id = 0;
     rootScene.name = QObject::tr("ルート");
-    const auto &settings = Rina::Core::SettingsManager::instance().settings();
+    const auto &settings = AviQtl::Core::SettingsManager::instance().settings();
     rootScene.width = settings.value(QStringLiteral("defaultProjectWidth"), 1920).toInt();
     rootScene.height = settings.value(QStringLiteral("defaultProjectHeight"), 1080).toInt();
     rootScene.fps = settings.value(QStringLiteral("defaultProjectFps"), 60.0).toDouble();
@@ -63,4 +63,4 @@ TimelineService::TimelineService(SelectionService *selection, QObject *parent) :
 void TimelineService::undo() { m_undoStack->undo(); }
 void TimelineService::redo() { m_undoStack->redo(); }
 
-} // namespace Rina::UI
+} // namespace AviQtl::UI

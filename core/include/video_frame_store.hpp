@@ -9,7 +9,7 @@
 #include <QVideoFrame>
 #include <QVideoSink>
 
-namespace Rina::Core {
+namespace AviQtl::Core {
 
 class VideoFrameStore : public QObject {
     Q_OBJECT
@@ -40,4 +40,4 @@ class VideoFrameStore : public QObject {
     QHash<QString, QPointer<QVideoSink>> m_sinks;
 };
 
-} // namespace Rina::Core
+} // namespace AviQtl::Core

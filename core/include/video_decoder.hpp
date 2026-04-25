@@ -17,11 +17,11 @@ struct SwsContext;
 #include <libavutil/pixfmt.h>
 #include <libavutil/rational.h>
 
-namespace Rina::Core {
+namespace AviQtl::Core {
 
 class VideoFrameStore;
 
-class VideoDecoder : public Rina::Core::MediaDecoder {
+class VideoDecoder : public AviQtl::Core::MediaDecoder {
     Q_OBJECT
   public:
     explicit VideoDecoder(int clipId, const QUrl &source, VideoFrameStore *store, QObject *parent = nullptr);
@@ -82,4 +82,4 @@ class VideoDecoder : public Rina::Core::MediaDecoder {
     static enum AVPixelFormat gethwformat(AVCodecContext *ctx, const enum AVPixelFormat *pixfmts);
 };
 
-} // namespace Rina::Core
+} // namespace AviQtl::Core

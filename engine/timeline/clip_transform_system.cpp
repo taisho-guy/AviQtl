@@ -1,7 +1,7 @@
 #include "clip_transform_system.hpp"
 #include <algorithm>
 
-namespace Rina::Engine::Timeline {
+namespace AviQtl::Engine::Timeline {
 
 bool ClipTransformSystem::canPlaceClip(const DenseComponentMap<TransformComponent> &transforms, int targetLayer, int startFrame, int durationFrames, int excludeClipId) {
     // DOD: TransformComponent の密配列を線形走査 O(N)、キャッシュに乗るため高速
@@ -104,4 +104,4 @@ int ClipTransformSystem::updateTransform(ECSState &state, int clipId, int layer,
     return safeStart;
 }
 
-} // namespace Rina::Engine::Timeline
+} // namespace AviQtl::Engine::Timeline

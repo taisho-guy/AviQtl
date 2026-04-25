@@ -137,7 +137,7 @@ def run_cppcheck(
     defines = [
         "Q_OBJECT=", "Q_INVOKABLE=", "Q_PROPERTY(...)=", "Q_SIGNALS=protected",
         "Q_SLOTS=", "Q_EMIT=", "slots=", "signals=protected:",
-        "RINA_HAS_CLAP=1", "RINA_HAS_VST3=1",
+        "AVIQTL_HAS_CLAP=1", "AVIQTL_HAS_VST3=1",
     ]
     for d in defines:
         cmd += [f"-D{d}"]
@@ -193,7 +193,7 @@ def run_qmllint(files: list[Path], args: argparse.Namespace, root: Path) -> int:
     
     if args.build_dir:
         # ビルドディレクトリ配下のQML関連パスを自動追加
-        for sub in ["qml", "Rina"]:
+        for sub in ["qml", "AviQtl"]:
             qml_path = Path(args.build_dir) / sub
             if qml_path.exists():
                 cmd += ["-I", str(qml_path)]
@@ -291,7 +291,7 @@ def print_summary(returncode: int, xml_path: Path | None) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Rina プロジェクト cppcheck 一括実行"
+        description="AviQtl プロジェクト cppcheck 一括実行"
     )
     parser.add_argument(
         "--jobs", type=int,
@@ -363,7 +363,7 @@ def main() -> int:
 
     root = Path(__file__).parent.resolve()
 
-    print(f"{BOLD}{CYAN}=== Rina cppcheck ==={RESET}")
+    print(f"{BOLD}{CYAN}=== AviQtl cppcheck ==={RESET}")
     print(f"  ルート      : {root}")
     print(f"  並列数      : {args.jobs}")
     print(f"  レベル      : {args.level}")

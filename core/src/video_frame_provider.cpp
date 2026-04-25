@@ -1,7 +1,7 @@
 #include "video_frame_provider.hpp"
 #include "video_frame_store.hpp"
 
-namespace Rina::Core {
+namespace AviQtl::Core {
 
 VideoFrameProvider::VideoFrameProvider(VideoFrameStore *store) : QQuickImageProvider(QQuickImageProvider::Image), m_store(store) {}
 
@@ -21,4 +21,4 @@ auto VideoFrameProvider::requestImage(const QString &id, QSize *size, const QSiz
     return img;
 }
 
-} // namespace Rina::Core
+} // namespace AviQtl::Core

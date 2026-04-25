@@ -1,7 +1,7 @@
 import QtQml
 import QtQuick
 import QtQuick3D
-import "qrc:/qt/qml/Rina/ui/qml/common" as Common
+import "qrc:/qt/qml/AviQtl/ui/qml/common" as Common
 
 Common.BaseObject {
     // visible:false だと ShaderEffectSource の更新が止まる // removed: managed by BaseObject
@@ -21,7 +21,7 @@ Common.BaseObject {
     // width/height は flattenHost のサイズで代替 (Binding が上書きしないよう明示宣言)
     property real fbWidth: flattenHost.width
     property real fbHeight: flattenHost.height
-    // ─── 内部: 上位レイヤー収集 ───────────────────────────────────
+    // 内部: 上位レイヤー収集
     property var _capturedOutputs: []
 
     function _rebuildCapture() {
@@ -81,7 +81,7 @@ Common.BaseObject {
         target: Workspace.currentTimeline
     }
 
-    // ─── 合成ホスト (offscreenRenderHost へ adopt2D される) ──────
+    // 合成ホスト (offscreenRenderHost へ adopt2D される)
     Item {
         // SceneGraph に残す (renderHost 側の opacity:0 で非表示にする) // removed: managed by BaseObject
 
@@ -107,7 +107,7 @@ Common.BaseObject {
 
     }
 
-    // ─── 3D Model として View3D に配置 ───────────────────────────
+    // 3D Model として View3D に配置
     // clearBelow: 下位レイヤーを黒でマスク
     Rectangle {
         visible: root.clearBelow

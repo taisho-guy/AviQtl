@@ -6,7 +6,7 @@
 #include <mutex>
 #include <vector>
 
-namespace Rina::UI::Effects {
+namespace AviQtl::UI::Effects {
 
 class ComputeTextureProvider : public QSGTextureProvider {
     Q_OBJECT
@@ -100,4 +100,4 @@ class ComputeEffect : public QQuickItem {
     std::vector<int> m_pendingReadbacks;
 };
 
-} // namespace Rina::UI::Effects
+} // namespace AviQtl::UI::Effects

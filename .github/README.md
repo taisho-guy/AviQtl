@@ -26,7 +26,7 @@ Rinaは、AviUtl 1.10 & ExEdit 0.92の操作感を踏襲しつつ、AviUtlを凌
 本プロジェクトへプルリクエストやその他の貢献を送信した場合、あなたは自分の貢献物を[GNU Affero General Public License Version 3](https://www.gnu.org/licenses/agpl-3.0.txt)の下で本プロジェクトに提供することに同意したものとみなします。あなたの貢献物の著作権はあなたに残りますが、受理されたコードは[GNU Affero General Public License Version 3](https://www.gnu.org/licenses/agpl-3.0.txt)の条件に従って利用・改変・再配布されます。
  
 - Rinaをフォークし、フォーク済みのリポジトリを`clone`します。
-- `cd Rina`
+- `cd AviQtl`
 - `git checkout -b fix/some-change`
 - 変更を行います。
 - `git add .`
@@ -51,7 +51,7 @@ Linuxユーザーであれば`BUILD.py`1つで簡単にビルドできます。
 
 - ビルドします
 
-  - `cd Rina`
+  - `cd AviQtl`
   - `python BUILD.py`
 
 - 実行します

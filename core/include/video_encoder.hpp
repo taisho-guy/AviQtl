@@ -26,7 +26,7 @@ struct AVAudioFifo;
 struct AVBufferRef;
 }
 
-namespace Rina::Core {
+namespace AviQtl::Core {
 
 class VideoEncoder : public QObject {
     Q_OBJECT
@@ -104,4 +104,4 @@ class VideoEncoder : public QObject {
     void cleanup();
 };
 
-} // namespace Rina::Core
+} // namespace AviQtl::Core

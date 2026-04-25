@@ -8,15 +8,15 @@
 namespace {
 
 // splitKeyframeTracks 境界値計算用
-using namespace Rina::Engine::Timeline::Interp;
+using namespace AviQtl::Engine::Timeline::Interp;
 
 QVariantMap ensureStructuredTrackLocal(const QVariant &raw, const QVariant &fallback) { return normalizeTrackForDuration(raw, fallback, inferredDurationForTrack(raw)); }
 
 } // anonymous namespace
 
-namespace Rina::Engine::Timeline {
+namespace AviQtl::Engine::Timeline {
 
-// ── 実装 ──────────────────────────────────────────────────────────
+// ── 実装
 
 QVariantMap ClipEffectSystem::evaluateParams(const DenseComponentMap<EffectStackComponent> &effectStacks, int clipId, int relFrame, int durationFrames, double fps) {
     QVariantMap out;
@@ -55,9 +55,9 @@ void ClipEffectSystem::updateParam(ECSState &state, int clipId, int effectIndex,
     ECS::instance().interpCache().invalidateParam(clipId, effectIndex, paramName);
 }
 
-// ── 新規追加関数 ──────────────────────────────────────────────────────
+// ── 新規追加関数
 
-void ClipEffectSystem::addEffect(ECSState &state, int clipId, const Rina::UI::EffectData &data) {
+void ClipEffectSystem::addEffect(ECSState &state, int clipId, const AviQtl::UI::EffectData &data) {
     auto *stack = state.effectStacks.find(clipId);
     if (!stack)
         return;
@@ -69,7 +69,7 @@ void ClipEffectSystem::addEffect(ECSState &state, int clipId, const Rina::UI::Ef
     ECS::instance().interpCache().resize(clipId, stack->effects.size());
 }
 
-void ClipEffectSystem::restoreEffect(ECSState &state, int clipId, const Rina::UI::EffectData &data) {
+void ClipEffectSystem::restoreEffect(ECSState &state, int clipId, const AviQtl::UI::EffectData &data) {
     // Undo redo 側：keyframeTracks 込みのデータをそのまま末尾に追加
     auto *stack = state.effectStacks.find(clipId);
     if (!stack)
@@ -78,7 +78,7 @@ void ClipEffectSystem::restoreEffect(ECSState &state, int clipId, const Rina::UI
     ECS::instance().interpCache().resize(clipId, stack->effects.size());
 }
 
-bool ClipEffectSystem::removeEffect(ECSState &state, int clipId, int effectIndex, Rina::UI::EffectData *outRemoved) {
+bool ClipEffectSystem::removeEffect(ECSState &state, int clipId, int effectIndex, AviQtl::UI::EffectData *outRemoved) {
     auto *stack = state.effectStacks.find(clipId);
     if (!stack)
         return false;
@@ -101,7 +101,7 @@ bool ClipEffectSystem::removeEffect(ECSState &state, int clipId, int effectIndex
     return true;
 }
 
-bool ClipEffectSystem::removeMultipleEffects(ECSState &state, int clipId, const QList<int> &sortedDescIndices, QList<Rina::UI::EffectData> *outRemoved) {
+bool ClipEffectSystem::removeMultipleEffects(ECSState &state, int clipId, const QList<int> &sortedDescIndices, QList<AviQtl::UI::EffectData> *outRemoved) {
     auto *stack = state.effectStacks.find(clipId);
     if (!stack)
         return false;
@@ -111,7 +111,7 @@ bool ClipEffectSystem::removeMultipleEffects(ECSState &state, int clipId, const 
 
     bool anyRemoved = false;
     for (int idx : sortedDescIndices) {
-        Rina::UI::EffectData removed;
+        AviQtl::UI::EffectData removed;
         if (removeEffect(state, clipId, idx, outRemoved ? &removed : nullptr)) {
             if (outRemoved)
                 outRemoved->prepend(removed); // ascData として返す
@@ -123,7 +123,7 @@ bool ClipEffectSystem::removeMultipleEffects(ECSState &state, int clipId, const 
     return anyRemoved;
 }
 
-void ClipEffectSystem::restoreMultipleEffects(ECSState &state, int clipId, const QList<Rina::UI::EffectData> &ascData) {
+void ClipEffectSystem::restoreMultipleEffects(ECSState &state, int clipId, const QList<AviQtl::UI::EffectData> &ascData) {
     auto *stack = state.effectStacks.find(clipId);
     if (!stack)
         return;
@@ -159,7 +159,7 @@ bool ClipEffectSystem::applyPermutation(ECSState &state, int clipId, const QList
         return false;
     if (perm.size() != stack->effects.size())
         return false;
-    QList<Rina::UI::EffectData> reordered;
+    QList<AviQtl::UI::EffectData> reordered;
     reordered.reserve(perm.size());
     for (int idx : perm)
         reordered.append(stack->effects.at(idx));
@@ -168,7 +168,7 @@ bool ClipEffectSystem::applyPermutation(ECSState &state, int clipId, const QList
     return true;
 }
 
-void ClipEffectSystem::pasteEffect(ECSState &state, int clipId, int targetIndex, const Rina::UI::EffectData &data) {
+void ClipEffectSystem::pasteEffect(ECSState &state, int clipId, int targetIndex, const AviQtl::UI::EffectData &data) {
     auto *stack = state.effectStacks.find(clipId);
     if (!stack)
         return;
@@ -285,7 +285,7 @@ void ClipEffectSystem::setKeyframeTracksAt(ECSState &state, int clipId, int effe
     eff.keyframeTracks = tracks;
     for (auto it = eff.params.begin(); it != eff.params.end(); ++it) {
         const QString &key = it.key();
-        if (Rina::Engine::Timeline::Interp::isStructuredTrack(eff.keyframeTracks.value(key)))
+        if (AviQtl::Engine::Timeline::Interp::isStructuredTrack(eff.keyframeTracks.value(key)))
             continue;
         QVariantMap s;
         s[QStringLiteral("frame")] = 0;
@@ -300,7 +300,7 @@ void ClipEffectSystem::setKeyframeTracksAt(ECSState &state, int clipId, int effe
     ECS::instance().interpCache().invalidateAll(clipId);
 }
 
-// ── キャッシュあり評価 ────────────────────────────────────────────────────
+// ── キャッシュあり評価
 
 QVariant ClipEffectSystem::evaluateParamCached(const ECSState &state, InterpolationCache &cache, int clipId, int effectIndex, const QString &paramName, int relFrame, int durationFrames, double fps) {
     const auto *stack = state.effectStacks.find(clipId);
@@ -317,7 +317,7 @@ QVariant ClipEffectSystem::evaluateParamCached(const ECSState &state, Interpolat
     if (strVal.startsWith(QStringLiteral("="))) {
         std::string expr = strVal.mid(1).toStdString();
         const double time = (fps > 0.0) ? relFrame / fps : 0.0;
-        return Rina::Scripting::LuaHost::instance().evaluate(expr, time, 0, fallback.toDouble());
+        return AviQtl::Scripting::LuaHost::instance().evaluate(expr, time, 0, fallback.toDouble());
     }
 
     if (!eff.keyframeTracks.contains(paramName))
@@ -375,4 +375,4 @@ QVariantList ClipEffectSystem::keyframeListForUi(const ECSState &state, int clip
     return Interp::flattenStructuredTrack(track);
 }
 
-} // namespace Rina::Engine::Timeline
+} // namespace AviQtl::Engine::Timeline

@@ -3,7 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import "common" as Common
 
-Common.RinaWindow {
+Common.AviQtlWindow {
     id: root
 
     width: 450

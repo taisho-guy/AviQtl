@@ -4,7 +4,7 @@
 #include <QFileInfo>
 #include <QUrl>
 
-namespace Rina::UI {
+namespace AviQtl::UI {
 
 // 起動時はタブなしで開始。プロジェクトランチャーが tabsChanged で自動起動する
 Workspace::Workspace(QObject *parent) : QObject(parent) {}
@@ -43,7 +43,7 @@ QVariantList Workspace::tabs() const {
     return list;
 }
 
-void Workspace::setVideoFrameStore(Rina::Core::VideoFrameStore *store) {
+void Workspace::setVideoFrameStore(AviQtl::Core::VideoFrameStore *store) {
     m_videoFrameStore = store;
     for (auto *tc : m_timelines) {
         tc->setVideoFrameStore(store);
@@ -101,4 +101,4 @@ void Workspace::loadProject(const QString &fileUrl) {
 
 void Workspace::onTabStateChanged() { emit tabsChanged(); }
 
-} // namespace Rina::UI
+} // namespace AviQtl::UI

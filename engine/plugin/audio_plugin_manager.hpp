@@ -7,7 +7,7 @@
 #include <atomic>
 #include <memory>
 
-namespace Rina::Engine::Plugin {
+namespace AviQtl::Engine::Plugin {
 
 struct PluginInfo {
     QString id;
@@ -53,4 +53,4 @@ class AudioPluginManager : public QObject {
     QHash<QString, PluginInfo> m_pluginMap;
 };
 
-} // namespace Rina::Engine::Plugin
+} // namespace AviQtl::Engine::Plugin

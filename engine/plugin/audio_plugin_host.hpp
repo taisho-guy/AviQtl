@@ -3,7 +3,7 @@
 #include <QtGlobal>
 #include <vector>
 
-namespace Rina::Engine::Plugin {
+namespace AviQtl::Engine::Plugin {
 
 struct ParamInfo {
     QString name;
@@ -46,4 +46,4 @@ class IAudioPlugin {
     virtual void onEditorIdle() {}
 };
 
-} // namespace Rina::Engine::Plugin
+} // namespace AviQtl::Engine::Plugin

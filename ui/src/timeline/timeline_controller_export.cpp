@@ -3,12 +3,12 @@
 #include "timeline_service.hpp"
 #include <QUrl>
 
-namespace Rina::UI {
+namespace AviQtl::UI {
 
 auto TimelineController::exportMedia(const QString &fileUrl, const QString &format, int quality) -> bool { return m_exportManager->exportMedia(fileUrl, format, quality); }
 
 void TimelineController::exportVideoAsync(const QVariantMap &cfg) {
-    Rina::Core::VideoEncoder::Config c;
+    AviQtl::Core::VideoEncoder::Config c;
     c.width = cfg.value(QStringLiteral("width"), 1920).toInt();
     c.height = cfg.value(QStringLiteral("height"), 1080).toInt();
     c.fps_num = cfg.value(QStringLiteral("fps_num"), 60000).toInt();
@@ -27,4 +27,4 @@ void TimelineController::exportVideoAsync(const QVariantMap &cfg) {
 void TimelineController::cancelExport() { m_exportManager->cancelExport(); }
 auto TimelineController::isExporting() const -> bool { return m_exportManager->isExporting(); }
 
-} // namespace Rina::UI
+} // namespace AviQtl::UI
