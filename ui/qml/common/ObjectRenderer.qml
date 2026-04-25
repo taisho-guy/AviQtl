@@ -6,14 +6,12 @@ Item {
     required property Item originalSource
     required property var effectModels
     required property int relFrame
+    // BaseObject から注入される ECS 評価済みキャッシュ（全エフェクト分）
     property var clipEvalParams: ({
     })
-    property int _paramRev: 0
     property alias output: textureSource
     readonly property Item finalItem: textureSource.sourceItem
-    // ─── 自動キャンバス拡張 ──────────────────────────────────────
-    // 全エフェクトの expansion を集計して描画キャンバスを動的に決定する。
-    // sourceItem のコンテンツサイズ + 全エフェクトが要求する余白 = 実際の描画領域。
+    // 全エフェクトの expansion を集計して描画キャンバスを動的に決定する
     readonly property var totalExpansion: {
         var t = 0, r = 0, b = 0, l = 0;
         for (var i = 0; i < effectChain.count; i++) {
@@ -33,18 +31,11 @@ Item {
             "left": l
         };
     }
-    // コンテンツ本来のサイズ（拡張前）
-    // width が 0 の場合（Node 内で初期化された Item 等）は implicitWidth にフォールバックする
     readonly property real contentWidth: originalSource ? Math.max(originalSource.width > 0 ? originalSource.width : (originalSource.implicitWidth > 0 ? originalSource.implicitWidth : 1), 1) : 1
     readonly property real contentHeight: originalSource ? Math.max(originalSource.height > 0 ? originalSource.height : (originalSource.implicitHeight > 0 ? originalSource.implicitHeight : 1), 1) : 1
-    // ─── コンテンツオフセット ────────────────────────────────────
-    // 拡張余白の分だけ originalSource のレンダリング開始位置をずらす。
-    // 各エフェクトは anchors.fill: parent により拡張済みキャンバス全体を受け取る。
     readonly property real contentX: totalExpansion.left
     readonly property real contentY: totalExpansion.top
 
-    onClipEvalParamsChanged: _paramRev++
-    // 拡張済みキャンバスサイズ（エフェクト込み）
     width: contentWidth + totalExpansion.left + totalExpansion.right
     height: contentHeight + totalExpansion.top + totalExpansion.bottom
 
@@ -54,20 +45,17 @@ Item {
         width: 1
         height: 1
         visible: true
-        opacity: 1 // 【修正】3D Texture キャプチャのため実体は不透明にする
+        opacity: 1
     }
 
-    // originalSource をオフセット付きでキャンバス内に配置するプロキシ
-    // エフェクトチェーンはこのプロキシをソースとして受け取る
     Item {
         id: contentProxy
 
         width: renderer.width
         height: renderer.height
         visible: true
-        opacity: 1 // 【修正】3D Texture キャプチャのため実体は不透明にする
+        opacity: 1
 
-        // originalSource 自体は ShaderEffectSource でテクスチャ化してオフセット配置する
         ShaderEffectSource {
             x: renderer.contentX
             y: renderer.contentY
@@ -107,31 +95,14 @@ Item {
                 if ("source" in item)
                     item.source = inputSource;
 
-                if ("params" in item)
-                    item.params = Qt.binding(function() {
-                    var ep = renderer.clipEvalParams[modelData.id];
-                    return ep !== undefined ? ep : modelData.params;
-                });
-
                 if ("effectModel" in item)
                     item.effectModel = modelData;
 
                 if ("frame" in item)
                     item.frame = renderer.relFrame;
 
-                if ("clipEvalParams" in item)
-                    item.clipEvalParams = Qt.binding(function() {
-                    return renderer.clipEvalParams;
-                });
-
-                if ("_paramRev" in item)
-                    item._paramRev = Qt.binding(function() {
-                    return renderer._paramRev;
-                });
-
             }
 
-            // 全エフェクトは拡張済みキャンバス全体を受け取る
             anchors.fill: parent
             active: modelData.enabled
             source: modelData.qmlSource
@@ -140,6 +111,16 @@ Item {
                 if (status === Loader.Ready && "source" in item)
                     item.source = inputSource;
 
+            }
+
+            // ECS キャッシュを宣言的バインド（実行時 "in" チェック不要）
+            // BaseEffect.evalParam は item.ecsCache[effectModel.id] を参照するため全キャッシュを渡す
+            Binding {
+                target: effectLoader.item
+                property: "ecsCache"
+                value: renderer.clipEvalParams
+                when: effectLoader.status === Loader.Ready && effectLoader.item !== null
+                restoreMode: Binding.RestoreNone
             }
 
             Connections {
@@ -169,17 +150,9 @@ Item {
             return defaultSource;
         }
 
-        // View3D.Inline モードでは ShaderEffectSource が直接 textureProvider として機能するため
-        // layer.enabled は不要（二重 FBO は Vulkan でテクスチャ同期の不具合を引き起こす）
-        // 【修正】FBOサイズを拡張済みキャンバスに明示バインドする。
-        // サイズ未指定だと fallbackItem(1x1) の間に FBO が 1x1 で固定される。
         width: renderer.width
         height: renderer.height
         sourceItem: {
-            // originalSource の null チェックのみ行う
-            // width<=0 による fallback は廃止: adopt2D タイミングの問題で
-            // sourceItem.width が 0 のまま fallbackItem(1x1) に固定されるのを防ぐ
-            // contentWidth は Math.max(w,1) で既に最低1pxが保証されているため安全
             if (!renderer.originalSource)
                 return fallbackItem;
 
@@ -190,10 +163,6 @@ Item {
         }
         visible: true
         opacity: 1
-        // contentWidth/Height > 1: adopt2D 前の w=0 状態（= 1×1 fallback）では
-        // FBO を焼き付けないよう live=false にして保護する。
-        // adopt2D 後に originalSource のサイズが確定すると contentWidth > 1 になり
-        // live=true に切り替わって FBO が正しいサイズで再生成される。
         live: renderer.contentWidth > 1 && renderer.contentHeight > 1
         hideSource: true
         recursive: false

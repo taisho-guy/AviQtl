@@ -42,32 +42,32 @@
 <context>
     <name>BaseObject</name>
     <message>
-        <location filename="../ui/qml/common/BaseObject.qml" line="60"/>
+        <location filename="../ui/qml/common/BaseObject.qml" line="55"/>
         <source>通常</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/BaseObject.qml" line="61"/>
+        <location filename="../ui/qml/common/BaseObject.qml" line="56"/>
         <source>スクリーン</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/BaseObject.qml" line="64"/>
+        <location filename="../ui/qml/common/BaseObject.qml" line="59"/>
         <source>乗算</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/BaseObject.qml" line="67"/>
+        <location filename="../ui/qml/common/BaseObject.qml" line="62"/>
         <source>オーバーレイ</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/BaseObject.qml" line="70"/>
+        <location filename="../ui/qml/common/BaseObject.qml" line="65"/>
         <source>焼き込み</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/BaseObject.qml" line="73"/>
+        <location filename="../ui/qml/common/BaseObject.qml" line="68"/>
         <source>覆い焼き</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1441,47 +1441,47 @@
 <context>
     <name>SettingDialog</name>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="225"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="254"/>
         <source>設定ダイアログ</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="524"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="556"/>
         <source>削除</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="524"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="556"/>
         <source>選択した %1 件を削除</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="833"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="861"/>
         <source> (直線)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="834"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="862"/>
         <source> (加速)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="835"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="863"/>
         <source> (減速)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="836"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="864"/>
         <source> (加減速)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="837"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="865"/>
         <source> (ベジェ)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="1298"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="1326"/>
         <source>エフェクトを追加</source>
         <translation type="unfinished"></translation>
     </message>

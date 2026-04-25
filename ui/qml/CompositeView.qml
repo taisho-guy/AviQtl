@@ -198,35 +198,21 @@ Item {
                 property int clipStartFrameRole: _clipData.startFrame
                 property int clipDurationFramesRole: _clipData.durationFrames
                 property url clipQmlSourceRole: _clipData.qmlSource || ""
-                property var clipEffectModelsRole: _clipData.effectModels || []
                 property Item fbRendererOutput: null // NodeLoader 完了後に接続
-                // 評価済みパラメータからtransform値を取得 (単一経路化)
+                // ECS 経由で transform パラメーターを評価（唯一の経路）
+                // _tRev（C++シグナル起点）と root.currentFrame に依存して自動再評価。
+                // EffectModel.evaluatedParam / .params への直接アクセスを完全に廃止。
+                property int _tRev: 0
                 readonly property var tParams: {
-                    var tModel = null;
-                    for (var i = 0; i < clipEffectModelsRole.length; i++) {
-                        if (clipEffectModelsRole[i].id === "transform") {
-                            tModel = clipEffectModelsRole[i];
-                            break;
-                        }
-                    }
-                    if (!tModel)
-                        return {
-                    };
+                    var _ = _tRev; // 整数依存: C++シグナル→_tRev++→再評価を保証
+                    if (clipIdRole < 0 || !Workspace.currentTimeline)
+                        return ({
+                    });
 
-                    var out = {
-                    };
-                    var fps = (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.fps : 60;
                     var relFrame = root.currentFrame - clipStartFrameRole;
-                    var keys = ["x", "y", "z", "rotationX", "rotationY", "rotationZ", "scale", "aspect", "opacity"];
-                    for (var k = 0; k < keys.length; k++) {
-                        var key = keys[k];
-                        var v = tModel.evaluatedParam(key, relFrame, fps);
-                        if (v === undefined || v === null)
-                            v = tModel.params[key];
-
-                        out[key] = v;
-                    }
-                    return out;
+                    var cache = Workspace.currentTimeline.evaluateClipParams(clipIdRole, relFrame);
+                    return (cache && cache["transform"]) ? cache["transform"] : ({
+                    });
                 }
                 readonly property real px: tParams.x !== undefined ? Number(tParams.x) : 0
                 readonly property real py: tParams.y !== undefined ? Number(tParams.y) : 0
@@ -402,9 +388,6 @@ Item {
                         "currentFrame": Qt.binding(() => {
                             return root.currentFrame;
                         }),
-                        "rawEffectModels": Qt.binding(() => {
-                            return clipNode.clipEffectModelsRole;
-                        }),
                         "renderHost": offscreenRenderHost
                     }
                     componentFactory: root.getCachedComponent
@@ -418,11 +401,6 @@ Item {
 
                             if ("sceneId" in item)
                                 item.sceneId = root.sceneId;
-
-                            if ("rawEffectModels" in item)
-                                item.rawEffectModels = Qt.binding(() => {
-                                return clipNode.clipEffectModelsRole;
-                            });
 
                             if ("currentFrame" in item)
                                 item.currentFrame = Qt.binding(() => {
@@ -439,6 +417,28 @@ Item {
                         }
                         root.childRendererOutputsChanged();
                     }
+                }
+
+                // transform パラメーター変化を tParams に伝播させる
+                // _tRev++ → readonly property var tParams のバインドが再評価される
+                Connections {
+                    function onEffectParamChanged(changedClipId, effectIndex, paramName, value) {
+                        if (changedClipId === clipIdRole)
+                            _tRev++;
+
+                    }
+
+                    function onClipEffectsChanged(changedClipId) {
+                        if (changedClipId === clipIdRole)
+                            _tRev++;
+
+                    }
+
+                    function onClipsChanged() {
+                        _tRev++;
+                    }
+
+                    target: Workspace.currentTimeline
                 }
 
             }

@@ -12,8 +12,9 @@ Common.RinaWindow {
     property int targetClipId: (Workspace.currentTimeline && Workspace.currentTimeline.selection) ? Workspace.currentTimeline.selection.selectedClipId : -1
     property var effectsModel: []
     property var audioEffectsModel: []
-    property bool inputting: false // 入力中フラグ（reloadループ防止用）
-    property bool reloading: false
+    // NOTE: inputting フラグは外部読み取り用に残存（内部では非参照）
+    property bool inputting: false
+    property bool reloading: false // onClipEffectsChanged → reload() の再入防止専用
     property bool isDeleting: false // 複数エフェクト削除中フラグ（途中reload抑制用）
     property bool enableSnap: SettingsManager && SettingsManager.settings ? SettingsManager.settings.enableSnap : true
     property bool sidebarOnRight: (SettingsManager && SettingsManager.settings && SettingsManager.settings.settingDialogSidebarRight !== undefined) ? SettingsManager.settings.settingDialogSidebarRight : false
@@ -89,6 +90,20 @@ Common.RinaWindow {
         return Math.max(0, newRelFrame);
     }
 
+    // ECS 経由でパラメータ評価（EffectModel.evaluatedParam の完全廃止）
+    // evaluateClipParams は interpCache を使用するため高速
+    function _evalECS(effectId, frame, paramKey) {
+        if (!Workspace.currentTimeline || root.targetClipId < 0)
+            return undefined;
+
+        var cache = Workspace.currentTimeline.evaluateClipParams(root.targetClipId, frame);
+        var ep = cache ? cache[effectId] : undefined;
+        return (ep !== undefined && ep[paramKey] !== undefined) ? ep[paramKey] : undefined;
+    }
+
+    // 同一クリップのエフェクト構成変化（追加・削除・並び替え）専用の重量リロード
+    // サイドバー選択状態を ID で復元する。
+    // 用途外（クリップ切り替え・表示時）には _loadForClip() を使う。
     function reload() {
         if (!Workspace.currentTimeline || !Workspace.currentTimeline.selection || reloading)
             return ;
@@ -148,6 +163,20 @@ Common.RinaWindow {
         reloading = false;
     }
 
+    // 別クリップ選択時の軽量モデル更新（選択状態復元なし）
+    // reload() は同一クリップのエフェクト構成変化専用に限定する
+    function _loadForClip(clipId) {
+        if (!Workspace.currentTimeline || clipId < 0) {
+            effectsModel = [];
+            audioEffectsModel = [];
+        } else {
+            effectsModel = Workspace.currentTimeline.getClipEffectsModel(clipId);
+            audioEffectsModel = Workspace.currentTimeline.getClipEffectStack(clipId);
+        }
+        sidebarList.selectedIndices = [];
+        sidebarList.currentIndex = -1;
+    }
+
     // 複数エフェクト一括削除（reload を削除完了後に1回だけ行う）
     function executeEffectDelete(indices) {
         if (!Workspace.currentTimeline)
@@ -185,8 +214,8 @@ Common.RinaWindow {
             // ビデオエフェクトは C++ removeMultipleEffects で一括削除
             Workspace.currentTimeline.removeMultipleEffects(targetClipId, toDelete);
         }
-        // ③ 全削除完了後に一回だけリロード
-        reload();
+        // ③ 全削除完了後に軽量リロード（選択状態は直後に clearSelection で消去）
+        _loadForClip(targetClipId);
         sidebarList.clearSelection();
     }
 
@@ -229,14 +258,17 @@ Common.RinaWindow {
     y: 200
     onVisibleChanged: {
         if (visible)
-            Qt.callLater(reload);
+            Qt.callLater(function() {
+            _loadForClip(targetClipId);
+        });
 
     }
 
     // 選択変更やデータ更新を監視してモデルをリロード
     Connections {
         function onSelectedClipIdChanged() {
-            reload();
+            // clipId が変わるだけ: 選択状態の復元は不要 → _loadForClip で軽量更新
+            _loadForClip(Workspace.currentTimeline.selection.selectedClipId);
         }
 
         target: Workspace.currentTimeline ? Workspace.currentTimeline.selection : null
@@ -268,13 +300,13 @@ Common.RinaWindow {
     // タブ切り替えでプロジェクトが変わった際にモデルをリセットして再ロード
     Connections {
         function onCurrentTimelineChanged() {
-            // 旧プロジェクトのサイドバー選択状態をクリア
+            // タイムライン切り替え: サイドバー選択をクリアし、新クリップ向けに再ロード
             sidebarList.selectedIndices = [];
             sidebarList.currentIndex = -1;
-            // エフェクトモデルを即座に空にしてから新プロジェクト向けに再ロード
-            effectsModel = [];
-            audioEffectsModel = [];
-            Qt.callLater(reload);
+            // Qt.callLater: targetClipId が新タイムラインの値に更新されるのを待つ
+            Qt.callLater(function() {
+                _loadForClip(targetClipId);
+            });
         }
 
         target: Workspace
@@ -589,10 +621,6 @@ Common.RinaWindow {
                         spacing: 0
 
                         Connections {
-                            function onParamsChanged() {
-                                effectRoot._effectRev++;
-                            }
-
                             function onKeyframeTracksChanged() {
                                 effectRoot._effectRev++;
                             }
@@ -655,8 +683,8 @@ Common.RinaWindow {
                                         return undefined;
 
                                     // onEffectParamChanged → _effectRev++ の時点では
-                                    // ECS に値が書き込まれているため evaluatedParam で確定値が取れる
-                                    return effectModel.evaluatedParam(key, curRelFrame, root._projectFps);
+                                    // ECS に値が書き込まれているため _evalECS で確定値が取れる
+                                    return root._evalECS(effectModel.id, curRelFrame, key);
                                 }
                                 property bool isNumber: typeof effVal === "number" && (!def.type || ["float", "number", "slider", "spinner", "int", "integer"].indexOf(def.type) !== -1)
                                 property bool isColor: !!def && (def.type === "color" || def.type === "colour")
@@ -678,12 +706,12 @@ Common.RinaWindow {
                                 property var startVal: {
                                     var _t = tracks;
                                     var _r = effectRoot._effectRev;
-                                    return effectModel ? effectModel.evaluatedParam(key, startFrame, root._projectFps) : effVal;
+                                    return effectModel ? (root._evalECS(effectModel.id, startFrame, key) ?? effVal) : effVal;
                                 }
                                 property var endVal: {
                                     var _t = tracks;
                                     var _r = effectRoot._effectRev;
-                                    return effectModel ? effectModel.evaluatedParam(key, endFrame, root._projectFps) : effVal;
+                                    return effectModel ? (root._evalECS(effectModel.id, endFrame, key) ?? effVal) : effVal;
                                 }
                                 property string interpType: {
                                     var _ = tracks;
@@ -710,7 +738,7 @@ Common.RinaWindow {
                                     if (hasKeyframeAt(f))
                                         return ;
 
-                                    var raw = effectModel.evaluatedParam(key, f, root._projectFps);
+                                    var raw = root._evalECS(effectModel.id, f, key);
                                     var v = (raw !== undefined && raw !== null) ? raw : effVal;
                                     var interp = "linear";
                                     paramDelegate.effectModel.setKeyframe(paramDelegate.key, f, v, {
@@ -1056,7 +1084,7 @@ Common.RinaWindow {
                                                             paramDelegate.activeDragOriginal = -1;
 
                                                         if (kfItem.currentFrame !== kfItem.originalFrame) {
-                                                            var val = kfItem.targetModel.evaluatedParam(kfItem.targetKey, kfItem.originalFrame, root._projectFps);
+                                                            var val = root._evalECS(kfItem.targetModel.id, kfItem.originalFrame, kfItem.targetKey);
                                                             var track = kfItem.targetModel.keyframeListForUi(kfItem.targetKey) || [];
                                                             var interp = "linear";
                                                             var pts = [];
@@ -1118,7 +1146,7 @@ Common.RinaWindow {
                                             if (hasKeyframeAt(f))
                                                 return ;
 
-                                            let val = effectModel.evaluatedParam(key, f, root._projectFps);
+                                            let val = root._evalECS(effectModel.id, f, key);
                                             let options = {
                                                 "interp": "linear"
                                             };

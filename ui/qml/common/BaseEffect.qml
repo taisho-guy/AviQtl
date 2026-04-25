@@ -4,53 +4,43 @@ import QtQuick.Effects
 Item {
     id: base
 
-    // ObjectRenderer から Binding で注入される
-    property var params
+    // ObjectRenderer / BaseObject から Qt.binding で注入される ECS 評価済みキャッシュ
+    // { effectId: { paramName: value, ... }, ... } の形式
+    property var ecsCache: ({
+    })
     property Item source
-    // ソースアイテムを非表示にしつつ、テクスチャとして利用可能にするプロキシ
     property alias sourceProxy: proxySource
-    property QtObject effectModel
+    property QtObject effectModel: null
     property int frame: 0
-    // 【自動描画範囲拡張】このエフェクトが必要とする追加余白をピクセル単位で宣言する。
-    // 各エフェクト QML がこのプロパティをオーバーライドして自身の展開量を返す。
-    // ObjectRenderer がこれを集計してキャンバスサイズを自動決定する。
+    // 各エフェクトが必要とする追加余白をピクセル単位で宣言する
     property var expansion: ({
         "top": 0,
         "right": 0,
         "bottom": 0,
         "left": 0
     })
-    property var clipEvalParams: ({
-    })
-    property int _paramRev: 0
 
-    // 【統一API】キーフレーム優先評価（ECS同期）
+    // 【統一API】ECS キャッシュから直接取得。カウンター依存なし。
+    // ecsCache[effectModel.id][key] への参照が QML エンジンの宣言的依存グラフに
+    // 自動登録されるため、ecsCache が差し替わると呼び出し元が自動再評価される。
     function evalParam(key, fallback) {
-        var _ = base._paramRev;
-        if (base.clipEvalParams && base.effectModel && base.effectModel.id) {
-            var effParams = base.clipEvalParams[base.effectModel.id];
-            if (effParams !== undefined && effParams[key] !== undefined) {
-                var v = effParams[key];
-                if (v !== undefined && v !== null)
-                    return v;
+        if (base.ecsCache && base.effectModel && base.effectModel.id) {
+            var m = base.ecsCache[base.effectModel.id];
+            if (m !== undefined && m[key] !== undefined && m[key] !== null)
+                return m[key];
 
-            }
         }
-        if (base.params && base.params[key] !== undefined)
-            return base.params[key];
-
         return fallback;
     }
 
-    // 数値専用（型変換込み）
     function evalNumber(key, fallback) {
-        return Number(evalParam(key, fallback));
+        var v = evalParam(key, fallback);
+        return (v !== undefined && v !== null && v !== "") ? Number(v) : fallback;
     }
 
-    // 色専用
     function evalColor(key, fallback) {
         var v = evalParam(key, fallback);
-        return (typeof v === 'string') ? v : fallback;
+        return (typeof v === "string") ? v : fallback;
     }
 
     ShaderEffectSource {
