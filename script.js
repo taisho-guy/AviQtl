@@ -1,5 +1,5 @@
 async function fetchReleases() {
-    const repo = 'taisho-guy/Rina';
+    const repo = 'taisho-guy/AviQtl';
     const tagsUrl = `https://codeberg.org/api/v1/repos/${repo}/tags?limit=11`;
     const releasesUrl = `https://codeberg.org/api/v1/repos/${repo}/releases?limit=10`;
     const tbody = document.getElementById('release-list');
