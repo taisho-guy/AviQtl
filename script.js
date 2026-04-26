@@ -38,8 +38,8 @@ async function fetchReleases() {
             const tdCompare = document.createElement('td');
             const aComp = document.createElement('a');
             aComp.href = prevTag 
-                ? `https://codeberg.org/taisho-guy/Rina/compare/${prevTag}...${tag}`
-                : `https://codeberg.org/taisho-guy/Rina/releases/tag/${tag}`;
+                ? `https://codeberg.org/${repo}/compare/${prevTag}...${tag}`
+                : `https://codeberg.org/${repo}/releases/tag/${tag}`;
             aComp.textContent = prevTag ? `${prevTag}...${tag}` : tag;
             
             tdCompare.appendChild(aComp);
@@ -48,7 +48,7 @@ async function fetchReleases() {
             if (assets.length > 0) {
                 assets.forEach(asset => {
                     const a = document.createElement('a');
-                    a.href = `https://codeberg.org/taisho-guy/Rina/releases/download/${tag}/${asset.name}`;
+                    a.href = `https://codeberg.org/${repo}/releases/download/${tag}/${asset.name}`;
                     a.textContent = asset.name;
                     tdBinary.appendChild(a);
                     tdBinary.appendChild(document.createElement('br'));
@@ -59,8 +59,8 @@ async function fetchReleases() {
 
             const tdSource = document.createElement('td');
             const aSrc = document.createElement('a');
-            aSrc.href = `https://codeberg.org/taisho-guy/Rina/archive/${tag}.zip`;
-            aSrc.textContent = `Rina-${tag}.zip`;
+            aSrc.href = `https://codeberg.org/${repo}/archive/${tag}.zip`;
+            aSrc.textContent = `AviQtl-${tag}.zip`;
             tdSource.appendChild(aSrc);
 
             const tdDate = document.createElement('td');
@@ -78,7 +78,7 @@ async function fetchReleases() {
         const footTr = document.createElement('tr');
         footTr.innerHTML = `
             <td colspan="5" style="text-align: center; padding: 8px; vertical-align: middle;">
-                <a href="https://codeberg.org/taisho-guy/Rina/releases" target="_blank" style="font-weight: bold;">
+                <a href="https://codeberg.org/${repo}/releases" target="_blank" style="font-weight: bold;">
                     過去のリリース情報
                 </a>
             </td>`;
