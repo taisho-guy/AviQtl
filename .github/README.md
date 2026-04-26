@@ -63,7 +63,7 @@ AviQtlは構造的な弱点を根本的に解決します：
 アイコンは、QtとAviUtlのロゴを組み合わせたデザインになっています。
 
 <p align="center">
-  <img src="./assets/qt.svg" width="64"> + <img src="./assets/aviutl.svg" width="64"> = <img src="./assets/icon.svg" width="64">
+  <img src="./assets/qt.svg" width="64" align="middle"> + <img src="./assets/aviutl.svg" width="64" align="middle"> = <img src="./assets/icon.svg" width="64" align="middle">
 </p>
 </details>
 
