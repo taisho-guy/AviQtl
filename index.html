@@ -5,21 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AviQtlのお部屋</title>
     <link rel="canonical" href="https://aviqtl.taisho-guy.org/" />
-    <meta name="description" content="AviUtlの操作感を継承し、GPU加速、VST3/LV2、クロスプラットフォームに対応。AviUtlの限界を超える次世代のオープンソース動画編集ソフト「AviQtl」公式サイト。">
-    <meta name="keywords" content="AviQtl, AviUtl, AviUtl2, 動画編集, 動画編集ソフト, 無料, 自由, DTM, DAW, Linux, オープンソース, OSS, GPU, VST, 公式">
+    <meta name="description" content="AviUtlの操作感を継承し、GPU加速、VST3/LV2、クロスプラットフォームに対応。AviUtlの限界を超える次世代のオープンソース動画編集ソフト「AviQtl」公式サイト。Vulkanによる高速描画とECSによるデータ指向設計。">
+    <meta name="keywords" content="AviQtl, AviUtl, 動画編集, GPU加速, Vulkan, VST3, LV2, Linux, OSS, 次世代">
     <meta name="google-site-verification" content="xmXYtl-62Vi0ktTxGecj5qIXhQ81q76_dCKlFycBDEY" />
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2cde85">
 
     <meta property="og:title" content="AviQtlのお部屋">
     <meta property="og:description" content="AviUtlの操作感を継承し、GPU加速、VST3/LV2、クロスプラットフォームに対応。性能の限界を超える次世代のオープンソース動画編集ソフト「AviQtl」公式サイト。">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://aviqtl.taisho-guy.org">
-    <meta property="og:image" content="https://aviqtl.taisho-guy.org/assets/icon.svg">
+    <meta property="og:image" content="https://aviqtl.taisho-guy.org/assets/splash.svg">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="dns-prefetch" href="https://codeberg.org">
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Lexend:wght@400;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
 
-    <link rel="icon" href="https://aviqtl.taisho-guy.org/assets/icon.svg" type="image/svg+xml">
+    <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="assets/icon.svg">
 
     <script type="application/ld+json">
     {
@@ -30,9 +36,21 @@
       "applicationCategory": "MultimediaApplication",
       "description": "AviUtlの操作感を継承し、GPU加速、VST3/LV2、クロスプラットフォームに対応。性能の限界を超える次世代のオープンソース動画編集ソフト。",
       "image": "https://aviqtl.taisho-guy.org/assets/splash.svg",
+      "url": "https://aviqtl.taisho-guy.org/",
+      "author": {
+        "@type": "Person",
+        "name": "taisho-guy",
+        "url": "https://codeberg.org/taisho-guy"
+      },
+      "license": "https://www.gnu.org/licenses/agpl-3.0.txt",
+      "releaseNotes": "https://codeberg.org/taisho-guy/AviQtl/releases",
+      "softwareVersion": "Alpha",
+      "downloadUrl": "https://codeberg.org/taisho-guy/AviQtl/releases",
+      "featureList": "GPU acceleration, VST3/LV2 support, Cross-platform, AviUtl-like UI, ECS architecture",
       "offers": {
         "@type": "Offer",
-        "price": "0"
+        "price": "0",
+        "priceCurrency": "JPY"
       }
     }
     </script>
@@ -158,11 +176,11 @@
     <details>
         <summary>アイコンの由来は？</summary>
         <div style="display: flex; align-items: center; justify-content: center; gap: 15px; padding: 10px 0; flex-wrap: wrap;">
-            <img src="./assets/qt.svg" alt="Qt" width="64">
+            <img src="assets/qt.svg" alt="Qt" width="64" loading="lazy">
             <span style="font-size: 24px; font-weight: bold;">+</span>
-            <img src="./assets/aviutl.svg" alt="AviUtl" width="64">
+            <img src="assets/aviutl.svg" alt="AviUtl" width="64" loading="lazy">
             <span style="font-size: 24px; font-weight: bold;">=</span>
-            <img src="./assets/icon.svg" alt="AviQtl" width="64">
+            <img src="assets/icon.svg" alt="AviQtl" width="64" loading="lazy">
         </div>
         <p>AviUtlとQtを組み合わせた本プロジェクトのアイデンティティを表現しています。</p>
     </details>
