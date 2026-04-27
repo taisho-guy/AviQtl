@@ -8,10 +8,8 @@ namespace AviQtl::Engine::Timeline {
 
 ECS::ECS() : m_editIndex(1) {
     m_activeIndex.store(0, std::memory_order_relaxed);
-    // フェーズ1: m_fullSyncRequired.fill(true) → DirtyFlags::fullSync を全バッファにセット
-    for (auto &f : m_dirtyFlags) {
+    for (auto &f : m_dirtyFlags)
         f.fullSync = true;
-    }
 }
 
 auto ECS::instance() -> ECS & {
@@ -19,8 +17,7 @@ auto ECS::instance() -> ECS & {
     return inst;
 }
 
-// フェーズ1: 引数を std::bitset<MAX_CLIP_ID> に変更
-// QSet::contains() → bitset::test() でキャッシュライン直撃
+// フェーズ1: std::bitset<MAX_CLIP_ID> → O(1)L1直撃
 void ECS::syncClipIds(const std::bitset<MAX_CLIP_ID> &aliveFlags) {
     auto &editState = m_buffers[m_editIndex];
     bool changed = false;
@@ -28,46 +25,38 @@ void ECS::syncClipIds(const std::bitset<MAX_CLIP_ID> &aliveFlags) {
     changed |= editState.renderStates.syncAlive(aliveFlags);
     changed |= editState.audioStates.syncAlive(aliveFlags);
     changed |= editState.metadataStates.syncAlive(aliveFlags);
-
     if (changed) {
-        // フェーズ1: m_fullSyncRequired[X] = true → m_dirtyFlags[X].fullSync = true
         m_dirtyFlags[(m_editIndex + 1) % 3].fullSync = true;
         m_dirtyFlags[(m_editIndex + 2) % 3].fullSync = true;
     }
 }
 
-void ECS::updateClipState(int clipId, int layer, double time) { // NOLINT(bugprone-easily-swappable-parameters)
+void ECS::updateClipState(int clipId, int layer, double time) {
     assert(clipId >= 0 && clipId < MAX_CLIP_ID);
     auto &editState = m_buffers[m_editIndex];
-
     if (!editState.transforms.contains(clipId)) {
         m_dirtyFlags[(m_editIndex + 1) % 3].fullSync = true;
         m_dirtyFlags[(m_editIndex + 2) % 3].fullSync = true;
     }
     auto &transform = editState.transforms[clipId];
-
-    bool changed = (transform.layer != layer || std::abs(transform.timePosition - time) > 0.001);
-
+    bool changed = (transform.layer != layer) || (std::abs(transform.timePosition - time) > 0.001);
     if (changed) {
         transform.layer = layer;
         transform.timePosition = time;
-
         auto &render = editState.renderStates[clipId];
         render.needsUpdate = true;
         editState.renderGraphDirty = true;
-
-        // フェーズ1: QSet::insert → bitset::set
-        const auto cidx = static_cast<std::size_t>(clipId);
-        m_dirtyFlags[(m_editIndex + 1) % 3].dirty.set(cidx);
-        m_dirtyFlags[(m_editIndex + 2) % 3].dirty.set(cidx);
-        ECS_PROF_INC(dirtyBitSetCount);
     }
+    const auto cidx = static_cast<std::size_t>(clipId);
+    m_dirtyFlags[(m_editIndex + 1) % 3].dirty.set(cidx);
+    m_dirtyFlags[(m_editIndex + 2) % 3].dirty.set(cidx);
+    ECS_PROF_INC(dirtyBitSetCount);
 }
 
-void ECS::updateAudioClipState(int clipId, int startFrame, int durationFrames, float volume, float pan, bool mute) { // NOLINT(bugprone-easily-swappable-parameters)
+void ECS::updateAudioClipState(int clipId, int startFrame, int durationFrames, // NOLINT
+                               float volume, float pan, bool mute) {
     assert(clipId >= 0 && clipId < MAX_CLIP_ID);
     auto &editState = m_buffers[m_editIndex];
-
     if (!editState.audioStates.contains(clipId)) {
         m_dirtyFlags[(m_editIndex + 1) % 3].fullSync = true;
         m_dirtyFlags[(m_editIndex + 2) % 3].fullSync = true;
@@ -79,79 +68,59 @@ void ECS::updateAudioClipState(int clipId, int startFrame, int durationFrames, f
     audio.volume = volume;
     audio.pan = pan;
     audio.mute = mute;
-
-    // 音声パラメータは頻繁に変わる可能性があるためダーティフラグ処理
     const auto cidx = static_cast<std::size_t>(clipId);
     m_dirtyFlags[(m_editIndex + 1) % 3].dirty.set(cidx);
     m_dirtyFlags[(m_editIndex + 2) % 3].dirty.set(cidx);
     ECS_PROF_INC(dirtyBitSetCount);
 }
 
-// フェーズ2: "#RRGGBB" / "#AARRGGBB" を ARGB uint32_t にパック
-// Qt依存を最小化するため QString で受けて変換のみ行う
+// フェーズ2: QString → StringTable ID + SoA uint32_t
 static auto parseColorRGBA(const QString &colorStr) -> uint32_t {
     QString s = colorStr.trimmed();
-    if (s.startsWith(u'#')) {
+    if (s.startsWith(u'#'))
         s.remove(0, 1);
-    }
     bool ok = false;
     const uint32_t val = s.toUInt(&ok, 16);
-    if (!ok) {
-        return 0xFF000000u; // 不明な場合は不透明黒
-    }
-    if (s.length() == 6) {
-        return 0xFF000000u | val; // RRGGBB → AARRGGBB
-    }
-    return val; // AARRGGBB
+    if (!ok)
+        return 0xFF000000u;
+    if (s.length() == 6)
+        return 0xFF000000u | val;
+    return val;
 }
 
 void ECS::updateMetadata(int clipId, const QString &name, const QString &source, const QString &type, const QString &color) {
     assert(clipId >= 0 && clipId < MAX_CLIP_ID);
     auto &editState = m_buffers[m_editIndex];
-
     if (!editState.metadataStates.contains(clipId)) {
         m_dirtyFlags[(m_editIndex + 1) % 3].fullSync = true;
         m_dirtyFlags[(m_editIndex + 2) % 3].fullSync = true;
     }
-
-    // フェーズ2: QString → StringTable ID に変換してからSoAへ書き込む
-    // これにより比較コストが uint32_t == uint32_t のみになる
     const uint32_t nId = m_stringTable.intern(name.toStdString());
     const uint32_t sId = m_stringTable.intern(source.toStdString());
     const uint32_t tId = m_stringTable.intern(type.toStdString());
     const uint32_t cRGBA = parseColorRGBA(color);
-
     auto &meta = editState.metadataStates[clipId];
-
-    if (meta.clipId != clipId || meta.nameId != nId || meta.sourceId != sId || meta.typeId != tId || meta.colorRGBA != cRGBA) {
+    if (meta.clipId != static_cast<int32_t>(clipId) || meta.nameId != nId || meta.sourceId != sId || meta.typeId != tId || meta.colorRGBA != cRGBA) {
         meta.clipId = static_cast<int32_t>(clipId);
         meta.nameId = nId;
         meta.sourceId = sId;
         meta.typeId = tId;
         meta.colorRGBA = cRGBA;
-        const auto cidx = static_cast<std::size_t>(clipId);
-        m_dirtyFlags[(m_editIndex + 1) % 3].dirty.set(cidx);
-        m_dirtyFlags[(m_editIndex + 2) % 3].dirty.set(cidx);
     }
+    const auto cidx = static_cast<std::size_t>(clipId);
+    m_dirtyFlags[(m_editIndex + 1) % 3].dirty.set(cidx);
+    m_dirtyFlags[(m_editIndex + 2) % 3].dirty.set(cidx);
 }
 
 void ECS::commit() {
     ECS_PROF_INC(commitCount);
 
     // フェーズ5: mailbox パターンによるバッファ競合排除
-    // 従来: commit() が直接 m_activeIndex を変更 → render thread と書き込み競合の可能性
-    // 改善: commit() は m_pendingIndex に deposit するのみ
-    //       m_activeIndex の昇格は render thread 側の getSnapshot() が担う
-    //
-    // バッファ所有権の不変条件:
-    //   m_editIndex  → UI thread が排他的に書き込む
-    //   m_activeIndex→ render thread が読む。getSnapshot() のみが変更する
-    //   m_pendingIndex→ UI/render 間の handoff。-1 = 未発行
-
+    // commit() は m_pendingIndex に deposit するのみ
+    // m_activeIndex の昇格は render thread 側の getSnapshot() が担う
     const int justWritten = m_editIndex;
 
     // 次の edit バッファを選択: active と pending の両方を避ける
-    // (render thread が現在または次に読む可能性があるバッファに触れない)
     const int active = m_activeIndex.load(std::memory_order_acquire);
     const int pending = m_pendingIndex.load(std::memory_order_acquire);
 
@@ -174,13 +143,10 @@ void ECS::commit() {
         m_dirtyFlags[m_editIndex].fullSync = false;
         m_dirtyFlags[m_editIndex].dirty.reset();
     } else {
-        // 部分更新: フェーズ1の bitset 走査
-        // 4096bit = 512byte = L1キャッシュ 8ライン: 全走査でも L1 完結
+        // 部分更新: フェーズ1の bitset 走査 (4096bit = L1キャッシュ 8ライン)
         const auto &src = m_buffers[justWritten];
         auto &dst = m_buffers[m_editIndex];
-
         dst.renderGraphDirty = src.renderGraphDirty;
-
         const auto &dirtyBits = m_dirtyFlags[m_editIndex].dirty;
         for (std::size_t i = 0; i < MAX_CLIP_ID; ++i) {
             if (!dirtyBits.test(i))
@@ -198,15 +164,12 @@ void ECS::commit() {
         m_dirtyFlags[m_editIndex].dirty.reset();
     }
 
-    // フェーズ5: mailbox に deposit（m_activeIndex は触らない）
-    // render thread が次の getSnapshot() で CAS により take する
+    // フェーズ5: mailbox に deposit (m_activeIndex は触らない)
     m_pendingIndex.store(justWritten, std::memory_order_release);
 }
 
 auto ECS::getSnapshot() const -> const ECSState * {
     // フェーズ5: mailbox から最新バッファを取り出して active に昇格 (lazy swap)
-    // CAS: m_pendingIndex を -1 にクリアしてから m_activeIndex を更新する
-    // 失敗時はすでに他の呼び出しが取り出し済みなので読み飛ばして現在の active を返す
     int pending = m_pendingIndex.load(std::memory_order_acquire);
     if (pending != -1) {
         if (m_pendingIndex.compare_exchange_strong(pending, -1, std::memory_order_acq_rel, std::memory_order_relaxed)) {
@@ -216,23 +179,42 @@ auto ECS::getSnapshot() const -> const ECSState * {
     return &m_buffers[m_activeIndex.load(std::memory_order_acquire)];
 }
 
+// フェーズ6: ECS スナップショット → SoA フラット配列への直接展開
+// QVariantMap / QByteArray を一切経由しない zero-copy パス
+void ECS::writeSSBOLayout(GpuTransformSoA &tfm, GpuAudioSoA &aud) const {
+    ECS_PROF_INC(ssboWriteCount);
+
+    const ECSState *state = getSnapshot();
+
+    // TransformComponent → GpuTransformSoA
+    tfm.count = 0;
+    state->transforms.forEach([&](int clipId, const TransformComponent &tc) {
+        if (tfm.count >= MAX_ACTIVE_CLIPS)
+            return;
+        const int idx = tfm.count++;
+        tfm.clipIds[idx] = static_cast<int32_t>(clipId);
+        tfm.layers[idx] = static_cast<int32_t>(tc.layer);
+        tfm.timePositions[idx] = static_cast<float>(tc.timePosition);
+        tfm.startFrames[idx] = static_cast<int32_t>(tc.startFrame);
+        tfm.durationFrames[idx] = static_cast<int32_t>(tc.durationFrames);
+    });
+
+    // AudioComponent → GpuAudioSoA
+    aud.count = 0;
+    state->audioStates.forEach([&](int /*clipId*/, const AudioComponent &ac) {
+        if (aud.count >= MAX_ACTIVE_CLIPS)
+            return;
+        const int idx = aud.count++;
+        aud.volumes[idx] = ac.volume;
+        aud.pans[idx] = ac.pan;
+        aud.mutes[idx] = ac.mute ? 1 : 0;
+        aud.startFrames[idx] = static_cast<int32_t>(ac.startFrame);
+        aud.durationFrames[idx] = static_cast<int32_t>(ac.durationFrames);
+    });
+}
+
 auto ECS::isRenderGraphDirty() const -> bool { return m_buffers[m_editIndex].renderGraphDirty; }
 
 void ECS::markRenderGraphClean() { m_buffers[m_editIndex].renderGraphDirty = false; }
 
 } // namespace AviQtl::Engine::Timeline
-
-extern "C" {
-auto aviqtl_lua_get_audio_volume(int clipId) -> float {
-    const auto *state = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
-    if (state == nullptr) {
-        return 1.0F;
-    }
-
-    const auto *it = state->audioStates.find(clipId);
-    if (it != nullptr) {
-        return it->volume;
-    }
-    return 1.0F;
-}
-}

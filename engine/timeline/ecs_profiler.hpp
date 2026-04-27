@@ -16,8 +16,9 @@ struct ECSProfiler {
     std::atomic<uint64_t> syncAliveRemoved{0};
     std::atomic<uint64_t> updateActiveNs{0};
     std::atomic<uint64_t> dirtyBitSetCount{0};
-    // フェーズ3実装後に有効化
     std::atomic<uint64_t> variantEvalCount{0};
+    // フェーズ6: ECS→SSBO 直書き回数
+    std::atomic<uint64_t> ssboWriteCount{0};
 
     static ECSProfiler &instance() {
         static ECSProfiler prof;
@@ -32,12 +33,13 @@ struct ECSProfiler {
         updateActiveNs.store(0, std::memory_order_relaxed);
         dirtyBitSetCount.store(0, std::memory_order_relaxed);
         variantEvalCount.store(0, std::memory_order_relaxed);
+        ssboWriteCount.store(0, std::memory_order_relaxed);
     }
 
     void dump() const {
         qDebug() << "[ECSProfiler]"
                  << "commit=" << commitCount.load() << "mapHit=" << denseMapHit.load() << "mapMiss=" << denseMapMiss.load() << "syncRemoved=" << syncAliveRemoved.load() << "updateActiveNs=" << updateActiveNs.load()
-                 << "dirtyBits=" << dirtyBitSetCount.load() << "variantEval=" << variantEvalCount.load();
+                 << "dirtyBits=" << dirtyBitSetCount.load() << "variantEval=" << variantEvalCount.load() << "ssboWrite=" << ssboWriteCount.load();
     }
 
   private:

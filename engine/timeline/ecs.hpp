@@ -1,8 +1,8 @@
 #pragma once
 #include "ecs_profiler.hpp"
+#include "ssbo_layout.hpp"
 #include "string_table.hpp"
 #include <QString>
-#include <QVariantMap>
 #include <array>
 #include <atomic>
 #include <bitset>
@@ -15,18 +15,15 @@
 namespace AviQtl::Engine::Timeline {
 
 // フェーズ1: ClipIDの最大値を定数化し、QSet<int>を排除する
-// ClipIDが0以上この値未満であることをassertで保証する
 inline constexpr int MAX_CLIP_ID = 4096;
 
 // フェーズ1: ダーティ追跡をbitset+bool1個に統合
-// QSet<int> + bool の2構造 → DirtyFlags 1構造へ
-// 512バイト(=4096bit) のbitsetはL1キャッシュ8ライン相当でアクセス効率が高い
 struct DirtyFlags {
     std::bitset<MAX_CLIP_ID> dirty;
     bool fullSync = false;
 };
 
-// Sparse Set (疎集合) パターンによるデータ指向コンテナ
+// Sparse Set パターンによるデータ指向コンテナ
 template <typename T> class DenseComponentMap {
   public:
     T &operator[](int clipId) {
@@ -74,12 +71,11 @@ template <typename T> class DenseComponentMap {
         m_sparse[static_cast<std::size_t>(clipId)] = -1;
     }
 
-    // フェーズ1: 引数をbitsetに変更 → QSet::contains() O(1)hash → bitset::test() O(1)L1直撃
+    // フェーズ1: 引数をbitsetに変更 → O(1)L1直撃
     bool syncAlive(const std::bitset<MAX_CLIP_ID> &aliveFlags) {
         bool changed = false;
         for (int i = static_cast<int>(m_entities.size()) - 1; i >= 0; --i) {
             int id = m_entities[static_cast<std::size_t>(i)];
-            // idがMAX_CLIP_ID未満かつaliveでなければ削除
             if (id >= MAX_CLIP_ID || !aliveFlags.test(static_cast<std::size_t>(id))) {
                 erase(id);
                 changed = true;
@@ -89,7 +85,6 @@ template <typename T> class DenseComponentMap {
         return changed;
     }
 
-    // データ指向アクセス用のイテレータ（ポインタ）
     using iterator = T *;
     using const_iterator = const T *;
 
@@ -104,6 +99,14 @@ template <typename T> class DenseComponentMap {
         return m_sparse[static_cast<std::size_t>(clipId)] != -1;
     }
 
+    // フェーズ6: ID 付きイテレーション (writeSSBOLayout 用)
+    // m_entities[i] = clipId, m_data[i] = Component の対応を保証
+    template <typename Fn> void forEach(Fn &&fn) const {
+        for (std::size_t i = 0; i < m_data.size(); ++i) {
+            fn(m_entities[i], m_data[i]);
+        }
+    }
+
   private:
     void ensureSparseSize(int clipId) {
         if (clipId < 0)
@@ -113,8 +116,8 @@ template <typename T> class DenseComponentMap {
             m_sparse.resize(needed, -1);
     }
 
-    std::vector<int> m_entities; // Dense IDs
-    std::vector<T> m_data;       // Dense Components
+    std::vector<int> m_entities;
+    std::vector<T> m_data;
     std::vector<int> m_sparse;
 };
 
@@ -135,22 +138,23 @@ struct TransformComponent {
 };
 
 // フェーズ2: QString を排除し trivially_copyable な POD 構造体へ
-// name/source/type は StringTable のIDで保持
-// color は "#RRGGBB"/"#AARRGGBB" を uint32_t ARGB にパック
 struct MetadataComponent {
     int32_t clipId = -1;
-    uint32_t nameId = 0;    // StringTable index
-    uint32_t sourceId = 0;  // StringTable index
-    uint32_t typeId = 0;    // StringTable index
-    uint32_t colorRGBA = 0; // ARGB packed
+    uint32_t nameId = 0;
+    uint32_t sourceId = 0;
+    uint32_t typeId = 0;
+    uint32_t colorRGBA = 0;
 };
 static_assert(sizeof(MetadataComponent) == 20, "MetadataComponent size check failed");
 static_assert(std::is_trivially_copyable_v<MetadataComponent>, "MetadataComponent must be trivially copyable");
 
+// フェーズ6: QString effectChain を除去し trivially_copyable を達成
+// effectChain は QML ObjectRenderer.qml 側で管理するため ECS での保持は不要
 struct RenderComponent {
     bool needsUpdate = true;
-    QString effectChain;
+    uint32_t effectChainId = 0; // 将来: StringTable index
 };
+static_assert(std::is_trivially_copyable_v<RenderComponent>, "RenderComponent must be trivially copyable");
 
 struct ECSState {
     bool renderGraphDirty = false;
@@ -172,9 +176,14 @@ class ECS {
 
     void commit();
 
+    // フェーズ6: 現在の ECS スナップショットを GPU SSBO 用 SoA フラット構造に変換
+    // 呼び出し元が確保した GpuTransformSoA / GpuAudioSoA に直接書き込む
+    // glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(tfm), &tfm, GL_DYNAMIC_DRAW) で即転送可能
+    void writeSSBOLayout(GpuTransformSoA &transforms, GpuAudioSoA &audio) const;
+
     ECSState &editState() { return m_buffers[m_editIndex]; }
 
-    // フェーズ1: QSet::insert → bitset::set
+    // フェーズ1: QSet<int>.insert → bitset.set
     void markEvaluatedParamsDirty(int clipId) {
         assert(clipId >= 0 && clipId < MAX_CLIP_ID);
         m_dirtyFlags[(m_editIndex + 1) % 3].dirty.set(static_cast<std::size_t>(clipId));
@@ -183,7 +192,7 @@ class ECS {
 
     const ECSState *getSnapshot() const;
 
-    // フェーズ2: StringTableへの読み取りアクセス（レンダラー/Lua向け）
+    // フェーズ2: StringTable Lua スクリプトから参照可能
     const StringTable &stringTable() const { return m_stringTable; }
 
     bool isRenderGraphDirty() const;
@@ -192,24 +201,20 @@ class ECS {
   private:
     ECS();
 
-    // トリプルバッファリングのための固定長配列
     std::array<ECSState, 3> m_buffers;
 
-    // 現在UIスレッドが書き込んでいるバッファのインデックス
+    // UI thread が排他的に書き込む edit バッファのインデックス
     int m_editIndex = 0;
 
-    // バックグラウンドスレッドが現在読み取っている(最新の確定済み)バッファのインデックス
     // フェーズ5: render thread (getSnapshot) のみが activeIndex を昇格する
     mutable std::atomic<int> m_activeIndex{0};
-    // フェーズ5: UI→render の mailbox（-1 = 未発行）
-    // commit() が deposit し、getSnapshot() が CAS で take する
+    // フェーズ5: UI→render の mailbox (-1 = 未発行)
     mutable std::atomic<int> m_pendingIndex{-1};
 
-    // フェーズ2: 文字列インターンプール（SoA内から heap 文字列を排除）
+    // フェーズ2: SoA heap StringTable
     StringTable m_stringTable;
 
-    // フェーズ1: QSet<int> x3 + bool x3 → DirtyFlags x3 に統合
-    // DirtyFlags: { bitset<4096> dirty; bool fullSync; }
+    // フェーズ1: QSet<int> x3 + bool x3 → DirtyFlags x3
     std::array<DirtyFlags, 3> m_dirtyFlags;
 };
 
