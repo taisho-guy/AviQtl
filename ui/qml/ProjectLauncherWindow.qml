@@ -7,9 +7,6 @@ import "common" as Common
 Common.AviQtlWindow {
     id: root
 
-    // プロジェクトが選択されたら他のウィンドウを開く
-    signal projectSelected(string projectPath, int width, int height, double fps)
-
     width: 700
     height: 500
     title: qsTr("AviQtl - プロジェクトランチャー")
@@ -184,10 +181,17 @@ Common.AviQtlWindow {
                 highlighted: true
                 Layout.fillWidth: true
                 onClicked: {
-                    if (Workspace.currentTimeline && Workspace.currentTimeline.project)
-                        Workspace.currentTimeline.project.sampleRate = parseInt(sampleRateField.text);
-
-                    root.projectSelected("", parseInt(widthField.text), parseInt(heightField.text), parseFloat(fpsField.text));
+                    // C++ 0引数の newProject() のみ使用（QML はオーバーロード不可）
+                    Workspace.newProject();
+                    // newProject() は setCurrentIndex() まで同期完了するため
+                    // 直後に currentTimeline.project へ代入可能
+                    var proj = Workspace.currentTimeline ? Workspace.currentTimeline.project : null;
+                    if (proj) {
+                        proj.width = parseInt(widthField.text);
+                        proj.height = parseInt(heightField.text);
+                        proj.fps = parseFloat(fpsField.text);
+                        proj.sampleRate = parseInt(sampleRateField.text);
+                    }
                     root.close();
                 }
 
@@ -242,7 +246,7 @@ Common.AviQtlWindow {
                         width: recentListView.width
                         height: 60
                         onClicked: {
-                            root.projectSelected(model.path, model.width, model.height, model.fps);
+                            Workspace.loadProject(model.path);
                             root.close();
                         }
 
@@ -308,22 +312,7 @@ Common.AviQtlWindow {
         title: qsTr("プロジェクトファイルを開く")
         nameFilters: ["AviQtl Project (*.aviqtl)", "All files (*)"]
         onAccepted: {
-            var width = 1920;
-            var height = 1080;
-            var fps = 60;
-            if (Workspace.currentTimeline) {
-                var info = Workspace.currentTimeline.getProjectInfo(fileDialog.selectedFile);
-                if (info.width !== undefined)
-                    width = info.width;
-
-                if (info.height !== undefined)
-                    height = info.height;
-
-                if (info.fps !== undefined)
-                    fps = info.fps;
-
-            }
-            root.projectSelected(fileDialog.selectedFile, width, height, fps);
+            Workspace.loadProject(fileDialog.selectedFile);
             root.close();
         }
     }

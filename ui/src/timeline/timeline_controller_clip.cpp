@@ -267,127 +267,182 @@ void TimelineController::applyClipBatchMove(const QVariantList &moves) {
 }
 
 void TimelineController::resizeSelectedClips(int deltaStartFrame, int deltaDuration) {
-    if (m_timeline != nullptr) {
-        m_timeline->resizeSelectedClips(deltaStartFrame, deltaDuration);
+    if (m_timeline == nullptr) {
+        return;
     }
+
+    const QVariantList ids = m_selection->selectedClipIds();
+    if (ids.isEmpty()) {
+        return;
+    }
+
+    // リサイズ前の状態を値コピー（updateClip 呼び出しでポインタが失効しないよう）
+    struct PendingResize {
+        int id;
+        int layer;
+        int oldStart;
+        int oldDuration;
+    };
+
+    QVector<PendingResize> pending;
+    pending.reserve(ids.size());
+    for (const QVariant &vId : std::as_const(ids)) {
+        const int id = vId.toInt();
+        const auto *clip = m_timeline->findClipById(id);
+        if (clip == nullptr) {
+            continue;
+        }
+        pending.push_back({id, clip->layer, clip->startFrame, clip->durationFrames});
+    }
+    if (pending.isEmpty()) {
+        return;
+    }
+
+    // TimelineService と同一の衝突回避ソート順を維持する
+    if (deltaStartFrame > 0 || deltaDuration > 0) {
+        std::ranges::sort(pending, [](const PendingResize &a, const PendingResize &b) { return a.oldStart != b.oldStart ? a.oldStart > b.oldStart : a.layer > b.layer; });
+    } else {
+        std::ranges::sort(pending, [](const PendingResize &a, const PendingResize &b) { return a.oldStart != b.oldStart ? a.oldStart < b.oldStart : a.layer < b.layer; });
+    }
+
+    // updateClip() 経由で適用: メディア長クランプ・ECS 同期・Undo 登録を全クリップに保証
+    m_timeline->undoStack()->beginMacro(tr("複数クリップリサイズ: %1").arg(pending.size()));
+    for (const PendingResize &r : std::as_const(pending)) {
+        const int newStart = std::max(0, r.oldStart + deltaStartFrame);
+        const int newDuration = std::max(1, r.oldDuration + deltaDuration);
+        updateClip(r.id, r.layer, newStart, newDuration);
+    }
+    m_timeline->undoStack()->endMacro();
 }
 
-void TimelineController::updateClip(int id, int layer, int startFrame, int duration) {
-    const auto *clip = m_timeline->findClipById(id);
+// ----------------------------------------------------------------
+// clampedDuration: video/audio/scene の素材長に合わせて duration を上限クランプ
+// updateClip と resizeSelectedClips の共通ロジックとして抽出
+// ----------------------------------------------------------------
+int TimelineController::clampedDuration(int clipId, int newStart, int requestedDuration) const {
+    Q_UNUSED(newStart);
+    const auto *clip = m_timeline->findClipById(clipId);
+    if (clip == nullptr) {
+        return requestedDuration;
+    }
 
-    if (clip != nullptr) {
-        const int projectFps = static_cast<int>(project()->fps());
+    const int projectFps = static_cast<int>(project()->fps());
+    int duration = requestedDuration;
 
-        if (clip->type == QLatin1String("video")) {
-            auto *vid = qobject_cast<AviQtl::Core::VideoDecoder *>(m_mediaManager->decoderForClip(id));
-            if ((vid != nullptr) && vid->isReady()) {
-                int startVideoFrame = 0;
-                double speed = 100.0;
-                bool isDirectMode = false;
-
-                for (const auto *eff : clip->effects) {
-                    if (eff->id() != "video") {
-                        continue;
-                    }
-                    const QString playMode = eff->params().value(QStringLiteral("playMode"), "開始フレーム＋再生速度").toString();
-                    if (playMode == QStringLiteral("フレーム直接指定")) {
-                        isDirectMode = true;
-                        break;
-                    }
-                    startVideoFrame = eff->params().value(QStringLiteral("startFrame"), 0).toInt();
-                    speed = eff->params().value(QStringLiteral("speed"), 100.0).toDouble();
-                    break;
-                }
-
-                double srcFps = vid->sourceFps();
-                if (srcFps <= 0.0) {
-                    srcFps = projectFps;
-                }
-                int maxDuration = duration;
-
-                if (isDirectMode) {
-                    // フレーム直接指定: 単純に「素材の総フレーム数 / srcFps * projectFps」を限界とする
-                    const double totalSec = static_cast<double>(vid->totalFrameCount()) / srcFps;
-                    maxDuration = static_cast<int>(totalSec * projectFps);
-                } else if (speed > 0.0) {
-                    const double startSec = static_cast<double>(startVideoFrame) / srcFps;
-                    const double remainingSec = (static_cast<double>(vid->totalFrameCount()) / srcFps) - startSec;
-                    if (remainingSec > 0.0) {
-                        maxDuration = static_cast<int>(remainingSec / (speed / 100.0) * projectFps);
-                    }
-                }
-
-                if (maxDuration > 0 && duration > maxDuration) {
-                    duration = maxDuration;
-                }
-            }
-        } else if (clip->type == QLatin1String("audio")) {
-            auto *aud = qobject_cast<AviQtl::Core::AudioDecoder *>(m_mediaManager->decoderForClip(id));
-            if ((aud != nullptr) && aud->isReady()) {
-                double startTime = 0.0;
-                double speed = 100.0;
-                bool isDirectMode = false;
-
-                for (const auto *eff : clip->effects) {
-                    if (eff->id() != "audio") {
-                        continue;
-                    }
-                    const QString playMode = eff->params().value(QStringLiteral("playMode"), "開始時間＋再生速度").toString();
-                    if (playMode == QStringLiteral("時間直接指定")) {
-                        isDirectMode = true;
-                        break;
-                    }
-                    startTime = eff->params().value(QStringLiteral("startTime"), 0.0).toDouble();
-                    speed = eff->params().value(QStringLiteral("speed"), 100.0).toDouble();
-                    break;
-                }
-
-                const double totalSec = aud->totalDurationSec();
-                int maxDuration = duration;
-
-                if (isDirectMode) {
-                    // 時間直接指定: 素材の総秒数 * projectFps を限界とする
-                    maxDuration = static_cast<int>(totalSec * projectFps);
-                } else if (speed > 0.0) {
-                    const double remainingSec = totalSec - startTime;
-                    if (remainingSec > 0.0) {
-                        maxDuration = static_cast<int>(remainingSec / (speed / 100.0) * projectFps);
-                    }
-                }
-
-                if (maxDuration > 0 && duration > maxDuration) {
-                    duration = maxDuration;
-                }
-            }
-        } else if (clip->type == QLatin1String("scene")) {
-            int targetSceneId = 0;
-            double speed = 1.0;
-            int offset = 0;
-            [[maybe_unused]] bool isDirectMode = false;
+    if (clip->type == QLatin1String("video")) {
+        auto *vid = qobject_cast<AviQtl::Core::VideoDecoder *>(m_mediaManager->decoderForClip(clipId));
+        if ((vid != nullptr) && vid->isReady()) {
+            int startVideoFrame = 0;
+            double speed = 100.0;
+            bool isDirectMode = false;
 
             for (const auto *eff : clip->effects) {
-                if (eff->id() != "scene") {
+                if (eff->id() != "video") {
                     continue;
                 }
-                // ※ 現在Sceneには playMode パラメータは無いが、将来のために概念として考慮。
-                // 現状の仕様では「speed と offset」による計算。
-                targetSceneId = eff->params().value(QStringLiteral("targetSceneId"), 0).toInt();
-                speed = eff->params().value(QStringLiteral("speed"), 1.0).toDouble();
-                offset = eff->params().value(QStringLiteral("offset"), 0).toInt();
+                const QString playMode = eff->params().value(QStringLiteral("playMode"), "開始フレーム＋再生速度").toString();
+                if (playMode == QStringLiteral("フレーム直接指定")) {
+                    isDirectMode = true;
+                    break;
+                }
+                startVideoFrame = eff->params().value(QStringLiteral("startFrame"), 0).toInt();
+                speed = eff->params().value(QStringLiteral("speed"), 100.0).toDouble();
                 break;
             }
 
-            const int sceneDur = getSceneDuration(targetSceneId);
-            if (sceneDur > 0 && speed > 0.0) {
-                const double rhs = (static_cast<double>(sceneDur - 1 - offset)) / speed;
-                int maxDuration = static_cast<int>(rhs) + 1;
-                maxDuration = std::max(maxDuration, 1);
-                duration = std::min(duration, maxDuration);
+            double srcFps = vid->sourceFps();
+            if (srcFps <= 0.0) {
+                srcFps = projectFps;
             }
+            int maxDuration = duration;
+
+            if (isDirectMode) {
+                const double totalSec = static_cast<double>(vid->totalFrameCount()) / srcFps;
+                maxDuration = static_cast<int>(totalSec * projectFps);
+            } else if (speed > 0.0) {
+                const double startSec = static_cast<double>(startVideoFrame) / srcFps;
+                const double remainingSec = (static_cast<double>(vid->totalFrameCount()) / srcFps) - startSec;
+                if (remainingSec > 0.0) {
+                    maxDuration = static_cast<int>(remainingSec / (speed / 100.0) * projectFps);
+                }
+            }
+            if (maxDuration > 0 && duration > maxDuration) {
+                duration = maxDuration;
+            }
+        }
+    } else if (clip->type == QLatin1String("audio")) {
+        auto *aud = qobject_cast<AviQtl::Core::AudioDecoder *>(m_mediaManager->decoderForClip(clipId));
+        if ((aud != nullptr) && aud->isReady()) {
+            double startTime = 0.0;
+            double speed = 100.0;
+            bool isDirectMode = false;
+
+            for (const auto *eff : clip->effects) {
+                if (eff->id() != "audio") {
+                    continue;
+                }
+                const QString playMode = eff->params().value(QStringLiteral("playMode"), "開始時間＋再生速度").toString();
+                if (playMode == QStringLiteral("時間直接指定")) {
+                    isDirectMode = true;
+                    break;
+                }
+                startTime = eff->params().value(QStringLiteral("startTime"), 0.0).toDouble();
+                speed = eff->params().value(QStringLiteral("speed"), 100.0).toDouble();
+                break;
+            }
+
+            const double totalSec = aud->totalDurationSec();
+            int maxDuration = duration;
+
+            if (isDirectMode) {
+                maxDuration = static_cast<int>(totalSec * projectFps);
+            } else if (speed > 0.0) {
+                const double remainingSec = totalSec - startTime;
+                if (remainingSec > 0.0) {
+                    maxDuration = static_cast<int>(remainingSec / (speed / 100.0) * projectFps);
+                }
+            }
+            if (maxDuration > 0 && duration > maxDuration) {
+                duration = maxDuration;
+            }
+        }
+    } else if (clip->type == QLatin1String("scene")) {
+        int targetSceneId = 0;
+        double speed = 1.0;
+        int offset = 0;
+
+        for (const auto *eff : clip->effects) {
+            if (eff->id() != "scene") {
+                continue;
+            }
+            targetSceneId = eff->params().value(QStringLiteral("targetSceneId"), 0).toInt();
+            speed = eff->params().value(QStringLiteral("speed"), 1.0).toDouble();
+            offset = eff->params().value(QStringLiteral("offset"), 0).toInt();
+            break;
+        }
+
+        const int sceneDur = getSceneDuration(targetSceneId);
+        if (sceneDur > 0 && speed > 0.0) {
+            const double rhs = (static_cast<double>(sceneDur - 1 - offset)) / speed;
+            int maxDuration = std::max(static_cast<int>(rhs) + 1, 1);
+            duration = std::min(duration, maxDuration);
         }
     }
 
-    m_timeline->updateClip(id, layer, startFrame, duration);
+    return duration;
+}
+
+// ----------------------------------------------------------------
+// updateClip: clampedDuration() に委譲して DRY を維持
+// ----------------------------------------------------------------
+void TimelineController::updateClip(int id, int layer, int startFrame, int duration) {
+    const auto *clip = m_timeline->findClipById(id);
+    if (clip == nullptr) {
+        return;
+    }
+
+    const int clamped = clampedDuration(id, startFrame, duration);
+    m_timeline->updateClip(id, layer, startFrame, clamped);
 }
 
 void TimelineController::moveClipWithCollisionCheck(int clipId, int layer, int startFrame) {

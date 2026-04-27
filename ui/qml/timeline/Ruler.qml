@@ -95,7 +95,12 @@ Rectangle {
                 anchors.fill: parent
                 onScaleChanged: requestPaint()
                 onOffsetXChanged: requestPaint()
+                onWidthChanged: requestPaint()
+                onHeightChanged: requestPaint()
                 onPaint: {
+                    if (width <= 0 || height <= 0 || scale <= 0)
+                        return ;
+
                     var ctx = getContext("2d");
                     ctx.clearRect(0, 0, width, height);
                     if (!Workspace.currentTimeline)
@@ -156,6 +161,15 @@ Rectangle {
                         }
                     }
                 }
+
+                Connections {
+                    function onCurrentTimelineChanged() {
+                        rulerCanvas.requestPaint();
+                    }
+
+                    target: Workspace
+                }
+
             }
 
             Rectangle {

@@ -10,7 +10,33 @@ ApplicationWindow {
 
     id: mainWin
 
-    function checkSaveAndExecute(action) {
+    // 全タブ横断で未保存確認し、全て処理済みになってから finalAction を実行
+    function checkAllUnsavedAndExecute(finalAction) {
+        if (!Workspace || !Workspace.tabs) {
+            finalAction();
+            return ;
+        }
+        for (var i = 0; i < Workspace.tabs.length; i++) {
+            if (Workspace.tabs[i].hasUnsavedChanges) {
+                // 対象タブをアクティブにしてダイアログを出す
+                Workspace.currentIndex = i;
+                saveConfirmDialog.pendingAction = function() {
+                    // 保存/破棄が完了したら次の未保存タブへ進む
+                    checkAllUnsavedAndExecute(finalAction);
+                };
+                saveConfirmDialog.open();
+                return ; // ダイアログ完了を待つ（Cancelは pendingAction=null で自然停止）
+            }
+        }
+        // 未保存タブが 0 なら即実行
+        finalAction();
+    }
+
+    // 単一タブを対象にした確認（tabIndex が指定されたらそのタブをアクティブにする）
+    function checkSaveAndExecute(action, tabIndex) {
+        if (tabIndex !== undefined && Workspace.currentIndex !== tabIndex)
+            Workspace.currentIndex = tabIndex;
+
         if (Workspace.currentTimeline && Workspace.currentTimeline.hasUnsavedChanges) {
             saveConfirmDialog.pendingAction = action;
             saveConfirmDialog.open();
@@ -27,10 +53,13 @@ ApplicationWindow {
     title: qsTr("AviQtl - プレビュー")
     // お前はこれで死ねぇ！！！！！
     onClosing: (close) => {
-        if (WindowManager)
-            WindowManager.requestQuit();
+        // 一旦クローズをキャンセルし、全タブの未保存確認を行ってから終了する
+        close.accepted = false;
+        checkAllUnsavedAndExecute(function() {
+            if (WindowManager)
+                WindowManager.requestQuit();
 
-        close.accepted = true;
+        });
     }
     // 起動時に自分自身(Window)をコントローラーに渡す
     Component.onCompleted: {
@@ -64,9 +93,8 @@ ApplicationWindow {
 
         text: qsTr("新規プロジェクト")
         onTriggered: {
-            if (Workspace)
-                Workspace.newProject();
-
+            // ランチャーで幅・高さ・fps を選ばせてから新規タブを作成する
+            WindowManager.showLauncher();
         }
     }
 
@@ -114,7 +142,7 @@ ApplicationWindow {
 
         text: qsTr("終了")
         onTriggered: {
-            checkSaveAndExecute(function() {
+            checkAllUnsavedAndExecute(function() {
                 if (WindowManager)
                     WindowManager.requestQuit();
 
@@ -406,25 +434,27 @@ ApplicationWindow {
         parent: Overlay.overlay
         standardButtons: Dialog.Save | Dialog.Discard | Dialog.Cancel
         onAccepted: {
+            var action = pendingAction;
+            pendingAction = null; // 先にリセット（再入防止）
             if (Workspace.currentTimeline) {
                 if (Workspace.currentTimeline.currentProjectUrl === "") {
-                    // 名前を付けて保存 → 完了後に pendingAction を実行
-                    saveDialog._nextAction = pendingAction;
+                    // 名前を付けて保存 → saveDialog 完了後に action を実行
+                    saveDialog._nextAction = action;
                     saveDialog.open();
                 } else {
                     Workspace.currentTimeline.saveProject("");
-                    if (pendingAction)
-                        pendingAction();
+                    if (action)
+                        action();
 
                 }
             }
-            pendingAction = null;
         }
         onDiscarded: {
-            if (pendingAction)
-                pendingAction();
-
+            var action = pendingAction;
             pendingAction = null;
+            if (action)
+                action();
+
         }
         onRejected: {
             pendingAction = null;
@@ -512,16 +542,30 @@ ApplicationWindow {
         id: exportDialog
     }
 
+    // タブが 0 になったとき（最後のプロジェクトを閉じた時）にランチャーを自動表示
+    Connections {
+        function onTabsChanged() {
+            if (Workspace.tabs.length === 0)
+                WindowManager.showLauncher();
+
+        }
+
+        target: Workspace
+    }
+
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
 
-        // プロジェクトタブバー
+        // プロジェクトタブバー（タブが 0 のときは非表示にして KDE TabBar の null アクセスを防ぐ）
         RowLayout {
+            readonly property int _tabH: SettingsManager && SettingsManager.settings ? (SettingsManager.settings.timelineHeaderHeight || 28) : 28
+
             Layout.fillWidth: true
-            Layout.preferredHeight: SettingsManager && SettingsManager.settings ? (SettingsManager.settings.timelineHeaderHeight || 28) : 28
-            Layout.maximumHeight: SettingsManager && SettingsManager.settings ? (SettingsManager.settings.timelineHeaderHeight || 28) : 28
-            Layout.minimumHeight: SettingsManager && SettingsManager.settings ? (SettingsManager.settings.timelineHeaderHeight || 28) : 28
+            visible: Workspace && Workspace.tabs && Workspace.tabs.length > 0
+            Layout.preferredHeight: visible ? _tabH : 0
+            Layout.minimumHeight: 0
+            Layout.maximumHeight: visible ? _tabH : 0
             spacing: 0
             z: 1
 
@@ -532,53 +576,61 @@ ApplicationWindow {
                 ScrollBar.vertical.policy: ScrollBar.AlwaysOff
                 clip: true
 
-                TabBar {
-                    id: projectTabBar
+                Loader {
+                    active: Workspace && Workspace.tabs && Workspace.tabs.length > 0
+                    width: parent ? parent.width : 0
+                    height: parent ? parent.height : 0
 
-                    width: Math.max(parent.width, contentWidth)
+                    sourceComponent: TabBar {
+                        width: Math.max(parent ? parent.width : 0, contentWidth || 0)
 
-                    Repeater {
-                        id: projectRepeater
+                        Repeater {
+                            id: projectRepeater
 
-                        model: Workspace ? Workspace.tabs : []
+                            model: Workspace ? Workspace.tabs : []
 
-                        TabButton {
-                            id: tabBtn
+                            TabButton {
+                                id: projectTabBtn
 
-                            checked: Workspace && Workspace.currentIndex === index
-                            onClicked: {
-                                if (Workspace)
-                                    Workspace.currentIndex = index;
+                                checked: Workspace && Workspace.currentIndex === index
+                                onClicked: {
+                                    if (Workspace)
+                                        Workspace.currentIndex = index;
 
-                            }
-
-                            contentItem: RowLayout {
-                                spacing: 4
-
-                                Text {
-                                    text: modelData.name + (modelData.hasUnsavedChanges ? " *" : "")
-                                    font: tabBtn.font
-                                    color: palette.text
-                                    horizontalAlignment: Text.AlignHCenter
-                                    verticalAlignment: Text.AlignVCenter
-                                    elide: Text.ElideRight
-                                    Layout.maximumWidth: 200
                                 }
 
-                                Button {
-                                    flat: true
-                                    Layout.preferredWidth: 20
-                                    Layout.preferredHeight: 20
-                                    onClicked: {
-                                        if (Workspace)
-                                            Workspace.closeProject(index);
+                                contentItem: RowLayout {
+                                    spacing: 4
 
+                                    Text {
+                                        text: modelData.name + (modelData.hasUnsavedChanges ? " *" : "")
+                                        font: projectTabBtn.font
+                                        color: palette.text
+                                        horizontalAlignment: Text.AlignHCenter
+                                        verticalAlignment: Text.AlignVCenter
+                                        elide: Text.ElideRight
+                                        Layout.maximumWidth: 200
                                     }
 
-                                    contentItem: Common.AviQtlIcon {
-                                        iconName: "close_line"
-                                        size: 14
-                                        color: parent.hovered ? parent.palette.highlight : parent.palette.text
+                                    Button {
+                                        flat: true
+                                        Layout.preferredWidth: 20
+                                        Layout.preferredHeight: 20
+                                        onClicked: {
+                                            // 未保存確認後にタブを閉じる
+                                            checkSaveAndExecute(function() {
+                                                if (Workspace)
+                                                    Workspace.closeProject(index);
+
+                                            }, index);
+                                        }
+
+                                        contentItem: Common.AviQtlIcon {
+                                            iconName: "close_line"
+                                            size: 14
+                                            color: parent.hovered ? parent.palette.highlight : parent.palette.text
+                                        }
+
                                     }
 
                                 }
@@ -593,15 +645,13 @@ ApplicationWindow {
 
             }
 
-            // 新規プロジェクト追加ボタン
             Button {
                 flat: true
                 Layout.preferredWidth: 40
                 Layout.fillHeight: true
                 onClicked: {
-                    if (Workspace)
-                        Workspace.newProject();
-
+                    // ランチャーで幅・高さ・fps を選ばせてから新規タブを作成する
+                    WindowManager.showLauncher();
                 }
 
                 contentItem: Common.AviQtlIcon {
