@@ -86,12 +86,13 @@ void TimelineEngineSynchronizer::updateActiveClipsList() {
             bool mute = false;
             for (auto *eff : clip->effects) {
                 if (eff->id() == clip->type) {
-                    QVariant vVol = eff->evaluatedParam(QStringLiteral("volume"), relFrame, fps);
-                    if (vVol.isValid()) {
-                        vol = vVol.toFloat();
-                    }
-                    pan = eff->evaluatedParam(QStringLiteral("pan"), relFrame, fps).toFloat();
-                    mute = eff->evaluatedParam(QStringLiteral("mute"), relFrame, fps).toBool();
+                    // フェーズ3: QVariant boxing を排除した直接評価 API に切り替え
+                    // evaluatedParam (QVariant) → evaluatedParamFloat/Bool (float/bool 直接)
+                    // m_resolvedCache を共有するため二重キャッシュは発生しない
+                    vol = eff->evaluatedParamFloat(QStringLiteral("volume"), relFrame, 1.0f, fps);
+                    pan = eff->evaluatedParamFloat(QStringLiteral("pan"), relFrame, 0.0f, fps);
+                    mute = eff->evaluatedParamBool(QStringLiteral("mute"), relFrame, false, fps);
+                    ECS_PROF_ADD(variantEvalCount, 3);
                     break;
                 }
             }
