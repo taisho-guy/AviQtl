@@ -1,13 +1,17 @@
 #include "ecs.hpp"
+#include "ecs_profiler.hpp"
 #include <QDebug>
+#include <cassert>
 #include <cmath>
 
 namespace AviQtl::Engine::Timeline {
 
 ECS::ECS() : m_editIndex(1) {
     m_activeIndex.store(0, std::memory_order_relaxed);
-
-    m_fullSyncRequired.fill(true);
+    // フェーズ1: m_fullSyncRequired.fill(true) → DirtyFlags::fullSync を全バッファにセット
+    for (auto &f : m_dirtyFlags) {
+        f.fullSync = true;
+    }
 }
 
 auto ECS::instance() -> ECS & {
@@ -15,26 +19,30 @@ auto ECS::instance() -> ECS & {
     return inst;
 }
 
-void ECS::syncClipIds(const QSet<int> &aliveIds) {
+// フェーズ1: 引数を std::bitset<MAX_CLIP_ID> に変更
+// QSet::contains() → bitset::test() でキャッシュライン直撃
+void ECS::syncClipIds(const std::bitset<MAX_CLIP_ID> &aliveFlags) {
     auto &editState = m_buffers[m_editIndex];
     bool changed = false;
-    changed |= editState.transforms.syncAlive(aliveIds);
-    changed |= editState.renderStates.syncAlive(aliveIds);
-    changed |= editState.audioStates.syncAlive(aliveIds);
-    changed |= editState.metadataStates.syncAlive(aliveIds);
+    changed |= editState.transforms.syncAlive(aliveFlags);
+    changed |= editState.renderStates.syncAlive(aliveFlags);
+    changed |= editState.audioStates.syncAlive(aliveFlags);
+    changed |= editState.metadataStates.syncAlive(aliveFlags);
 
     if (changed) {
-        m_fullSyncRequired[(m_editIndex + 1) % 3] = true;
-        m_fullSyncRequired[(m_editIndex + 2) % 3] = true;
+        // フェーズ1: m_fullSyncRequired[X] = true → m_dirtyFlags[X].fullSync = true
+        m_dirtyFlags[(m_editIndex + 1) % 3].fullSync = true;
+        m_dirtyFlags[(m_editIndex + 2) % 3].fullSync = true;
     }
 }
 
 void ECS::updateClipState(int clipId, int layer, double time) { // NOLINT(bugprone-easily-swappable-parameters)
+    assert(clipId >= 0 && clipId < MAX_CLIP_ID);
     auto &editState = m_buffers[m_editIndex];
 
     if (!editState.transforms.contains(clipId)) {
-        m_fullSyncRequired[(m_editIndex + 1) % 3] = true;
-        m_fullSyncRequired[(m_editIndex + 2) % 3] = true;
+        m_dirtyFlags[(m_editIndex + 1) % 3].fullSync = true;
+        m_dirtyFlags[(m_editIndex + 2) % 3].fullSync = true;
     }
     auto &transform = editState.transforms[clipId];
 
@@ -48,17 +56,21 @@ void ECS::updateClipState(int clipId, int layer, double time) { // NOLINT(bugpro
         render.needsUpdate = true;
         editState.renderGraphDirty = true;
 
-        m_dirtyForBuffer[(m_editIndex + 1) % 3].insert(clipId);
-        m_dirtyForBuffer[(m_editIndex + 2) % 3].insert(clipId);
+        // フェーズ1: QSet::insert → bitset::set
+        const auto cidx = static_cast<std::size_t>(clipId);
+        m_dirtyFlags[(m_editIndex + 1) % 3].dirty.set(cidx);
+        m_dirtyFlags[(m_editIndex + 2) % 3].dirty.set(cidx);
+        ECS_PROF_INC(dirtyBitSetCount);
     }
 }
 
 void ECS::updateAudioClipState(int clipId, int startFrame, int durationFrames, float volume, float pan, bool mute) { // NOLINT(bugprone-easily-swappable-parameters)
+    assert(clipId >= 0 && clipId < MAX_CLIP_ID);
     auto &editState = m_buffers[m_editIndex];
 
     if (!editState.audioStates.contains(clipId)) {
-        m_fullSyncRequired[(m_editIndex + 1) % 3] = true;
-        m_fullSyncRequired[(m_editIndex + 2) % 3] = true;
+        m_dirtyFlags[(m_editIndex + 1) % 3].fullSync = true;
+        m_dirtyFlags[(m_editIndex + 2) % 3].fullSync = true;
     }
     auto &audio = editState.audioStates[clipId];
     audio.clipId = clipId;
@@ -69,16 +81,19 @@ void ECS::updateAudioClipState(int clipId, int startFrame, int durationFrames, f
     audio.mute = mute;
 
     // 音声パラメータは頻繁に変わる可能性があるためダーティフラグ処理
-    m_dirtyForBuffer[(m_editIndex + 1) % 3].insert(clipId);
-    m_dirtyForBuffer[(m_editIndex + 2) % 3].insert(clipId);
+    const auto cidx = static_cast<std::size_t>(clipId);
+    m_dirtyFlags[(m_editIndex + 1) % 3].dirty.set(cidx);
+    m_dirtyFlags[(m_editIndex + 2) % 3].dirty.set(cidx);
+    ECS_PROF_INC(dirtyBitSetCount);
 }
 
 void ECS::updateMetadata(int clipId, const QString &name, const QString &source, const QString &type, const QString &color) {
+    assert(clipId >= 0 && clipId < MAX_CLIP_ID);
     auto &editState = m_buffers[m_editIndex];
 
     if (!editState.metadataStates.contains(clipId)) {
-        m_fullSyncRequired[(m_editIndex + 1) % 3] = true;
-        m_fullSyncRequired[(m_editIndex + 2) % 3] = true;
+        m_dirtyFlags[(m_editIndex + 1) % 3].fullSync = true;
+        m_dirtyFlags[(m_editIndex + 2) % 3].fullSync = true;
     }
     auto &meta = editState.metadataStates[clipId];
 
@@ -88,12 +103,15 @@ void ECS::updateMetadata(int clipId, const QString &name, const QString &source,
         meta.source = source;
         meta.type = type;
         meta.color = color;
-        m_dirtyForBuffer[(m_editIndex + 1) % 3].insert(clipId);
-        m_dirtyForBuffer[(m_editIndex + 2) % 3].insert(clipId);
+        const auto cidx = static_cast<std::size_t>(clipId);
+        m_dirtyFlags[(m_editIndex + 1) % 3].dirty.set(cidx);
+        m_dirtyFlags[(m_editIndex + 2) % 3].dirty.set(cidx);
     }
 }
 
 void ECS::commit() {
+    ECS_PROF_INC(commitCount);
+
     // 現在の edit バッファのインデックスを新しい active バッファにする
     int nextActive = m_editIndex;
 
@@ -105,19 +123,26 @@ void ECS::commit() {
         m_editIndex = (m_editIndex + 1) % 3;
     }
 
-    if (m_fullSyncRequired[m_editIndex]) {
+    // フェーズ1: m_fullSyncRequired[X] → m_dirtyFlags[X].fullSync
+    if (m_dirtyFlags[m_editIndex].fullSync) {
         // 構造変更があった、または初期状態の場合はフルコピー
         m_buffers[m_editIndex] = m_buffers[nextActive];
-        m_fullSyncRequired[m_editIndex] = false;
-        m_dirtyForBuffer[m_editIndex].clear();
+        m_dirtyFlags[m_editIndex].fullSync = false;
+        m_dirtyFlags[m_editIndex].dirty.reset();
     } else {
         // 部分更新: 変更があったコンポーネントのみコピー
+        // フェーズ1: for (int id : QSet) → bitset走査
+        // 4096bit = 512byte = 8キャッシュライン: 全走査でもL1完結
         const auto &src = m_buffers[nextActive];
         auto &dst = m_buffers[m_editIndex];
 
         dst.renderGraphDirty = src.renderGraphDirty;
 
-        for (int id : m_dirtyForBuffer[m_editIndex]) {
+        const auto &dirtyBits = m_dirtyFlags[m_editIndex].dirty;
+        for (std::size_t i = 0; i < MAX_CLIP_ID; ++i) {
+            if (!dirtyBits.test(i))
+                continue;
+            const int id = static_cast<int>(i);
             if (const auto *s = src.transforms.find(id)) {
                 dst.transforms[id] = *s;
             }
@@ -131,7 +156,7 @@ void ECS::commit() {
                 dst.metadataStates[id] = *s;
             }
         }
-        m_dirtyForBuffer[m_editIndex].clear();
+        m_dirtyFlags[m_editIndex].dirty.reset();
     }
 
     // 最新の active インデックスを公開

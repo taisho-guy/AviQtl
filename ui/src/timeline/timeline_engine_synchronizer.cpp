@@ -1,8 +1,10 @@
 #include "timeline_engine_synchronizer.hpp"
 #include "clip_model.hpp"
 #include "engine/timeline/ecs.hpp"
+#include "engine/timeline/ecs_profiler.hpp"
 #include "timeline_controller.hpp"
 #include <algorithm>
+#include <bitset>
 
 namespace AviQtl::UI {
 
@@ -60,6 +62,8 @@ void TimelineEngineSynchronizer::queryIntervalTree(int nodeIdx, int frame, QList
 }
 
 void TimelineEngineSynchronizer::updateActiveClipsList() {
+    ECS_TIMER_SCOPE(updateActiveNs);
+
     int current = m_controller->transport()->currentFrame();
 
     QList<ClipData *> active;
@@ -109,10 +113,14 @@ void TimelineEngineSynchronizer::rebuildClipIndex() {
     auto &clips = m_controller->timeline()->clipsMutable();
     m_sortedClips.reserve(clips.size());
 
-    QSet<int> aliveIds;
+    // フェーズ1: QSet<int> aliveIds → std::bitset<MAX_CLIP_ID> aliveFlags
+    // QSet::insert() → bitset::set() に変更
+    // アサート: ClipIDがMAX_CLIP_ID未満であることをここで保証する
+    std::bitset<AviQtl::Engine::Timeline::MAX_CLIP_ID> aliveFlags;
 
     for (auto &clip : clips) {
-        aliveIds.insert(clip.id);
+        assert(clip.id >= 0 && clip.id < AviQtl::Engine::Timeline::MAX_CLIP_ID);
+        aliveFlags.set(static_cast<std::size_t>(clip.id));
         m_sortedClips.push_back(&clip);
         m_maxDuration = std::max(clip.durationFrames, m_maxDuration);
 
@@ -129,7 +137,7 @@ void TimelineEngineSynchronizer::rebuildClipIndex() {
         m_treeRoot = buildIntervalTree(0, static_cast<int>(m_sortedClips.size()) - 1);
     }
 
-    // ECSの不要になったコンポーネントを掃除する
-    AviQtl::Engine::Timeline::ECS::instance().syncClipIds(aliveIds);
+    // フェーズ1: QSet → bitset を ECS::syncClipIds に渡す
+    AviQtl::Engine::Timeline::ECS::instance().syncClipIds(aliveFlags);
 }
 } // namespace AviQtl::UI

@@ -1,11 +1,11 @@
 #pragma once
-#include <QHash>
-#include <QSet>
+#include "ecs_profiler.hpp"
 #include <QString>
-#include <QVariant>
 #include <QVariantMap>
 #include <array>
 #include <atomic>
+#include <bitset>
+#include <cassert>
 #include <cstddef>
 #include <iterator>
 #include <utility>
@@ -13,15 +13,29 @@
 
 namespace AviQtl::Engine::Timeline {
 
+// フェーズ1: ClipIDの最大値を定数化し、QSet<int>を排除する
+// ClipIDが0以上この値未満であることをassertで保証する
+inline constexpr int MAX_CLIP_ID = 4096;
+
+// フェーズ1: ダーティ追跡をbitset+bool1個に統合
+// QSet<int> + bool の2構造 → DirtyFlags 1構造へ
+// 512バイト(=4096bit) のbitsetはL1キャッシュ8ライン相当でアクセス効率が高い
+struct DirtyFlags {
+    std::bitset<MAX_CLIP_ID> dirty;
+    bool fullSync = false;
+};
+
 // Sparse Set (疎集合) パターンによるデータ指向コンテナ
 template <typename T> class DenseComponentMap {
   public:
     T &operator[](int clipId) {
         ensureSparseSize(clipId);
         int &denseIndex = m_sparse[static_cast<std::size_t>(clipId)];
-        if (denseIndex >= 0)
+        if (denseIndex >= 0) {
+            ECS_PROF_INC(denseMapHit);
             return m_data[static_cast<std::size_t>(denseIndex)];
-
+        }
+        ECS_PROF_INC(denseMapMiss);
         denseIndex = static_cast<int>(m_data.size());
         m_entities.push_back(clipId);
         m_data.push_back(T{});
@@ -59,13 +73,16 @@ template <typename T> class DenseComponentMap {
         m_sparse[static_cast<std::size_t>(clipId)] = -1;
     }
 
-    bool syncAlive(const QSet<int> &aliveIds) {
+    // フェーズ1: 引数をbitsetに変更 → QSet::contains() O(1)hash → bitset::test() O(1)L1直撃
+    bool syncAlive(const std::bitset<MAX_CLIP_ID> &aliveFlags) {
         bool changed = false;
         for (int i = static_cast<int>(m_entities.size()) - 1; i >= 0; --i) {
             int id = m_entities[static_cast<std::size_t>(i)];
-            if (!aliveIds.contains(id)) {
+            // idがMAX_CLIP_ID未満かつaliveでなければ削除
+            if (id >= MAX_CLIP_ID || !aliveFlags.test(static_cast<std::size_t>(id))) {
                 erase(id);
                 changed = true;
+                ECS_PROF_INC(syncAliveRemoved);
             }
         }
         return changed;
@@ -141,7 +158,8 @@ class ECS {
   public:
     static ECS &instance();
 
-    void syncClipIds(const QSet<int> &aliveIds);
+    // フェーズ1: QSet<int> → std::bitset<MAX_CLIP_ID>
+    void syncClipIds(const std::bitset<MAX_CLIP_ID> &aliveFlags);
     void updateClipState(int clipId, int layer, double time);
     void updateAudioClipState(int clipId, int startFrame, int durationFrames, float volume, float pan, bool mute);
     void updateMetadata(int clipId, const QString &name, const QString &source, const QString &type, const QString &color);
@@ -149,12 +167,14 @@ class ECS {
     void commit();
 
     ECSState &editState() { return m_buffers[m_editIndex]; }
+
+    // フェーズ1: QSet::insert → bitset::set
     void markEvaluatedParamsDirty(int clipId) {
-        m_dirtyForBuffer[(m_editIndex + 1) % 3].insert(clipId);
-        m_dirtyForBuffer[(m_editIndex + 2) % 3].insert(clipId);
+        assert(clipId >= 0 && clipId < MAX_CLIP_ID);
+        m_dirtyFlags[(m_editIndex + 1) % 3].dirty.set(static_cast<std::size_t>(clipId));
+        m_dirtyFlags[(m_editIndex + 2) % 3].dirty.set(static_cast<std::size_t>(clipId));
     }
 
-    // スナップショットのポインタを返す。戻り値は呼び出し側スレッドで安全に利用できる。
     const ECSState *getSnapshot() const;
 
     bool isRenderGraphDirty() const;
@@ -172,11 +192,9 @@ class ECS {
     // バックグラウンドスレッドが現在読み取っている(最新の確定済み)バッファのインデックス
     std::atomic<int> m_activeIndex{0};
 
-    // トリプルバッファリングの部分更新用
-    // 各バッファが次に編集対象となったとき、同期が必要なClipIDリスト
-    std::array<QSet<int>, 3> m_dirtyForBuffer;
-    // 構造変更（追加・削除）があったため、フルコピーが必要かどうか
-    std::array<bool, 3> m_fullSyncRequired{};
+    // フェーズ1: QSet<int> x3 + bool x3 → DirtyFlags x3 に統合
+    // DirtyFlags: { bitset<4096> dirty; bool fullSync; }
+    std::array<DirtyFlags, 3> m_dirtyFlags;
 };
 
 } // namespace AviQtl::Engine::Timeline
