@@ -1,12 +1,5 @@
-#include "clip_effect_system.hpp"
-#include "clip_lifecycle_system.hpp"
-#include "clip_snapshot.hpp"
 #include "commands.hpp"
 #include "effect_registry.hpp"
-#include "engine/timeline/clip_effect_system.hpp"
-#include "engine/timeline/clip_lifecycle_system.hpp"
-#include "engine/timeline/clip_transform_system.hpp"
-#include "engine/timeline/ecs.hpp"
 #include "selection_service.hpp"
 #include "settings_manager.hpp"
 #include "timeline_service.hpp"
@@ -38,55 +31,31 @@ void TimelineService::createClipInternal(int clipId, const QString &type, int st
 
     const int defaultDuration = AviQtl::Core::SettingsManager::instance().settings().value(QStringLiteral("defaultClipDuration"), 100).toInt();
     auto overlaps = [](int s1, int d1, int s2, int d2) -> bool { return (s1 < (s2 + d2)) && (s2 < (s1 + d1)); };
-    // 衝突チェック: ECS スナップショットを正本として走査
-    const auto *createSnap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
-    for (const auto &ct : createSnap->transforms) {
-        if (ct.layer == layer && overlaps(startFrame, defaultDuration, ct.startFrame, ct.durationFrames)) {
+    auto &currentClips = clipsMutable();
+    for (const auto &c : std::as_const(currentClips)) {
+        if (c.layer == layer && overlaps(startFrame, defaultDuration, c.startFrame, c.durationFrames)) {
             qWarning() << "クリップ作成を拒否: レイヤー" << layer << "の" << startFrame << "フレームで衝突が発生";
             return;
         }
     }
 
-    // 全書き込みを同じ editState に対して行い、最後に1回だけ commit する
-    // 途中で commit すると editState が新バッファに進み effectStacks[clipId] が
-    // 次バッファに伝搬しないため addEffect が find(clipId)==nullptr で空振りする
-    auto &ecs = AviQtl::Engine::Timeline::ECS::instance();
-    auto &state = ecs.editState();
+    ClipData newClip;
+    newClip.id = clipId;
+    newClip.sceneId = m_currentSceneId;
+    newClip.type = type;
+    newClip.startFrame = startFrame;
+    newClip.durationFrames = defaultDuration;
+    newClip.layer = layer;
 
-    AviQtl::Engine::Timeline::ClipLifecycleSystem::createClip(state, clipId, type, layer, startFrame, defaultDuration);
-    ecs.updateMetadata(clipId, type, QStringLiteral(""), type, QStringLiteral(""));
+    currentClips.append(newClip);
 
-    // addEffectInternal は内部で commit を挟むため使用不可
-    // 同じ state に直接書き込むラムダで代替する
-    const auto addEffectToState = [&](const QString &effectId) {
-        const auto meta = AviQtl::Core::EffectRegistry::instance().getEffect(effectId);
-        if (meta.id.isEmpty())
-            return;
-        AviQtl::UI::EffectData data;
-        data.id = meta.id;
-        data.name = meta.name;
-        data.kind = meta.kind;
-        data.categories = meta.categories;
-        data.qmlSource = meta.qmlSource;
-        data.uiDefinition = meta.uiDefinition;
-        data.enabled = true;
-        data.params = meta.defaultParams;
-        // [DEBUG LOG #3] エフェクト追加時の qmlSource / kind / params を確認
-        // プレビューに反映されない場合は qmlSource が空か kind が "effect" でないことが多い
-        qDebug() << "[AddEffect] effectId=" << effectId << " kind=" << data.kind << " qmlSource=" << data.qmlSource << " params=" << data.params.keys();
-        AviQtl::Engine::Timeline::ClipEffectSystem::addEffect(state, clipId, data);
-    };
-
-    addEffectToState(QStringLiteral("transform"));
-    addEffectToState(type);
-
-    // 全書き込み完了後に1回だけ commit して activeIndex に公開する
-    ecs.commit();
+    // デフォルトで transform エフェクトを追加
+    addEffectInternal(clipId, QStringLiteral("transform"));
+    addEffectInternal(clipId, type);
 
     if (emitSignal) {
         emit clipsChanged();
-        emit clipEffectsChanged(clipId);
-        emit clipCreated(clipId, layer, startFrame, defaultDuration, type);
+        emit clipCreated(newClip.id, newClip.layer, newClip.startFrame, newClip.durationFrames, newClip.type);
     }
 }
 
@@ -98,18 +67,17 @@ void TimelineService::addClipsDirectInternal(const QList<ClipData> &clips) {
 }
 
 void TimelineService::updateClip(int id, int layer, int startFrame, int duration) {
-    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
-    const auto *t = snap->transforms.find(id);
-    const auto *m = snap->metadataStates.find(id);
-    if (t == nullptr || m == nullptr) {
+    const auto *clip = findClipById(id);
+    if (clip == nullptr) {
         return;
     }
-    const auto *fx = snap->effectStacks.find(id);
-    QString clipName = m->type;
-    if (fx != nullptr && !fx->effects.isEmpty()) {
-        clipName = fx->effects.first().name;
+
+    QString clipName = clip->type;
+    if (!clip->effects.isEmpty()) {
+        clipName = clip->effects.first()->name();
     }
-    m_undoStack->push(new MoveClipCommand(this, id, t->layer, t->startFrame, t->durationFrames, layer, startFrame, duration, clipName));
+
+    m_undoStack->push(new MoveClipCommand(this, id, clip->layer, clip->startFrame, clip->durationFrames, layer, startFrame, duration, clipName));
 }
 
 void TimelineService::applyClipBatchMove(const QVariantList &moves) {
@@ -118,7 +86,6 @@ void TimelineService::applyClipBatchMove(const QVariantList &moves) {
     }
 
     m_batchExcludes.clear();
-    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
     for (const QVariant &vMove : std::as_const(moves)) {
         m_batchExcludes.insert(vMove.toMap().value(QStringLiteral("id")).toInt());
     }
@@ -139,17 +106,15 @@ void TimelineService::applyClipBatchMove(const QVariantList &moves) {
     for (const QVariant &vMove : std::as_const(moves)) {
         QVariantMap move = vMove.toMap();
         int id = move.value(QStringLiteral("id")).toInt();
-        const auto *t2 = snap->transforms.find(id);
-        const auto *m2 = snap->metadataStates.find(id);
-        if (t2 != nullptr && m2 != nullptr) {
-            const auto *fx2 = snap->effectStacks.find(id);
+        const auto *clip = findClipById(id);
+        if (clip != nullptr) {
             pending.push_back(PendingOp{.id = id,
-                                        .oldLayer = t2->layer,
-                                        .oldStart = t2->startFrame,
+                                        .oldLayer = clip->layer,
+                                        .oldStart = clip->startFrame,
                                         .targetLayer = move.value(QStringLiteral("layer")).toInt(),
                                         .targetStart = move.value(QStringLiteral("startFrame")).toInt(),
                                         .duration = move.value(QStringLiteral("duration")).toInt(),
-                                        .name = (fx2 == nullptr || fx2->effects.isEmpty()) ? m2->type : fx2->effects.first().name});
+                                        .name = clip->effects.isEmpty() ? clip->type : clip->effects.first()->name()});
         }
     }
 
@@ -210,16 +175,14 @@ void TimelineService::moveSelectedClips(int deltaLayer, int deltaFrame) {
     QVector<PendingOp> pending;
     pending.reserve(ids.size());
 
-    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
     for (const QVariant &value : std::as_const(ids)) {
         const int id = value.toInt();
-        const auto *tR = snap->transforms.find(id);
-        const auto *mR = snap->metadataStates.find(id);
-        if (tR == nullptr || mR == nullptr) {
+        const auto *clip = findClipById(id);
+        if (clip == nullptr) {
             continue;
         }
-        const auto *fxR = snap->effectStacks.find(id);
-        pending.push_back(PendingOp{.id = id, .oldLayer = tR->layer, .oldStart = tR->startFrame, .duration = tR->durationFrames, .name = (fxR == nullptr || fxR->effects.isEmpty()) ? mR->type : fxR->effects.first().name});
+
+        pending.push_back(PendingOp{.id = id, .oldLayer = clip->layer, .oldStart = clip->startFrame, .duration = clip->durationFrames, .name = clip->effects.isEmpty() ? clip->type : clip->effects.first()->name()});
     }
 
     if (deltaFrame > 0 || (deltaFrame == 0 && deltaLayer > 0)) {
@@ -265,19 +228,17 @@ void TimelineService::resizeSelectedClips(int deltaStartFrame, int deltaDuration
         QString name;
     };
 
-    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
     QVector<PendingOp> pending;
     pending.reserve(ids.size());
 
     for (const QVariant &value : std::as_const(ids)) {
         const int id = value.toInt();
-        const auto *tR = snap->transforms.find(id);
-        const auto *mR = snap->metadataStates.find(id);
-        if (tR == nullptr || mR == nullptr) {
+        const auto *clip = findClipById(id);
+        if (clip == nullptr) {
             continue;
         }
-        const auto *fxR = snap->effectStacks.find(id);
-        pending.push_back(PendingOp{.id = id, .oldLayer = tR->layer, .oldStart = tR->startFrame, .duration = tR->durationFrames, .name = (fxR == nullptr || fxR->effects.isEmpty()) ? mR->type : fxR->effects.first().name});
+
+        pending.push_back(PendingOp{.id = id, .oldLayer = clip->layer, .oldStart = clip->startFrame, .duration = clip->durationFrames, .name = clip->effects.isEmpty() ? clip->type : clip->effects.first()->name()});
     }
 
     // Resize left side -> deltaStartFrame != 0. If deltaStartFrame > 0, left edge moves right.
@@ -310,18 +271,17 @@ void TimelineService::resizeSelectedClips(int deltaStartFrame, int deltaDuration
 
 auto TimelineService::computeMagneticSnapPosition(int clipId, int targetLayer, int proposedStartFrame) -> int {
     // 0. 移動対象のクリップ情報を取得
-    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
-    const auto *movingT = snap->transforms.find(clipId);
-    if (movingT == nullptr) {
+    const auto *movingClip = findClipById(clipId);
+    if (movingClip == nullptr) {
         return proposedStartFrame; // 対象クリップが見つからなければ何もしない
     }
-    const int clipDuration = movingT->durationFrames;
+    const int clipDuration = movingClip->durationFrames;
 
     // 1. 対象レイヤーのクリップを抽出 (現在のシーンのみ)
-    QList<const AviQtl::Engine::Timeline::TransformComponent *> layerClips;
-    for (const auto &ct : snap->transforms) {
-        if (ct.layer == targetLayer && ct.clipId != clipId) {
-            layerClips.append(&ct);
+    QList<const ClipData *> layerClips;
+    for (const auto &c : clips()) { // 修正: 全シーン走査を現在のシーンに限定
+        if (c.layer == targetLayer && c.id != clipId) {
+            layerClips.append(&c);
         }
     }
 
@@ -334,7 +294,7 @@ auto TimelineService::computeMagneticSnapPosition(int clipId, int targetLayer, i
     }
 
     // 3. startFrame昇順ソート
-    std::ranges::sort(layerClips, [](const auto *a, const auto *b) -> bool { return a->startFrame < b->startFrame; });
+    std::ranges::sort(layerClips, [](const ClipData *a, const ClipData *b) -> bool { return a->startFrame < b->startFrame; });
 
     // 4. スナップ候補となる「空き領域の始点」を生成
     QList<int> snapPoints;
@@ -383,14 +343,13 @@ auto TimelineService::computeMagneticSnapPosition(int clipId, int targetLayer, i
 }
 
 auto TimelineService::resolveDragPosition(int clipId, int targetLayer, int proposedStartFrame, const QVariantList &batchIds) -> QPoint { // NOLINT(bugprone-easily-swappable-parameters)
-    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
-    const auto *movingT = snap->transforms.find(clipId);
-    if (movingT == nullptr) {
+    const auto *movingClip = findClipById(clipId);
+    if (movingClip == nullptr) {
         return {proposedStartFrame, targetLayer};
     }
 
-    int deltaLayer = targetLayer - movingT->layer;
-    int deltaFrame = proposedStartFrame - movingT->startFrame;
+    int deltaLayer = targetLayer - movingClip->layer;
+    int deltaFrame = proposedStartFrame - movingClip->startFrame;
 
     QSet<int> movingIds;
     if (!batchIds.isEmpty()) {
@@ -416,7 +375,7 @@ auto TimelineService::resolveDragPosition(int clipId, int targetLayer, int propo
         int currentPush = 0;
 
         for (int id : std::as_const(movingIds)) {
-            const auto *c = snap->transforms.find(id);
+            const auto *c = findClipById(id);
             if (c == nullptr) {
                 continue;
             }
@@ -461,14 +420,13 @@ auto TimelineService::resolveDragPosition(int clipId, int targetLayer, int propo
 }
 
 void TimelineService::updateClipInternal(int id, int layer, int startFrame, int duration, bool emitSignal) {
-    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
-    const auto *existingT = snap->transforms.find(id);
-    if (existingT == nullptr) {
+    const auto *existingClip = findClipById(id);
+    if (existingClip == nullptr) {
         return;
     }
 
     // 移動元または移動先がロックされている場合は拒否
-    if (isLayerLocked(layer) || isLayerLocked(existingT->layer)) {
+    if (isLayerLocked(layer) || isLayerLocked(existingClip->layer)) {
         qWarning() << "updateClipInternal: ロックされたレイヤーへの/からの操作を拒否しました。";
         return;
     }
@@ -485,12 +443,17 @@ void TimelineService::updateClipInternal(int id, int layer, int startFrame, int 
         startFrame = safeStartFrame;
     }
 
-    // m_scenes ループを廃止: ECS を正本として更新し、選択キャッシュのみ同期する
-    {
-        const auto *updSnap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
-        const auto *updTr = updSnap->transforms.find(id);
-        if (updTr != nullptr) {
-            if (updTr->layer != layer || updTr->startFrame != startFrame || updTr->durationFrames != duration) {
+    for (auto &clip : clipsMutable()) {
+        if (clip.id == id) {
+            if (clip.layer != layer || clip.startFrame != startFrame || clip.durationFrames != duration) {
+                clip.layer = layer;
+                clip.startFrame = startFrame;
+                clip.durationFrames = duration;
+                for (auto *effect : std::as_const(clip.effects)) {
+                    if (effect != nullptr) {
+                        effect->syncTrackEndpoints(duration);
+                    }
+                }
                 if (emitSignal) {
                     emit clipsChanged();
                 }
@@ -503,13 +466,9 @@ void TimelineService::updateClipInternal(int id, int layer, int startFrame, int 
                     m_selection->refreshSelectionData(id, data);
                 }
             }
+            break;
         }
     }
-
-    // ECS の TransformComponent を更新（フェーズ2: ECS を正本として同時更新する）
-    // safeStartFrame が衝突回避済みの値なので ECS にもその値を書く
-    AviQtl::Engine::Timeline::ECS::instance().updateClipState(id, layer, startFrame, duration);
-    AviQtl::Engine::Timeline::ECS::instance().commit();
 }
 
 void TimelineService::selectClip(int id) { applySelectionIds(QVariantList{id}); }
@@ -551,23 +510,19 @@ void TimelineService::applySelectionIds(const QVariantList &ids) {
 
     if (!newSelectedIds.isEmpty()) {
         int id = newSelectedIds.first().toInt(); // 最初のクリップをプライマリとする
-        const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
-        const auto *tS = snap->transforms.find(id);
-        const auto *mS = snap->metadataStates.find(id);
-        const auto *fxS = snap->effectStacks.find(id);
-        if (tS != nullptr && mS != nullptr) {
-            primaryId = id;
-            if (fxS != nullptr) {
-                for (const auto &eff : std::as_const(fxS->effects)) {
-                    for (auto it = eff.params.begin(); it != eff.params.end(); ++it) {
-                        primaryData.insert(it.key(), it.value());
-                    }
+        const auto *clip = findClipById(id);
+        if (clip != nullptr) { // findClipById は nullptr を返す可能性があるのでチェック
+            primaryId = clip->id;
+            for (auto *eff : clip->effects) {
+                QVariantMap params = eff->params();
+                for (auto it = params.begin(); it != params.end(); ++it) {
+                    primaryData.insert(it.key(), it.value());
                 }
             }
-            primaryData.insert(QStringLiteral("startFrame"), tS->startFrame);
-            primaryData.insert(QStringLiteral("durationFrames"), tS->durationFrames);
-            primaryData.insert(QStringLiteral("layer"), tS->layer);
-            primaryData.insert(QStringLiteral("type"), mS->type);
+            primaryData.insert(QStringLiteral("startFrame"), clip->startFrame);
+            primaryData.insert(QStringLiteral("durationFrames"), clip->durationFrames);
+            primaryData.insert(QStringLiteral("layer"), clip->layer);
+            primaryData.insert(QStringLiteral("type"), clip->type);
         }
     }
 
@@ -585,35 +540,29 @@ void TimelineService::selectClipsInRange(int frameA, int frameB, int layerA, int
     int primaryId = -1;
     QVariantMap primaryData;
 
-    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
-    for (const auto &ct : snap->transforms) {
-        const auto *mSel = snap->metadataStates.find(ct.clipId);
-        if (mSel == nullptr) {
-            continue;
-        }
-        const int clipEnd = ct.startFrame + ct.durationFrames;
-        const bool frameOverlap = ct.startFrame < maxFrame && minFrame < clipEnd;
-        const bool layerMatch = ct.layer >= minLayer && ct.layer <= maxLayer;
+    for (const auto &clip : clips()) {
+        const int clipStart = clip.startFrame;
+        const int clipEnd = clip.startFrame + clip.durationFrames;
+        const bool frameOverlap = clipStart < maxFrame && minFrame < clipEnd;
+        const bool layerMatch = clip.layer >= minLayer && clip.layer <= maxLayer;
         if (!frameOverlap || !layerMatch) {
             continue;
         }
 
-        ids.append(ct.clipId);
+        ids.append(clip.id);
 
         if (primaryId == -1) {
-            primaryId = ct.clipId;
-            const auto *fxSel = snap->effectStacks.find(ct.clipId);
-            if (fxSel != nullptr) {
-                for (const auto &eff : std::as_const(fxSel->effects)) {
-                    for (auto it = eff.params.begin(); it != eff.params.end(); ++it) {
-                        primaryData.insert(it.key(), it.value());
-                    }
+            primaryId = clip.id;
+            for (auto *eff : std::as_const(clip.effects)) {
+                QVariantMap params = eff->params();
+                for (auto it = params.begin(); it != params.end(); ++it) {
+                    primaryData.insert(it.key(), it.value());
                 }
             }
-            primaryData.insert(QStringLiteral("startFrame"), ct.startFrame);
-            primaryData.insert(QStringLiteral("durationFrames"), ct.durationFrames);
-            primaryData.insert(QStringLiteral("layer"), ct.layer);
-            primaryData.insert(QStringLiteral("type"), mSel->type);
+            primaryData.insert(QStringLiteral("startFrame"), clip.startFrame);
+            primaryData.insert(QStringLiteral("durationFrames"), clip.durationFrames);
+            primaryData.insert(QStringLiteral("layer"), clip.layer);
+            primaryData.insert(QStringLiteral("type"), clip.type);
         }
     }
 
@@ -671,11 +620,13 @@ void TimelineService::deleteClipsByIds(const QVariantList &ids) {
 void TimelineService::deleteClip(int clipId) { deleteClipsByIds({clipId}); }
 
 void TimelineService::deleteClipInternal(int clipId, bool emitSignal) {
-    // m_scenes ループを廃止: ECS を正本として削除する
-    auto &delEcs = AviQtl::Engine::Timeline::ECS::instance();
-    if (delEcs.getSnapshot()->transforms.find(clipId) != nullptr) {
-        AviQtl::Engine::Timeline::ClipLifecycleSystem::destroyClip(delEcs.editState(), clipId);
-        delEcs.commit();
+    auto &currentClips = clipsMutable();
+    auto it = std::ranges::find_if(currentClips, [clipId](const ClipData &c) -> bool { return c.id == clipId; });
+    if (it != currentClips.end()) {
+        for (auto *eff : it->effects) {
+            eff->deleteLater();
+        }
+        currentClips.erase(it);
         if (emitSignal) {
             emit clipsChanged();
         }
@@ -683,95 +634,76 @@ void TimelineService::deleteClipInternal(int clipId, bool emitSignal) {
 }
 
 void TimelineService::addClipDirectInternal(const ClipData &clip, bool emitSignal) {
-    // m_scenes.append 廃止: ECS へ直接復元する
-    auto &addEcs = AviQtl::Engine::Timeline::ECS::instance();
-    AviQtl::Engine::Timeline::ClipLifecycleSystem::restoreClipFromDTO(addEcs.editState(), clip);
-    addEcs.commit();
+    clipsMutable().append(clip);
     if (emitSignal) {
         emit clipsChanged();
         emit clipCreated(clip.id, clip.layer, clip.startFrame, clip.durationFrames, clip.type);
     }
 }
-void TimelineService::restoreClipFromSnapshotInternal(const AviQtl::UI::ClipSnapshot &snap, bool emitSignal) {
-    auto &ecs = AviQtl::Engine::Timeline::ECS::instance();
-    AviQtl::Engine::Timeline::ClipLifecycleSystem::restoreClipFromSnapshot(ecs.editState(), snap);
-    ecs.commit();
-    if (emitSignal) {
-        emit clipsChanged();
-        emit clipCreated(snap.transform.clipId, snap.transform.layer, snap.transform.startFrame, snap.transform.durationFrames, snap.metadata.type);
+
+auto TimelineService::findClipById(int clipId) -> ClipData * {
+    auto &currentClips = clipsMutable();
+    auto it = std::ranges::find_if(currentClips, [clipId](const ClipData &c) -> bool { return c.id == clipId; });
+    return (it != currentClips.end()) ? &(*it) : nullptr;
+}
+
+auto TimelineService::findClipById(int clipId) const -> const ClipData * {
+    const auto &currentClips = clips();
+    auto it = std::ranges::find_if(currentClips, [clipId](const ClipData &c) -> bool { return c.id == clipId; });
+    return (it != currentClips.end()) ? &(*it) : nullptr;
+}
+
+auto TimelineService::deepCopyClip(const ClipData &source) -> ClipData {
+    ClipData newClip;
+    newClip.id = -1;
+    newClip.type = source.type;
+    newClip.startFrame = source.startFrame;
+    newClip.durationFrames = source.durationFrames;
+    newClip.layer = source.layer;
+
+    for (const auto *oldEffect : std::as_const(source.effects)) {
+        auto *newEffect = new EffectModel(oldEffect->id(), oldEffect->name(), oldEffect->kind(), oldEffect->categories(), oldEffect->params(), oldEffect->qmlSource(), oldEffect->uiDefinition(), this);
+        newEffect->setEnabled(oldEffect->isEnabled());
+        newEffect->setKeyframeTracks(oldEffect->keyframeTracks());
+        newEffect->syncTrackEndpoints(source.durationFrames);
+        connect(newEffect, &EffectModel::keyframeTracksChanged, this, &TimelineService::clipsChanged);
+        newClip.effects.append(newEffect);
     }
-}
-
-void TimelineService::restoreClipsFromSnapshotInternal(const QList<AviQtl::UI::ClipSnapshot> &snaps) {
-    auto &ecs = AviQtl::Engine::Timeline::ECS::instance();
-    for (const auto &snap : snaps)
-        AviQtl::Engine::Timeline::ClipLifecycleSystem::restoreClipFromSnapshot(ecs.editState(), snap);
-    ecs.commit();
-    emit clipsChanged();
-}
-
-void TimelineService::setClipboardFromSnapshot(const AviQtl::UI::ClipSnapshot &snap) {
-    m_clipboardSnapshots.clear();
-    m_clipboardSnapshots.append(snap);
+    return newClip;
 }
 
 void TimelineService::copyClip(int clipId) {
-    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
-    AviQtl::UI::ClipSnapshot cs;
-    if (const auto *t = snap->transforms.find(clipId)) {
-        cs.transform = *t;
+    auto &currentClips = clipsMutable();
+    auto it = std::ranges::find_if(currentClips, [clipId](const ClipData &c) -> bool { return c.id == clipId; });
+    if (it == currentClips.end()) {
+        return;
     }
-    if (const auto *m = snap->metadataStates.find(clipId)) {
-        cs.metadata = *m;
-    }
-    if (const auto *fx = snap->effectStacks.find(clipId)) {
-        cs.effectStack = *fx;
-    }
-    if (const auto *au = snap->audioStacks.find(clipId)) {
-        cs.audioStack = *au;
-    }
-    if (cs.isValid()) {
-        m_clipboardSnapshots.clear();
-        m_clipboardSnapshots.append(cs);
-    }
+
+    m_clipboard.clear();
+    m_clipboard.append(deepCopyClip(*it));
 }
 
 void TimelineService::copySelectedClips() {
+    QList<ClipData> copied;
     const QVariantList ids = m_selection->selectedClipIds();
-    QList<AviQtl::UI::ClipSnapshot> copied;
-    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
     for (const QVariant &value : std::as_const(ids)) {
         const int id = value.toInt();
-        AviQtl::UI::ClipSnapshot cs;
-        if (const auto *t = snap->transforms.find(id)) {
-            cs.transform = *t;
-        }
-        if (const auto *m = snap->metadataStates.find(id)) {
-            cs.metadata = *m;
-        }
-        if (const auto *fx = snap->effectStacks.find(id)) {
-            cs.effectStack = *fx;
-        }
-        if (const auto *au = snap->audioStacks.find(id)) {
-            cs.audioStack = *au;
-        }
-        if (cs.isValid()) {
-            copied.append(cs);
+        const auto *clip = findClipById(id);
+        if (clip != nullptr) {
+            copied.append(deepCopyClip(*clip));
         }
     }
     if (!copied.isEmpty()) {
-        m_clipboardSnapshots = copied;
+        setClipboard(copied);
     }
 }
 
 void TimelineService::cutClip(int clipId) {
-    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
-    const auto *mC = snap->metadataStates.find(clipId);
-    const auto *fxC = snap->effectStacks.find(clipId);
-    if (mC == nullptr) {
+    const auto *clip = findClipById(clipId); // findClipById は const なので、ここでコピー
+    if (clip == nullptr) {
         return;
     }
-    QString name = (fxC == nullptr || fxC->effects.isEmpty()) ? mC->type : fxC->effects.first().name;
+    QString name = clip->effects.isEmpty() ? clip->type : clip->effects.first()->name();
     m_undoStack->push(new CutClipCommand(this, clipId, name));
 }
 
@@ -785,30 +717,14 @@ void TimelineService::cutSelectedClips() {
         return;
     }
 
-    QList<AviQtl::UI::ClipSnapshot> copied;
-    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
+    QList<ClipData> copied;
     for (const QVariant &v : std::as_const(ids)) {
-        const int id = v.toInt();
-        AviQtl::UI::ClipSnapshot cs;
-        if (const auto *t = snap->transforms.find(id)) {
-            cs.transform = *t;
-        }
-        if (const auto *m = snap->metadataStates.find(id)) {
-            cs.metadata = *m;
-        }
-        if (const auto *fx = snap->effectStacks.find(id)) {
-            cs.effectStack = *fx;
-        }
-        if (const auto *au = snap->audioStacks.find(id)) {
-            cs.audioStack = *au;
-        }
-        if (cs.isValid()) {
-            copied.append(cs);
+        const auto *clip = findClipById(v.toInt());
+        if (clip != nullptr) {
+            copied.append(deepCopyClip(*clip));
         }
     }
-    if (!copied.isEmpty()) {
-        m_clipboardSnapshots = copied;
-    }
+    setClipboard(copied); // クリップボードにコピー
 
     QList<int> intIds;
     for (const QVariant &v : std::as_const(ids)) {
@@ -835,7 +751,7 @@ void TimelineService::splitSelectedClips(int frame) {
 }
 
 void TimelineService::pasteClip(int frame, int layer) {
-    if (m_clipboardSnapshots.isEmpty()) {
+    if (m_clipboard.isEmpty()) {
         return;
     }
 
@@ -843,30 +759,29 @@ void TimelineService::pasteClip(int frame, int layer) {
     layer = std::max(layer, 0);
 
     auto overlaps = [](int s1, int d1, int s2, int d2) -> bool { return (s1 < (s2 + d2)) && (s2 < (s1 + d1)); };
-    // 衝突チェック: ECS スナップショットを正本として走査（m_scenes廃止）
-    const auto *pasteSnap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
+    auto &currentClips = clipsMutable();
 
-    int baseFrame = m_clipboardSnapshots.first().transform.startFrame;
-    int baseLayer = m_clipboardSnapshots.first().transform.layer;
-    for (const auto &clip : std::as_const(m_clipboardSnapshots)) {
-        baseFrame = std::min(baseFrame, clip.transform.startFrame);
-        baseLayer = std::min(baseLayer, clip.transform.layer);
+    int baseFrame = m_clipboard.first().startFrame;
+    int baseLayer = m_clipboard.first().layer;
+    for (const auto &clip : std::as_const(m_clipboard)) {
+        baseFrame = std::min(baseFrame, clip.startFrame);
+        baseLayer = std::min(baseLayer, clip.layer);
     }
 
-    QList<AviQtl::UI::ClipSnapshot> pending;
-    for (const auto &src : std::as_const(m_clipboardSnapshots)) {
-        AviQtl::UI::ClipSnapshot newClip = src;
-        newClip.transform.startFrame = frame + (src.transform.startFrame - baseFrame);
-        newClip.transform.layer = std::max(0, layer + (src.transform.layer - baseLayer));
+    QList<ClipData> pending;
+    for (const auto &src : std::as_const(m_clipboard)) {
+        ClipData newClip = deepCopyClip(src);
+        newClip.startFrame = frame + (src.startFrame - baseFrame);
+        newClip.layer = std::max(0, layer + (src.layer - baseLayer));
 
-        for (const auto &ct : pasteSnap->transforms) {
-            if (ct.layer == newClip.transform.layer && overlaps(newClip.transform.startFrame, newClip.transform.durationFrames, ct.startFrame, ct.durationFrames)) {
-                qWarning() << "クリップ貼り付けを拒否: レイヤー" << newClip.transform.layer << "の" << newClip.transform.startFrame << "フレームで衝突が発生";
+        for (const auto &c : std::as_const(currentClips)) {
+            if (c.layer == newClip.layer && overlaps(newClip.startFrame, newClip.durationFrames, c.startFrame, c.durationFrames)) {
+                qWarning() << "クリップ貼り付けを拒否: レイヤー" << newClip.layer << "の" << newClip.startFrame << "フレームで衝突が発生";
                 return;
             }
         }
         for (const auto &c : std::as_const(pending)) {
-            if (c.transform.layer == newClip.transform.layer && overlaps(newClip.transform.startFrame, newClip.transform.durationFrames, c.transform.startFrame, c.transform.durationFrames)) {
+            if (c.layer == newClip.layer && overlaps(newClip.startFrame, newClip.durationFrames, c.startFrame, c.durationFrames)) {
                 qWarning() << "クリップ貼り付けを拒否: 貼り付け対象同士が衝突";
                 return;
             }
@@ -875,29 +790,38 @@ void TimelineService::pasteClip(int frame, int layer) {
         pending.append(newClip);
     }
 
-    // TODO: Phase3 Undo command requires ClipSnapshot support
-    // For now, PasteClipCommand still takes ClipData (converted dynamically in Phase3 or here if needed)
-    // To preserve buildability for Phase2, we will leave PasteClipCommand untouched until Phase3.
-    // *Temporarily bypass Paste for Phase 2 strict snapshot build.*
-    qWarning() << "pasteClip is temporarily disabled until Undo command supports ClipSnapshot (Phase 3)";
-}
-
-void TimelineService::splitClip(int clipId, int frame) {
-    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
-    const auto *tSp = snap->transforms.find(clipId);
-    const auto *mSp = snap->metadataStates.find(clipId);
-    const auto *fxSp = snap->effectStacks.find(clipId);
-    if (tSp == nullptr || mSp == nullptr) {
+    if (pending.size() == 1) {
+        int newId = m_nextClipId++;
+        m_undoStack->push(new PasteClipCommand(this, newId, pending.first()));
         return;
     }
 
-    if (frame > tSp->startFrame && frame < tSp->startFrame + tSp->durationFrames) {
-        QString clipName = (fxSp == nullptr || fxSp->effects.isEmpty()) ? mSp->type : fxSp->effects.first().name;
+    m_undoStack->beginMacro(QObject::tr("複数クリップ貼り付け: %1").arg(pending.size()));
+    for (const auto &clip : std::as_const(pending)) {
+        int newId = m_nextClipId++;
+        m_undoStack->push(new PasteClipCommand(this, newId, clip));
+    }
+    m_undoStack->endMacro();
+}
+
+void TimelineService::splitClip(int clipId, int frame) {
+    const auto *clip = findClipById(clipId);
+    if (clip == nullptr) {
+        return;
+    }
+
+    if (frame > clip->startFrame && frame < clip->startFrame + clip->durationFrames) {
+        QString clipName = clip->type;
+        if (!clip->effects.isEmpty()) {
+            clipName = clip->effects.first()->name();
+        }
         m_undoStack->push(new SplitClipCommand(this, clipId, frame, clipName));
     }
 }
 
-// clips() / clipsMutable() は ECS 正本化に伴い廃止（フェーズ3完了）
+auto TimelineService::clips() const -> const QList<ClipData> & { return currentScene()->clips; }
+
+auto TimelineService::clipsMutable() -> QList<ClipData> & { return currentScene()->clips; }
 
 auto TimelineService::clips(int sceneId) const -> const QList<ClipData> & {
     for (const auto &scene : std::as_const(m_scenes)) {
@@ -910,25 +834,26 @@ auto TimelineService::clips(int sceneId) const -> const QList<ClipData> & {
 }
 
 auto TimelineService::findVacantFrame(int layer, int startFrame, int duration, int excludeClipId) const -> int { // NOLINT(bugprone-easily-swappable-parameters)
-    QList<const AviQtl::Engine::Timeline::TransformComponent *> layerClips;
+    QList<const ClipData *> layerClips;
 
+    // バッチ移動中は明示的に指定された集合を使い、そうでない場合は選択情報を使う
     bool isBatchMode = !m_batchExcludes.isEmpty();
     bool isSelected = (m_selection != nullptr) && m_selection->isSelected(excludeClipId);
     QVariantList selectedIds = isSelected ? m_selection->selectedClipIds() : QVariantList();
 
-    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
-    for (const auto &ct : snap->transforms) {
-        if (ct.clipId == excludeClipId) {
+    for (const auto &clip : clips()) {
+        if (clip.id == excludeClipId) {
             continue;
         }
+
         if (isBatchMode) {
-            if (m_batchExcludes.contains(ct.clipId)) {
+            if (m_batchExcludes.contains(clip.id)) {
                 continue;
             }
         } else if (isSelected) {
             bool isPeer = false;
             for (const QVariant &v : std::as_const(selectedIds)) {
-                if (v.toInt() == ct.clipId) {
+                if (v.toInt() == clip.id) {
                     isPeer = true;
                     break;
                 }
@@ -937,12 +862,13 @@ auto TimelineService::findVacantFrame(int layer, int startFrame, int duration, i
                 continue;
             }
         }
-        if (ct.layer == layer) {
-            layerClips.append(&ct);
+
+        if (clip.layer == layer) {
+            layerClips.append(&clip);
         }
     }
 
-    std::ranges::sort(layerClips, [](const auto *a, const auto *b) -> bool { return a->startFrame < b->startFrame; });
+    std::ranges::sort(layerClips, [](const ClipData *a, const ClipData *b) -> bool { return a->startFrame < b->startFrame; });
 
     int candidateStart = std::max(0, startFrame);
     for (const auto &clip : std::as_const(layerClips)) {
@@ -953,6 +879,18 @@ auto TimelineService::findVacantFrame(int layer, int startFrame, int duration, i
         }
     }
     return candidateStart;
+}
+
+void TimelineService::setClipboard(const ClipData &clip) {
+    m_clipboard.clear();
+    m_clipboard.append(deepCopyClip(clip));
+}
+
+void TimelineService::setClipboard(const QList<ClipData> &clips) {
+    m_clipboard.clear();
+    for (const auto &clip : std::as_const(clips)) {
+        m_clipboard.append(deepCopyClip(clip));
+    }
 }
 
 } // namespace AviQtl::UI

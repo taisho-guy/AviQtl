@@ -5,11 +5,9 @@
 #include "color_scheme_controller.hpp"
 #include "compute_effect.hpp"
 #include "effect_registry.hpp"
-#include "package_manager.hpp"
 #include "settings_manager.hpp"
 #include "theme_controller.hpp"
 #include "timeline_controller.hpp"
-#include "version.hpp"
 #include "video_encoder.hpp"
 #include "video_frame_provider.hpp"
 #include "video_frame_store.hpp"
@@ -76,7 +74,7 @@ auto main(int argc, char *argv[]) -> int {
     QApplication::setWindowIcon(QIcon(QStringLiteral(":/assets/icon.svg")));
 
     // スプラッシュ画面をヒープ領域に確保する
-    int splashSize = settings.value(QStringLiteral("splashSize"), 512).toInt();
+    int splashSize = settings.value(QStringLiteral("splashSize"), 128).toInt();
     QPixmap splashPixmap = QIcon(QStringLiteral(":/assets/splash.svg")).pixmap(splashSize, splashSize);
     auto *splash = new QSplashScreen(splashPixmap);
     splash->show();
@@ -100,10 +98,6 @@ auto main(int argc, char *argv[]) -> int {
     engine.rootContext()->setContextProperty(QStringLiteral("SettingsManager"), &AviQtl::Core::SettingsManager::instance());
     engine.rootContext()->setContextProperty(QStringLiteral("ColorSchemeController"), colorSchemeController);
     qmlRegisterUncreatableType<AviQtl::UI::TimelineController>("AviQtl.UI", 1, 0, "TimelineController", "Managed by C++");
-
-    engine.rootContext()->setContextProperty(QStringLiteral("AviQtlVersion"), QString::fromUtf8(AviQtl::VERSION_STRING));
-    engine.rootContext()->setContextProperty(QStringLiteral("AviQtlVersionCodename"), QString::fromUtf8(AviQtl::VERSION_CODENAME));
-    engine.rootContext()->setContextProperty(QStringLiteral("PackageManager"), &AviQtl::Core::PackageManager::instance());
     auto *workspace = new AviQtl::UI::Workspace(&app);
     engine.rootContext()->setContextProperty(QStringLiteral("Workspace"), workspace);
     QObject::connect(workspace, &AviQtl::UI::Workspace::currentTimelineChanged, &app, [&modEngine, workspace]() {

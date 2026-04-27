@@ -38,14 +38,14 @@ Common.AviQtlWindow {
                 Layout.fillWidth: true
 
                 Label {
-                    text: "AviQtl " + (typeof AviQtlVersion !== "undefined" ? AviQtlVersion : "")
+                    text: "AviQtl"
                     font.pixelSize: 28
                     font.bold: true
                     color: palette.text
                 }
 
                 Label {
-                    text: typeof AviQtlVersionCodename !== "undefined" ? AviQtlVersionCodename : "Rolling Release"
+                    text: "Rolling Release"
                     font.pixelSize: 14
                     color: palette.highlight
                     font.bold: true

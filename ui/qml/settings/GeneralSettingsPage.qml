@@ -23,7 +23,7 @@ ScrollView {
         return fallback;
     }
 
-    // ページ本体
+    // --- ページ本体 ---
     Layout.fillWidth: true
     Layout.fillHeight: true
     contentWidth: availableWidth
@@ -155,7 +155,7 @@ ScrollView {
                     from: 128
                     to: 2048
                     stepSize: 64
-                    value: root.valueOr("splashSize", 512)
+                    value: root.valueOr("splashSize", 128)
                     onValueModified: root.setValue("splashSize", value)
                 }
 

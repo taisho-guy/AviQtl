@@ -4,8 +4,6 @@ import QtQuick3D
 import "qrc:/qt/qml/AviQtl/ui/qml/common" as Common
 
 Common.BaseObject {
-    // visible:false だと ShaderEffectSource の更新が止まる // removed: managed by BaseObject
-
     id: root
 
     // CompositeView から注入 (properties ではなく onItemChanged で動的セット)
@@ -21,7 +19,7 @@ Common.BaseObject {
     // width/height は flattenHost のサイズで代替 (Binding が上書きしないよう明示宣言)
     property real fbWidth: flattenHost.width
     property real fbHeight: flattenHost.height
-    // 内部: 上位レイヤー収集
+    // ─── 内部: 上位レイヤー収集 ───────────────────────────────────
     property var _capturedOutputs: []
 
     function _rebuildCapture() {
@@ -81,15 +79,13 @@ Common.BaseObject {
         target: Workspace.currentTimeline
     }
 
-    // 合成ホスト (offscreenRenderHost へ adopt2D される)
+    // ─── 合成ホスト (offscreenRenderHost へ adopt2D される) ──────
     Item {
-        // SceneGraph に残す (renderHost 側の opacity:0 で非表示にする) // removed: managed by BaseObject
-
         id: flattenHost
 
         width: (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.width : 1920
-        // height: (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.height : 1080
-        visible: true
+        height: (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.height : 1080
+        visible: true // SceneGraph に残す (renderHost 側の opacity:0 で非表示にする)
 
         // 収集した各レイヤーの output をレイヤー順に重ねる
         Repeater {
@@ -107,7 +103,24 @@ Common.BaseObject {
 
     }
 
-    // 3D Model として View3D に配置
+    // ─── 3D Model として View3D に配置 ───────────────────────────
+    Model {
+        source: "#Rectangle"
+        scale: Qt.vector3d(flattenHost.width / 100, flattenHost.height / 100, 1)
+
+        materials: DefaultMaterial {
+            lighting: DefaultMaterial.NoLighting
+            blendMode: root.blendMode
+            cullMode: root.cullMode
+
+            diffuseMap: Texture {
+                sourceItem: renderer.output
+            }
+
+        }
+
+    }
+
     // clearBelow: 下位レイヤーを黒でマスク
     Rectangle {
         visible: root.clearBelow
@@ -121,8 +134,8 @@ Common.BaseObject {
         id: fbSourceWrapper
 
         width: flattenHost.width
-        // height: flattenHost.height
-        visible: true
+        height: flattenHost.height
+        visible: true // visible:false だと ShaderEffectSource の更新が止まる
 
         ShaderEffectSource {
             anchors.fill: parent

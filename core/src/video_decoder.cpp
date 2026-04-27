@@ -75,14 +75,12 @@ void VideoDecoder::startDecoding() {
 }
 
 auto VideoDecoder::open(const QString &path) -> bool {
-    qDebug() << "[VD] open clipId=" << clipId() << "path=" << path;
     QMutexLocker locker(&m_mutex);
     close();
     mlastDecodedFrame = -1;
     mindex.clear();
 
     if (avformat_open_input(&mfmtCtx, path.toStdString().c_str(), nullptr, nullptr) != 0) {
-        qDebug() << "[VD] open: avformat_open_input FAILED clipId=" << clipId();
         return false;
     }
     if (avformat_find_stream_info(mfmtCtx, nullptr) < 0) {
@@ -148,10 +146,8 @@ hwinitdone:
         return false;
     }
     if (!buildIndex()) {
-        qDebug() << "[VD] open: buildIndex FAILED clipId=" << clipId();
         return false;
     }
-    qDebug() << "[VD] open: SUCCESS clipId=" << clipId() << "fps=" << msourceFps << "frames=" << mindex.size();
     return true;
 }
 
@@ -231,24 +227,19 @@ auto VideoDecoder::frameIndexFromSeconds(double seconds) const -> int {
 }
 
 void VideoDecoder::seekToTime(double seconds) {
-    qDebug() << "[VD] seekToTime clipId=" << clipId() << "sec=" << seconds << "isReady=" << m_isReady;
     if (!m_isReady) {
         return;
     }
     seconds = std::max(seconds, 0.0);
     const int frame = frameIndexFromSeconds(seconds);
-    qDebug() << "[VD] seekToTime -> frame=" << frame;
     seekToFrame(frame, msourceFps);
 }
 
 void VideoDecoder::seekToFrame(int frame, double fps) { // NOLINT(bugprone-easily-swappable-parameters)
-    qDebug() << "[VD] seekToFrame clipId=" << clipId() << "frame=" << frame << "fps=" << fps << "isReady=" << m_isReady;
     if (!m_isReady) {
-        qDebug() << "[VD] seekToFrame: early return - not ready clipId=" << clipId();
         return;
     }
     if (frame < 0) {
-        qDebug() << "[VD] seekToFrame: early return - frame<0 clipId=" << clipId();
         return;
     }
     mlastRequestedFrame.store(frame, std::memory_order_release);
@@ -277,14 +268,11 @@ void VideoDecoder::seekToFrame(int frame, double fps) { // NOLINT(bugprone-easil
 }
 
 void VideoDecoder::decodeTask(int targetFrame, double fps) { // NOLINT(bugprone-easily-swappable-parameters)
-    qDebug() << "[VD] decodeTask clipId=" << clipId() << "targetFrame=" << targetFrame;
     QMutexLocker locker(&m_mutex);
     if (mclosing.load(std::memory_order_acquire)) {
-        qDebug() << "[VD] decodeTask: early return - closing clipId=" << clipId();
         return;
     }
     if ((mdecCtx == nullptr) || mindex.empty()) {
-        qDebug() << "[VD] decodeTask: early return - mdecCtx=" << mdecCtx << "indexEmpty=" << mindex.empty() << "clipId=" << clipId();
         return;
     }
 

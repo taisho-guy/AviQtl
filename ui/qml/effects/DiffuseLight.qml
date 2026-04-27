@@ -8,14 +8,6 @@ Common.BaseEffect {
     property real diffusion: Math.max(0, root.evalNumber("diffusion", 10))
     property bool fixedSize: root.evalParam("fixedSize", false)
 
-    // 拡散量の分だけ全方向に拡張
-    expansion: ({
-        "top": diffusion,
-        "right": diffusion,
-        "bottom": diffusion,
-        "left": diffusion
-    })
-
     ShaderEffect {
         property variant source: root.sourceProxy
         property real strength: root.strength

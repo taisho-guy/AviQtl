@@ -3,8 +3,6 @@
 #include "commands.hpp"
 #include "effect_registry.hpp"
 #include "engine/plugin/audio_plugin_manager.hpp"
-#include "engine/timeline/clip_effect_system.hpp"
-#include "engine/timeline/ecs.hpp"
 #include "project_serializer.hpp"
 #include "project_service.hpp"
 #include "scripting/lua_host.hpp"
@@ -72,21 +70,14 @@ void TimelineController::setupConnections() {
     });
     connect(m_timeline, &TimelineService::currentSceneIdChanged, this, &TimelineController::currentSceneIdChanged);
     connect(m_timeline, &TimelineService::clipEffectsChanged, this, [this](int id) -> void {
-        m_mediaManager->updateMediaDecoders();
         m_mediaManager->onCurrentFrameChanged();
         updateActiveClipsList();
         emit clipEffectsChanged(id);
     });
-    connect(m_timeline, &TimelineService::effectParamChanged, this, [this](int clipId, int effectIndex, const QString &paramName, const QVariant &value) -> void {
-        // path/source 変更時のみデコーダーと表示を更新。
-        // パラメータ変更はクリップ位置に影響しないため updateActiveClipsList は不要。
-        if (paramName == QLatin1String("path") || paramName == QLatin1String("source") || paramName == QStringLiteral("targetSceneId")) {
-            m_mediaManager->updateMediaDecoders();
-            m_mediaManager->onCurrentFrameChanged();
-        }
-        emit effectParamChanged(clipId, effectIndex, paramName, value);
+    connect(m_timeline, &TimelineService::effectParamChanged, this, [this]() -> void {
+        m_mediaManager->onCurrentFrameChanged();
+        updateActiveClipsList();
     });
-    connect(m_timeline, &TimelineService::effectKeyframesChanged, this, &TimelineController::effectKeyframesChanged);
 
     // 画像や動画の準備ができたらUI側に再描画を促す
     connect(m_mediaManager, &TimelineMediaManager::frameUpdated, this, &TimelineController::clipEffectsChanged);
@@ -149,17 +140,16 @@ void TimelineController::log(const QString &msg) { qDebug() << "[TimelineBridge]
 auto TimelineController::resolveDragPosition(int clipId, int targetLayer, int proposedStartFrame, const QVariantList &batchIds) -> QPoint { return m_timeline->resolveDragPosition(clipId, targetLayer, proposedStartFrame, batchIds); }
 
 auto TimelineController::resolveDragDelta(int clipId, int deltaFrame, int deltaLayer, const QVariantList &batchIds, int minFrame, int minLayer, int maxLayer, int totalLayers) -> QPoint {
-    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
-    const auto *tr = snap->transforms.find(clipId);
-    if (tr == nullptr) {
+    const auto *clip = m_timeline->findClipById(clipId);
+    if (clip == nullptr) {
         return {0, 0};
     }
     // NOLINT(bugprone-easily-swappable-parameters)
     // 1. 衝突判定を含めた座標解決
-    QPoint resolved = m_timeline->resolveDragPosition(clipId, tr->layer + deltaLayer, tr->startFrame + deltaFrame, batchIds);
+    QPoint resolved = m_timeline->resolveDragPosition(clipId, clip->layer + deltaLayer, clip->startFrame + deltaFrame, batchIds);
 
-    int dF = resolved.x() - tr->startFrame;
-    int dL = resolved.y() - tr->layer;
+    int dF = resolved.x() - clip->startFrame;
+    int dL = resolved.y() - clip->layer;
 
     // 2. タイムライン境界によるクランプ (QMLから移行)
     if (minFrame + dF < 0) {
@@ -196,12 +186,6 @@ bool TimelineController::hasUnsavedChanges() const {
         return !m_timeline->undoStack()->isClean();
     }
     return false;
-}
-
-QVariantList TimelineController::keyframeListForUi(int clipId, int effectIndex, const QString &paramName) const {
-    using AviQtl::Engine::Timeline::ClipEffectSystem;
-    using AviQtl::Engine::Timeline::ECS;
-    return ClipEffectSystem::keyframeListForUi(ECS::instance().editState(), clipId, effectIndex, paramName);
 }
 
 } // namespace AviQtl::UI

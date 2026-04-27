@@ -76,7 +76,7 @@ SettingsManager::SettingsManager(QObject *parent) : QObject(parent) {
         {"timelineLayerHeaderWidth", 60},
         {"timelineRulerTimeWidth", 70},
         {"timelineClipResizeHandleWidth", 10},
-        {"splashDuration", 512},
+        {"splashDuration", 1000},
         {"splashSize", 512},
         {"appStartupDelay", 1000},
         {"exportImageQuality", 95},

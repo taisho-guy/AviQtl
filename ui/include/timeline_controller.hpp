@@ -37,12 +37,12 @@ namespace AviQtl::UI { // 元のnamespaceに戻す
 class TimelineController : public QObject {
     Q_OBJECT
 
-    // サービス (サブコントローラ)
+    // === サービス (サブコントローラ) ===
     Q_PROPERTY(AviQtl::UI::ProjectService *project READ project CONSTANT)
     Q_PROPERTY(AviQtl::UI::TransportService *transport READ transport CONSTANT)
     Q_PROPERTY(AviQtl::UI::SelectionService *selection READ selection CONSTANT)
 
-    // レガシー / ファサードプロパティ
+    // === レガシー / ファサードプロパティ ===
     Q_PROPERTY(double timelineScale READ timelineScale WRITE setTimelineScale NOTIFY timelineScaleChanged)
     Q_PROPERTY(int clipStartFrame READ clipStartFrame WRITE setClipStartFrame NOTIFY clipStartFrameChanged)
     Q_PROPERTY(int clipDurationFrames READ clipDurationFrames WRITE setClipDurationFrames NOTIFY clipDurationFramesChanged)
@@ -115,9 +115,7 @@ class TimelineController : public QObject {
     Q_INVOKABLE QVariantMap evaluateClipParams(int clipId, int relFrame) const;
 
     // エフェクト操作
-    Q_INVOKABLE QVariantList getClipEffectsModel(int clipId) const;
-    // 軽量 meta 版: id/name/kind/qmlSource/enabled のみ（params/keyframeTracks を含まない）
-    Q_INVOKABLE QVariantList getClipEffectsMeta(int clipId) const;
+    Q_INVOKABLE QList<QObject *> getClipEffectsModel(int clipId) const;
     Q_INVOKABLE void updateClipEffectParam(int clipId, int effectIndex, const QString &paramName, const QVariant &value);
 
     // エフェクト・オブジェクトの利用可能リスト取得
@@ -156,8 +154,6 @@ class TimelineController : public QObject {
     Q_INVOKABLE void setEffectParameter(int clipId, int effectIndex, int paramIndex, float value);
     Q_INVOKABLE void setKeyframe(int clipId, int effectIndex, const QString &paramName, int frame, const QVariant &value, const QVariantMap &options);
     Q_INVOKABLE void removeKeyframe(int clipId, int effectIndex, const QString &paramName, int frame);
-    // UI表示用キーフレーム一覧をECSから直接取得（QML→ECSの読み取りパス）
-    Q_INVOKABLE QVariantList keyframeListForUi(int clipId, int effectIndex, const QString &paramName) const;
 
     // シーン操作
     QVariantList scenes() const;
@@ -241,7 +237,6 @@ class TimelineController : public QObject {
     void activeObjectTypeChanged(); // 選択中クリップの種別 (text, rectなど)
     void clipsChanged();
     void effectParamChanged(int clipId, int effectIndex, const QString &paramName, const QVariant &value); // 追加
-    void effectKeyframesChanged(int clipId, int effectIndex, const QString &paramName);
     void scenesChanged();
     void currentSceneIdChanged();
     void currentProjectUrlChanged();
@@ -263,9 +258,6 @@ class TimelineController : public QObject {
     // Internal Slots
     void onPlayingChanged();
     void onCurrentFrameChanged();
-
-    // メディア制約（素材長）を考慮し duration を上限クランプして返す
-    int clampedDuration(int clipId, int newStart, int requestedDuration) const;
 
     void updateClipActiveState();
     double m_timelineScale = 1.0; // タイムラインの表示倍率 (1.0 = 1フレームあたり1ピクセル)

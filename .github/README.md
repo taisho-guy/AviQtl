@@ -5,9 +5,7 @@
 <p align="center"><b>AviUtlを踏襲し凌駕する次世代動画編集ソフト</b></p>
 
 > [!IMPORTANT]
-> ## このリポジトリは [Codeberg](https://codeberg.org/taisho-guy/Rina) のミラーです。
-> 開発はCodebergで活発に行われており、**イシューの報告やプルリクエストの送信はすべてCodebergでのみ受け付けています**。
-> フィードバックや貢献を検討されている方は、ぜひ Codeberg のリポジトリをご利用ください。
+> ### 本リポジトリは[Codeberg](https://codeberg.org/taisho-guy/AviQtl)のミラーです。開発の実態はCodebergにございます。
 
 ## AviQtlとは
 

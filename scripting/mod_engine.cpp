@@ -110,7 +110,7 @@ static HostApiTable g_hostApi = {.log = api_log,
 // ヘルパー
 static auto _checkCtrl(lua_State *L) -> int {
     if (g_ctrl == nullptr) {
-        lua_pushstring(L, "[RinaAPI] controller not ready");
+        lua_pushstring(L, "[AviQtlAPI] controller not ready");
         lua_error(L);
     }
     return 0;
@@ -363,7 +363,7 @@ void ModEngine::initialize(void *ecsPtr) {
 void ModEngine::registerController(void *controller) {
     g_ctrl = static_cast<AviQtl::UI::TimelineController *>(controller);
     if (L != nullptr) {
-        _registerRinaAPI();
+        _registerAviQtlAPI();
 
         // Export Host API Table
         lua_pushlightuserdata(L, &g_hostApi);
@@ -371,7 +371,7 @@ void ModEngine::registerController(void *controller) {
     }
 }
 
-void ModEngine::_registerRinaAPI() {
+void ModEngine::_registerAviQtlAPI() {
     // transport
     lua_register(L, "aviqtl_transport_play", l_transport_play);
     lua_register(L, "aviqtl_transport_pause", l_transport_pause);
@@ -410,9 +410,9 @@ void ModEngine::_registerRinaAPI() {
     lua_register(L, "aviqtl_command_begin_group", l_command_begin_group);
     lua_register(L, "aviqtl_command_end_group", l_command_end_group);
 
-    // rina.xxx() 形式のテーブルAPIをLua側で構築
+    // aviqtl.xxx() 形式のテーブルAPIをLua側で構築
     const char *aviqtl_table = R"(
-rina = {
+aviqtl = {
     transport = {
         play       = aviqtl_transport_play,
         pause      = aviqtl_transport_pause,
@@ -490,7 +490,7 @@ void ModEngine::onUpdate() {
     if (L == nullptr) {
         return;
     }
-    lua_getglobal(L, "RinaUpdateHook");
+    lua_getglobal(L, "AviQtlUpdateHook");
     if (lua_isfunction(L, -1)) {
         if (lua_pcall(L, 0, 0, 0) != 0) {
             qCritical() << "[ModEngine] Hook Error:" << lua_tostring(L, -1);

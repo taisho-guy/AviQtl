@@ -28,28 +28,15 @@ Common.BaseObject {
     // ★ ここが一番のキモ:
     // この VideoObject が属しているシーンの時間が進んだとき (relFrame は BaseObject の property)
     // C++ 側に「このクリップのこのローカル時間でデコードして！」と要求を出す
-    function _requestFrame() {
-        if (Workspace.currentTimeline && typeof Workspace.currentTimeline.requestVideoFrame === "function" && base.clipId > 0) {
-            console.log("[VID] _requestFrame clipId=" + base.clipId + " relFrame=" + base.relFrame);
-            Workspace.currentTimeline.requestVideoFrame(base.clipId, base.relFrame);
-        } else {
-            console.log("[VID] _requestFrame skip clipId=" + base.clipId + " relFrame=" + base.relFrame);
-        }
-    }
-
-    onClipIdChanged: {
-        console.log("[VID] onClipIdChanged clipId=" + base.clipId);
-        Qt.callLater(_requestFrame);
-    }
     onRelFrameChanged: {
-        _requestFrame();
-    }
-    onCurrentFrameChanged: {
-        _requestFrame();
+        if (Workspace.currentTimeline && typeof Workspace.currentTimeline.requestVideoFrame === "function" && base.clipId > 0)
+            Workspace.currentTimeline.requestVideoFrame(base.clipId, base.relFrame);
+
     }
     Component.onCompleted: {
-        console.log("[VID] onCompleted clipId=" + base.clipId + " relFrame=" + base.relFrame);
-        Qt.callLater(_requestFrame);
+        if (Workspace.currentTimeline && typeof Workspace.currentTimeline.requestVideoFrame === "function" && base.clipId > 0)
+            Workspace.currentTimeline.requestVideoFrame(base.clipId, base.relFrame);
+
     }
 
     Connections {
@@ -62,15 +49,29 @@ Common.BaseObject {
         target: videoFrameStore
     }
 
+    Model {
+        source: "#Rectangle"
+        scale: Qt.vector3d(base.sourceItem.width / 100, base.sourceItem.height / 100, 1)
+        opacity: base.opacity
+
+        materials: DefaultMaterial {
+            lighting: DefaultMaterial.NoLighting
+            blendMode: DefaultMaterial.SourceOver
+
+            diffuseMap: Texture {
+                sourceItem: renderer.output
+            }
+
+        }
+
+    }
+
     sourceItem: Item {
         id: containerItem
 
-        // Node 内で初期化される際、width は Qt Quick のレイアウトから外れて 0 になることがある。
-        // implicitWidth/Height を明示的に設定し、ObjectRenderer 側でそれをフォールバックとして拾う。
-        implicitWidth: (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.width : 1920
-        implicitHeight: (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.height : 1080
-        width: implicitWidth
-        height: implicitHeight
+        width: (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.width : 1920
+        height: (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.height : 1080
+        visible: false
 
         VideoOutput {
             id: videoOut
@@ -78,6 +79,9 @@ Common.BaseObject {
             anchors.fill: parent
             fillMode: VideoOutput.PreserveAspectFit
             opacity: base.opacity
+            // FBOキャプチャの黒画面制約を突破するGPUレイヤー化
+            layer.enabled: true
+            layer.format: ShaderEffectSource.RGBA
             Component.onCompleted: {
                 if (base.clipId > 0 && typeof videoFrameStore !== "undefined")
                     videoFrameStore.registerSink(base.instanceKey, videoOut.videoSink);

@@ -40,58 +40,25 @@
     </message>
 </context>
 <context>
-    <name>AviQtl::Core::PackageManager</name>
-    <message>
-        <location filename="../core/src/package_manager.cpp" line="11"/>
-        <source>待機中</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../core/src/package_manager.cpp" line="38"/>
-        <source>リポジトリを同期中...</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../core/src/package_manager.cpp" line="45"/>
-        <source>同期完了</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../core/src/package_manager.cpp" line="55"/>
-        <source>パッケージのインストール中: %1</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../core/src/package_manager.cpp" line="61"/>
-        <source>インストール完了: %1</source>
-        <translation type="unfinished"></translation>
-    </message>
-</context>
-<context>
     <name>AviQtl::UI::TimelineController</name>
     <message>
-        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="87"/>
+        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="80"/>
         <source>プロパティ変更: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="130"/>
+        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="122"/>
         <source>開始フレーム変更</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="148"/>
+        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="139"/>
         <source>長さ変更</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="166"/>
+        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="156"/>
         <source>レイヤー変更</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="356"/>
-        <source>複数クリップリサイズ: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -121,85 +88,80 @@
 <context>
     <name>AviQtl::UI::WindowManager</name>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="24"/>
+        <location filename="../ui/src/window_manager.cpp" line="50"/>
         <source>AviQtl メインプレビュー</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="25"/>
+        <location filename="../ui/src/window_manager.cpp" line="51"/>
         <source>タイムライン</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="26"/>
+        <location filename="../ui/src/window_manager.cpp" line="52"/>
         <source>プロジェクト設定</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="27"/>
+        <location filename="../ui/src/window_manager.cpp" line="53"/>
         <source>オブジェクト設定</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="28"/>
+        <location filename="../ui/src/window_manager.cpp" line="54"/>
         <source>システム設定</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="29"/>
+        <location filename="../ui/src/window_manager.cpp" line="55"/>
         <source>AviQtlについて</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="30"/>
+        <location filename="../ui/src/window_manager.cpp" line="56"/>
         <source>シーン設定</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="31"/>
+        <location filename="../ui/src/window_manager.cpp" line="57"/>
         <source>メディアの書き出し</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="32"/>
+        <location filename="../ui/src/window_manager.cpp" line="58"/>
         <source>補間設定</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/src/window_manager.cpp" line="33"/>
-        <source>パッケージマネージャー</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
     <name>BaseObject</name>
     <message>
-        <location filename="../ui/qml/common/BaseObject.qml" line="55"/>
+        <location filename="../ui/qml/common/BaseObject.qml" line="52"/>
         <source>通常</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/BaseObject.qml" line="56"/>
+        <location filename="../ui/qml/common/BaseObject.qml" line="53"/>
         <source>スクリーン</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/BaseObject.qml" line="59"/>
+        <location filename="../ui/qml/common/BaseObject.qml" line="56"/>
         <source>乗算</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/BaseObject.qml" line="62"/>
+        <location filename="../ui/qml/common/BaseObject.qml" line="59"/>
         <source>オーバーレイ</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/BaseObject.qml" line="65"/>
+        <location filename="../ui/qml/common/BaseObject.qml" line="62"/>
         <source>焼き込み</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/BaseObject.qml" line="68"/>
+        <location filename="../ui/qml/common/BaseObject.qml" line="65"/>
         <source>覆い焼き</source>
         <translation type="unfinished"></translation>
     </message>
@@ -214,37 +176,37 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="277"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="270"/>
         <source>開始色 (f%1)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="277"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="270"/>
         <source>色を選択</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="353"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="346"/>
         <source>終了色 (f%1)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="398"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="391"/>
         <source>ファイルを選択</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="540"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="530"/>
         <source>設定</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="616"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="606"/>
         <source>フォントを選択</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="632"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="622"/>
         <source>デフォルト</source>
         <translation type="unfinished"></translation>
     </message>
@@ -300,166 +262,166 @@
 <context>
     <name>EasingConfigWindow</name>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="373"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="372"/>
         <source>補間設定: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="410"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="409"/>
         <source>プレビュー</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="420"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="419"/>
         <source>ズーム:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="683"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="682"/>
         <source>右ドラッグ:パン  ホイール:ズーム</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="683"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="682"/>
         <source>  左ドラッグ:ハンドル</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="692"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="691"/>
         <source>制御点</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="776"/>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="980"/>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="980"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="775"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="979"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="979"/>
         <source>直線</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="779"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="778"/>
         <source>サイン</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="782"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="781"/>
         <source>2次</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="785"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="784"/>
         <source>3次</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="788"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="787"/>
         <source>4次</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="791"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="790"/>
         <source>5次</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="794"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="793"/>
         <source>指数</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="797"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="796"/>
         <source>円</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="800"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="799"/>
         <source>戻る</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="803"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="802"/>
         <source>弾性</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="806"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="805"/>
         <source>跳ね返り</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="809"/>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="983"/>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="983"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="808"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="982"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="982"/>
         <source>カスタム</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="820"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="819"/>
         <source>種類</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="833"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="832"/>
         <source>検索...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="986"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="985"/>
         <source>加減速</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="989"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="988"/>
         <source>減加速</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="992"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="991"/>
         <source>加速</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="995"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="994"/>
         <source>減速</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1042"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1041"/>
         <source>補間方法:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1054"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1053"/>
         <source>瞬間移動</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1057"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1056"/>
         <source>直線移動</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1060"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1059"/>
         <source>曲線移動</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1063"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1062"/>
         <source>ランダム移動</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1066"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1065"/>
         <source>反復移動</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1089"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1088"/>
         <source>更新間隔:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1102"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1101"/>
         <source>フレーム</source>
         <translation type="unfinished"></translation>
     </message>
@@ -785,217 +747,217 @@
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="94"/>
+        <location filename="../ui/qml/MainWindow.qml" line="27"/>
+        <source>AviQtl - プレビュー</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/MainWindow.qml" line="65"/>
         <source>新規プロジェクト</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="106"/>
+        <location filename="../ui/qml/MainWindow.qml" line="78"/>
         <source>プロジェクトの上書き保存</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="123"/>
-        <location filename="../ui/qml/MainWindow.qml" line="532"/>
-        <location filename="../ui/qml/MainWindow.qml" line="532"/>
+        <location filename="../ui/qml/MainWindow.qml" line="95"/>
+        <location filename="../ui/qml/MainWindow.qml" line="502"/>
+        <location filename="../ui/qml/MainWindow.qml" line="502"/>
         <source>プロジェクトを開く</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="134"/>
+        <location filename="../ui/qml/MainWindow.qml" line="106"/>
         <source>プロジェクトを名前を付けて保存...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="143"/>
-        <location filename="../ui/qml/MainWindow.qml" line="1064"/>
-        <location filename="../ui/qml/MainWindow.qml" line="1064"/>
+        <location filename="../ui/qml/MainWindow.qml" line="115"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1014"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1014"/>
         <source>終了</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="158"/>
+        <location filename="../ui/qml/MainWindow.qml" line="130"/>
         <source>元に戻す</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="171"/>
+        <location filename="../ui/qml/MainWindow.qml" line="143"/>
         <source>やり直す</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="184"/>
+        <location filename="../ui/qml/MainWindow.qml" line="156"/>
         <source>再生 / 一時停止</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="197"/>
+        <location filename="../ui/qml/MainWindow.qml" line="169"/>
         <source>クリップを分割</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="219"/>
+        <location filename="../ui/qml/MainWindow.qml" line="191"/>
         <source>削除</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="232"/>
+        <location filename="../ui/qml/MainWindow.qml" line="204"/>
         <source>コピー</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="245"/>
+        <location filename="../ui/qml/MainWindow.qml" line="217"/>
         <source>カット</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="258"/>
+        <location filename="../ui/qml/MainWindow.qml" line="230"/>
         <source>貼り付け</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="273"/>
+        <location filename="../ui/qml/MainWindow.qml" line="245"/>
         <source>複製</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="289"/>
+        <location filename="../ui/qml/MainWindow.qml" line="261"/>
         <source>1フレーム進む</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="302"/>
+        <location filename="../ui/qml/MainWindow.qml" line="274"/>
         <source>1フレーム戻る</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="315"/>
+        <location filename="../ui/qml/MainWindow.qml" line="287"/>
         <source>先頭へ移動</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="328"/>
+        <location filename="../ui/qml/MainWindow.qml" line="300"/>
         <source>末尾へ移動</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="341"/>
+        <location filename="../ui/qml/MainWindow.qml" line="313"/>
         <source>ズームイン</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="356"/>
+        <location filename="../ui/qml/MainWindow.qml" line="328"/>
         <source>ズームアウト</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="371"/>
+        <location filename="../ui/qml/MainWindow.qml" line="343"/>
         <source>レイヤーを上へ移動</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="384"/>
+        <location filename="../ui/qml/MainWindow.qml" line="356"/>
         <source>レイヤーを下へ移動</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="397"/>
+        <location filename="../ui/qml/MainWindow.qml" line="369"/>
         <source>1フレーム左へ移動</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="410"/>
+        <location filename="../ui/qml/MainWindow.qml" line="382"/>
         <source>1フレーム右へ移動</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="421"/>
+        <location filename="../ui/qml/MainWindow.qml" line="393"/>
         <source>エラー</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="430"/>
+        <location filename="../ui/qml/MainWindow.qml" line="402"/>
         <source>保存の確認</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="464"/>
+        <location filename="../ui/qml/MainWindow.qml" line="434"/>
         <source>プロジェクトに保存されていない変更があります。
 続行する前に保存しますか？</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="511"/>
+        <location filename="../ui/qml/MainWindow.qml" line="481"/>
         <source>名前を付けて保存</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="832"/>
+        <location filename="../ui/qml/MainWindow.qml" line="782"/>
         <source>速度</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1021"/>
+        <location filename="../ui/qml/MainWindow.qml" line="971"/>
         <source>ファイル</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1050"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1000"/>
         <source>メディアの書き出し...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1092"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1042"/>
         <source>プロジェクト設定</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1105"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1055"/>
         <source>環境設定</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1144"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1094"/>
         <source>ツール</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1147"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1097"/>
         <source>パッケージマネージャー</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1089"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1039"/>
         <source>設定</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="53"/>
-        <source>AviQtl - プレビュー</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1073"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1023"/>
         <source>編集</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1118"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1068"/>
         <source>表示</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1121"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1071"/>
         <source>タイムラインの表示</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1131"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1081"/>
         <source>設定ダイアログの表示</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1158"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1108"/>
         <source>バージョン情報</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1005,29 +967,6 @@
     <message>
         <location filename="../ui/qml/common/NodeLoader.qml" line="61"/>
         <source>[NodeLoader] コンポーネントエラー: %1</source>
-        <translation type="unfinished"></translation>
-    </message>
-</context>
-<context>
-    <name>PackageManagerWindow</name>
-    <message>
-        <location filename="../ui/qml/PackageManagerWindow.qml" line="9"/>
-        <source>パッケージマネージャー</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/PackageManagerWindow.qml" line="24"/>
-        <source>リポジトリを同期</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/PackageManagerWindow.qml" line="35"/>
-        <source>検索...</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/PackageManagerWindow.qml" line="50"/>
-        <source>（後で実装: パッケージリスト）</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -1103,92 +1042,92 @@
 <context>
     <name>ProjectLauncherWindow</name>
     <message>
-        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="12"/>
+        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="15"/>
         <source>AviQtl - プロジェクトランチャー</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="54"/>
+        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="57"/>
         <source>新規プロジェクト</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="60"/>
+        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="63"/>
         <source>プロジェクト設定</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="70"/>
+        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="73"/>
         <source>テンプレート:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="77"/>
+        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="80"/>
         <source>HD 1080p (1920x1080, 30fps)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="77"/>
+        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="80"/>
         <source>HD 720p (1280x720, 30fps)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="77"/>
+        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="80"/>
         <source>Full HD (1920x1080, 60fps)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="77"/>
+        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="80"/>
         <source>4K UHD (3840x2160, 30fps)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="77"/>
+        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="80"/>
         <source>カスタム</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="111"/>
+        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="114"/>
         <source>幅 (横):</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="127"/>
+        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="130"/>
         <source>高さ (縦):</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="143"/>
+        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="146"/>
         <source>フレームレート (FPS):</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="159"/>
+        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="162"/>
         <source>サンプリングレート:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="207"/>
+        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="203"/>
         <source>新規プロジェクトを作成</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="229"/>
+        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="225"/>
         <source>最近使ったプロジェクト</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="258"/>
+        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="254"/>
         <source>無題のプロジェクト</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="296"/>
+        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="292"/>
         <source>既存プロジェクトを開く...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="312"/>
+        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="308"/>
         <source>プロジェクトファイルを開く</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1272,168 +1211,173 @@
 <context>
     <name>QObject</name>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="12"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="10"/>
         <source>クリップ追加: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="19"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="17"/>
         <source>クリップ移動: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="26"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="24"/>
         <source>パラメータ変更: %1 - %2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="45"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="43"/>
         <source>エフェクト追加: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="52"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="50"/>
         <source>エフェクト削除: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="66"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="64"/>
         <source>エフェクト順序変更</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="79"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="77"/>
         <source>オーディオプラグイン順序変更</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="85"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="83"/>
         <source>エフェクト有効/無効切り替え</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="91"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="89"/>
         <source>オーディオプラグイン有効/無効切り替え</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="99"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="97"/>
         <source>エフェクト貼り付け</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="106"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="104"/>
         <source>レイヤーロック</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="106"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="104"/>
         <source>ロック解除</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="106"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="104"/>
         <source>レイヤー非表示</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="106"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="104"/>
         <source>レイヤー表示</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="107"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="105"/>
         <source>%1: レイヤー %2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="114"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="112"/>
         <source>クリップ分割: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="182"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="170"/>
         <source>クリップ削除: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="223"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="202"/>
         <source>切り取り: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="231"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="213"/>
         <source>貼り付け: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="246"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="225"/>
         <source>キーフレーム設定: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="272"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="251"/>
         <source>キーフレーム削除: %1 [%2]</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="277"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="256"/>
         <source>シーン追加: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="288"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="267"/>
         <source>シーン削除: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_commands.cpp" line="295"/>
+        <location filename="../ui/src/timeline/timeline_commands.cpp" line="274"/>
         <source>シーン設定変更: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../ui/src/timeline/timeline_scene.cpp" line="60"/>
-        <location filename="../ui/src/timeline_service.cpp" line="55"/>
+        <location filename="../ui/src/timeline_service.cpp" line="17"/>
         <source>ルート</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_clip.cpp" line="183"/>
+        <location filename="../ui/src/timeline/timeline_clip.cpp" line="148"/>
         <source>複数クリップ絶対移動: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_clip.cpp" line="241"/>
+        <location filename="../ui/src/timeline/timeline_clip.cpp" line="204"/>
         <source>複数クリップ移動: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_clip.cpp" line="302"/>
+        <location filename="../ui/src/timeline/timeline_clip.cpp" line="263"/>
         <source>複数クリップ変形: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_clip.cpp" line="662"/>
+        <location filename="../ui/src/timeline/timeline_clip.cpp" line="611"/>
         <source>クリップ削除</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_clip.cpp" line="662"/>
+        <location filename="../ui/src/timeline/timeline_clip.cpp" line="611"/>
         <source>複数クリップ削除: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_clip.cpp" line="830"/>
+        <location filename="../ui/src/timeline/timeline_clip.cpp" line="746"/>
         <source>複数クリップ分割: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_effect.cpp" line="76"/>
+        <location filename="../ui/src/timeline/timeline_clip.cpp" line="799"/>
+        <source>複数クリップ貼り付け: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/src/timeline/timeline_effect.cpp" line="114"/>
         <source>エフェクト削除 (%1件)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_effect.cpp" line="171"/>
+        <location filename="../ui/src/timeline/timeline_effect.cpp" line="270"/>
         <source>エフェクト順序変更 (%1件)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1441,47 +1385,47 @@
 <context>
     <name>SettingDialog</name>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="255"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="214"/>
         <source>設定ダイアログ</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="565"/>
-        <source>選択した %1 件を削除</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="565"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="492"/>
         <source>削除</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="867"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="492"/>
+        <source>選択した %1 件を削除</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/SettingDialog.qml" line="804"/>
         <source> (直線)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="868"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="805"/>
         <source> (加速)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="869"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="806"/>
         <source> (減速)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="870"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="807"/>
         <source> (加減速)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="871"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="808"/>
         <source> (ベジェ)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="1332"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="1269"/>
         <source>エフェクトを追加</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1501,6 +1445,14 @@
     <message>
         <location filename="../ui/qml/settings/ShortcutSettingsPage.qml" line="78"/>
         <source>未設定</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>SplashWindow</name>
+    <message>
+        <location filename="../ui/qml/SplashWindow.qml" line="7"/>
+        <source>AviQtl を起動中...</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

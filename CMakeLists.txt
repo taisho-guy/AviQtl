@@ -140,7 +140,7 @@ qt_add_qml_module(AviQtl
         ui/qml/timeline/TimelineView.qml
         ui/qml/timeline/ClipItem.qml
         ui/qml/timeline/TimelineGrid.qml
-        ui/qml/ProjectLauncherWindow.qml
+            ui/qml/ProjectLauncherWindow.qml
         ui/qml/ProjectSettingsWindow.qml
         ui/qml/SettingDialog.qml
         ui/qml/SystemSettingsWindow.qml
@@ -157,7 +157,6 @@ qt_add_qml_module(AviQtl
         ui/qml/CompositeView.qml
         ui/qml/ExportDialog.qml
         ui/qml/AboutWindow.qml
-        ui/qml/PackageManagerWindow.qml
 
         ui/qml/common/AviQtlWindow.qml
         ui/qml/common/ParamControl.qml
@@ -206,8 +205,6 @@ endif()
 target_include_directories(AviQtl PRIVATE
     core/include
     ui/include
-    engine/timeline
-    scripting
     ${CARLA_INCLUDE_DIRS}
 )
 
@@ -257,7 +254,7 @@ file(COPY \"${CMAKE_SOURCE_DIR}/plugins/\" DESTINATION \"${CMAKE_BINARY_DIR}/plu
 ")
 add_custom_target(copy_runtime_assets ALL
     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_BINARY_DIR}/copy_assets.cmake
-    COMMENT "Copying runtime assets (excluding shader sources)"
+    COMMENT \"Copying runtime assets (excluding shader sources)\"
     VERBATIM
 )
 

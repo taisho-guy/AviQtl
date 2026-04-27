@@ -11,10 +11,6 @@
 #include <QtGlobal>
 #include <algorithm>
 
-#include "effect_data.hpp"
-#include "engine/timeline/clip_effect_system.hpp"
-#include "engine/timeline/ecs.hpp"
-
 namespace AviQtl::UI {
 
 void TimelineController::handleClipClick(int clipId, int modifiers) { // NOLINT(bugprone-easily-swappable-parameters)
@@ -36,24 +32,21 @@ void TimelineController::updateSelectionPreview(int frameA, int frameB, int laye
     int minL = std::min(layerA, layerB);
     int maxL = std::max(layerA, layerB);
 
-    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
-    for (const auto &ct : snap->transforms) {
-        const auto *fxUsp = snap->effectStacks.find(ct.clipId);
-        // GroupControl によるレイヤー拡張分を考慮
+    for (const auto &clip : m_timeline->clips()) {
+        // GroupControlによるレイヤーの拡張分を考慮
         int groupLayerCount = 0;
-        if (fxUsp != nullptr) {
-            for (const auto &eff : std::as_const(fxUsp->effects)) {
-                if (eff.id == QLatin1String("GroupControl")) {
-                    groupLayerCount = eff.params.value(QStringLiteral("layerCount"), 0).toInt();
-                    break;
-                }
+        for (auto *eff : clip.effects) {
+            if (eff->id() == QLatin1String("GroupControl")) {
+                groupLayerCount = eff->params().value(QStringLiteral("layerCount"), 0).toInt();
+                break;
             }
         }
-        int clipMaxL = ct.layer + groupLayerCount;
-        int clipEnd = ct.startFrame + ct.durationFrames;
-        if (ct.startFrame < maxF && minF < clipEnd && clipMaxL >= minL && ct.layer <= maxL) {
-            if (!ids.contains(ct.clipId)) {
-                ids.append(ct.clipId);
+        int clipMaxL = clip.layer + groupLayerCount;
+
+        int clipEnd = clip.startFrame + clip.durationFrames;
+        if (clip.startFrame < maxF && minF < clipEnd && clipMaxL >= minL && clip.layer <= maxL) {
+            if (!ids.contains(clip.id)) {
+                ids.append(clip.id);
             }
         }
     }
@@ -88,29 +81,28 @@ void TimelineController::setClipProperty(const QString &name, const QVariant &va
 
     for (const QVariant &vId : ids) {
         int id = vId.toInt();
-        const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
-        const auto *fx = snap->effectStacks.find(id);
-        if (fx == nullptr) {
+        const ClipData *clip = m_timeline->findClipById(id);
+        if (clip == nullptr) {
             continue;
         }
 
         int targetEffectIndex = -1;
-        for (int i = 0; i < fx->effects.size(); ++i) {
-            if (fx->effects.value(i).params.contains(name)) {
+        for (int i = 0; i < clip->effects.size(); ++i) {
+            if (clip->effects.value(i)->params().contains(name)) {
                 targetEffectIndex = i;
                 break;
             }
         }
 
-        if (targetEffectIndex == -1 && !fx->effects.isEmpty()) {
+        if (targetEffectIndex == -1 && !clip->effects.isEmpty()) {
             targetEffectIndex = 0;
             static const QStringList transformKeys = {"x", "y", "z", "scale", "aspect", "rotationX", "rotationY", "rotationZ", "opacity"};
-            if (!transformKeys.contains(name) && fx->effects.size() > 1) {
+            if (!transformKeys.contains(name) && clip->effects.size() > 1) {
                 targetEffectIndex = 1;
             }
         }
 
-        if (targetEffectIndex != -1 && targetEffectIndex < fx->effects.size()) {
+        if (targetEffectIndex != -1 && targetEffectIndex < clip->effects.size()) {
             updateClipEffectParam(id, targetEffectIndex, name, value);
         }
     }
@@ -128,10 +120,9 @@ void TimelineController::setClipStartFrame(int frame) {
     }
 
     m_timeline->undoStack()->beginMacro(tr("開始フレーム変更"));
-    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
     for (const QVariant &vId : ids) {
         int id = vId.toInt();
-        if (const auto *c = snap->transforms.find(id)) {
+        if (const auto *c = m_timeline->findClipById(id)) {
             m_timeline->updateClip(id, c->layer, frame, c->durationFrames);
         }
     }
@@ -146,10 +137,9 @@ void TimelineController::setClipDurationFrames(int frames) {
     }
 
     m_timeline->undoStack()->beginMacro(tr("長さ変更"));
-    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
     for (const QVariant &vId : ids) {
         int id = vId.toInt();
-        if (const auto *c = snap->transforms.find(id)) {
+        if (const auto *c = m_timeline->findClipById(id)) {
             m_timeline->updateClip(id, c->layer, c->startFrame, frames);
         }
     }
@@ -164,10 +154,9 @@ void TimelineController::setLayer(int layer) {
     }
 
     m_timeline->undoStack()->beginMacro(tr("レイヤー変更"));
-    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
     for (const QVariant &vId : ids) {
         int id = vId.toInt();
-        if (const auto *c = snap->transforms.find(id)) {
+        if (const auto *c = m_timeline->findClipById(id)) {
             m_timeline->updateClip(id, layer, c->startFrame, c->durationFrames);
         }
     }
@@ -203,98 +192,63 @@ void TimelineController::createObject(const QString &type, int startFrame, int l
     }
 }
 
-QVariantList TimelineController::getClipEffectsModel(int clipId) const {
-    QVariantList list;
-    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
-    if (!snap)
-        return list;
-
-    const auto *fx = snap->effectStacks.find(clipId);
-    if (!fx)
-        return list;
-
-    // SettingDialog 専用: evaluatedParam / keyframeTracks / setKeyframe 等
-    // EffectModel* の全メソッドが必要な場合のみ使用する。
-    // レンダリングパスには getClipEffectsMeta() を使うこと。
-    for (const auto &data : fx->effects) {
-        // parent=nullptr + JavaScriptOwnership: QML 参照消失時に GC が delete する
-        auto *model = AviQtl::UI::effectModelFromData(data);
-        list.append(QVariant::fromValue(model));
+auto TimelineController::getClipEffectsModel(int clipId) const -> QList<QObject *> {
+    QList<QObject *> list;
+    for (const auto &clip : m_timeline->clips()) {
+        if (clip.id == clipId) {
+            for (auto *eff : clip.effects) {
+                list.append(eff);
+            }
+            break;
+        }
     }
     return list;
 }
 
-auto TimelineController::getClipEffectsMeta(int clipId) const -> QVariantList {
-    QVariantList list;
-    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
-    if (!snap)
-        return list;
-    const auto *fx = snap->effectStacks.find(clipId);
-    if (!fx)
-        return list;
-
-    for (const auto &data : fx->effects) {
-        QVariantMap meta;
-        meta[QStringLiteral("id")] = data.id;
-        meta[QStringLiteral("name")] = data.name;
-        meta[QStringLiteral("kind")] = data.kind;
-        meta[QStringLiteral("qmlSource")] = data.qmlSource;
-        meta[QStringLiteral("enabled")] = data.enabled;
-        list.append(meta);
-    }
-    return list;
-}
-
-void TimelineController::updateClipEffectParam(int clipId, int effectIndex, const QString &paramName, const QVariant &value) {
-    qDebug() << "[TMM] updateClipEffectParam: clipId=" << clipId << "effectIndex=" << effectIndex << "paramName=" << paramName << "value=" << value;
-    m_timeline->updateEffectParam(clipId, effectIndex, paramName, value);
-}
+void TimelineController::updateClipEffectParam(int clipId, int effectIndex, const QString &paramName, const QVariant &value) { m_timeline->updateEffectParam(clipId, effectIndex, paramName, value); }
 
 auto TimelineController::clips() const -> QVariantList {
     QVariantList list;
-    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
-    for (const auto &ct : snap->transforms) {
-        const auto *m = snap->metadataStates.find(ct.clipId);
-        const auto *fx = snap->effectStacks.find(ct.clipId);
-        if (m == nullptr) {
-            continue;
-        }
-
+    for (const auto &clip : m_timeline->clips()) {
         QVariantMap map;
-        map.insert(QStringLiteral("id"), ct.clipId);
-        map.insert(QStringLiteral("type"), m->type);
-        map.insert(QStringLiteral("startFrame"), ct.startFrame);
-        map.insert(QStringLiteral("durationFrames"), ct.durationFrames);
-        map.insert(QStringLiteral("layer"), ct.layer);
+        map.insert(QStringLiteral("id"), clip.id);
+        map.insert(QStringLiteral("type"), clip.type);
+        map.insert(QStringLiteral("startFrame"), clip.startFrame);
+        map.insert(QStringLiteral("durationFrames"), clip.durationFrames);
+        map.insert(QStringLiteral("layer"), clip.layer);
 
-        auto meta = AviQtl::Core::EffectRegistry::instance().getEffect(m->type);
-        map.insert(QStringLiteral("name"), !meta.name.isEmpty() ? meta.name : m->type);
+        // オブジェクトのQMLパスを取得して追加
+        auto meta = AviQtl::Core::EffectRegistry::instance().getEffect(clip.type);
+        map.insert(QStringLiteral("name"), !meta.name.isEmpty() ? meta.name : clip.type);
         if (!meta.qmlSource.isEmpty()) {
             map.insert(QStringLiteral("qmlSource"), meta.qmlSource);
         }
 
+        // params を構築して追加
         QVariantMap params;
-        params.insert(QStringLiteral("layer"), ct.layer);
-        params.insert(QStringLiteral("startFrame"), ct.startFrame);
-        params.insert(QStringLiteral("durationFrames"), ct.durationFrames);
-        params.insert(QStringLiteral("id"), ct.clipId);
+        // 基本情報もparamsに入れておく（QML側での利便性とBaseObjectでの参照用）
+        params.insert(QStringLiteral("layer"), clip.layer);
+        params.insert(QStringLiteral("startFrame"), clip.startFrame);
+        params.insert(QStringLiteral("durationFrames"), clip.durationFrames);
+        params.insert(QStringLiteral("id"), clip.id);
 
         int groupLayerCount = 0;
-        if (fx != nullptr) {
-            for (const auto &eff : std::as_const(fx->effects)) {
-                if (eff.id == QLatin1String("GroupControl")) {
-                    groupLayerCount = eff.params.value(QStringLiteral("layerCount"), 0).toInt();
-                    break;
-                }
+        for (auto *eff : clip.effects) {
+            if (eff->id() == QLatin1String("GroupControl")) {
+                groupLayerCount = eff->params().value(QStringLiteral("layerCount"), 0).toInt();
+                break;
             }
-            map.insert(QStringLiteral("groupLayerCount"), groupLayerCount);
-            for (const auto &eff : std::as_const(fx->effects)) {
-                for (auto it = eff.params.begin(); it != eff.params.end(); ++it) {
-                    params.insert(it.key(), it.value());
-                }
+        }
+        map.insert(QStringLiteral("groupLayerCount"), groupLayerCount);
+
+        for (auto *eff : clip.effects) {
+            QVariantMap p = eff->params();
+            for (auto it = p.begin(); it != p.end(); ++it) {
+                params.insert(it.key(), it.value());
             }
         }
         map.insert(QStringLiteral("params"), params);
+
         list.append(map);
     }
     return list;
@@ -313,198 +267,136 @@ void TimelineController::applyClipBatchMove(const QVariantList &moves) {
 }
 
 void TimelineController::resizeSelectedClips(int deltaStartFrame, int deltaDuration) {
-    if (m_timeline == nullptr) {
-        return;
+    if (m_timeline != nullptr) {
+        m_timeline->resizeSelectedClips(deltaStartFrame, deltaDuration);
     }
-
-    const QVariantList ids = m_selection->selectedClipIds();
-    if (ids.isEmpty()) {
-        return;
-    }
-
-    // リサイズ前の状態を値コピー（updateClip 呼び出しでポインタが失効しないよう）
-    struct PendingResize {
-        int id;
-        int layer;
-        int oldStart;
-        int oldDuration;
-    };
-
-    QVector<PendingResize> pending;
-    pending.reserve(ids.size());
-    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
-    for (const QVariant &vId : std::as_const(ids)) {
-        const int id = vId.toInt();
-        const auto *t = snap->transforms.find(id);
-        if (t == nullptr) {
-            continue;
-        }
-        pending.push_back({id, t->layer, t->startFrame, t->durationFrames});
-    }
-    if (pending.isEmpty()) {
-        return;
-    }
-
-    // TimelineService と同一の衝突回避ソート順を維持する
-    if (deltaStartFrame > 0 || deltaDuration > 0) {
-        std::ranges::sort(pending, [](const PendingResize &a, const PendingResize &b) { return a.oldStart != b.oldStart ? a.oldStart > b.oldStart : a.layer > b.layer; });
-    } else {
-        std::ranges::sort(pending, [](const PendingResize &a, const PendingResize &b) { return a.oldStart != b.oldStart ? a.oldStart < b.oldStart : a.layer < b.layer; });
-    }
-
-    // updateClip() 経由で適用: メディア長クランプ・ECS 同期・Undo 登録を全クリップに保証
-    m_timeline->undoStack()->beginMacro(tr("複数クリップリサイズ: %1").arg(pending.size()));
-    for (const PendingResize &r : std::as_const(pending)) {
-        const int newStart = std::max(0, r.oldStart + deltaStartFrame);
-        const int newDuration = std::max(1, r.oldDuration + deltaDuration);
-        updateClip(r.id, r.layer, newStart, newDuration);
-    }
-    m_timeline->undoStack()->endMacro();
 }
 
-// clampedDuration: video/audio/scene の素材長に合わせて duration を上限クランプ
-// updateClip と resizeSelectedClips の共通ロジックとして抽出
-int TimelineController::clampedDuration(int clipId, int newStart, int requestedDuration) const {
-    Q_UNUSED(newStart);
-    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
-    const auto *m = snap->metadataStates.find(clipId);
-    const auto *fx = snap->effectStacks.find(clipId);
-    if (m == nullptr) {
-        return requestedDuration;
-    }
+void TimelineController::updateClip(int id, int layer, int startFrame, int duration) {
+    const auto *clip = m_timeline->findClipById(id);
 
-    const int projectFps = static_cast<int>(project()->fps());
-    int duration = requestedDuration;
+    if (clip != nullptr) {
+        const int projectFps = static_cast<int>(project()->fps());
 
-    if (m->type == QLatin1String("video")) {
-        auto *vid = qobject_cast<AviQtl::Core::VideoDecoder *>(m_mediaManager->decoderForClip(clipId));
-        if ((vid != nullptr) && vid->isReady()) {
-            int startVideoFrame = 0;
-            double speed = 100.0;
-            bool isDirectMode = false;
+        if (clip->type == QLatin1String("video")) {
+            auto *vid = qobject_cast<AviQtl::Core::VideoDecoder *>(m_mediaManager->decoderForClip(id));
+            if ((vid != nullptr) && vid->isReady()) {
+                int startVideoFrame = 0;
+                double speed = 100.0;
+                bool isDirectMode = false;
 
-            if (fx != nullptr) {
-                for (const auto &eff : std::as_const(fx->effects)) {
-                    if (eff.id != QLatin1String("video")) {
+                for (const auto *eff : clip->effects) {
+                    if (eff->id() != "video") {
                         continue;
                     }
-                    const QString playMode = eff.params.value(QStringLiteral("playMode"), "開始フレーム＋再生速度").toString();
+                    const QString playMode = eff->params().value(QStringLiteral("playMode"), "開始フレーム＋再生速度").toString();
                     if (playMode == QStringLiteral("フレーム直接指定")) {
                         isDirectMode = true;
                         break;
                     }
-                    startVideoFrame = eff.params.value(QStringLiteral("startFrame"), 0).toInt();
-                    speed = eff.params.value(QStringLiteral("speed"), 100.0).toDouble();
+                    startVideoFrame = eff->params().value(QStringLiteral("startFrame"), 0).toInt();
+                    speed = eff->params().value(QStringLiteral("speed"), 100.0).toDouble();
                     break;
                 }
-            }
 
-            double srcFps = vid->sourceFps();
-            if (srcFps <= 0.0) {
-                srcFps = projectFps;
-            }
-            int maxDuration = duration;
+                double srcFps = vid->sourceFps();
+                if (srcFps <= 0.0) {
+                    srcFps = projectFps;
+                }
+                int maxDuration = duration;
 
-            if (isDirectMode) {
-                const double totalSec = static_cast<double>(vid->totalFrameCount()) / srcFps;
-                maxDuration = static_cast<int>(totalSec * projectFps);
-            } else if (speed > 0.0) {
-                const double startSec = static_cast<double>(startVideoFrame) / srcFps;
-                const double remainingSec = (static_cast<double>(vid->totalFrameCount()) / srcFps) - startSec;
-                if (remainingSec > 0.0) {
-                    maxDuration = static_cast<int>(remainingSec / (speed / 100.0) * projectFps);
+                if (isDirectMode) {
+                    // フレーム直接指定: 単純に「素材の総フレーム数 / srcFps * projectFps」を限界とする
+                    const double totalSec = static_cast<double>(vid->totalFrameCount()) / srcFps;
+                    maxDuration = static_cast<int>(totalSec * projectFps);
+                } else if (speed > 0.0) {
+                    const double startSec = static_cast<double>(startVideoFrame) / srcFps;
+                    const double remainingSec = (static_cast<double>(vid->totalFrameCount()) / srcFps) - startSec;
+                    if (remainingSec > 0.0) {
+                        maxDuration = static_cast<int>(remainingSec / (speed / 100.0) * projectFps);
+                    }
+                }
+
+                if (maxDuration > 0 && duration > maxDuration) {
+                    duration = maxDuration;
                 }
             }
-            if (maxDuration > 0 && duration > maxDuration) {
-                duration = maxDuration;
-            }
-        }
-    } else if (m->type == QLatin1String("audio")) {
-        auto *aud = qobject_cast<AviQtl::Core::AudioDecoder *>(m_mediaManager->decoderForClip(clipId));
-        if ((aud != nullptr) && aud->isReady()) {
-            double startTime = 0.0;
-            double speed = 100.0;
-            bool isDirectMode = false;
+        } else if (clip->type == QLatin1String("audio")) {
+            auto *aud = qobject_cast<AviQtl::Core::AudioDecoder *>(m_mediaManager->decoderForClip(id));
+            if ((aud != nullptr) && aud->isReady()) {
+                double startTime = 0.0;
+                double speed = 100.0;
+                bool isDirectMode = false;
 
-            if (fx != nullptr) {
-                for (const auto &eff : std::as_const(fx->effects)) {
-                    if (eff.id != QLatin1String("audio")) {
+                for (const auto *eff : clip->effects) {
+                    if (eff->id() != "audio") {
                         continue;
                     }
-                    const QString playMode = eff.params.value(QStringLiteral("playMode"), "開始時間＋再生速度").toString();
+                    const QString playMode = eff->params().value(QStringLiteral("playMode"), "開始時間＋再生速度").toString();
                     if (playMode == QStringLiteral("時間直接指定")) {
                         isDirectMode = true;
                         break;
                     }
-                    startTime = eff.params.value(QStringLiteral("startTime"), 0.0).toDouble();
-                    speed = eff.params.value(QStringLiteral("speed"), 100.0).toDouble();
+                    startTime = eff->params().value(QStringLiteral("startTime"), 0.0).toDouble();
+                    speed = eff->params().value(QStringLiteral("speed"), 100.0).toDouble();
                     break;
                 }
-            }
 
-            const double totalSec = aud->totalDurationSec();
-            int maxDuration = duration;
+                const double totalSec = aud->totalDurationSec();
+                int maxDuration = duration;
 
-            if (isDirectMode) {
-                maxDuration = static_cast<int>(totalSec * projectFps);
-            } else if (speed > 0.0) {
-                const double remainingSec = totalSec - startTime;
-                if (remainingSec > 0.0) {
-                    maxDuration = static_cast<int>(remainingSec / (speed / 100.0) * projectFps);
+                if (isDirectMode) {
+                    // 時間直接指定: 素材の総秒数 * projectFps を限界とする
+                    maxDuration = static_cast<int>(totalSec * projectFps);
+                } else if (speed > 0.0) {
+                    const double remainingSec = totalSec - startTime;
+                    if (remainingSec > 0.0) {
+                        maxDuration = static_cast<int>(remainingSec / (speed / 100.0) * projectFps);
+                    }
+                }
+
+                if (maxDuration > 0 && duration > maxDuration) {
+                    duration = maxDuration;
                 }
             }
-            if (maxDuration > 0 && duration > maxDuration) {
-                duration = maxDuration;
-            }
-        }
-    } else if (m->type == QLatin1String("scene")) {
-        int targetSceneId = 0;
-        double speed = 1.0;
-        int offset = 0;
+        } else if (clip->type == QLatin1String("scene")) {
+            int targetSceneId = 0;
+            double speed = 1.0;
+            int offset = 0;
+            [[maybe_unused]] bool isDirectMode = false;
 
-        if (fx != nullptr) {
-            for (const auto &eff : std::as_const(fx->effects)) {
-                if (eff.id != QLatin1String("scene")) {
+            for (const auto *eff : clip->effects) {
+                if (eff->id() != "scene") {
                     continue;
                 }
-                targetSceneId = eff.params.value(QStringLiteral("targetSceneId"), 0).toInt();
-                speed = eff.params.value(QStringLiteral("speed"), 1.0).toDouble();
-                offset = eff.params.value(QStringLiteral("offset"), 0).toInt();
+                // ※ 現在Sceneには playMode パラメータは無いが、将来のために概念として考慮。
+                // 現状の仕様では「speed と offset」による計算。
+                targetSceneId = eff->params().value(QStringLiteral("targetSceneId"), 0).toInt();
+                speed = eff->params().value(QStringLiteral("speed"), 1.0).toDouble();
+                offset = eff->params().value(QStringLiteral("offset"), 0).toInt();
                 break;
             }
-        }
 
-        const int sceneDur = getSceneDuration(targetSceneId);
-        if (sceneDur > 0 && speed > 0.0) {
-            const double rhs = (static_cast<double>(sceneDur - 1 - offset)) / speed;
-            int maxDuration = std::max(static_cast<int>(rhs) + 1, 1);
-            duration = std::min(duration, maxDuration);
+            const int sceneDur = getSceneDuration(targetSceneId);
+            if (sceneDur > 0 && speed > 0.0) {
+                const double rhs = (static_cast<double>(sceneDur - 1 - offset)) / speed;
+                int maxDuration = static_cast<int>(rhs) + 1;
+                maxDuration = std::max(maxDuration, 1);
+                duration = std::min(duration, maxDuration);
+            }
         }
     }
 
-    return duration;
-}
-
-// updateClip: clampedDuration() に委譲して DRY を維持
-void TimelineController::updateClip(int id, int layer, int startFrame, int duration) {
-    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
-    const auto *t = snap->transforms.find(id);
-    if (t == nullptr) {
-        return;
-    }
-
-    const int clamped = clampedDuration(id, startFrame, duration);
-    m_timeline->updateClip(id, layer, startFrame, clamped);
+    m_timeline->updateClip(id, layer, startFrame, duration);
 }
 
 void TimelineController::moveClipWithCollisionCheck(int clipId, int layer, int startFrame) {
-    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
-    const auto *t = snap->transforms.find(clipId);
-    if (t == nullptr) {
+    const ClipData *clip = m_timeline->findClipById(clipId);
+    if (clip == nullptr) {
         return;
     }
 
-    int duration = t->durationFrames;
+    int duration = clip->durationFrames;
     int fixedStart = m_timeline->findVacantFrame(layer, startFrame, duration, clipId);
     updateClip(clipId, layer, fixedStart, duration);
 }
@@ -604,9 +496,8 @@ void TimelineController::reorderAudioPlugins(int clipId, int oldIndex, int newIn
 }
 
 auto TimelineController::isAudioClip(int clipId) const -> bool {
-    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
-    const auto *m = snap->metadataStates.find(clipId);
-    return (m != nullptr) && m->type == QLatin1String("audio");
+    const auto *clip = m_timeline->findClipById(clipId);
+    return (clip != nullptr) && clip->type == QLatin1String("audio");
 }
 
 auto TimelineController::getWaveformPeaks(int clipId, int pixelWidth, int displayDurationFrames) const -> QVariantList { // NOLINT(bugprone-easily-swappable-parameters)
@@ -614,9 +505,8 @@ auto TimelineController::getWaveformPeaks(int clipId, int pixelWidth, int displa
         return {};
     }
 
-    const auto *snap = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
-    const auto *m = snap->metadataStates.find(clipId);
-    if ((m == nullptr) || m->type != QLatin1String("audio")) {
+    const auto *clip = m_timeline->findClipById(clipId);
+    if ((clip == nullptr) || clip->type != "audio") {
         return {};
     }
 
@@ -747,19 +637,16 @@ void TimelineController::splitSelectedClips(int frame) {
     }
 }
 
+#include "engine/timeline/ecs.hpp"
+
 auto TimelineController::evaluateClipParams(int clipId, int relFrame) const -> QVariantMap {
-    auto &ecs = ::AviQtl::Engine::Timeline::ECS::instance();
-    const auto *state = ecs.getSnapshot();
-    if (!state || !state->effectStacks.contains(clipId))
-        return QVariantMap{};
-
-    int durationFrames = 0;
-    if (const auto *tr = state->transforms.find(clipId))
-        durationFrames = tr->durationFrames;
-
-    const double fps = (m_project && m_project->fps() > 0.0) ? m_project->fps() : 60.0;
-
-    return ::AviQtl::Engine::Timeline::ClipEffectSystem::evaluateParamsCached(*state, ecs.interpCache(), clipId, relFrame, durationFrames, fps);
+    QVariantMap out;
+    if (const auto *clip = m_timeline->findClipById(clipId)) {
+        for (auto *eff : clip->effects) {
+            out.insert(eff->id(), eff->evaluatedParams(relFrame));
+        }
+    }
+    return out;
 }
 void TimelineController::copyClip(int clipId) { m_timeline->copyClip(clipId); }
 

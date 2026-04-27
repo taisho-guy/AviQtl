@@ -11,14 +11,6 @@ Common.BaseEffect {
     readonly property real vRatio: aspect < 0 ? (100 + aspect) / 100 : 1
     readonly property real effectSize: size * Math.max(hRatio, vRatio)
 
-    // 描画範囲を effectSize 分だけ全方向に拡張
-    expansion: ({
-        "top": effectSize,
-        "right": effectSize,
-        "bottom": effectSize,
-        "left": effectSize
-    })
-
     ShaderEffect {
         property variant source: root.sourceProxy
         property real size: root.effectSize

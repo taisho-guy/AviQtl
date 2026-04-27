@@ -25,7 +25,7 @@ class BuildWorker(QtCore.QThread):
         self.skip_install = skip_install
         self.dist_dir = self.source_dir / "dist"
         self.system = platform.system()
-        self.container_name = "archlinux-rina"
+        self.container_name = "archlinux-aviqtl"
 
     def _run_cmd(self, cmd, shell=False, in_container=False):
         display_cmd = ' '.join(cmd) if isinstance(cmd, list) else cmd
@@ -100,36 +100,6 @@ class BuildWorker(QtCore.QThread):
                 shutil.move(str(lib_file), lib_dir / lib_file.name)
             zip_path.unlink()
 
-    def _build_kde_framework(self, name, repo_url):
-        install_dir = self.source_dir / "kde-frameworks"
-        build_dir = self.source_dir / f".build_{name}"
-        src_dir = self.source_dir / name
-        
-        # インストール済みかチェック
-        check_name = "KF6Kirigami" if name == "kirigami" else f"KF6{name[0].upper()}{name[1:]}"
-        if name == "kcolorscheme": check_name = "KF6KColorScheme"
-        
-        if (install_dir / "lib" / "cmake" / check_name).exists():
-            return
-
-        self.log_signal.emit(f"KDE Framework {name} をソースからビルド中...")
-        if not src_dir.exists():
-            self._run_cmd(["git", "clone", repo_url, "--depth", "1", str(src_dir)])
-        
-        brew_prefix = "/opt/homebrew"
-        try:
-            brew_prefix = subprocess.check_output(["brew", "--prefix"], text=True).strip()
-        except: pass
-
-        cmd = [
-            "cmake", "-B", str(build_dir), "-S", str(src_dir), "-G", "Ninja",
-            f"-DCMAKE_INSTALL_PREFIX={install_dir}",
-            f"-DCMAKE_PREFIX_PATH={brew_prefix};{install_dir}",
-            "-DBUILD_TESTING=OFF"
-        ]
-        self._run_cmd(cmd)
-        self._run_cmd(["cmake", "--build", str(build_dir), "--target", "install"])
-
     def install_dependencies(self):
         if self.skip_install:
             self.log_signal.emit("依存関係のインストール/アップデートをスキップします (--noSyu)")
@@ -203,7 +173,7 @@ class BuildWorker(QtCore.QThread):
 
             # 正しいURLで tap を実行
             try:
-                self._run_cmd(["brew", "tap", tap_name, tap_url, "-f"])
+                self._run_cmd(["brew", "tap", tap_name, tap_url, "--force-auto-update"])
                 
                 # ECMやKF6のリンク問題を解決するための caveat スクリプトを実行
                 repo_path = subprocess.check_output(["brew", "--repo", tap_name], text=True).strip()
@@ -216,17 +186,9 @@ class BuildWorker(QtCore.QThread):
 
             deps = [
                 "cmake", "ninja", "qt6", "ffmpeg", "luajit", "vulkan-headers", "vulkan-loader",
-                "pkg-config", "lilv", "extra-cmake-modules", "carla"
+                "pkg-config", "lilv", "kf6-kirigami", "kf6-kcolorscheme", "extra-cmake-modules", "carla"
             ]
-            for dep in deps:
-                try:
-                    self._run_cmd(["brew", "install", dep])
-                except subprocess.CalledProcessError:
-                    self.log_signal.emit(f"  情報: {dep} は既にインストールされているか、スキップされました。")
-            
-            # KF6系がHomebrew公式/Tapに存在しないため、ソースからビルド
-            self._build_kde_framework("kirigami", "https://invent.kde.org/frameworks/kirigami.git")
-            self._build_kde_framework("kcolorscheme", "https://invent.kde.org/frameworks/kcolorscheme.git")
+            self._run_cmd(["brew", "install"] + deps)
             
             if not (self.source_dir / "clap").exists():
                 self._run_cmd(["git", "clone", "https://github.com/free-audio/clap.git", "--depth", "1"])
@@ -241,7 +203,7 @@ class BuildWorker(QtCore.QThread):
             if not (shutil.which("distrobox") and shutil.which("podman")):
                 self.log_signal.emit("警告: distrobox または podman が見つかりません。インストールしてください。")
 
-            # 2. コンテナの作成 (archlinux-rina)
+            # 2. コンテナの作成 (archlinux-aviqtl)
             self.log_signal.emit(f"ビルド用コンテナ '{self.container_name}' を準備中...")
             try:
                 self._run_cmd(["distrobox", "create", "--name", self.container_name, "--image", "archlinux:latest", "--yes"])
@@ -312,8 +274,7 @@ class BuildWorker(QtCore.QThread):
                  # HomebrewのパスをCMakeの検索対象に追加 (ECMやKF6を見つけるため)
                  try:
                      brew_prefix = subprocess.check_output(["brew", "--prefix"], text=True).strip()
-                     kde_prefix = str(self.source_dir / "kde-frameworks")
-                     conf_cmd.append(f"-DCMAKE_PREFIX_PATH={brew_prefix};{kde_prefix}")
+                     conf_cmd.append(f"-DCMAKE_PREFIX_PATH={brew_prefix}")
                  except:
                      conf_cmd.append("-DCMAKE_PREFIX_PATH=/opt/homebrew")
 
@@ -457,7 +418,7 @@ class BuildWorker(QtCore.QThread):
             self.log_signal.emit(f"ビルド完了：{dest_bin}")
             self.log_signal.emit(f"アーカイブ：{self.dist_dir / (archive_name + '.zip')}")
             if self.system == "Windows":
-                 self.log_signal.emit("ヒント：buildフォルダ内のRina.exeを実行してください")
+                 self.log_signal.emit("ヒント：buildフォルダ内のAviQtl.exeを実行してください")
             else:
                  self.log_signal.emit("ヒント：python BUILD.py --runで直ちに起動できます")
             

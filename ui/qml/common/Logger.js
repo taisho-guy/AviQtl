@@ -5,7 +5,7 @@ var _debugEnabled = false;
 
 function isDebugEnabled() {
     if (!_debugChecked) {
-        _debugEnabled = (Qt.application.arguments.indexOf("--rina-debug") !== -1);
+        _debugEnabled = (Qt.application.arguments.indexOf("--aviqtl-debug") !== -1);
         _debugChecked = true;
     }
     return _debugEnabled;

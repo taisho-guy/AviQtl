@@ -10,14 +10,6 @@ Common.BaseEffect {
     property real intervalY: root.evalNumber("intervalY", 0)
     property bool mirror: root.evalParam("mirror", false)
 
-    // ループ枚数 × インターバル分だけキャンバスを拡張
-    expansion: ({
-        "top": Math.max(0, (countY - 1) * intervalY),
-        "right": Math.max(0, (countX - 1) * intervalX),
-        "bottom": Math.max(0, (countY - 1) * intervalY),
-        "left": Math.max(0, (countX - 1) * intervalX)
-    })
-
     ShaderEffect {
         property variant source: root.sourceProxy
         property real countX: root.countX

@@ -5,8 +5,6 @@ import "qrc:/qt/qml/AviQtl/ui/qml" as Ui
 import "qrc:/qt/qml/AviQtl/ui/qml/common" as Common
 
 Common.BaseObject {
-    // テクスチャソースとして用いるため可視化しない // removed: managed by BaseObject
-
     id: root
 
     property int targetSceneId: evalParam("scene", "targetSceneId", 0)
@@ -25,13 +23,31 @@ Common.BaseObject {
     }
 
     // 3Dモデルとして表示
+    Model {
+        source: "#Rectangle"
+        scale: Qt.vector3d(root.sourceItem.width / 100, root.sourceItem.height / 100, 1)
+        opacity: root.opacity
+
+        materials: DefaultMaterial {
+            lighting: DefaultMaterial.NoLighting
+            blendMode: root.blendMode
+            cullMode: root.cullMode
+
+            diffuseMap: Texture {
+                sourceItem: renderer.output
+            }
+
+        }
+
+    }
+
     // 以前のImage/SceneDecoderベースの代わりに、SceneRendererを直接組み込む
     // GPU空間内でシーングラフとして完結させる
     sourceItem: Ui.SceneRenderer {
         sceneId: root.targetSceneId
         currentFrame: root.sceneFrame
-        // timelineBridge: typeof Workspace.currentTimeline !== "undefined" ? Workspace.currentTimeline : null
-        visible: false
+        timelineBridge: typeof Workspace.currentTimeline !== "undefined" ? Workspace.currentTimeline : null
+        visible: false // テクスチャソースとして用いるため可視化しない
     }
 
 }

@@ -13,14 +13,6 @@ Common.BaseEffect {
     property real samples: root.evalNumber("samples", 10)
     readonly property real strength: range
 
-    // 中心からの放射方向に range 分拡張
-    expansion: ({
-        "top": range,
-        "right": range,
-        "bottom": range,
-        "left": range
-    })
-
     ShaderEffect {
         id: blurPass
 

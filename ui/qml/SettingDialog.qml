@@ -12,10 +12,8 @@ Common.AviQtlWindow {
     property int targetClipId: (Workspace.currentTimeline && Workspace.currentTimeline.selection) ? Workspace.currentTimeline.selection.selectedClipId : -1
     property var effectsModel: []
     property var audioEffectsModel: []
-    // NOTE: inputting フラグは外部読み取り用に残存（内部では非参照）
-    property bool inputting: false
-    property int _updateDepth: 0
-    property bool reloading: false // onClipEffectsChanged → reload() の再入防止専用
+    property bool inputting: false // 入力中フラグ（reloadループ防止用）
+    property bool reloading: false
     property bool isDeleting: false // 複数エフェクト削除中フラグ（途中reload抑制用）
     property bool enableSnap: SettingsManager && SettingsManager.settings ? SettingsManager.settings.enableSnap : true
     property bool sidebarOnRight: (SettingsManager && SettingsManager.settings && SettingsManager.settings.settingDialogSidebarRight !== undefined) ? SettingsManager.settings.settingDialogSidebarRight : false
@@ -91,26 +89,13 @@ Common.AviQtlWindow {
         return Math.max(0, newRelFrame);
     }
 
-    // ECS 経由でパラメータ評価（EffectModel.evaluatedParam の完全廃止）
-    // evaluateClipParams は interpCache を使用するため高速
-    function _evalECS(effectId, frame, paramKey) {
-        if (!Workspace.currentTimeline || root.targetClipId < 0)
-            return undefined;
-
-        var cache = Workspace.currentTimeline.evaluateClipParams(root.targetClipId, frame);
-        var ep = cache ? cache[effectId] : undefined;
-        return (ep !== undefined && ep[paramKey] !== undefined) ? ep[paramKey] : undefined;
-    }
-
-    // 同一クリップのエフェクト構成変化（追加・削除・並び替え）専用の重量リロード
-    // サイドバー選択状態を ID で復元する。
-    // 用途外（クリップ切り替え・表示時）には _loadForClip() を使う。
     function reload() {
         if (!Workspace.currentTimeline || !Workspace.currentTimeline.selection || reloading)
             return ;
 
         reloading = true;
         var id = Workspace.currentTimeline.selection.selectedClipId;
+        targetClipId = id;
         // 選択状態をオブジェクト参照で保存（インデックスずれ防止）
         var oldModel = sidebarList.model;
         var oldSelectedObjects = [];
@@ -136,46 +121,20 @@ Common.AviQtlWindow {
         // 保存したオブジェクト参照から新インデックスを復元
         var newModel = (Workspace.currentTimeline && Workspace.currentTimeline.isAudioClip(id)) ? audioEffectsModel : effectsModel;
         if (newModel && oldSelectedObjects.length > 0) {
-            // getClipEffectsModel は毎回 new するためポインタ比較が常に失敗する。
-            // id プロパティで照合して選択状態を復元する。
-            var oldIds = oldSelectedObjects.map(function(o) {
-                return o ? o.id : null;
-            });
-            var oldCurrentId = oldCurrentObject ? oldCurrentObject.id : null;
             var newSel = [];
             for (var j = 0; j < newModel.length; j++) {
-                if (oldIds.indexOf(newModel[j].id) !== -1)
+                if (oldSelectedObjects.indexOf(newModel[j]) !== -1)
                     newSel.push(j);
 
             }
             sidebarList.selectedIndices = newSel;
-            var newCurrentIdx = -1;
-            for (var k = 0; k < newModel.length; k++) {
-                if (newModel[k].id === oldCurrentId) {
-                    newCurrentIdx = k;
-                    break;
-                }
-            }
+            var newCurrentIdx = newModel.indexOf(oldCurrentObject);
             if (newCurrentIdx !== -1)
                 sidebarList.currentIndex = newCurrentIdx;
             else if (newSel.length > 0)
                 sidebarList.currentIndex = newSel[newSel.length - 1];
         }
         reloading = false;
-    }
-
-    // 別クリップ選択時の軽量モデル更新（選択状態復元なし）
-    // reload() は同一クリップのエフェクト構成変化専用に限定する
-    function _loadForClip(clipId) {
-        if (!Workspace.currentTimeline || clipId < 0) {
-            effectsModel = [];
-            audioEffectsModel = [];
-        } else {
-            effectsModel = Workspace.currentTimeline.getClipEffectsModel(clipId);
-            audioEffectsModel = Workspace.currentTimeline.getClipEffectStack(clipId);
-        }
-        sidebarList.selectedIndices = [];
-        sidebarList.currentIndex = -1;
     }
 
     // 複数エフェクト一括削除（reload を削除完了後に1回だけ行う）
@@ -215,8 +174,8 @@ Common.AviQtlWindow {
             // ビデオエフェクトは C++ removeMultipleEffects で一括削除
             Workspace.currentTimeline.removeMultipleEffects(targetClipId, toDelete);
         }
-        // ③ 全削除完了後に軽量リロード（選択状態は直後に clearSelection で消去）
-        _loadForClip(targetClipId);
+        // ③ 全削除完了後に一回だけリロード
+        reload();
         sidebarList.clearSelection();
     }
 
@@ -259,17 +218,21 @@ Common.AviQtlWindow {
     y: 200
     onVisibleChanged: {
         if (visible)
-            Qt.callLater(function() {
-            _loadForClip(targetClipId);
-        });
+            Qt.callLater(reload);
 
     }
 
     // 選択変更やデータ更新を監視してモデルをリロード
     Connections {
         function onSelectedClipIdChanged() {
-            // clipId が変わるだけ: 選択状態の復元は不要 → _loadForClip で軽量更新
-            _loadForClip(Workspace.currentTimeline.selection.selectedClipId);
+            reload();
+        }
+
+        // パラメータ変更時の反映用（入力中はリロードしない）
+        function onSelectedClipDataChanged() {
+            if (!inputting && !root.isDeleting)
+                reload();
+
         }
 
         target: Workspace.currentTimeline ? Workspace.currentTimeline.selection : null
@@ -282,43 +245,7 @@ Common.AviQtlWindow {
 
         }
 
-        // reload() を呼ばず _effectRev++ のみで startVal/endVal/effVal を再評価させる
-        function onEffectParamChanged(changedClipId, effectIndex, paramName, value) {
-            if (changedClipId !== targetClipId)
-                return ;
-
-            var item = videoEffectsRepeater.itemAt(effectIndex);
-            if (item)
-                item._effectRev++;
-
-        }
-
-        function onEffectKeyframesChanged(changedClipId, effectIndex, paramName) {
-            if (changedClipId !== targetClipId)
-                return ;
-
-            var item = videoEffectsRepeater.itemAt(effectIndex);
-            if (item)
-                item._effectRev++;
-
-        }
-
         target: Workspace.currentTimeline
-    }
-
-    // タブ切り替えでプロジェクトが変わった際にモデルをリセットして再ロード
-    Connections {
-        function onCurrentTimelineChanged() {
-            // タイムライン切り替え: サイドバー選択をクリアし、新クリップ向けに再ロード
-            sidebarList.selectedIndices = [];
-            sidebarList.currentIndex = -1;
-            // Qt.callLater: targetClipId が新タイムラインの値に更新されるのを待つ
-            Qt.callLater(function() {
-                _loadForClip(targetClipId);
-            });
-        }
-
-        target: Workspace
     }
 
     SplitView {
@@ -629,6 +556,19 @@ Common.AviQtlWindow {
                         width: root.width
                         spacing: 0
 
+                        Connections {
+                            function onParamsChanged() {
+                                effectRoot._effectRev++;
+                            }
+
+                            function onKeyframeTracksChanged() {
+                                effectRoot._effectRev++;
+                            }
+
+                            target: effectRoot.effectModel
+                            ignoreUnknownSignals: true
+                        }
+
                         // エフェクトヘッダー
                         Rectangle {
                             Layout.fillWidth: true
@@ -682,9 +622,14 @@ Common.AviQtlWindow {
                                     if (!effectModel)
                                         return undefined;
 
-                                    // onEffectParamChanged → _effectRev++ の時点では
-                                    // ECS に値が書き込まれているため _evalECS で確定値が取れる
-                                    return root._evalECS(effectModel.id, curRelFrame, key);
+                                    var v = effectModel.evaluatedParam(key, curRelFrame, root._projectFps);
+                                    if (v !== undefined && v !== null)
+                                        return v;
+
+                                    if (effectModel.params)
+                                        return effectModel.params[key];
+
+                                    return undefined;
                                 }
                                 property bool isNumber: typeof effVal === "number" && (!def.type || ["float", "number", "slider", "spinner", "int", "integer"].indexOf(def.type) !== -1)
                                 property bool isColor: !!def && (def.type === "color" || def.type === "colour")
@@ -694,27 +639,27 @@ Common.AviQtlWindow {
                                 // キーフレーム
                                 property int curRelFrame: (Workspace.currentTimeline && Workspace.currentTimeline.transport) ? Math.max(0, Workspace.currentTimeline.transport.currentFrame - Workspace.currentTimeline.clipStartFrame) : 0
                                 property int clipDur: Workspace.currentTimeline ? Workspace.currentTimeline.clipDurationFrames : 100
+                                property var tracks: effectModel ? effectModel.keyframeTracks : null
                                 property var kfs: {
-                                    var _ = effectRoot._effectRev;
-                                    if (!Workspace.currentTimeline || !key)
-                                        return [];
-
-                                    return Workspace.currentTimeline.keyframeListForUi(root.targetClipId, effIdx, key) || [];
+                                    var _ = tracks;
+                                    return effectModel ? effectModel.keyframeListForUi(key) : [];
                                 }
                                 property bool hasKeyframes: kfs.length > 0
                                 property var interval: findInterval(kfs, curRelFrame, clipDur)
                                 property int startFrame: interval.start
                                 property int endFrame: interval.end
                                 property var startVal: {
+                                    var _t = tracks;
                                     var _r = effectRoot._effectRev;
-                                    return effectModel ? (root._evalECS(effectModel.id, startFrame, key) ?? effVal) : effVal;
+                                    return effectModel ? effectModel.evaluatedParam(key, startFrame, root._projectFps) : effVal;
                                 }
                                 property var endVal: {
+                                    var _t = tracks;
                                     var _r = effectRoot._effectRev;
-                                    return effectModel ? (root._evalECS(effectModel.id, endFrame, key) ?? effVal) : effVal;
+                                    return effectModel ? effectModel.evaluatedParam(key, endFrame, root._projectFps) : effVal;
                                 }
                                 property string interpType: {
-                                    var _ = effectRoot._effectRev;
+                                    var _ = tracks;
                                     return hasKeyframes ? getInterpAt(startFrame) : "constant";
                                 }
                                 property bool isMoving: supportsRangeUi && (hasKeyframes || interpType !== "constant")
@@ -738,10 +683,10 @@ Common.AviQtlWindow {
                                     if (hasKeyframeAt(f))
                                         return ;
 
-                                    var raw = root._evalECS(effectModel.id, f, key);
+                                    var raw = effectModel.evaluatedParam(key, f, root._projectFps);
                                     var v = (raw !== undefined && raw !== null) ? raw : effVal;
                                     var interp = "linear";
-                                    Workspace.currentTimeline.setKeyframe(root.targetClipId, paramDelegate.effIdx, paramDelegate.key, f, v, {
+                                    paramDelegate.effectModel.setKeyframe(paramDelegate.key, f, v, {
                                         "interp": interp
                                     });
                                 }
@@ -826,15 +771,8 @@ Common.AviQtlWindow {
                                     if (!effectModel || !key)
                                         return ;
 
-                                    if (root._updateDepth > 0)
-                                        return ;
-
-                                    root._updateDepth++;
-                                    // メディア参照系パラメータはキーフレーム有無に関わらず直接更新
-                                    var isMediaRef = (def && (def.type === "path" || def.type === "file")) || key === "path" || key === "source";
-                                    if (!hasKeyframes || isMediaRef) {
+                                    if (!hasKeyframes) {
                                         Workspace.currentTimeline.updateClipEffectParam(targetClipId, effIdx, key, val);
-                                        root._updateDepth--;
                                         return ;
                                     }
                                     let type = "linear";
@@ -848,7 +786,6 @@ Common.AviQtlWindow {
                                     Workspace.currentTimeline.setKeyframe(targetClipId, effIdx, paramDelegate.key, frame, val, {
                                         "interp": type
                                     });
-                                    root._updateDepth--;
                                 }
 
                                 Layout.fillWidth: true
@@ -1048,7 +985,7 @@ Common.AviQtlWindow {
                                                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                                                 onClicked: function(mouse) {
                                                     if (mouse.button === Qt.RightButton && kfItem.originalFrame !== 0)
-                                                        Workspace.currentTimeline.removeKeyframe(root.targetClipId, paramDelegate.effIdx, kfItem.targetKey, kfItem.originalFrame);
+                                                        kfItem.targetModel.removeKeyframe(kfItem.targetKey, kfItem.originalFrame);
 
                                                 }
                                                 onDoubleClicked: function(mouse) {
@@ -1090,8 +1027,8 @@ Common.AviQtlWindow {
                                                             paramDelegate.activeDragOriginal = -1;
 
                                                         if (kfItem.currentFrame !== kfItem.originalFrame) {
-                                                            var val = root._evalECS(paramDelegate.effectModel.id, kfItem.originalFrame, kfItem.targetKey);
-                                                            var track = Workspace.currentTimeline.keyframeListForUi(root.targetClipId, paramDelegate.effIdx, kfItem.targetKey) || [];
+                                                            var val = kfItem.targetModel.evaluatedParam(kfItem.targetKey, kfItem.originalFrame, root._projectFps);
+                                                            var track = kfItem.targetModel.keyframeListForUi(kfItem.targetKey) || [];
                                                             var interp = "linear";
                                                             var pts = [];
                                                             for (let i = 0; i < track.length; i++) {
@@ -1104,14 +1041,14 @@ Common.AviQtlWindow {
                                                                     break;
                                                                 }
                                                             }
-                                                            Workspace.currentTimeline.removeKeyframe(root.targetClipId, paramDelegate.effIdx, kfItem.targetKey, kfItem.originalFrame);
+                                                            kfItem.targetModel.removeKeyframe(kfItem.targetKey, kfItem.originalFrame);
                                                             let options = {
                                                                 "interp": interp
                                                             };
                                                             if (pts.length > 0)
                                                                 options.points = pts;
 
-                                                            Workspace.currentTimeline.setKeyframe(root.targetClipId, paramDelegate.effIdx, kfItem.targetKey, kfItem.currentFrame, val, options);
+                                                            kfItem.targetModel.setKeyframe(kfItem.targetKey, kfItem.currentFrame, val, options);
                                                         }
                                                         kfItem.rootWindow.inputting = false;
                                                     }
@@ -1152,11 +1089,11 @@ Common.AviQtlWindow {
                                             if (hasKeyframeAt(f))
                                                 return ;
 
-                                            let val = root._evalECS(effectModel.id, f, key);
+                                            let val = effectModel.evaluatedParam(key, f, root._projectFps);
                                             let options = {
                                                 "interp": "linear"
                                             };
-                                            Workspace.currentTimeline.setKeyframe(root.targetClipId, effIdx, key, f, val, options);
+                                            effectModel.setKeyframe(key, f, val, options);
                                         }
                                     }
 

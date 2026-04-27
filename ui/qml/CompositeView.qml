@@ -111,9 +111,6 @@ Item {
         // 現在のクリップ内での相対時間 (0.0 ~ 1.0)
         property double currentClipTimeRatio: (Workspace.currentTimeline) ? Math.max(0, Math.min(1, (root.currentFrame - Workspace.currentTimeline.clipStartFrame) / Workspace.currentTimeline.clipDurationFrames)) : 0
 
-        // View3D.Inline: Qt Quick シーングラフと統合し ShaderEffectSource テクスチャを直接共有する
-        // (デフォルトの Offscreen では独立 FBO のため VideoOutput テクスチャの同期が保証されない)
-        renderMode: View3D.Inline
         camera: activeCameraControl ? activeCameraControl.camera : mainCamera
         // 親に収まる最大サイズを計算 (Letterboxing)
         width: root.exportMode ? projW : Math.min(parent.width, parent.height * aspect)
@@ -178,9 +175,7 @@ Item {
             // 拡大率は親の影響を受けず自身のサイズとして適用（AviUtl仕様依存）
 
             model: root.clipModel
-            onCountChanged: console.log("[QML] CompositeView Instantiator count:", count)
             onObjectAdded: (index, object) => {
-                console.log("[QML] Instantiator Object added at index:", index, "type:", object.clipTypeRole);
                 object.parent = sceneRoot;
             }
             onObjectRemoved: (index, object) => {
@@ -198,21 +193,35 @@ Item {
                 property int clipStartFrameRole: _clipData.startFrame
                 property int clipDurationFramesRole: _clipData.durationFrames
                 property url clipQmlSourceRole: _clipData.qmlSource || ""
+                property var clipEffectModelsRole: _clipData.effectModels || []
                 property Item fbRendererOutput: null // NodeLoader 完了後に接続
-                // ECS 経由で transform パラメーターを評価（唯一の経路）
-                // _tRev（C++シグナル起点）と root.currentFrame に依存して自動再評価。
-                // EffectModel.evaluatedParam / .params への直接アクセスを完全に廃止。
-                property int _tRev: 0
+                // 評価済みパラメータからtransform値を取得 (単一経路化)
                 readonly property var tParams: {
-                    var _ = _tRev; // 整数依存: C++シグナル→_tRev++→再評価を保証
-                    if (clipIdRole < 0 || !Workspace.currentTimeline)
-                        return ({
-                    });
+                    var tModel = null;
+                    for (var i = 0; i < clipEffectModelsRole.length; i++) {
+                        if (clipEffectModelsRole[i].id === "transform") {
+                            tModel = clipEffectModelsRole[i];
+                            break;
+                        }
+                    }
+                    if (!tModel)
+                        return {
+                    };
 
+                    var out = {
+                    };
+                    var fps = (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.fps : 60;
                     var relFrame = root.currentFrame - clipStartFrameRole;
-                    var cache = Workspace.currentTimeline.evaluateClipParams(clipIdRole, relFrame);
-                    return (cache && cache["transform"]) ? cache["transform"] : ({
-                    });
+                    var keys = ["x", "y", "z", "rotationX", "rotationY", "rotationZ", "scale", "aspect", "opacity"];
+                    for (var k = 0; k < keys.length; k++) {
+                        var key = keys[k];
+                        var v = tModel.evaluatedParam(key, relFrame, fps);
+                        if (v === undefined || v === null)
+                            v = tModel.params[key];
+
+                        out[key] = v;
+                    }
+                    return out;
                 }
                 readonly property real px: tParams.x !== undefined ? Number(tParams.x) : 0
                 readonly property real py: tParams.y !== undefined ? Number(tParams.y) : 0
@@ -296,12 +305,16 @@ Item {
 
                 // レイヤーが非表示の場合は描画しない
                 visible: {
-                    // DOD Sync が IntervalTree でアクティブクリップのみを ClipModel に送るため、
-                    // フレーム範囲チェックは不要かつ有害（currentFrame タイミングズレで false になる）。
-                    // レイヤーの visible フラグのみで制御する。
+                    // 1. レイヤー自体の表示設定
+                    // QMLエンジンのバインディングシステムに検知させるため、layerStatesを直接参照する
                     var states = root.layerStates;
                     var layerInfo = states ? states[clipLayerRole] : null;
-                    return (layerInfo !== null && layerInfo !== undefined) ? layerInfo.visible : true;
+                    var layerVisible = (layerInfo !== null && layerInfo !== undefined) ? layerInfo.visible : true;
+                    if (!layerVisible)
+                        return false;
+
+                    // 2. 再生ヘッドがクリップの範囲内にあるか（プリロードされたオブジェクトを隠す）
+                    return root.currentFrame >= clipStartFrameRole && root.currentFrame < (clipStartFrameRole + clipDurationFramesRole);
                 }
                 // 座標変換: 中心(0,0)、Y軸下プラス(AviUtl互換)
                 // Qt3DはY上がプラスなので、入力を反転させる
@@ -320,37 +333,16 @@ Item {
                 // 不透明度 (全体)
                 opacity: effectiveTransform.opacity
                 // params 変化 (scale/pos/rot/opacity) → BaseObject の fbCaptureItem を同期
-                // tParamsが変化したとき(位置/回転/スケール/不透明度すべて含む)に1回だけ同期する
-                onTParamsChanged: objectContainer._syncTransformToItem()
-                Component.onCompleted: objectContainer._syncTransformToItem()
+                onPxChanged: objectContainer._syncTransformToItem()
+                onPyChanged: objectContainer._syncTransformToItem()
+                onPRotZChanged: objectContainer._syncTransformToItem()
+                onBaseScaleChanged: objectContainer._syncTransformToItem()
+                onAspectXChanged: objectContainer._syncTransformToItem()
+                onAspectYChanged: objectContainer._syncTransformToItem()
+                onPOpacityChanged: objectContainer._syncTransformToItem()
 
                 // Loader (2D) は 3D シーン内では機能しないため、
                 // Qt.createComponent を使用して Node 派生クラスを動的に生成する
-                // 方針A: 2Dレンダー結果(fbRendererOutput)を板ポリとして3D空間に配置
-                // is3DObject=true のオブジェクトはこの板ポリをスキップし、オブジェクト自身の Node/Model ツリーで描画する
-                Model {
-                    source: "#Rectangle"
-                    // QtQuick3D の #Rectangle は 100x100 基準のため /100 でスケール換算
-                    scale: Qt.vector3d((clipNode.fbRendererOutput ? clipNode.fbRendererOutput.width : 100) / 100, (clipNode.fbRendererOutput ? clipNode.fbRendererOutput.height : 100) / 100, 1)
-                    position: Qt.vector3d(0, 0, 0)
-                    pickable: false
-                    // is3DObject=true のときは板ポリを非表示にしてオブジェクト自身に委ねる
-                    visible: (clipNode.fbRendererOutput !== null) && !(objectContainer.item && objectContainer.item.is3DObject)
-                    onVisibleChanged: console.log("[CV] plate visible=" + visible + " fbOut=" + clipNode.fbRendererOutput + " fbW=" + (clipNode.fbRendererOutput ? clipNode.fbRendererOutput.width : -1) + " fbH=" + (clipNode.fbRendererOutput ? clipNode.fbRendererOutput.height : -1))
-
-                    materials: DefaultMaterial {
-                        lighting: DefaultMaterial.NoLighting
-                        cullMode: DefaultMaterial.NoCulling
-
-                        diffuseMap: Texture {
-                            sourceItem: clipNode.fbRendererOutput
-                            onSourceItemChanged: console.log("[CV] Texture.sourceItem=" + sourceItem + " w=" + (sourceItem ? sourceItem.width : -1) + " h=" + (sourceItem ? sourceItem.height : -1))
-                        }
-
-                    }
-
-                }
-
                 Common.NodeLoader {
                     id: objectContainer
 
@@ -385,8 +377,11 @@ Item {
                         "clipId": clipNode.clipIdRole,
                         "clipStartFrame": clipNode.clipStartFrameRole,
                         "clipDurationFrames": clipNode.clipDurationFramesRole,
-                        "currentFrame": Qt.binding(() => {
+                        "currentFrame": Qt.binding(function() {
                             return root.currentFrame;
+                        }),
+                        "rawEffectModels": Qt.binding(function() {
+                            return clipNode.clipEffectModelsRole;
                         }),
                         "renderHost": offscreenRenderHost
                     }
@@ -395,15 +390,19 @@ Item {
                     onItemChanged: {
                         if (item) {
                             clipNode.fbRendererOutput = item.fbCaptureItem ?? null;
-                            console.log("[CV] fbRendererOutput assigned=" + clipNode.fbRendererOutput + " w=" + (clipNode.fbRendererOutput ? clipNode.fbRendererOutput.width : -1) + " h=" + (clipNode.fbRendererOutput ? clipNode.fbRendererOutput.height : -1));
                             if ("clipLayer" in item)
                                 item.clipLayer = clipNode.clipLayerRole;
 
                             if ("sceneId" in item)
                                 item.sceneId = root.sceneId;
 
+                            if ("rawEffectModels" in item)
+                                item.rawEffectModels = Qt.binding(function() {
+                                return clipNode.clipEffectModelsRole;
+                            });
+
                             if ("currentFrame" in item)
-                                item.currentFrame = Qt.binding(() => {
+                                item.currentFrame = Qt.binding(function() {
                                 return root.currentFrame;
                             });
 
@@ -417,28 +416,6 @@ Item {
                         }
                         root.childRendererOutputsChanged();
                     }
-                }
-
-                // transform パラメーター変化を tParams に伝播させる
-                // _tRev++ → readonly property var tParams のバインドが再評価される
-                Connections {
-                    function onEffectParamChanged(changedClipId, effectIndex, paramName, value) {
-                        if (changedClipId === clipIdRole)
-                            _tRev++;
-
-                    }
-
-                    function onClipEffectsChanged(changedClipId) {
-                        if (changedClipId === clipIdRole)
-                            _tRev++;
-
-                    }
-
-                    function onClipsChanged() {
-                        _tRev++;
-                    }
-
-                    target: Workspace.currentTimeline
                 }
 
             }

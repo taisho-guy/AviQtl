@@ -34,17 +34,32 @@ Common.BaseObject {
         target: videoFrameStore
     }
 
+    Model {
+        source: "#Rectangle"
+        scale: Qt.vector3d((renderer.output.sourceItem ? renderer.output.sourceItem.width : base.sourceItem.width) / 100, (renderer.output.sourceItem ? renderer.output.sourceItem.height : base.sourceItem.height) / 100, 1)
+        opacity: base.imageOpacity
+
+        materials: DefaultMaterial {
+            lighting: DefaultMaterial.NoLighting
+            blendMode: base.blendMode
+            cullMode: base.cullMode
+
+            diffuseMap: Texture {
+                sourceItem: renderer.output
+            }
+
+        }
+
+    }
+
     Item {
         id: containerItem
 
-        readonly property real pad: 0 // paddingは削除済み
+        readonly property real pad: base.padding * 2
 
-        // Node 内で初期化される際、width は Qt Quick のレイアウトから外れて 0 になることがある。
-        // implicitWidth/Height を明示的に設定し、ObjectRenderer 側でそれをフォールバックとして拾う。
-        implicitWidth: (Workspace.currentTimeline && Workspace.currentTimeline.project ? Workspace.currentTimeline.project.width : 1920)
-        implicitHeight: (Workspace.currentTimeline && Workspace.currentTimeline.project ? Workspace.currentTimeline.project.height : 1080)
-        width: implicitWidth
-        height: implicitHeight
+        width: (Workspace.currentTimeline && Workspace.currentTimeline.project ? Workspace.currentTimeline.project.width : 1920) + pad
+        height: (Workspace.currentTimeline && Workspace.currentTimeline.project ? Workspace.currentTimeline.project.height : 1080) + pad
+        visible: false
 
         VideoOutput {
             id: videoOut
@@ -54,6 +69,8 @@ Common.BaseObject {
             height: (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.height : 1080
             fillMode: base.fillMode
             opacity: base.imageOpacity
+            layer.enabled: true
+            layer.format: ShaderEffectSource.RGBA
             Component.onCompleted: {
                 if (base.clipId > 0 && typeof videoFrameStore !== "undefined")
                     videoFrameStore.registerSink(base.instanceKey, videoOut.videoSink);

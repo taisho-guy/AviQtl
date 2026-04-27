@@ -42,10 +42,8 @@ class TimelineMediaManager : public QObject {
     void frameUpdated(int clipId);
 
   private:
-    static QUrl getClipSourceUrl(int clipId);
-    // Phase4 廃止予定: ClipData* 依存の旧版。呼び出し元は updateVideoClipFrameECS に移行済み
+    static QUrl getClipSourceUrl(const ClipData &clip);
     void updateVideoClipFrame(AviQtl::Core::VideoDecoder *vid, const ClipData *clip, int relFrame);
-    void updateVideoClipFrameECS(AviQtl::Core::VideoDecoder *vid, int clipId, int relFrame, double fps);
     int sceneIdForClip(int clipId) const;
 
     TimelineController *m_controller;

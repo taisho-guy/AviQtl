@@ -29,7 +29,7 @@ void ECS::syncClipIds(const QSet<int> &aliveIds) {
     }
 }
 
-void ECS::updateClipState(int clipId, int layer, int startFrame, int durationFrames, double timePosition) { // NOLINT(bugprone-easily-swappable-parameters)
+void ECS::updateClipState(int clipId, int layer, double time) { // NOLINT(bugprone-easily-swappable-parameters)
     auto &editState = m_buffers[m_editIndex];
 
     if (!editState.transforms.contains(clipId)) {
@@ -38,14 +38,11 @@ void ECS::updateClipState(int clipId, int layer, int startFrame, int durationFra
     }
     auto &transform = editState.transforms[clipId];
 
-    bool changed = (transform.layer != layer || transform.startFrame != startFrame || transform.durationFrames != durationFrames || std::abs(transform.timePosition - timePosition) > 0.001);
+    bool changed = (transform.layer != layer || std::abs(transform.timePosition - time) > 0.001);
 
     if (changed) {
-        transform.clipId = clipId;
         transform.layer = layer;
-        transform.startFrame = startFrame;
-        transform.durationFrames = durationFrames;
-        transform.timePosition = timePosition;
+        transform.timePosition = time;
 
         auto &render = editState.renderStates[clipId];
         render.needsUpdate = true;
@@ -76,21 +73,6 @@ void ECS::updateAudioClipState(int clipId, int startFrame, int durationFrames, f
     m_dirtyForBuffer[(m_editIndex + 2) % 3].insert(clipId);
 }
 
-void ECS::removeClip(int clipId) {
-    auto &editState = m_buffers[m_editIndex];
-    editState.transforms.erase(clipId);
-    editState.metadataStates.erase(clipId);
-    editState.selections.erase(clipId);
-    editState.effectStacks.erase(clipId);
-    editState.audioStacks.erase(clipId);
-    editState.audioStates.erase(clipId);
-    editState.renderStates.erase(clipId);
-    editState.renderGraphDirty = true;
-    m_interpCache.remove(clipId);
-    m_fullSyncRequired[(m_editIndex + 1) % 3] = true;
-    m_fullSyncRequired[(m_editIndex + 2) % 3] = true;
-}
-
 void ECS::updateMetadata(int clipId, const QString &name, const QString &source, const QString &type, const QString &color) {
     auto &editState = m_buffers[m_editIndex];
 
@@ -109,18 +91,6 @@ void ECS::updateMetadata(int clipId, const QString &name, const QString &source,
         m_dirtyForBuffer[(m_editIndex + 1) % 3].insert(clipId);
         m_dirtyForBuffer[(m_editIndex + 2) % 3].insert(clipId);
     }
-}
-
-void ECS::updateEffectStack(int clipId, const QList<AviQtl::UI::EffectData> &effects) {
-    auto &state = m_buffers[m_editIndex];
-
-    // operator[] は要素がなければ新規作成し、あれば参照を返す (ensureSparseSize等も内部で実行される)
-    state.effectStacks[clipId].effects = effects;
-
-    // 他のバッファにも伝搬させるためのダーティフラグを立てる（必要であれば）
-    m_dirtyForBuffer[(m_editIndex + 1) % 3].insert(clipId);
-    m_dirtyForBuffer[(m_editIndex + 2) % 3].insert(clipId);
-    state.renderGraphDirty = true;
 }
 
 void ECS::commit() {
@@ -160,15 +130,6 @@ void ECS::commit() {
             if (const auto *s = src.metadataStates.find(id)) {
                 dst.metadataStates[id] = *s;
             }
-            if (const auto *s = src.effectStacks.find(id)) {
-                dst.effectStacks[id] = *s;
-            }
-            if (const auto *s = src.selections.find(id)) {
-                dst.selections[id] = *s;
-            }
-            if (const auto *s = src.audioStacks.find(id)) {
-                dst.audioStacks[id] = *s;
-            }
         }
         m_dirtyForBuffer[m_editIndex].clear();
     }
@@ -182,10 +143,6 @@ auto ECS::getSnapshot() const -> const ECSState * { return &m_buffers[m_activeIn
 auto ECS::isRenderGraphDirty() const -> bool { return m_buffers[m_editIndex].renderGraphDirty; }
 
 void ECS::markRenderGraphClean() { m_buffers[m_editIndex].renderGraphDirty = false; }
-
-void ECS::invalidateEffectCache(int clipId, int effectIndex, const QString &paramName) { m_interpCache.invalidateParam(clipId, effectIndex, paramName); }
-
-void ECS::invalidateAllEffectCaches(int clipId) { m_interpCache.invalidateAll(clipId); }
 
 } // namespace AviQtl::Engine::Timeline
 

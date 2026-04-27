@@ -1,7 +1,5 @@
 #include "project_serializer.hpp"
 #include "effect_registry.hpp"
-#include "engine/timeline/clip_lifecycle_system.hpp"
-#include "engine/timeline/ecs.hpp"
 #include "project_service.hpp"
 #include "settings_manager.hpp"
 #include "timeline_service.hpp"
@@ -29,7 +27,7 @@ auto ProjectSerializer::save(const QString &fileUrl, const UI::TimelineService *
     settings.insert(QStringLiteral("sampleRate"), project->sampleRate());
     root.insert(QStringLiteral("settings"), settings);
 
-    // シーン情報の保存
+    // --- シーン情報の保存 ---
     QJsonArray scenesArray;
     for (const auto &scene : timeline->getAllScenes()) {
         QJsonObject sObj;
@@ -45,50 +43,39 @@ auto ProjectSerializer::save(const QString &fileUrl, const UI::TimelineService *
     }
     root.insert(QStringLiteral("scenes"), scenesArray);
 
-    // フェーズ2: ECS スナップショットを正本として clips を保存する
-    // effects / audioPlugins は ClipData* から補完（フェーズ3で ECS 化予定）
+    // --- 全シーンのクリップをフラットに保存 ---
     QJsonArray clipsArray;
-    const auto *ecsState = AviQtl::Engine::Timeline::ECS::instance().getSnapshot();
-    if (ecsState) {
-        for (const auto &transform : ecsState->transforms) {
-            const int clipId = transform.clipId;
+    for (const auto &scene : timeline->getAllScenes()) {
+        for (const auto &clip : std::as_const(scene.clips)) {
             QJsonObject clipObj;
-            clipObj.insert(QStringLiteral("id"), clipId);
-            clipObj.insert(QStringLiteral("start"), transform.startFrame);
-            clipObj.insert(QStringLiteral("duration"), transform.durationFrames);
-            clipObj.insert(QStringLiteral("layer"), transform.layer);
+            clipObj.insert(QStringLiteral("id"), clip.id);
+            clipObj.insert(QStringLiteral("sceneId"), clip.sceneId); // シーンIDを保存
+            clipObj.insert(QStringLiteral("type"), clip.type);
+            clipObj.insert(QStringLiteral("start"), clip.startFrame);
+            clipObj.insert(QStringLiteral("duration"), clip.durationFrames);
+            clipObj.insert(QStringLiteral("layer"), clip.layer);
 
-            if (const auto *meta = ecsState->metadataStates.find(clipId)) {
-                clipObj.insert(QStringLiteral("type"), meta->type);
+            QJsonArray audioPluginsArray;
+            for (const auto &plugin : std::as_const(clip.audioPlugins)) {
+                QJsonObject pObj;
+                pObj.insert(QStringLiteral("id"), plugin.id);
+                pObj.insert(QStringLiteral("enabled"), plugin.enabled);
+                pObj.insert(QStringLiteral("params"), QJsonObject::fromVariantMap(plugin.params));
+                audioPluginsArray.append(pObj);
             }
+            clipObj.insert(QStringLiteral("audioPlugins"), audioPluginsArray);
 
-            // effects: ECS EffectStackComponent から取得
-            if (const auto *fx = ecsState->effectStacks.find(clipId)) {
-                QJsonArray effArray;
-                for (const auto &eff : std::as_const(fx->effects)) {
-                    QJsonObject eObj;
-                    eObj.insert(QStringLiteral("id"), eff.id);
-                    eObj.insert(QStringLiteral("name"), eff.name);
-                    eObj.insert(QStringLiteral("enabled"), eff.enabled);
-                    eObj.insert(QStringLiteral("params"), QJsonObject::fromVariantMap(eff.params));
-                    eObj.insert(QStringLiteral("keyframes"), QJsonObject::fromVariantMap(eff.keyframeTracks));
-                    effArray.append(eObj);
-                }
-                clipObj.insert(QStringLiteral("effects"), effArray);
+            QJsonArray effArray;
+            for (const auto *eff : std::as_const(clip.effects)) {
+                QJsonObject eObj;
+                eObj.insert(QStringLiteral("id"), eff->id());
+                eObj.insert(QStringLiteral("name"), eff->name());
+                eObj.insert(QStringLiteral("enabled"), eff->isEnabled());
+                eObj.insert(QStringLiteral("params"), QJsonObject::fromVariantMap(eff->params()));
+                eObj.insert(QStringLiteral("keyframes"), QJsonObject::fromVariantMap(eff->keyframeTracks()));
+                effArray.append(eObj);
             }
-
-            // audioPlugins: ECS AudioStackComponent から取得
-            if (const auto *audioStack = ecsState->audioStacks.find(clipId)) {
-                QJsonArray audioPluginsArray;
-                for (const auto &plugin : std::as_const(audioStack->audioPlugins)) {
-                    QJsonObject pObj;
-                    pObj.insert(QStringLiteral("id"), plugin.id);
-                    pObj.insert(QStringLiteral("enabled"), plugin.enabled);
-                    pObj.insert(QStringLiteral("params"), QJsonObject::fromVariantMap(plugin.params));
-                    audioPluginsArray.append(pObj);
-                }
-                clipObj.insert(QStringLiteral("audioPlugins"), audioPluginsArray);
-            }
+            clipObj.insert(QStringLiteral("effects"), effArray);
             clipsArray.append(clipObj);
         }
     }
@@ -134,7 +121,7 @@ auto ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
     }
     QJsonObject root = doc.object();
 
-    // 1. 一時的な構造体にパース (検証フェーズ)
+    // --- 1. 一時的な構造体にパース (検証フェーズ) ---
 
     // Project Settings
     bool hasSettings = root.contains(QStringLiteral("settings"));
@@ -246,7 +233,7 @@ auto ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
         }
     }
 
-    // 2. 変更を適用 (コミットフェーズ)
+    // --- 2. 変更を適用 (コミットフェーズ) ---
 
     if (hasSettings) {
         project->setWidth(pWidth);
@@ -280,15 +267,6 @@ auto ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
     timeline->setScenes(tempScenes);
     timeline->setNextClipId(tempMaxId + 1);
     timeline->setNextSceneId(maxSceneId + 1);
-
-    // フェーズ2: load 後に ECS を初期化する（setScenes は m_scenes のみ更新するため）
-    // commit() は clipsChanged の前に行い、synchronizer がスナップショットを正しく参照できるようにする
-    auto &ecs = AviQtl::Engine::Timeline::ECS::instance();
-    for (const auto &clip : std::as_const(tempClips)) {
-        AviQtl::Engine::Timeline::ClipLifecycleSystem::restoreClipFromDTO(ecs.editState(), clip);
-    }
-    ecs.commit();
-
     QMetaObject::invokeMethod(timeline, "clipsChanged");
 
     return true;

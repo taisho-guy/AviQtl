@@ -9,14 +9,6 @@ Common.BaseEffect {
     property real speed: root.evalNumber("speed", 20)
     property real randomSeed: root.evalNumber("seed", 0)
 
-    // 最大振れ幅の分だけ全方向に拡張
-    expansion: ({
-        "top": yStrength,
-        "right": xStrength,
-        "bottom": yStrength,
-        "left": xStrength
-    })
-
     ShaderEffect {
         property variant source: root.sourceProxy
         property real xStrength: root.xStrength

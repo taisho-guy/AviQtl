@@ -54,7 +54,7 @@ class ModEngine {
     ModEngine(const ModEngine &) = delete;
     ModEngine &operator=(const ModEngine &) = delete;
     lua_State *L = nullptr;
-    void _registerRinaAPI();
+    void _registerAviQtlAPI();
 };
 
 } // namespace AviQtl::Scripting

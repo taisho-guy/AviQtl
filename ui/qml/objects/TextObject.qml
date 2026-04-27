@@ -5,8 +5,6 @@ import QtQuick3D
 import "qrc:/qt/qml/AviQtl/ui/qml/common" as Common
 
 Common.BaseObject {
-    // removed: managed by BaseObject
-
     id: root
 
     property string textContent: evalString("text", "text", "テキスト")
@@ -33,44 +31,52 @@ Common.BaseObject {
     // 縁取りがはみ出さないようにパディングを確保
     readonly property real _pad: outlineEnabled ? Math.ceil(outlineWidth) + 2 : 2
 
+    Model {
+        source: "#Rectangle"
+        scale: Qt.vector3d((renderer.output.sourceItem ? renderer.output.sourceItem.width : 1) / 100, (renderer.output.sourceItem ? renderer.output.sourceItem.height : 1) / 100, 1)
+
+        materials: DefaultMaterial {
+            lighting: DefaultMaterial.NoLighting
+            blendMode: root.blendMode
+            cullMode: root.cullMode
+
+            diffuseMap: Texture {
+                sourceItem: renderer.output
+            }
+
+        }
+
+    }
+
     sourceItem: Item {
-        // 【修正】width/height をコンテンツの implicitSize から直接算出し、
-        // 親(renderHost)のサイズに一切依存しない自律サイズにする。
-        // adopt2D で親が 1920x1080 の renderHost に変わっても再レイアウトが起きない。
+        // _pad 分 + 背景パディング分だけ拡大
         width: Math.max(textItem.implicitWidth + root._pad * 2 + (root.bgEnabled ? root.bgPaddingX * 2 : 0), 1)
         height: Math.max(textItem.implicitHeight + root._pad * 2 + (root.bgEnabled ? root.bgPaddingY * 2 : 0), 1)
-        // opacity/visible は BaseObject.onSourceItemChanged が設定する
-        // visible: true
-        opacity: 1
+        // visible: false にすると SceneGraph から外れてテクスチャ更新が止まるため、
+        // opacity: 0 で不可視にしつつ SceneGraph には残す（BaseObject.qml の設計方針に準拠）
+        visible: true
+        opacity: 0
 
         Rectangle {
-            x: 0
-            y: 0
-            width: parent.width
-            height: parent.height
+            anchors.fill: parent
             visible: root.bgEnabled
             color: root.bgColor
             radius: root.bgRadius
         }
 
+        // テキスト＋縁取りをまとめるコンテナ
+        // テキスト本体と「クールな」GPU 縁取り
         Item {
             id: textWrapper
 
-            // 【修正】anchors.centerIn を廃止して x/y を明示固定する。
-            // anchors.centerIn は親サイズに依存するため reparent 時に循環レイアウトの原因になる。
-            x: root._pad + (root.bgEnabled ? root.bgPaddingX : 0)
-            y: root._pad + (root.bgEnabled ? root.bgPaddingY : 0)
+            anchors.centerIn: parent
             width: textItem.implicitWidth + root._pad * 2
             height: textItem.implicitHeight + root._pad * 2
 
             Text {
                 id: textItem
 
-                // 【修正】anchors.centerIn を廃止して x/y を明示固定する。
-                x: root._pad
-                y: root._pad
-                // 【修正】wrapMode を NoWrap に明示して親幅に引きずられないようにする。
-                wrapMode: Text.NoWrap
+                anchors.centerIn: parent
                 text: root.textContent
                 font.family: root.fontFamily
                 font.pixelSize: root.fontSize
@@ -86,6 +92,8 @@ Common.BaseObject {
                 renderType: Text.CurveRendering
             }
 
+            // Glow の spread: 1.0 は、ぼかしを一切行わず、100% の濃さで指定ピクセル分を
+            // 押し広げるため、単一の描画パスで完璧なソリッド縁取り(アウトライン)が完成します。
             Glow {
                 anchors.fill: textItem
                 source: textItem
@@ -95,6 +103,7 @@ Common.BaseObject {
                 samples: Math.min(64, 1 + Math.ceil(root.outlineWidth) * 2)
                 spread: 1
                 transparentBorder: true
+                // Textの上に被らないように z を下げる
                 z: -1
             }
 
@@ -111,6 +120,8 @@ Common.BaseObject {
             height: textWrapper.height
         }
 
+        // 影エフェクト: textCapture (FBOキャプチャ済み) をソースに使う
+        // これにより textWrapper が非表示でも正しく影付きテキストが描画される
         MultiEffect {
             x: textWrapper.x
             y: textWrapper.y

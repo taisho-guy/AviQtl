@@ -112,7 +112,7 @@ static void writeUniform(QByteArray &buf, const QShaderDescription::BlockVariabl
     }
 }
 
-// SSBO ペイロード変換
+// ─── SSBO ペイロード変換 ─────────────────────────────────────────
 static QByteArray ssboToBytes(const QVariant &val) {
     if (val.canConvert<QByteArray>())
         return val.toByteArray();
@@ -384,7 +384,7 @@ class ComputePassNode : public QSGRenderNode {
     QSGTexture *m_qsgTex = nullptr;
 };
 
-// ComputeEffect
+// ─── ComputeEffect ──────────────────────────────────────────────────────────
 ComputeEffect::ComputeEffect(QQuickItem *parent) : QQuickItem(parent) { setFlag(ItemHasContents, true); }
 ComputeEffect::~ComputeEffect() = default;
 
@@ -512,4 +512,4 @@ void ComputeEffect::geometryChange(const QRectF &newGeometry, const QRectF &oldG
 
 } // namespace AviQtl::UI::Effects
 
-// #include "compute_effect.moc" // Removed to fix AutoMoc warning
+#include "compute_effect.moc"

@@ -28,9 +28,9 @@ Common.BaseObject {
     sourceItem: sourceItem
 
     Item {
-        // id: sourceItem
+        id: sourceItem
 
-        visible: false // removed: managed by BaseObject
+        visible: false
         width: root.sizeW + padding * 2
         height: root.sizeH + padding * 2
 
