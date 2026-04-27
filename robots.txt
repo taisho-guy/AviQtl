@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 
 # サイトマップの場所を指定
-Sitemap: https://rina.taisho-guy.org/sitemap.xml
+Sitemap: https://aviqtl.taisho-guy.org/sitemap.xml
