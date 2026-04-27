@@ -138,28 +138,45 @@ void ECS::updateMetadata(int clipId, const QString &name, const QString &source,
 void ECS::commit() {
     ECS_PROF_INC(commitCount);
 
-    // 現在の edit バッファのインデックスを新しい active バッファにする
-    int nextActive = m_editIndex;
+    // フェーズ5: mailbox パターンによるバッファ競合排除
+    // 従来: commit() が直接 m_activeIndex を変更 → render thread と書き込み競合の可能性
+    // 改善: commit() は m_pendingIndex に deposit するのみ
+    //       m_activeIndex の昇格は render thread 側の getSnapshot() が担う
+    //
+    // バッファ所有権の不変条件:
+    //   m_editIndex  → UI thread が排他的に書き込む
+    //   m_activeIndex→ render thread が読む。getSnapshot() のみが変更する
+    //   m_pendingIndex→ UI/render 間の handoff。-1 = 未発行
 
-    // 次の edit バッファを選ぶ (0, 1, 2 を循環)
-    m_editIndex = (m_editIndex + 1) % 3;
+    const int justWritten = m_editIndex;
 
-    // 次の edit バッファが現在 active として使われているなら、もう一つ進める
-    if (m_editIndex == m_activeIndex.load(std::memory_order_acquire)) {
-        m_editIndex = (m_editIndex + 1) % 3;
+    // 次の edit バッファを選択: active と pending の両方を避ける
+    // (render thread が現在または次に読む可能性があるバッファに触れない)
+    const int active = m_activeIndex.load(std::memory_order_acquire);
+    const int pending = m_pendingIndex.load(std::memory_order_acquire);
+
+    int next = -1;
+    for (int c = 0; c < 3; ++c) {
+        if (c == justWritten || c == active || c == pending)
+            continue;
+        next = c;
+        break;
     }
+    if (next == -1) {
+        // 全バッファ使用中: UI が render より高速な場合 (pending を上書きしてフレームスキップ)
+        next = (pending != -1) ? pending : (justWritten + 1) % 3;
+    }
+    m_editIndex = next;
 
-    // フェーズ1: m_fullSyncRequired[X] → m_dirtyFlags[X].fullSync
     if (m_dirtyFlags[m_editIndex].fullSync) {
         // 構造変更があった、または初期状態の場合はフルコピー
-        m_buffers[m_editIndex] = m_buffers[nextActive];
+        m_buffers[m_editIndex] = m_buffers[justWritten];
         m_dirtyFlags[m_editIndex].fullSync = false;
         m_dirtyFlags[m_editIndex].dirty.reset();
     } else {
-        // 部分更新: 変更があったコンポーネントのみコピー
-        // フェーズ1: for (int id : QSet) → bitset走査
-        // 4096bit = 512byte = 8キャッシュライン: 全走査でもL1完結
-        const auto &src = m_buffers[nextActive];
+        // 部分更新: フェーズ1の bitset 走査
+        // 4096bit = 512byte = L1キャッシュ 8ライン: 全走査でも L1 完結
+        const auto &src = m_buffers[justWritten];
         auto &dst = m_buffers[m_editIndex];
 
         dst.renderGraphDirty = src.renderGraphDirty;
@@ -169,27 +186,35 @@ void ECS::commit() {
             if (!dirtyBits.test(i))
                 continue;
             const int id = static_cast<int>(i);
-            if (const auto *s = src.transforms.find(id)) {
+            if (const auto *s = src.transforms.find(id))
                 dst.transforms[id] = *s;
-            }
-            if (const auto *s = src.renderStates.find(id)) {
+            if (const auto *s = src.renderStates.find(id))
                 dst.renderStates[id] = *s;
-            }
-            if (const auto *s = src.audioStates.find(id)) {
+            if (const auto *s = src.audioStates.find(id))
                 dst.audioStates[id] = *s;
-            }
-            if (const auto *s = src.metadataStates.find(id)) {
+            if (const auto *s = src.metadataStates.find(id))
                 dst.metadataStates[id] = *s;
-            }
         }
         m_dirtyFlags[m_editIndex].dirty.reset();
     }
 
-    // 最新の active インデックスを公開
-    m_activeIndex.store(nextActive, std::memory_order_release);
+    // フェーズ5: mailbox に deposit（m_activeIndex は触らない）
+    // render thread が次の getSnapshot() で CAS により take する
+    m_pendingIndex.store(justWritten, std::memory_order_release);
 }
 
-auto ECS::getSnapshot() const -> const ECSState * { return &m_buffers[m_activeIndex.load(std::memory_order_acquire)]; }
+auto ECS::getSnapshot() const -> const ECSState * {
+    // フェーズ5: mailbox から最新バッファを取り出して active に昇格 (lazy swap)
+    // CAS: m_pendingIndex を -1 にクリアしてから m_activeIndex を更新する
+    // 失敗時はすでに他の呼び出しが取り出し済みなので読み飛ばして現在の active を返す
+    int pending = m_pendingIndex.load(std::memory_order_acquire);
+    if (pending != -1) {
+        if (m_pendingIndex.compare_exchange_strong(pending, -1, std::memory_order_acq_rel, std::memory_order_relaxed)) {
+            m_activeIndex.store(pending, std::memory_order_release);
+        }
+    }
+    return &m_buffers[m_activeIndex.load(std::memory_order_acquire)];
+}
 
 auto ECS::isRenderGraphDirty() const -> bool { return m_buffers[m_editIndex].renderGraphDirty; }
 

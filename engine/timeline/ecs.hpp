@@ -199,7 +199,11 @@ class ECS {
     int m_editIndex = 0;
 
     // バックグラウンドスレッドが現在読み取っている(最新の確定済み)バッファのインデックス
-    std::atomic<int> m_activeIndex{0};
+    // フェーズ5: render thread (getSnapshot) のみが activeIndex を昇格する
+    mutable std::atomic<int> m_activeIndex{0};
+    // フェーズ5: UI→render の mailbox（-1 = 未発行）
+    // commit() が deposit し、getSnapshot() が CAS で take する
+    mutable std::atomic<int> m_pendingIndex{-1};
 
     // フェーズ2: 文字列インターンプール（SoA内から heap 文字列を排除）
     StringTable m_stringTable;
