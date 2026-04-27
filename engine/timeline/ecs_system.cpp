@@ -87,6 +87,24 @@ void ECS::updateAudioClipState(int clipId, int startFrame, int durationFrames, f
     ECS_PROF_INC(dirtyBitSetCount);
 }
 
+// フェーズ2: "#RRGGBB" / "#AARRGGBB" を ARGB uint32_t にパック
+// Qt依存を最小化するため QString で受けて変換のみ行う
+static auto parseColorRGBA(const QString &colorStr) -> uint32_t {
+    QString s = colorStr.trimmed();
+    if (s.startsWith(u'#')) {
+        s.remove(0, 1);
+    }
+    bool ok = false;
+    const uint32_t val = s.toUInt(&ok, 16);
+    if (!ok) {
+        return 0xFF000000u; // 不明な場合は不透明黒
+    }
+    if (s.length() == 6) {
+        return 0xFF000000u | val; // RRGGBB → AARRGGBB
+    }
+    return val; // AARRGGBB
+}
+
 void ECS::updateMetadata(int clipId, const QString &name, const QString &source, const QString &type, const QString &color) {
     assert(clipId >= 0 && clipId < MAX_CLIP_ID);
     auto &editState = m_buffers[m_editIndex];
@@ -95,14 +113,22 @@ void ECS::updateMetadata(int clipId, const QString &name, const QString &source,
         m_dirtyFlags[(m_editIndex + 1) % 3].fullSync = true;
         m_dirtyFlags[(m_editIndex + 2) % 3].fullSync = true;
     }
+
+    // フェーズ2: QString → StringTable ID に変換してからSoAへ書き込む
+    // これにより比較コストが uint32_t == uint32_t のみになる
+    const uint32_t nId = m_stringTable.intern(name.toStdString());
+    const uint32_t sId = m_stringTable.intern(source.toStdString());
+    const uint32_t tId = m_stringTable.intern(type.toStdString());
+    const uint32_t cRGBA = parseColorRGBA(color);
+
     auto &meta = editState.metadataStates[clipId];
 
-    if (meta.clipId != clipId || meta.name != name || meta.source != source || meta.type != type || meta.color != color) {
-        meta.clipId = clipId;
-        meta.name = name;
-        meta.source = source;
-        meta.type = type;
-        meta.color = color;
+    if (meta.clipId != clipId || meta.nameId != nId || meta.sourceId != sId || meta.typeId != tId || meta.colorRGBA != cRGBA) {
+        meta.clipId = static_cast<int32_t>(clipId);
+        meta.nameId = nId;
+        meta.sourceId = sId;
+        meta.typeId = tId;
+        meta.colorRGBA = cRGBA;
         const auto cidx = static_cast<std::size_t>(clipId);
         m_dirtyFlags[(m_editIndex + 1) % 3].dirty.set(cidx);
         m_dirtyFlags[(m_editIndex + 2) % 3].dirty.set(cidx);

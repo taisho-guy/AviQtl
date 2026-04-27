@@ -1,5 +1,6 @@
 #pragma once
 #include "ecs_profiler.hpp"
+#include "string_table.hpp"
 #include <QString>
 #include <QVariantMap>
 #include <array>
@@ -133,13 +134,18 @@ struct TransformComponent {
     int durationFrames = 0;
 };
 
+// フェーズ2: QString を排除し trivially_copyable な POD 構造体へ
+// name/source/type は StringTable のIDで保持
+// color は "#RRGGBB"/"#AARRGGBB" を uint32_t ARGB にパック
 struct MetadataComponent {
-    int clipId = -1;
-    QString name;
-    QString source;
-    QString type;
-    QString color;
+    int32_t clipId = -1;
+    uint32_t nameId = 0;    // StringTable index
+    uint32_t sourceId = 0;  // StringTable index
+    uint32_t typeId = 0;    // StringTable index
+    uint32_t colorRGBA = 0; // ARGB packed
 };
+static_assert(sizeof(MetadataComponent) == 20, "MetadataComponent size check failed");
+static_assert(std::is_trivially_copyable_v<MetadataComponent>, "MetadataComponent must be trivially copyable");
 
 struct RenderComponent {
     bool needsUpdate = true;
@@ -177,6 +183,9 @@ class ECS {
 
     const ECSState *getSnapshot() const;
 
+    // フェーズ2: StringTableへの読み取りアクセス（レンダラー/Lua向け）
+    const StringTable &stringTable() const { return m_stringTable; }
+
     bool isRenderGraphDirty() const;
     void markRenderGraphClean();
 
@@ -191,6 +200,9 @@ class ECS {
 
     // バックグラウンドスレッドが現在読み取っている(最新の確定済み)バッファのインデックス
     std::atomic<int> m_activeIndex{0};
+
+    // フェーズ2: 文字列インターンプール（SoA内から heap 文字列を排除）
+    StringTable m_stringTable;
 
     // フェーズ1: QSet<int> x3 + bool x3 → DirtyFlags x3 に統合
     // DirtyFlags: { bitset<4096> dirty; bool fullSync; }
