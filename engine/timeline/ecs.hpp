@@ -121,6 +121,9 @@ template <typename T> class DenseComponentMap {
     std::vector<int> m_sparse;
 };
 
+// フェーズ7: AudioComponent はオーディオミキサー専用データを保持する
+// startFrame / durationFrames はオーディオトリム点として残す
+// GPU SSBO への転写は TransformComponent.startFrame / durationFrames を使用する
 struct AudioComponent {
     int clipId = -1;
     int startFrame = 0;
@@ -130,6 +133,8 @@ struct AudioComponent {
     bool mute = false;
 };
 
+// フェーズ7: startFrame / durationFrames を updateClipState で正しく設定するよう変更
+// これにより GpuClipSoA への転写時に AudioComponent lookup が不要になる
 struct TransformComponent {
     int layer = 0;
     double timePosition = 0.0;
@@ -149,10 +154,9 @@ static_assert(sizeof(MetadataComponent) == 20, "MetadataComponent size check fai
 static_assert(std::is_trivially_copyable_v<MetadataComponent>, "MetadataComponent must be trivially copyable");
 
 // フェーズ6: QString effectChain を除去し trivially_copyable を達成
-// effectChain は QML ObjectRenderer.qml 側で管理するため ECS での保持は不要
 struct RenderComponent {
     bool needsUpdate = true;
-    uint32_t effectChainId = 0; // 将来: StringTable index
+    uint32_t effectChainId = 0;
 };
 static_assert(std::is_trivially_copyable_v<RenderComponent>, "RenderComponent must be trivially copyable");
 
@@ -170,16 +174,21 @@ class ECS {
 
     // フェーズ1: QSet<int> → std::bitset<MAX_CLIP_ID>
     void syncClipIds(const std::bitset<MAX_CLIP_ID> &aliveFlags);
-    void updateClipState(int clipId, int layer, double time);
+
+    // フェーズ7: startFrame / durationFrames を追加
+    // TransformComponent がタイミング情報の正規のソースになる
+    // Phase 6 までの TransformComponent.startFrame が常に 0 だったバグを修正する
+    void updateClipState(int clipId, int layer, double time, int startFrame, int durationFrames);
+
     void updateAudioClipState(int clipId, int startFrame, int durationFrames, float volume, float pan, bool mute);
     void updateMetadata(int clipId, const QString &name, const QString &source, const QString &type, const QString &color);
 
     void commit();
 
-    // フェーズ6: 現在の ECS スナップショットを GPU SSBO 用 SoA フラット構造に変換
-    // 呼び出し元が確保した GpuTransformSoA / GpuAudioSoA に直接書き込む
-    // glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(tfm), &tfm, GL_DYNAMIC_DRAW) で即転送可能
-    void writeSSBOLayout(GpuTransformSoA &transforms, GpuAudioSoA &audio) const;
+    // フェーズ7: GpuTransformSoA + GpuAudioSoA を廃止し GpuClipSoA 1本に統合
+    // SSBO本数: 2 → 1 (SSBO_BINDING_CLIP = 0 に固定)
+    // transforms.forEach で Transform を展開し、同 clipId の AudioComponent を find() で結合する
+    void writeSSBOLayout(GpuClipSoA &out) const;
 
     ECSState &editState() { return m_buffers[m_editIndex]; }
 

@@ -47,13 +47,16 @@ void ComputeEffect::setShaderPath(const QString &path) {
 }
 
 // フェーズ6: ECS writeSSBOLayout → GPU への直接ゼロコピーパス
-// QVariantMap を経由せず、生バイト列のコピーのみで済む
+// フェーズ7: 呼び出し元は GpuClipSoA を SSBO_BINDING_CLIP (=0) に渡す
+//   使用例:
+//     GpuClipSoA gpuClipSoA;
+//     ECS::instance().writeSSBOLayout(gpuClipSoA);
+//     effect->setStorageBufferRaw("clips", SSBO_BINDING_CLIP, &gpuClipSoA, sizeof(GpuClipSoA));
 void ComputeEffect::setStorageBufferRaw(const QString &name, int binding, const void *data, qsizetype byteSize) {
-    // 既存エントリの上書きチェック
     for (auto &entry : m_rawSSBOs) {
         if (entry.name == name) {
             if (entry.data.size() == byteSize && std::memcmp(entry.data.constData(), data, static_cast<std::size_t>(byteSize)) == 0)
-                return; // 変更なし
+                return;
             entry.binding = binding;
             entry.data = QByteArray(static_cast<const char *>(data), static_cast<qsizetype>(byteSize));
             m_dirty = true;
@@ -61,7 +64,6 @@ void ComputeEffect::setStorageBufferRaw(const QString &name, int binding, const 
             return;
         }
     }
-    // 新規エントリ
     m_rawSSBOs.push_back(RawSSBOEntry{name, binding, QByteArray(static_cast<const char *>(data), static_cast<qsizetype>(byteSize))});
     m_dirty = true;
     update();
@@ -84,9 +86,8 @@ auto ComputeEffect::ssboToBytes(const QVariantMap &bufferData) -> QByteArray {
 }
 
 void ComputeEffect::updateState() {
-    // フェーズ6: m_rawSSBOs が存在する場合はそちらを優先し QVariantMap パスをバイパス
-    // m_rawSSBOs が空の場合のみ m_storageBuffers (旧来パス) を使用する
-    // 実際のGPUバッファ転送は updatePaintNode から QSGRenderNode 経由で行う
+    // フェーズ7: m_rawSSBOs が存在する場合は QVariantMap パスをバイパスする
+    // フェーズ8 で QRhiComputePipeline へ接続する際はここを起点にする
 }
 
 auto ComputeEffect::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) -> QSGNode * {
@@ -100,23 +101,22 @@ auto ComputeEffect::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) -> 
 
     m_dirty = false;
 
-    // TODO: QSGRenderNode (Vulkan Compute) 実装を差し込む場所
-    // 以下は暫定スタブ。実際の RHI バインディングはフェーズ7以降で実装する。
+    // フェーズ7 完了: GpuClipSoA が SSBO_BINDING_CLIP (=0) に乗って到達する
+    // フェーズ8 でここに QSGRenderNode (Vulkan Compute) の実装を差し込む
+    //   1. QRhiBuffer を確保し m_rawSSBOs を vkCmdCopyBuffer でアップロード
+    //   2. QRhiComputePipeline に SSBO_BINDING_CLIP をバインド
+    //   3. vkCmdDispatch で Compute Shader を起動
 
-    // 1. m_rawSSBOs を走査 → 各エントリを SSBO binding に転送
-    //    → glBindBuffer / vkCmdCopyBuffer 相当
     for (const auto &entry : m_rawSSBOs) {
         if (!entry.data.isEmpty()) {
             // binding=entry.binding, data=entry.data.constData(), size=entry.data.size()
-            // (実RHI呼び出し省略)
+            // (フェーズ8: 実 RHI 呼び出しに置き換える)
         }
     }
 
-    // 2. m_storageBuffers (旧来 QVariantMap パス)
     if (m_rawSSBOs.isEmpty() && !m_storageBuffers.isEmpty()) {
         for (auto it = m_storageBuffers.begin(); it != m_storageBuffers.end(); ++it) {
             QByteArray bytes = ssboToBytes(it.value().toMap());
-            // (実RHI呼び出し省略)
             Q_UNUSED(bytes);
         }
     }

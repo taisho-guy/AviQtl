@@ -31,7 +31,11 @@ void ECS::syncClipIds(const std::bitset<MAX_CLIP_ID> &aliveFlags) {
     }
 }
 
-void ECS::updateClipState(int clipId, int layer, double time) {
+// フェーズ7: startFrame / durationFrames を TransformComponent に追加
+// これにより GpuClipSoA の startFrames[] / durationFrames[] の正規のソースになる
+// Phase 6 では TransformComponent.startFrame が常に 0 のまま writeSSBOLayout に
+// 渡されていたため、シェーダー側で正しいタイミング計算ができていなかった
+void ECS::updateClipState(int clipId, int layer, double time, int startFrame, int durationFrames) {
     assert(clipId >= 0 && clipId < MAX_CLIP_ID);
     auto &editState = m_buffers[m_editIndex];
     if (!editState.transforms.contains(clipId)) {
@@ -39,10 +43,15 @@ void ECS::updateClipState(int clipId, int layer, double time) {
         m_dirtyFlags[(m_editIndex + 2) % 3].fullSync = true;
     }
     auto &transform = editState.transforms[clipId];
-    bool changed = (transform.layer != layer) || (std::abs(transform.timePosition - time) > 0.001);
+    bool changed = (transform.layer != layer)
+                || (std::abs(transform.timePosition - time) > 0.001)
+                || (transform.startFrame != startFrame)
+                || (transform.durationFrames != durationFrames);
     if (changed) {
         transform.layer = layer;
         transform.timePosition = time;
+        transform.startFrame = startFrame;
+        transform.durationFrames = durationFrames;
         auto &render = editState.renderStates[clipId];
         render.needsUpdate = true;
         editState.renderGraphDirty = true;
@@ -116,11 +125,8 @@ void ECS::commit() {
     ECS_PROF_INC(commitCount);
 
     // フェーズ5: mailbox パターンによるバッファ競合排除
-    // commit() は m_pendingIndex に deposit するのみ
-    // m_activeIndex の昇格は render thread 側の getSnapshot() が担う
     const int justWritten = m_editIndex;
 
-    // 次の edit バッファを選択: active と pending の両方を避ける
     const int active = m_activeIndex.load(std::memory_order_acquire);
     const int pending = m_pendingIndex.load(std::memory_order_acquire);
 
@@ -132,18 +138,15 @@ void ECS::commit() {
         break;
     }
     if (next == -1) {
-        // 全バッファ使用中: UI が render より高速な場合 (pending を上書きしてフレームスキップ)
         next = (pending != -1) ? pending : (justWritten + 1) % 3;
     }
     m_editIndex = next;
 
     if (m_dirtyFlags[m_editIndex].fullSync) {
-        // 構造変更があった、または初期状態の場合はフルコピー
         m_buffers[m_editIndex] = m_buffers[justWritten];
         m_dirtyFlags[m_editIndex].fullSync = false;
         m_dirtyFlags[m_editIndex].dirty.reset();
     } else {
-        // 部分更新: フェーズ1の bitset 走査 (4096bit = L1キャッシュ 8ライン)
         const auto &src = m_buffers[justWritten];
         auto &dst = m_buffers[m_editIndex];
         dst.renderGraphDirty = src.renderGraphDirty;
@@ -164,7 +167,7 @@ void ECS::commit() {
         m_dirtyFlags[m_editIndex].dirty.reset();
     }
 
-    // フェーズ5: mailbox に deposit (m_activeIndex は触らない)
+    // フェーズ5: mailbox に deposit
     m_pendingIndex.store(justWritten, std::memory_order_release);
 }
 
@@ -179,37 +182,42 @@ auto ECS::getSnapshot() const -> const ECSState * {
     return &m_buffers[m_activeIndex.load(std::memory_order_acquire)];
 }
 
-// フェーズ6: ECS スナップショット → SoA フラット配列への直接展開
-// QVariantMap / QByteArray を一切経由しない zero-copy パス
-void ECS::writeSSBOLayout(GpuTransformSoA &tfm, GpuAudioSoA &aud) const {
+// フェーズ7: GpuTransformSoA + GpuAudioSoA を廃止し GpuClipSoA 1本に統合
+// 変更点:
+//   引数: (GpuTransformSoA&, GpuAudioSoA&) → (GpuClipSoA&)
+//   SSBO 本数: 2本 → 1本 (SSBO_BINDING_CLIP = 0)
+//   startFrames / durationFrames の重複を除去 (2,064 bytes 削減)
+//   transforms.forEach を一次ループとし、同 clipId の AudioComponent を find() で結合
+//   find() は DenseComponentMap の O(1) sparse lookup のため全体は O(k) を維持
+void ECS::writeSSBOLayout(GpuClipSoA &out) const {
     ECS_PROF_INC(ssboWriteCount);
 
     const ECSState *state = getSnapshot();
 
-    // TransformComponent → GpuTransformSoA
-    tfm.count = 0;
+    out.count = 0;
     state->transforms.forEach([&](int clipId, const TransformComponent &tc) {
-        if (tfm.count >= MAX_ACTIVE_CLIPS)
+        if (out.count >= MAX_ACTIVE_CLIPS)
             return;
-        const int idx = tfm.count++;
-        tfm.clipIds[idx] = static_cast<int32_t>(clipId);
-        tfm.layers[idx] = static_cast<int32_t>(tc.layer);
-        tfm.timePositions[idx] = static_cast<float>(tc.timePosition);
-        tfm.startFrames[idx] = static_cast<int32_t>(tc.startFrame);
-        tfm.durationFrames[idx] = static_cast<int32_t>(tc.durationFrames);
-    });
+        const int idx = out.count++;
 
-    // AudioComponent → GpuAudioSoA
-    aud.count = 0;
-    state->audioStates.forEach([&](int /*clipId*/, const AudioComponent &ac) {
-        if (aud.count >= MAX_ACTIVE_CLIPS)
-            return;
-        const int idx = aud.count++;
-        aud.volumes[idx] = ac.volume;
-        aud.pans[idx] = ac.pan;
-        aud.mutes[idx] = ac.mute ? 1 : 0;
-        aud.startFrames[idx] = static_cast<int32_t>(ac.startFrame);
-        aud.durationFrames[idx] = static_cast<int32_t>(ac.durationFrames);
+        out.clipIds[idx]        = static_cast<int32_t>(clipId);
+        out.layers[idx]         = static_cast<int32_t>(tc.layer);
+        out.timePositions[idx]  = static_cast<float>(tc.timePosition);
+        // タイミング情報: TransformComponent が正規のソース (Phase 6 のバグ修正)
+        out.startFrames[idx]    = static_cast<int32_t>(tc.startFrame);
+        out.durationFrames[idx] = static_cast<int32_t>(tc.durationFrames);
+
+        // Audio フィールド: AudioComponent が存在する場合のみ転写
+        // 存在しない場合 (テキスト・画像・矩形等) はデフォルト値を維持
+        if (const auto *ac = state->audioStates.find(clipId)) {
+            out.volumes[idx] = ac->volume;
+            out.pans[idx]    = ac->pan;
+            out.mutes[idx]   = ac->mute ? 1 : 0;
+        } else {
+            out.volumes[idx] = 1.0f;
+            out.pans[idx]    = 0.0f;
+            out.mutes[idx]   = 0;
+        }
     });
 }
 
