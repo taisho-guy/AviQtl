@@ -260,45 +260,66 @@ add_custom_target(copy_runtime_assets ALL
 )
 
 # シェーダーのコンパイル (.frag/.vert/.comp -> .qsb)
-# Compute シェーダーは GLSL 430 以上・MSL 20・HLSL 50 が必要。
-# フラグメント/バーテックス用の "100 es,120,150,310 es" を含めても問題ないが、
-# Compute には 430 が最低要件のため引数を統合して対応。
-# copy_runtime_assets より後に実行されるよう依存関係を明示し、
-# .qsb が .comp の生コピーで上書きされないようにする。
-function(compile_shaders TARGET_SUFFIX SRC_DIR DEST_DIR)
-    file(GLOB SHADERS "${SRC_DIR}/*.frag" "${SRC_DIR}/*.vert" "${SRC_DIR}/*.comp")
-    set(QSB_OUTPUTS "")
-    foreach(SHADER ${SHADERS})
-        get_filename_component(FILENAME ${SHADER} NAME)
-        get_filename_component(EXT ${SHADER} EXT)
-        set(QSB_FILE "${DEST_DIR}/${FILENAME}.qsb")
+# qt6_add_shaders の標準機能を活用して .comp を .frag/.vert と同列にコンパイルする。
+# PREFIX と BASE を指定し、リソース /qt/qml/AviQtl/effects および objects 以下に
+# コンパイル済みの .qsb を直接展開する。これによって、QMLからローカルの相対パス
+# （fragmentShader: "borderblur.frag.qsb" 等）でシームレスに参照可能となる。
 
-        if(EXT STREQUAL ".comp")
-            set(GLSL_ARGS "310 es,430")
-        else()
-            set(GLSL_ARGS "100 es,120,150,310 es,430")
-        endif()
+file(GLOB EFFECT_SHADERS_FRAGVERT "ui/qml/effects/*.frag" "ui/qml/effects/*.vert")
+file(GLOB EFFECT_SHADERS_COMP "ui/qml/effects/*.comp")
+file(GLOB OBJECT_SHADERS_FRAGVERT "ui/qml/objects/*.frag" "ui/qml/objects/*.vert")
+file(GLOB OBJECT_SHADERS_COMP "ui/qml/objects/*.comp")
 
-        add_custom_command(
-            OUTPUT ${QSB_FILE}
-            COMMAND Qt6::qsb --glsl "${GLSL_ARGS}" --hlsl 50 --msl 20 ${SHADER} -o ${QSB_FILE}
-            DEPENDS ${SHADER} ${COMMON_SHADERS}
-            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-            COMMENT "Compiling shader ${FILENAME} to .qsb"
-        )
-        list(APPEND QSB_OUTPUTS ${QSB_FILE})
-    endforeach()
+qt6_add_shaders(AviQtl "aviqtl_effects_fragvert"
+    GLSL "100 es,120,150,310 es,430"
+    HLSL 50
+    MSL 20
+    BATCHABLE
+    PRECOMPILE
+    OPTIMIZED
+    OUTPUT_DIR "${CMAKE_BINARY_DIR}"
+    BASE "ui/qml"
+    FILES ${EFFECT_SHADERS_FRAGVERT}
+)
 
-    if(QSB_OUTPUTS)
-        add_custom_target(CompileShaders_${TARGET_SUFFIX} ALL DEPENDS ${QSB_OUTPUTS})
-        # copy_runtime_assets の後にシェーダーをコンパイルすることで
-        # .qsb ファイルが生コピーで上書きされる競合を防ぐ
-        add_dependencies(CompileShaders_${TARGET_SUFFIX} copy_runtime_assets)
-        add_dependencies(AviQtl CompileShaders_${TARGET_SUFFIX})
-    endif()
-endfunction()
+if(EFFECT_SHADERS_COMP)
+    qt6_add_shaders(AviQtl "aviqtl_effects_comp"
+        GLSL "310 es,430"
+        HLSL 50
+        MSL 20
+        BATCHABLE
+        PRECOMPILE
+        OPTIMIZED
+        OUTPUT_DIR "${CMAKE_BINARY_DIR}"
+        BASE "ui/qml"
+        FILES ${EFFECT_SHADERS_COMP}
+    )
+endif()
 
-compile_shaders("Effects" "ui/qml/effects" "${CMAKE_BINARY_DIR}/effects")
-compile_shaders("Objects" "ui/qml/objects" "${CMAKE_BINARY_DIR}/objects")
+qt6_add_shaders(AviQtl "aviqtl_objects_fragvert"
+    GLSL "100 es,120,150,310 es,430"
+    HLSL 50
+    MSL 20
+    BATCHABLE
+    PRECOMPILE
+    OPTIMIZED
+    OUTPUT_DIR "${CMAKE_BINARY_DIR}"
+    BASE "ui/qml"
+    FILES ${OBJECT_SHADERS_FRAGVERT}
+)
+
+if(OBJECT_SHADERS_COMP)
+    qt6_add_shaders(AviQtl "aviqtl_objects_comp"
+        GLSL "310 es,430"
+        HLSL 50
+        MSL 20
+        BATCHABLE
+        PRECOMPILE
+        OPTIMIZED
+        OUTPUT_DIR "${CMAKE_BINARY_DIR}"
+        BASE "ui/qml"
+        FILES ${OBJECT_SHADERS_COMP}
+    )
+endif()
 
 # Trigger rescan for workspace.cpp and workspace.hpp
