@@ -63,8 +63,7 @@ void TimelineEngineSynchronizer::updateActiveClipsList() {
         // Phase 6 では TransformComponent.startFrame が常に 0 のままだったため
         // GpuTransformSoA.startFrames[] が無効な値を持っていた
         // これを修正し TransformComponent をタイミング情報の正規のソースとする
-        AviQtl::Engine::Timeline::ECS::instance().updateClipState(
-            clip->id, clip->layer, relFrame, clip->startFrame, clip->durationFrames);
+        AviQtl::Engine::Timeline::ECS::instance().updateClipState(clip->id, clip->layer, relFrame, clip->startFrame, clip->durationFrames);
 
         if (clip->type == QLatin1String("audio") || clip->type == QLatin1String("video")) {
             float vol = 1.0F;
@@ -79,8 +78,7 @@ void TimelineEngineSynchronizer::updateActiveClipsList() {
                     break;
                 }
             }
-            AviQtl::Engine::Timeline::ECS::instance().updateAudioClipState(
-                clip->id, clip->startFrame, clip->durationFrames, vol, pan, mute);
+            AviQtl::Engine::Timeline::ECS::instance().updateAudioClipState(clip->id, clip->startFrame, clip->durationFrames, vol, pan, mute);
         }
     }
 

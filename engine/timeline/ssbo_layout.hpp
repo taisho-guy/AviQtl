@@ -35,20 +35,18 @@ struct alignas(16) GpuClipSoA {
     // Transform フィールド (TransformComponent から転写)
     std::array<int32_t, MAX_ACTIVE_CLIPS> clipIds{};
     std::array<int32_t, MAX_ACTIVE_CLIPS> layers{};
-    std::array<float,   MAX_ACTIVE_CLIPS> timePositions{};
+    std::array<float, MAX_ACTIVE_CLIPS> timePositions{};
     // タイミング情報 (TransformComponent が正規のソース)
     // AudioComponent.startFrame / durationFrames はオーディオミキサー専用
     std::array<int32_t, MAX_ACTIVE_CLIPS> startFrames{};
     std::array<int32_t, MAX_ACTIVE_CLIPS> durationFrames{};
     // Audio フィールド (AudioComponent から転写。コンポーネント不在時はデフォルト値)
-    std::array<float,   MAX_ACTIVE_CLIPS> volumes{};
-    std::array<float,   MAX_ACTIVE_CLIPS> pans{};
+    std::array<float, MAX_ACTIVE_CLIPS> volumes{};
+    std::array<float, MAX_ACTIVE_CLIPS> pans{};
     std::array<int32_t, MAX_ACTIVE_CLIPS> mutes{};
 };
 
-static_assert(std::is_trivially_copyable_v<GpuClipSoA>,
-    "GpuClipSoA must be trivially copyable for glBufferData / vkCmdCopyBuffer");
-static_assert(sizeof(GpuClipSoA) == 16 + MAX_ACTIVE_CLIPS * 8 * sizeof(int32_t),
-    "GpuClipSoA layout check failed: std430 alignment violation");
+static_assert(std::is_trivially_copyable_v<GpuClipSoA>, "GpuClipSoA must be trivially copyable for glBufferData / vkCmdCopyBuffer");
+static_assert(sizeof(GpuClipSoA) == 16 + MAX_ACTIVE_CLIPS * 8 * sizeof(int32_t), "GpuClipSoA layout check failed: std430 alignment violation");
 
 } // namespace AviQtl::Engine::Timeline

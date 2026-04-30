@@ -1,7 +1,9 @@
 #include "compute_effect.hpp"
+#include "compute_render_node.hpp"
 #include <QDebug>
 #include <QSGNode>
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 
 namespace AviQtl::UI::Effects {
@@ -46,12 +48,40 @@ void ComputeEffect::setShaderPath(const QString &path) {
     update();
 }
 
-// フェーズ6: ECS writeSSBOLayout → GPU への直接ゼロコピーパス
-// フェーズ7: 呼び出し元は GpuClipSoA を SSBO_BINDING_CLIP (=0) に渡す
-//   使用例:
-//     GpuClipSoA gpuClipSoA;
-//     ECS::instance().writeSSBOLayout(gpuClipSoA);
-//     effect->setStorageBufferRaw("clips", SSBO_BINDING_CLIP, &gpuClipSoA, sizeof(GpuClipSoA));
+// フェーズ8: ワークグループサイズのセッタ
+void ComputeEffect::setWorkGroupSizeX(int x) {
+    const int clamped = qMax(1, x);
+    if (m_workGroupX == clamped)
+        return;
+    m_workGroupX = clamped;
+    m_dirty = true;
+    emit workGroupSizeXChanged();
+    update();
+}
+
+void ComputeEffect::setWorkGroupSizeY(int y) {
+    const int clamped = qMax(1, y);
+    if (m_workGroupY == clamped)
+        return;
+    m_workGroupY = clamped;
+    m_dirty = true;
+    emit workGroupSizeYChanged();
+    update();
+}
+
+void ComputeEffect::setAutoWorkGroup(bool autoWG) {
+    if (m_autoWorkGroup == autoWG)
+        return;
+    m_autoWorkGroup = autoWG;
+    if (m_autoWorkGroup)
+        recalcAutoWorkGroup();
+    m_dirty = true;
+    emit autoWorkGroupChanged();
+    update();
+}
+
+// フェーズ6 / 8: ECS writeSSBOLayout → GPU への直接ゼロコピーパス
+// フェーズ8: このデータは updatePaintNode で ComputeRenderNode に同期される
 void ComputeEffect::setStorageBufferRaw(const QString &name, int binding, const void *data, qsizetype byteSize) {
     for (auto &entry : m_rawSSBOs) {
         if (entry.name == name) {
@@ -67,6 +97,32 @@ void ComputeEffect::setStorageBufferRaw(const QString &name, int binding, const 
     m_rawSSBOs.push_back(RawSSBOEntry{name, binding, QByteArray(static_cast<const char *>(data), static_cast<qsizetype>(byteSize))});
     m_dirty = true;
     update();
+}
+
+// フェーズ8: アイテムリサイズ時に autoWorkGroup が true なら自動再計算
+void ComputeEffect::geometryChange(const QRectF &newGeometry, const QRectF &oldGeometry) {
+    QQuickItem::geometryChange(newGeometry, oldGeometry);
+    if (m_autoWorkGroup)
+        recalcAutoWorkGroup();
+}
+
+// 16x16 スレッドを 1 ワークグループとして item の縦横スレッド数を算出する
+// アイテム幅/高さが 0 の場合はデフォルト (1x1) を維持する
+void ComputeEffect::recalcAutoWorkGroup() {
+    if (width() > 0.0) {
+        const int newX = qMax(1, static_cast<int>(std::ceil(width() / 16.0)));
+        if (m_workGroupX != newX) {
+            m_workGroupX = newX;
+            emit workGroupSizeXChanged();
+        }
+    }
+    if (height() > 0.0) {
+        const int newY = qMax(1, static_cast<int>(std::ceil(height() / 16.0)));
+        if (m_workGroupY != newY) {
+            m_workGroupY = newY;
+            emit workGroupSizeYChanged();
+        }
+    }
 }
 
 // QVariantMap → バイト列変換 (旧来の互換パス。フェーズ6以降は setStorageBufferRaw を優先)
@@ -86,42 +142,50 @@ auto ComputeEffect::ssboToBytes(const QVariantMap &bufferData) -> QByteArray {
 }
 
 void ComputeEffect::updateState() {
-    // フェーズ7: m_rawSSBOs が存在する場合は QVariantMap パスをバイパスする
-    // フェーズ8 で QRhiComputePipeline へ接続する際はここを起点にする
+    // フェーズ8: m_rawSSBOs の内容は updatePaintNode → ComputeRenderNode::syncSSBOs で転送済み
 }
 
+// フェーズ8: ComputeRenderNode を生成・更新して返す
+// updatePaintNode は UI/レンダースレッドの同期ポイントであるため
+// m_rawSSBOs へのアクセスに mutex は不要
 auto ComputeEffect::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) -> QSGNode * {
     if (!m_enabled) {
         delete oldNode;
         return nullptr;
     }
 
-    if (!m_dirty)
-        return oldNode;
-
-    m_dirty = false;
-
-    // フェーズ7 完了: GpuClipSoA が SSBO_BINDING_CLIP (=0) に乗って到達する
-    // フェーズ8 でここに QSGRenderNode (Vulkan Compute) の実装を差し込む
-    //   1. QRhiBuffer を確保し m_rawSSBOs を vkCmdCopyBuffer でアップロード
-    //   2. QRhiComputePipeline に SSBO_BINDING_CLIP をバインド
-    //   3. vkCmdDispatch で Compute Shader を起動
-
-    for (const auto &entry : m_rawSSBOs) {
-        if (!entry.data.isEmpty()) {
-            // binding=entry.binding, data=entry.data.constData(), size=entry.data.size()
-            // (フェーズ8: 実 RHI 呼び出しに置き換える)
-        }
+    // フェーズ8: 初回呼び出し時に ComputeRenderNode を生成する
+    auto *node = static_cast<ComputeRenderNode *>(oldNode);
+    if (!node) {
+        node = new ComputeRenderNode(window());
+        m_dirty = true;
     }
 
-    if (m_rawSSBOs.isEmpty() && !m_storageBuffers.isEmpty()) {
-        for (auto it = m_storageBuffers.begin(); it != m_storageBuffers.end(); ++it) {
-            QByteArray bytes = ssboToBytes(it.value().toMap());
-            Q_UNUSED(bytes);
+    if (m_dirty) {
+        // m_rawSSBOs → ComputeRenderNode::SSBOEntry に変換して転送
+        QList<ComputeRenderNode::SSBOEntry> entries;
+        if (!m_rawSSBOs.isEmpty()) {
+            entries.reserve(m_rawSSBOs.size());
+            for (const auto &raw : std::as_const(m_rawSSBOs))
+                entries.push_back({raw.binding, raw.data});
+        } else if (!m_storageBuffers.isEmpty()) {
+            // 旧来 QVariantMap パス: m_rawSSBOs が空の場合のみ使用する
+            for (auto it = m_storageBuffers.cbegin(); it != m_storageBuffers.cend(); ++it) {
+                const QByteArray bytes = ssboToBytes(it.value().toMap());
+                if (!bytes.isEmpty())
+                    entries.push_back({0, bytes});
+            }
         }
+
+        node->syncSSBOs(entries);
+        node->syncShaderPath(m_shaderPath);
+        node->syncWorkGroupSize(m_workGroupX, m_workGroupY);
+        m_dirty = false;
     }
 
-    return oldNode;
+    // QSGNode のダーティフラグを立てて prepare() / render() が呼ばれることを保証する
+    node->markDirty(QSGNode::DirtyMaterial);
+    return node;
 }
 
 } // namespace AviQtl::UI::Effects

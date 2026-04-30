@@ -43,10 +43,7 @@ void ECS::updateClipState(int clipId, int layer, double time, int startFrame, in
         m_dirtyFlags[(m_editIndex + 2) % 3].fullSync = true;
     }
     auto &transform = editState.transforms[clipId];
-    bool changed = (transform.layer != layer)
-                || (std::abs(transform.timePosition - time) > 0.001)
-                || (transform.startFrame != startFrame)
-                || (transform.durationFrames != durationFrames);
+    bool changed = (transform.layer != layer) || (std::abs(transform.timePosition - time) > 0.001) || (transform.startFrame != startFrame) || (transform.durationFrames != durationFrames);
     if (changed) {
         transform.layer = layer;
         transform.timePosition = time;
@@ -200,23 +197,23 @@ void ECS::writeSSBOLayout(GpuClipSoA &out) const {
             return;
         const int idx = out.count++;
 
-        out.clipIds[idx]        = static_cast<int32_t>(clipId);
-        out.layers[idx]         = static_cast<int32_t>(tc.layer);
-        out.timePositions[idx]  = static_cast<float>(tc.timePosition);
+        out.clipIds[idx] = static_cast<int32_t>(clipId);
+        out.layers[idx] = static_cast<int32_t>(tc.layer);
+        out.timePositions[idx] = static_cast<float>(tc.timePosition);
         // タイミング情報: TransformComponent が正規のソース (Phase 6 のバグ修正)
-        out.startFrames[idx]    = static_cast<int32_t>(tc.startFrame);
+        out.startFrames[idx] = static_cast<int32_t>(tc.startFrame);
         out.durationFrames[idx] = static_cast<int32_t>(tc.durationFrames);
 
         // Audio フィールド: AudioComponent が存在する場合のみ転写
         // 存在しない場合 (テキスト・画像・矩形等) はデフォルト値を維持
         if (const auto *ac = state->audioStates.find(clipId)) {
             out.volumes[idx] = ac->volume;
-            out.pans[idx]    = ac->pan;
-            out.mutes[idx]   = ac->mute ? 1 : 0;
+            out.pans[idx] = ac->pan;
+            out.mutes[idx] = ac->mute ? 1 : 0;
         } else {
             out.volumes[idx] = 1.0f;
-            out.pans[idx]    = 0.0f;
-            out.mutes[idx]   = 0;
+            out.pans[idx] = 0.0f;
+            out.mutes[idx] = 0;
         }
     });
 }
