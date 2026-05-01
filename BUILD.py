@@ -3,455 +3,544 @@ import os
 import subprocess
 import shutil
 import multiprocessing
-from pathlib import Path
-from PySide6 import QtCore
-import platform
+import argparse
 import shlex
 import urllib.request
+from pathlib import Path
+from dataclasses import dataclass
+from typing import Callable, List, Type
+from PySide6 import QtCore
+
+
+@dataclass
+class BuildConfig:
+    source_dir: Path
+    temp_base: Path
+    output_dir: Path
+    target: str
+    is_debug: bool
+    use_container: bool
+    is_offline: bool
+
+    @property
+    def build_type(self) -> str:
+        return "Debug" if self.is_debug else "Release"
+
+    @property
+    def work_dir(self) -> Path:
+        return self.temp_base / self.build_type
+
+    @property
+    def dist_dir(self) -> Path:
+        return self.source_dir / "dist"
+
+
+class Logger:
+    def __init__(self, log_cb: Callable[[str], None], progress_cb: Callable[[int, str], None]):
+        self._log = log_cb
+        self._progress = progress_cb
+
+    def log(self, msg: str):
+        self._log(msg)
+
+    def section(self, title: str):
+        self._log(f">>> {title}")
+
+    def progress(self, val: int, msg: str):
+        self._progress(val, msg)
+
+
+class PlatformBuilder:
+    def __init__(self, config: BuildConfig, logger: Logger):
+        self.config = config
+        self.logger = logger
+        self.env = os.environ.copy()
+        self.env["GIT_TERMINAL_PROMPT"] = "0"
+        self.env["HOMEBREW_NO_AUTO_UPDATE"] = "1"
+        self.env["DEBIAN_FRONTEND"] = "noninteractive"
+        self.container_name = ""
+        self.use_container = False
+
+    def build(self):
+        self.logger.progress(10, f"{self.config.build_type} ビルド開始")
+        self.logger.section("依存関係の確認")
+        self.install_dependencies()
+        self.logger.section("CMake 設定")
+        self.configure()
+        self.logger.section("翻訳ファイル更新")
+        self.update_translations()
+        self.logger.section("コンパイル")
+        self.compile()
+        self.logger.section("パッケージング")
+        self.package()
+        self.logger.section("アーカイブ作成")
+        self.archive()
+        self.logger.progress(100, "完了")
+
+    def install_dependencies(self):
+        pass
+
+    def configure(self):
+        self.run_cmd(self.get_cmake_config_cmd())
+
+    def update_translations(self):
+        self.run_cmd(["cmake", "--build", str(self.config.work_dir), "--target", "AviQtl_lupdate"])
+
+    def compile(self):
+        j = multiprocessing.cpu_count()
+        self.logger.log(f"並列ジョブ数: {j}")
+        self.run_cmd(["cmake", "--build", str(self.config.work_dir), "-j", str(j)])
+
+    def package(self):
+        pass
+
+    def archive(self):
+        self.config.dist_dir.mkdir(parents=True, exist_ok=True)
+        archive_name = self.get_archive_name()
+        self.create_zip(archive_name)
+        self.logger.log(f"アーカイブ: {self.config.dist_dir / (archive_name + '.zip')}")
+
+    def run_cmd(self, cmd: List[str], shell: bool = False, force_host: bool = False):
+        in_container = self.use_container and not force_host
+        display_cmd = ' '.join(cmd) if isinstance(cmd, list) else cmd
+        tag = "[Container]" if in_container else "[Host]"
+        self.logger.log(f"{tag} {display_cmd}")
+
+        actual_cmd = cmd
+        if in_container:
+            cmd_str = shlex.join(cmd)
+            cwd = os.getcwd()
+            inner = f"cd {shlex.quote(cwd)} && {cmd_str}"
+            actual_cmd = f"distrobox enter {self.container_name} -- bash -lc {shlex.quote(inner)}"
+            shell = True
+
+        proc = subprocess.Popen(
+            actual_cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            shell=shell,
+            env=self.env,
+        )
+        for line in proc.stdout:
+            self.logger.log(line.rstrip())
+        proc.wait()
+        if proc.returncode != 0:
+            raise subprocess.CalledProcessError(proc.returncode, actual_cmd)
+
+    def get_cmake_config_cmd(self) -> List[str]:
+        return [
+            "cmake", "-B", str(self.config.work_dir), "-G", "Ninja",
+            f"-DCMAKE_BUILD_TYPE={self.config.build_type}",
+        ]
+
+    def get_archive_name(self) -> str:
+        return "AviQtl-Archive"
+
+    def create_zip(self, archive_name: str):
+        shutil.make_archive(str(self.config.dist_dir / archive_name), "zip", root_dir=self.config.output_dir)
+
+    def setup_carla_sdk(self, is_windows: bool = False):
+        sdk_dir = self.config.source_dir / "carla-sdk"
+        inc_dir = sdk_dir / "include"
+        lib_dir = sdk_dir / "lib"
+
+        if not inc_dir.exists():
+            self.logger.log("Carla ヘッダーを取得中...")
+            temp_clone = self.config.source_dir / ".carla_tmp"
+            if temp_clone.exists():
+                shutil.rmtree(temp_clone)
+            self.run_cmd(["git", "clone", "--depth", "1", "https://github.com/falkTX/Carla.git", str(temp_clone)], force_host=True)
+            inc_dir.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(temp_clone / "source/includes", inc_dir, dirs_exist_ok=True)
+            shutil.rmtree(temp_clone)
+
+        if is_windows and not (lib_dir / "carla-standalone.dll").exists():
+            self.logger.log("Carla Windows バイナリをダウンロード中...")
+            lib_dir.mkdir(parents=True, exist_ok=True)
+            version = "2.6.0"
+            carla_zip_url = f"https://github.com/falkTX/Carla/releases/download/v{version}/Carla_{version}-win64.zip"
+            zip_path = sdk_dir / "carla.zip"
+            urllib.request.urlretrieve(carla_zip_url, zip_path)
+            shutil.unpack_archive(zip_path, sdk_dir)
+            for lib_file in sdk_dir.rglob("*.dll"):
+                shutil.move(str(lib_file), lib_dir / lib_file.name)
+            zip_path.unlink()
+
+    def copy_assets(self, asset_dest: Path):
+        for d in ["effects", "objects"]:
+            src = self.config.source_dir / "ui/qml" / d
+            dst = asset_dest / d
+            if src.exists():
+                shutil.copytree(src, dst, ignore=shutil.ignore_patterns("*.frag", "*.vert", "*.comp", "*.glsl"), dirs_exist_ok=True)
+        for d in ["effects", "objects"]:
+            qsb_src = self.config.work_dir / d
+            qsb_dst = asset_dest / d
+            if qsb_src.exists() and qsb_dst.exists():
+                for f in qsb_src.glob("*.qsb"):
+                    shutil.copy2(f, qsb_dst / f.name)
+        plugins_src = self.config.source_dir / "plugins"
+        if plugins_src.exists() and any(plugins_src.iterdir()):
+            shutil.copytree(plugins_src, self.config.output_dir / "plugins", dirs_exist_ok=True)
+        i18n_dest = self.config.output_dir / "i18n"
+        i18n_dest.mkdir(parents=True, exist_ok=True)
+        for qm in self.config.work_dir.rglob("*.qm"):
+            if "CMakeFiles" not in qm.parts:
+                shutil.copy2(qm, i18n_dest / qm.name)
+
+
+class LinuxBuilderBase(PlatformBuilder):
+    def __init__(self, config: BuildConfig, logger: Logger):
+        super().__init__(config, logger)
+        if not self.config.use_container:
+            raise RuntimeError("Linux ターゲットではコンテナビルドが必須です")
+        self.use_container = True
+        self.image_name = ""
+
+    def warmup_container(self):
+        self.logger.log(f"コンテナ初期化を待機中 (distrobox init)...")
+        self.run_cmd(["true"])
+        self.logger.log("コンテナ初期化完了")
+
+    def create_container(self):
+        if not (shutil.which("distrobox") and shutil.which("podman")):
+            raise RuntimeError("distrobox または podman が見つかりません")
+        self.logger.log(f"コンテナ '{self.container_name}' を準備中...")
+        try:
+            self.run_cmd(
+                ["distrobox", "create", "--name", self.container_name, "--image", self.image_name, "--yes"],
+                force_host=True,
+            )
+        except subprocess.CalledProcessError:
+            self.logger.log("コンテナは既に存在します。そのまま使用します。")
+        self.warmup_container()
+
+    def install_dependencies(self):
+        if self.config.is_offline:
+            self.logger.log("依存関係インストールをスキップします (--offline)")
+            self.warmup_container()
+            return
+        self.create_container()
+
+    def get_cmake_config_cmd(self) -> List[str]:
+        cmd = super().get_cmake_config_cmd()
+        cmd.extend(["-DCMAKE_C_COMPILER=clang", "-DCMAKE_CXX_COMPILER=clang++"])
+        if not self.config.is_debug:
+            cmd.extend([
+                "-DCMAKE_CXX_FLAGS=-O3 -flto -fno-semantic-interposition -funsafe-math-optimizations",
+                "-DCMAKE_POLICY_DEFAULT_CMP0056=NEW",
+                "-DCMAKE_SKIP_INSTALL_RPATH=ON",
+            ])
+        cmd.append(str(self.config.source_dir))
+        return cmd
+
+    def package(self):
+        self.config.output_dir.mkdir(parents=True, exist_ok=True)
+        dest_bin = self.config.output_dir / "AviQtl"
+        src_bin = self.config.work_dir / "AviQtl"
+        if dest_bin.exists():
+            dest_bin.unlink()
+        if not src_bin.exists():
+            raise FileNotFoundError(f"実行ファイルが見つかりません: {src_bin}")
+        shutil.copy2(src_bin, dest_bin)
+        self.copy_assets(self.config.output_dir)
+        self.logger.log(f"実行ファイル: {dest_bin}")
+
+
+class ArchBuilder(LinuxBuilderBase):
+    def __init__(self, config: BuildConfig, logger: Logger):
+        super().__init__(config, logger)
+        self.container_name = "archlinux-aviqtl"
+        self.image_name = "archlinux:latest"
+
+    def install_dependencies(self):
+        super().install_dependencies()
+        if self.config.is_offline:
+            return
+        self.logger.log("pacman ロックファイルを確認中...")
+        try:
+            self.run_cmd(["sudo", "rm", "-f", "/var/lib/pacman/db.lck"])
+        except Exception:
+            pass
+        self.logger.log("pacman -Syu --needed を実行中...")
+        deps = [
+            "base-devel", "git", "cmake", "ninja", "clang", "mold", "zip",
+            "mesa", "vulkan-devel", "libxkbcommon", "wayland", "wayland-protocols",
+            "libffi", "ffmpeg", "luajit", "fftw",
+            "qt6-base", "qt6-declarative", "qt6-quick3d", "qt6-multimedia",
+            "qt6-shadertools", "qt6-svg", "qt6-5compat", "qt6-tools",
+            "lilv", "ladspa", "carla",
+            "openmp", "extra-cmake-modules",
+        ]
+        self.run_cmd(["sudo", "pacman", "-Syu", "--needed", "--noconfirm"] + deps)
+        self.logger.log("Arch Linux 依存関係インストール完了")
+
+    def get_archive_name(self) -> str:
+        return "AviQtl-Arch-Linux-x86_64"
+
+
+class DebianBuilder(LinuxBuilderBase):
+    def __init__(self, config: BuildConfig, logger: Logger):
+        super().__init__(config, logger)
+        self.container_name = "debian-aviqtl"
+        self.image_name = "debian:stable"
+
+    def install_dependencies(self):
+        super().install_dependencies()
+        if self.config.is_offline:
+            return
+        self.logger.log("apt-get update を実行中...")
+        self.run_cmd(["sudo", "apt-get", "update", "-y"])
+        self.logger.log("apt-get install を実行中...")
+        deps = [
+            "build-essential", "git", "cmake", "ninja-build", "clang", "lld", "mold", "zip",
+            "pkg-config", "libfftw3-dev", "libluajit-5.1-dev", "liblilv-dev",
+            "ladspa-sdk", "libxkbcommon-dev", "wayland-protocols", "libwayland-dev",
+            "libvulkan-dev", "libgl1-mesa-dev", "libffi-dev", "libomp-dev",
+            "ffmpeg", "libavcodec-dev", "libavformat-dev", "libavutil-dev",
+            "libswscale-dev", "libswresample-dev",
+            "qt6-base-dev", "qt6-declarative-dev", "qt6-5compat-dev",
+            "qt6-multimedia-dev", "qt6-shadertools-dev", "qt6-quick3d-dev",
+            "qt6-tools-dev", "qt6-tools-dev-tools", "qt6-svg-dev",
+            "libqt6opengl6-dev", "extra-cmake-modules",
+        ]
+        self.run_cmd(["sudo", "apt-get", "install", "-y"] + deps)
+        self.logger.log("Debian 依存関係インストール完了")
+        self.setup_carla_sdk()
+
+    def get_archive_name(self) -> str:
+        return "AviQtl-Debian-Linux-x86_64"
+
+
+class Msys2Builder(PlatformBuilder):
+    def install_dependencies(self):
+        if self.config.is_offline:
+            self.logger.log("依存関係インストールをスキップします (--offline)")
+            return
+        if "MSYSTEM" not in os.environ:
+            self.logger.log("警告: MSYS2 環境外です。依存関係インストールをスキップします。")
+            return
+        if os.environ["MSYSTEM"] != "UCRT64":
+            self.logger.log("警告: UCRT64 以外の環境が検出されました。UCRT64 を推奨します。")
+        self.logger.log("pacman -Syu --needed を実行中...")
+        deps = [
+            "mingw-w64-ucrt-x86_64-toolchain", "mingw-w64-ucrt-x86_64-cmake",
+            "mingw-w64-ucrt-x86_64-ninja", "git",
+            "mingw-w64-ucrt-x86_64-qt6-base", "mingw-w64-ucrt-x86_64-qt6-declarative",
+            "mingw-w64-ucrt-x86_64-qt6-quick3d", "mingw-w64-ucrt-x86_64-qt6-multimedia",
+            "mingw-w64-ucrt-x86_64-qt6-shadertools", "mingw-w64-ucrt-x86_64-qt6-svg",
+            "mingw-w64-ucrt-x86_64-qt6-5compat", "mingw-w64-ucrt-x86_64-qt6-tools",
+            "mingw-w64-ucrt-x86_64-ffmpeg", "mingw-w64-ucrt-x86_64-luajit",
+            "mingw-w64-ucrt-x86_64-vulkan-loader", "mingw-w64-ucrt-x86_64-vulkan-headers",
+            "mingw-w64-ucrt-x86_64-pkg-config", "mingw-w64-ucrt-x86_64-mold",
+            "mingw-w64-ucrt-x86_64-lilv", "mingw-w64-ucrt-x86_64-ladspa-sdk",
+            "mingw-w64-ucrt-x86_64-curl", "mingw-w64-ucrt-x86_64-extra-cmake-modules",
+            "zip", "mingw-w64-ucrt-x86_64-clang-tools-extra",
+        ]
+        self.run_cmd(["pacman", "-Syu", "--needed", "--noconfirm"] + deps)
+        self.logger.log("MSYS2 依存関係インストール完了")
+        self.setup_carla_sdk(is_windows=True)
+
+    def get_cmake_config_cmd(self) -> List[str]:
+        cmd = super().get_cmake_config_cmd()
+        cmd.append("-DCMAKE_BUILD_TYPE=Release")
+        if (self.config.source_dir / "carla-sdk").exists():
+            cmd.append(f"-DCARLA_SDK_DIR={self.config.source_dir / 'carla-sdk'}")
+        cmd.append(str(self.config.source_dir))
+        return cmd
+
+    def package(self):
+        self.config.output_dir.mkdir(parents=True, exist_ok=True)
+        dest_bin = self.config.output_dir / "AviQtl.exe"
+        src_bin = self.config.work_dir / "AviQtl.exe"
+        if dest_bin.exists():
+            dest_bin.unlink()
+        if not src_bin.exists():
+            raise FileNotFoundError(f"実行ファイルが見つかりません: {src_bin}")
+        shutil.copy2(src_bin, dest_bin)
+        self.copy_assets(self.config.output_dir)
+        self.logger.log("windeployqt を実行中...")
+        self.run_cmd([
+            "windeployqt",
+            "--qmldir", str(self.config.source_dir / "ui/qml"),
+            "--no-translations", "--no-compiler-runtime",
+            "--release" if not self.config.is_debug else "--debug",
+            str(dest_bin),
+            "--dir", str(self.config.output_dir),
+        ])
+        with open(self.config.output_dir / "qt.conf", "w", encoding="utf-8") as f:
+            f.write("[Paths]\nPlugins = .\n")
+        self.logger.log(f"実行ファイル: {dest_bin}")
+
+    def get_archive_name(self) -> str:
+        return "AviQtl-MSYS2-UCRT64-x86_64"
+
+
+class XcodeBuilder(PlatformBuilder):
+    def install_dependencies(self):
+        if self.config.is_offline:
+            self.logger.log("依存関係インストールをスキップします (--offline)")
+            return # Early exit if offline build
+        if not shutil.which("brew"):
+            raise RuntimeError("Homebrew が見つかりません") # Homebrew is essential for macOS
+        self.logger.log("brew install を実行中...")
+        # Removed KDE specific dependencies
+        deps = [
+            "cmake", "ninja", "qt6", "ffmpeg", "luajit",
+            "vulkan-headers", "vulkan-loader", "pkg-config",
+            "lilv", "extra-cmake-modules", "carla",
+        ]
+        self.run_cmd(["brew", "install"] + deps)
+        self.logger.log("macOS 依存関係インストール完了")
+        self.setup_carla_sdk()
+
+    def get_cmake_config_cmd(self) -> List[str]:
+        cmd = super().get_cmake_config_cmd()
+        cmd.append("-DCMAKE_BUILD_TYPE=Release")
+        try:
+            brew_prefix = subprocess.check_output(["brew", "--prefix"], text=True).strip()
+        except Exception:
+            brew_prefix = "/opt/homebrew"
+        cmd.append(f"-DCMAKE_PREFIX_PATH={brew_prefix}")
+        cmd.append(str(self.config.source_dir))
+        return cmd
+
+    def package(self):
+        self.config.output_dir.mkdir(parents=True, exist_ok=True)
+        src_app = self.config.work_dir / "AviQtl.app"
+        dest_app = self.config.output_dir / "AviQtl.app"
+        if dest_app.exists():
+            shutil.rmtree(dest_app)
+        if not src_app.exists():
+            raise FileNotFoundError(f"App バンドルが見つかりません: {src_app}")
+        shutil.copytree(src_app, dest_app)
+        self.copy_assets(dest_app / "Contents/Resources")
+        self.logger.log("macdeployqt を実行中...")
+        qt_prefix = subprocess.check_output(["brew", "--prefix", "qt6"], text=True).strip()
+        self.run_cmd([
+            f"{qt_prefix}/bin/macdeployqt", str(dest_app),
+            f"-qmldir={self.config.source_dir / 'ui/qml'}",
+            "-verbose=1",
+        ])
+        self.logger.log(f"App バンドル: {dest_app}")
+
+    def get_archive_name(self) -> str:
+        return "AviQtl-macOS-Xcode-Universal"
+
+    def create_zip(self, archive_name: str):
+        shutil.make_archive(
+            str(self.config.dist_dir / archive_name), "zip",
+            root_dir=self.config.output_dir, base_dir="AviQtl.app",
+        )
+
+
+BUILDERS: dict[str, Type[PlatformBuilder]] = {
+    "arch": ArchBuilder,
+    "debian": DebianBuilder,
+    "msys2": Msys2Builder,
+    "xcode": XcodeBuilder,
+}
+
 
 class BuildWorker(QtCore.QThread):
     progress_signal = QtCore.Signal(int, str)
     log_signal = QtCore.Signal(str)
     finished_signal = QtCore.Signal(bool, str)
-    dist_dir = None
 
-    def __init__(self, source_dir, temp_base, output_dir, is_debug=False, use_container=True, skip_install=False):
+    def __init__(self, config: BuildConfig):
         super().__init__()
-        self.source_dir = source_dir
-        self.temp_base = temp_base
-        self.output_dir = output_dir
-        self.is_debug = is_debug
-        self.use_container_opt = use_container
-        self.skip_install = skip_install
-        self.dist_dir = self.source_dir / "dist"
-        self.system = platform.system()
-        self.container_name = "archlinux-aviqtl"
-
-    def _run_cmd(self, cmd, shell=False, in_container=False):
-        display_cmd = ' '.join(cmd) if isinstance(cmd, list) else cmd
-        prefix = "[Container] " if in_container else ""
-        self.log_signal.emit(f"{prefix}Run: {display_cmd}")
-
-        # インタラクティブなプロンプト（Gitのユーザー名入力など）を無効化し、オートアップデートを抑制
-        env = os.environ.copy()
-        env["GIT_TERMINAL_PROMPT"] = "0"
-        env["HOMEBREW_NO_AUTO_UPDATE"] = "1"
-
-        actual_cmd = cmd
-        if in_container and self.system == "Linux":
-            if isinstance(cmd, str):
-                cmd = shlex.split(cmd)
-            
-            # コンテナ内でカレントディレクトリを維持して実行
-            cmd_str = shlex.join(cmd)
-            cwd = os.getcwd()
-            # プロセスをシェルで包んで実行 (shell=True)
-            inner_cmd = f"cd {shlex.quote(cwd)} && {cmd_str}"
-            actual_cmd = f"distrobox enter {self.container_name} -- bash -c {shlex.quote(inner_cmd)}"
-            shell = True
-
-        process = subprocess.Popen(
-            actual_cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            encoding='utf-8',
-            errors='replace',
-            shell=shell,
-            env=env
-        )
-        for line in process.stdout:
-            self.log_signal.emit(line.rstrip())
-        process.wait()
-        if process.returncode != 0:
-            raise subprocess.CalledProcessError(process.returncode, actual_cmd)
-
-    def _setup_carla_sdk(self):
-        sdk_dir = self.source_dir / "carla-sdk"
-        inc_dir = sdk_dir / "include"
-        lib_dir = sdk_dir / "lib"
-        
-        if not inc_dir.exists():
-            self.log_signal.emit("Carla ヘッダーを取得中...")
-            temp_clone = self.source_dir / ".carla_tmp"
-            if temp_clone.exists(): shutil.rmtree(temp_clone)
-            
-            # ヘッダーのみが必要なので、浅いクローンを実行
-            self._run_cmd(["git", "clone", "--depth", "1", "https://github.com/falkTX/Carla.git", str(temp_clone)])
-            inc_dir.mkdir(parents=True, exist_ok=True)
-            shutil.copytree(temp_clone / "source/includes", inc_dir, dirs_exist_ok=True)
-            shutil.rmtree(temp_clone)
-
-        # This part is only for Windows, macOS will use Homebrew
-        if self.system == "Windows" and not (lib_dir / "carla-standalone.dll").exists():
-            self.log_signal.emit("Carla Windows バイナリをダウンロード中...")
-            lib_dir.mkdir(parents=True, exist_ok=True)
-            version = "2.6.0"
-            suffix = "win64"
-            carla_zip_url = f"https://github.com/falkTX/Carla/releases/download/v{version}/Carla_{version}-{suffix}.zip"
-            zip_path = sdk_dir / "carla.zip"
-            
-            urllib.request.urlretrieve(carla_zip_url, zip_path)
-            shutil.unpack_archive(zip_path, sdk_dir)
-            
-            # 必要なライブラリを整理
-            ext = "*.dll"
-            for lib_file in sdk_dir.rglob(ext):
-                shutil.move(str(lib_file), lib_dir / lib_file.name)
-            zip_path.unlink()
-
-    def install_dependencies(self):
-        if self.skip_install:
-            self.log_signal.emit("依存関係のインストール/アップデートをスキップします (--noSyu)")
-            return
-
-        self.log_signal.emit("依存関係を確認中...")
-        
-        if self.system == "Windows":
-            # MSYS2 (UCRT64)
-            if "MSYSTEM" in os.environ:
-                if os.environ["MSYSTEM"] != "UCRT64":
-                    self.log_signal.emit("警告: UCRT64 環境以外が検出されました。UCRT64 での実行を強く推奨します。")
-
-                self.log_signal.emit("MSYS2 環境を検出しました。")
-                deps = [
-                    "mingw-w64-ucrt-x86_64-toolchain",
-                    "mingw-w64-ucrt-x86_64-cmake",
-                    "mingw-w64-ucrt-x86_64-ninja",
-                    "git",
-                    "mingw-w64-ucrt-x86_64-qt6-base",
-                    "mingw-w64-ucrt-x86_64-qt6-declarative",
-                    "mingw-w64-ucrt-x86_64-qt6-quick3d",
-                    "mingw-w64-ucrt-x86_64-qt6-multimedia",
-                    "mingw-w64-ucrt-x86_64-qt6-shadertools",
-                    "mingw-w64-ucrt-x86_64-qt6-svg",
-                    "mingw-w64-ucrt-x86_64-qt6-5compat",
-                    "mingw-w64-ucrt-x86_64-qt6-tools",
-                    "mingw-w64-ucrt-x86_64-ffmpeg",
-                    "mingw-w64-ucrt-x86_64-luajit",
-                    "mingw-w64-ucrt-x86_64-vulkan-loader",
-                    "mingw-w64-ucrt-x86_64-vulkan-headers",
-                    "mingw-w64-ucrt-x86_64-pkg-config",
-                    "mingw-w64-ucrt-x86_64-mold",
-                    "mingw-w64-ucrt-x86_64-lilv",
-                    "mingw-w64-ucrt-x86_64-ladspa-sdk",
-                    "mingw-w64-ucrt-x86_64-curl",
-                    "mingw-w64-ucrt-x86_64-extra-cmake-modules",
-                    "mingw-w64-ucrt-x86_64-kf6-kirigami",
-                    "mingw-w64-ucrt-x86_64-kf6-kcolorscheme",
-                    "zip",
-                    "mingw-w64-ucrt-x86_64-clang-tools-extra"
-                ]
-                self._run_cmd(["pacman", "-Syu", "--needed", "--noconfirm"] + deps)
-                
-                # Audio Plugin SDKs
-                if not (self.source_dir / "clap").exists():
-                    self._run_cmd(["git", "clone", "https://github.com/free-audio/clap.git", "--depth", "1"])
-
-                # Carla SDK 自動セットアップ
-                self._setup_carla_sdk()
-
-            else:
-                self.log_signal.emit("警告: MSYS2 環境外で実行されています。依存関係の自動インストールはスキップされます。")
-
-        elif self.system == "Darwin":
-            self.log_signal.emit("macOS (Homebrew) 環境を検出しました。")
-            if not shutil.which("brew"):
-                self.log_signal.emit("エラー: Homebrew が見つかりません。")
-                return
-
-            # 公式ドキュメントの手順に従い、KDE Homebrew Tap を構成します
-            self.log_signal.emit("KDE公式のHomebrew Tapを構成中...")
-            tap_name = "kde-mac/kde"
-            tap_url = "https://invent.kde.org/packaging/homebrew-kde.git"
-            
-            # 既存の誤った設定（もしあれば）をクリアするために untap を試行
-            try:
-                subprocess.run(["brew", "untap", tap_name], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
-            except:
-                pass
-
-            # 正しいURLで tap を実行
-            try:
-                self._run_cmd(["brew", "tap", tap_name, tap_url, "--force-auto-update"])
-                
-                # ECMやKF6のリンク問題を解決するための caveat スクリプトを実行
-                repo_path = subprocess.check_output(["brew", "--repo", tap_name], text=True).strip()
-                caveat_script = Path(repo_path) / "tools" / "do-caveats.sh"
-                if caveat_script.exists():
-                    self.log_signal.emit("KDE Caveats スクリプトを実行中...")
-                    self._run_cmd(["sh", str(caveat_script)])
-            except subprocess.CalledProcessError:
-                self.log_signal.emit("警告: brew tap または caveats の実行に失敗しました。ネットワーク状態を確認してください。")
-
-            deps = [
-                "cmake", "ninja", "qt6", "ffmpeg", "luajit", "vulkan-headers", "vulkan-loader",
-                "pkg-config", "lilv", "kf6-kirigami", "kf6-kcolorscheme", "extra-cmake-modules", "carla"
-            ]
-            self._run_cmd(["brew", "install"] + deps)
-            
-            if not (self.source_dir / "clap").exists():
-                self._run_cmd(["git", "clone", "https://github.com/free-audio/clap.git", "--depth", "1"])
-            self._setup_carla_sdk()
-
-        elif self.system == "Linux":
-            if not self.use_container_opt:
-                self.log_signal.emit("コンテナビルドは無効です。ホスト環境でビルドします。")
-                return
-
-            # 1. ホスト環境: distrobox と podman の確認
-            if not (shutil.which("distrobox") and shutil.which("podman")):
-                self.log_signal.emit("警告: distrobox または podman が見つかりません。インストールしてください。")
-
-            # 2. コンテナの作成 (archlinux-aviqtl)
-            self.log_signal.emit(f"ビルド用コンテナ '{self.container_name}' を準備中...")
-            try:
-                self._run_cmd(["distrobox", "create", "--name", self.container_name, "--image", "archlinux:latest", "--yes"])
-            except subprocess.CalledProcessError:
-                self.log_signal.emit("コンテナの作成をスキップします（既に存在するかエラーが発生しました）。")
-
-            # 3. コンテナ内: ビルド依存関係のインストール
-            self.log_signal.emit("コンテナ内の依存関係をインストール中...")
-            
-            container_deps = [
-                "base-devel", "git", "cmake", "ninja", "clang", "mold", "zip",
-                "mesa", "vulkan-devel", "libxkbcommon", "wayland", "wayland-protocols",
-                "libffi", "ffmpeg", "luajit", "fftw", "qt6-base", "qt6-declarative",
-                "qt6-quick3d", "qt6-multimedia", "qt6-shadertools", "qt6-svg",
-                "qt6-5compat", "qt6-tools", "lilv", "ladspa", "clap", "vst3sdk", "carla", "kirigami", "openmp", "extra-cmake-modules", "kcolorscheme"
-            ]
-            # コンテナ内では sudo を使用してインストール
-            # ロックファイルの解除を試みる (過去のプロセス中断時の対策)
-            try:
-                self._run_cmd(["sudo", "rm", "-f", "/var/lib/pacman/db.lck"], in_container=True)
-            except Exception:
-                pass
-
-            self._run_cmd(["sudo", "pacman", "-Syu", "--needed", "--noconfirm"] + container_deps, in_container=True)
+        self.config = config
 
     def run(self):
         try:
-            cpu_count = multiprocessing.cpu_count()
-            j_slots = cpu_count
-
-            self.log_signal.emit(f"リソース割り当て: {j_slots} 並列ジョブ")
-            
-            # 依存関係のインストール
-            self.install_dependencies()
-            
-            name = "Debug" if self.is_debug else "Release"
-            self.progress_signal.emit(10, f"{name} ビルド開始")
-            self.log_signal.emit(f"ソースディレクトリ: {self.source_dir}")
-            
-            work_dir = self.temp_base / name
-            
-            # 1. CMake Configuration
-            self.log_signal.emit(f"--- {name} 設定 ({self.system}) ---")
-            
-            conf_cmd = [
-                "cmake", "-B", str(work_dir), "-G", "Ninja",
-                f"-DCMAKE_BUILD_TYPE={name}",
-            ]
-
-            if self.system == "Linux":
-                conf_cmd.extend([
-                    "-DCMAKE_C_COMPILER=clang",
-                    "-DCMAKE_CXX_COMPILER=clang++",
-                ])
-                if not self.is_debug:
-                    conf_cmd.append("-DCMAKE_CXX_FLAGS=-O3 -flto -fno-semantic-interposition -funsafe-math-optimizations")
-                    conf_cmd.append("-DCMAKE_POLICY_DEFAULT_CMP0056=NEW")
-                    conf_cmd.append("-DCMAKE_SKIP_INSTALL_RPATH=ON")
-            
-            elif self.system == "Windows":
-                 conf_cmd.append("-DCMAKE_BUILD_TYPE=Release")
-                 conf_cmd.append(f"-DCLAP_SDK_DIR={self.source_dir}/clap")
-                 if (self.source_dir / "carla-sdk").exists():
-                     conf_cmd.append(f"-DCARLA_SDK_DIR={self.source_dir}/carla-sdk")
-            
-            elif self.system == "Darwin":
-                 conf_cmd.append("-DCMAKE_BUILD_TYPE=Release")
-                 # HomebrewのパスをCMakeの検索対象に追加 (ECMやKF6を見つけるため)
-                 try:
-                     brew_prefix = subprocess.check_output(["brew", "--prefix"], text=True).strip()
-                     conf_cmd.append(f"-DCMAKE_PREFIX_PATH={brew_prefix}")
-                 except:
-                     conf_cmd.append("-DCMAKE_PREFIX_PATH=/opt/homebrew")
-
-            conf_cmd.append(str(self.source_dir))
-            
-            # Linuxの場合はコンテナ内で実行
-            use_container = (self.system == "Linux" and self.use_container_opt)
-            self._run_cmd(conf_cmd, in_container=use_container)
-
-            # 2.5 翻訳ソースファイル (.ts) を自動更新 (常に実行)
-            self.log_signal.emit("翻訳ソースファイル (.ts) を更新中...")
-            self._run_cmd(["cmake", "--build", str(work_dir), "--target", "AviQtl_lupdate"], in_container=use_container)
-
-            # 3. Build
-            self.log_signal.emit(f"{name} コンパイル中...")
-            build_cmd = ["cmake", "--build", str(work_dir), "-j", str(j_slots)]
-            self._run_cmd(build_cmd, in_container=use_container)
-
-            # 4. パッケージング処理
-            self.log_signal.emit(f"パッケージングを開始します...")
-            self.output_dir.mkdir(parents=True, exist_ok=True)
-            self.dist_dir.mkdir(parents=True, exist_ok=True)
-            
-            exe_name = "AviQtl.exe" if self.system == "Windows" else "AviQtl"
-
-            if self.system == "Darwin":
-                src_app = work_dir / "AviQtl.app"
-                dest_app = self.output_dir / "AviQtl.app"
-                if dest_app.exists(): shutil.rmtree(dest_app)
-                if src_app.exists():
-                    shutil.copytree(src_app, dest_app)
-                    dest_bin = dest_app / "Contents/MacOS/AviQtl"
-                    asset_dest = dest_app / "Contents/Resources"
-                else:
-                    raise FileNotFoundError(f"{src_app} not found")
-            else:
-                dest_bin = self.output_dir / exe_name
-                src_bin = work_dir / exe_name
-                if dest_bin.exists(): dest_bin.unlink()
-                if src_bin.exists():
-                    shutil.copy2(src_bin, dest_bin)
-                else:
-                    self.log_signal.emit(f"エラー: 実行ファイルが見つかりません: {src_bin}")
-                    raise FileNotFoundError(f"{src_bin} not found")
-                asset_dest = self.output_dir
-
-            # アセットのコピー (アプリ動作に必要なデータのみ)
-            for d in ["effects", "objects"]:
-                src_path = self.source_dir / "ui/qml" / d
-                dest_path = asset_dest / d
-                if src_path.exists():
-                    # Linuxの場合は不要なシェーダーソースを除外
-                    ignore_pat = shutil.ignore_patterns("*.frag", "*.vert", "*.comp", "*.glsl")
-                    shutil.copytree(src_path, dest_path, ignore=ignore_pat, dirs_exist_ok=True)
-
-            # コンパイル済みシェーダー(.qsb)のコピー
-            for d in ["effects", "objects"]:
-                qsb_src_dir = work_dir / d
-                qsb_dest_dir = asset_dest / d
-                if qsb_src_dir.exists() and qsb_dest_dir.exists():
-                    for qsb_file in qsb_src_dir.glob("*.qsb"):
-                        shutil.copy2(qsb_file, qsb_dest_dir / qsb_file.name)
-
-            # Plugins
-            plugins_src = self.source_dir / "plugins"
-            if plugins_src.exists() and any(plugins_src.iterdir()):
-                plugins_dest = self.output_dir / "plugins"
-                shutil.copytree(plugins_src, plugins_dest, dirs_exist_ok=True)
-
-            # i18n (国際化ファイル - 言語拡張)
-            i18n_dest = self.output_dir / "i18n"
-            
-            # CMake (LinguistTools) によって生成された .qm ファイルを収集
-            # ビルドディレクトリ内を再帰的に探索して .qm ファイルだけを拾う
-            i18n_dest.mkdir(parents=True, exist_ok=True)
-            for qm_file in work_dir.rglob("*.qm"):
-                # CMake内部のパス（CMakeFiles等）に含まれるものは除外
-                if "CMakeFiles" not in qm_file.parts:
-                    shutil.copy2(qm_file, i18n_dest / qm_file.name)
-
-            # Windows固有のデプロイ処理 (windeployqtなど)
-            if self.system == "Windows":
-                self.log_signal.emit("Windows デプロイメント処理を実行中...")
-                # windeployqtの実行
-                # 注意: PATHにwindeployqtが含まれている必要がある
-                qml_dir = self.source_dir / "ui/qml"
-                deploy_cmd = [
-                    "windeployqt",
-                    "--qmldir", str(qml_dir),
-                    "--no-translations",
-                    "--no-compiler-runtime",
-                    "--release" if not self.is_debug else "--debug",
-                    str(dest_bin),
-                    "--dir", str(self.output_dir)
-                ]
-                self._run_cmd(deploy_cmd)
-                
-                # qt.confの作成
-                qt_conf = self.output_dir / "qt.conf"
-                with open(qt_conf, "w") as f:
-                    f.write("[Paths]\nPlugins = .\n")
-                
-                # 非Qt依存関係の収集 (簡易的)
-                # lddの代わりに、MSYS2環境なら依存DLLをコピーするロジックが必要だが、
-                # ここではwindeployqtが主要なQt依存関係を処理したと仮定する。
-                # 必要であれば、objdump等で依存関係を解析してコピーする処理を追加する。
-
-            elif self.system == "Darwin":
-                self.log_signal.emit("macOS デプロイメント処理を実行中...")
-                qt_prefix = subprocess.check_output(["brew", "--prefix", "qt6"], text=True).strip()
-                macdeployqt = f"{qt_prefix}/bin/macdeployqt"
-                deploy_cmd = [
-                    macdeployqt, str(dest_app),
-                    "-qmldir=" + str(self.source_dir / "ui/qml"),
-                    "-verbose=1"
-                ]
-                self._run_cmd(deploy_cmd)
-
-            # ZIP圧縮
-            self.log_signal.emit("アーカイブを作成中...")
-            archive_name = f"AviQtl-{self.system}-x64"
-            if self.system == "Linux":
-                archive_name = "AviQtl-Linux-x86_64-v3"
-            elif self.system == "Darwin":
-                archive_name = "AviQtl-macOS-Universal"
-            
-            if self.system == "Darwin":
-                shutil.make_archive(
-                    str(self.dist_dir / archive_name),
-                    'zip',
-                    root_dir=self.output_dir,
-                    base_dir="AviQtl.app"
-                )
-            else:
-                shutil.make_archive(
-                    str(self.dist_dir / archive_name),
-                    'zip',
-                    root_dir=self.output_dir
-                )
-
-            self.log_signal.emit(f"ビルド完了：{dest_bin}")
-            self.log_signal.emit(f"アーカイブ：{self.dist_dir / (archive_name + '.zip')}")
-            if self.system == "Windows":
-                 self.log_signal.emit("ヒント：buildフォルダ内のAviQtl.exeを実行してください")
-            else:
-                 self.log_signal.emit("ヒント：python BUILD.py --runで直ちに起動できます")
-            
-            self.progress_signal.emit(100, "完了")
-            self.finished_signal.emit(True, f"ビルド成功")
+            logger = Logger(self.log_signal.emit, self.progress_signal.emit)
+            builder = BUILDERS[self.config.target](self.config, logger)
+            builder.build()
+            self.finished_signal.emit(True, "ビルド成功")
         except Exception as e:
             self.finished_signal.emit(False, str(e))
 
-if __name__ == "__main__":
-    # CLI Mode (Release Build)
-    app = QtCore.QCoreApplication(sys.argv)
-    
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        prog="BUILD.py",
+        description="AviQtl ビルドスクリプト",
+        formatter_class=argparse.RawTextHelpFormatter,
+        epilog=(
+            "使用例:\n"
+            "  python BUILD.py --arch\n"
+            "  python BUILD.py --debian --offline\n"
+            "  python BUILD.py --msys2 --debug\n"
+            "  python BUILD.py --xcode --offline\n"
+        ),
+    )
+    target_group = parser.add_mutually_exclusive_group(required=True)
+    target_group.add_argument(
+        "--arch", action="store_true",
+        help="Arch Linux 向けビルド。distrobox コンテナ (archlinux-aviqtl) 内で pacman により依存関係を管理します。",
+    )
+    target_group.add_argument(
+        "--debian", action="store_true",
+        help="Debian 向けビルド。distrobox コンテナ (debian-aviqtl) 内で apt により依存関係を管理します。",
+    )
+    target_group.add_argument(
+        "--msys2", action="store_true",
+        help="Windows (MSYS2 UCRT64) 向けビルド。pacman により依存関係を管理します。",
+    )
+    target_group.add_argument(
+        "--xcode", action="store_true",
+        help="macOS 向けビルド。Homebrew により依存関係を管理します。",
+    )
+    parser.add_argument(
+        "--offline", action="store_true",
+        help="依存関係のダウンロード・インストールをスキップします。既に環境が整っている場合に使用してください。",
+    )
+    parser.add_argument(
+        "--debug", action="store_true",
+        help="Debug ビルドを実行します。デフォルトは Release です。",
+    )
+    parser.add_argument(
+        "--no-container", action="store_true",
+        help="Linux ターゲットでコンテナを使わずホスト環境でビルドします (非推奨)。",
+    )
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+
+    target = next(t for t in ("arch", "debian", "msys2", "xcode") if getattr(args, t))
+
     source_dir = Path.cwd()
-    temp_base = source_dir / ".build_tmp"
-    output_dir = source_dir / "build"
-    
-    # Host Native Release Build
-    use_container = "--no-container" not in sys.argv
-    skip_install = "--noSyu" in sys.argv
-    
-    worker = BuildWorker(source_dir, temp_base, output_dir, is_debug=False, use_container=use_container, skip_install=skip_install)
-    
+    config = BuildConfig(
+        source_dir=source_dir,
+        temp_base=source_dir / ".build_tmp",
+        output_dir=source_dir / "build",
+        target=target,
+        is_debug=args.debug,
+        use_container=not args.no_container,
+        is_offline=args.offline,
+    )
+
+    app = QtCore.QCoreApplication(sys.argv)
+    worker = BuildWorker(config)
     worker.log_signal.connect(print)
     worker.progress_signal.connect(lambda val, msg: print(f"[{val}%] {msg}"))
-    
-    def on_cli_finished(success, msg):
+
+    def on_finished(success: bool, msg: str):
         if success:
             app.quit()
         else:
             print(f"\nビルド失敗: {msg}")
             app.exit(1)
-    worker.finished_signal.connect(on_cli_finished)
-    
-    print("リリースビルドを開始します...")
+
+    worker.finished_signal.connect(on_finished)
+    print(f"ビルド開始 | ターゲット={target} | {config.build_type} | オフライン={config.is_offline}")
     worker.start()
     sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    main()

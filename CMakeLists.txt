@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 4.0)
+cmake_minimum_required(VERSION 3.25)
 project(AviQtl LANGUAGES CXX C)
 
 set(CMAKE_AUTOMOC ON)
@@ -18,7 +18,6 @@ find_package(Qt6 REQUIRED COMPONENTS Core Gui GuiPrivate Quick QuickControls2 Qu
 find_package(Vulkan REQUIRED)
 find_package(ECM REQUIRED NO_MODULE)
 list(APPEND CMAKE_MODULE_PATH ${ECM_MODULE_PATH})
-find_package(KF6 REQUIRED COMPONENTS Kirigami ColorScheme)
 find_package(PkgConfig REQUIRED)
 
 pkg_check_modules(FFMPEG IMPORTED_TARGET REQUIRED libavcodec libavformat libavutil libswscale libswresample)
@@ -86,7 +85,6 @@ file(GLOB_RECURSE COMMON_SHADERS "ui/qml/common/shaders/*.glsl")
 qt_add_executable(AviQtl
     ${CPP_SOURCES}
     core/src/settings_manager.cpp
-    core/src/color_scheme_controller.cpp
     ui/src/project_service.cpp
     ui/src/transport_service.cpp
     ui/src/selection_service.cpp
@@ -194,7 +192,7 @@ target_link_libraries(
                    PkgConfig::LUAJIT
                    PkgConfig::FFMPEG
                    ${CARLA_LIBRARIES}
-                   KF6::Kirigami KF6::ColorScheme)
+)
 
 # Carlaのライブラリパスを明示（/usr/lib/carla/ 等の非標準ディレクトリ対策）
 target_link_directories(AviQtl PRIVATE ${CARLA_LIBRARY_DIRS})
@@ -255,7 +253,7 @@ file(COPY \"${CMAKE_SOURCE_DIR}/plugins/\" DESTINATION \"${CMAKE_BINARY_DIR}/plu
 ")
 add_custom_target(copy_runtime_assets ALL
     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_BINARY_DIR}/copy_assets.cmake
-    COMMENT \"Copying runtime assets (excluding shader sources)\"
+    COMMENT "Copying runtime assets (excluding shader sources)"
     VERBATIM
 )
 

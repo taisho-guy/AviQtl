@@ -2,7 +2,6 @@
 #include "../../engine/timeline/ecs.hpp"
 #include "../../scripting/mod_engine.hpp"
 #include "aviqtl_context.hpp"
-#include "color_scheme_controller.hpp"
 #include "compute_effect.hpp"
 #include "effect_registry.hpp"
 #include "package_manager.hpp"
@@ -88,7 +87,6 @@ auto main(int argc, char *argv[]) -> int {
     luaHookTimer.start(AviQtl::Core::SettingsManager::instance().value(QStringLiteral("luaHookIntervalMs"), 16).toInt());
 
     QQuickStyle::setFallbackStyle(QStringLiteral("Fusion"));
-    auto *colorSchemeController = new AviQtl::Core::ColorSchemeController(&app);
     QQmlApplicationEngine engine;
 
     auto *videoFrameStore = new AviQtl::Core::VideoFrameStore(&app);
@@ -98,7 +96,6 @@ auto main(int argc, char *argv[]) -> int {
     qmlRegisterType<AviQtl::Core::VideoEncoder>("AviQtl.Core", 1, 0, "VideoEncoder");
     qmlRegisterType<AviQtl::UI::Effects::ComputeEffect>("AviQtl.Compute", 1, 0, "ComputeEffect");
     engine.rootContext()->setContextProperty(QStringLiteral("SettingsManager"), &AviQtl::Core::SettingsManager::instance());
-    engine.rootContext()->setContextProperty(QStringLiteral("ColorSchemeController"), colorSchemeController);
     qmlRegisterUncreatableType<AviQtl::UI::TimelineController>("AviQtl.UI", 1, 0, "TimelineController", "Managed by C++");
 
     engine.rootContext()->setContextProperty(QStringLiteral("AviQtlVersion"), QString::fromUtf8(AviQtl::VERSION_STRING));

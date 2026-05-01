@@ -1,4 +1,6 @@
 push.fish
+carla-sdk
+clap
 
 # Builds
 build/
