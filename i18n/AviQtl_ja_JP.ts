@@ -19,23 +19,13 @@
 <context>
     <name>AppearanceSettingsPage</name>
     <message>
-        <location filename="../ui/qml/settings/AppearanceSettingsPage.qml" line="37"/>
+        <location filename="../ui/qml/settings/AppearanceSettingsPage.qml" line="34"/>
         <source>表示</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/AppearanceSettingsPage.qml" line="47"/>
-        <source>テーマ</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/settings/AppearanceSettingsPage.qml" line="71"/>
+        <location filename="../ui/qml/settings/AppearanceSettingsPage.qml" line="44"/>
         <source>文字余白係数</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/settings/AppearanceSettingsPage.qml" line="93"/>
-        <source>テーマ変更は再起動後に完全反映される場合があります</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

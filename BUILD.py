@@ -28,7 +28,7 @@ class BuildConfig:
 
     @property
     def work_dir(self) -> Path:
-        return self.temp_base / self.build_type
+        return self.temp_base / self.target / self.build_type
 
     @property
     def dist_dir(self) -> Path:
@@ -281,39 +281,6 @@ class ArchBuilder(LinuxBuilderBase):
         return "AviQtl-Arch-Linux-x86_64"
 
 
-class DebianBuilder(LinuxBuilderBase):
-    def __init__(self, config: BuildConfig, logger: Logger):
-        super().__init__(config, logger)
-        self.container_name = "debian-aviqtl"
-        self.image_name = "debian:stable"
-
-    def install_dependencies(self):
-        super().install_dependencies()
-        if self.config.is_offline:
-            return
-        self.logger.log("apt-get update を実行中...")
-        self.run_cmd(["sudo", "apt-get", "update", "-y"])
-        self.logger.log("apt-get install を実行中...")
-        deps = [
-            "build-essential", "git", "cmake", "ninja-build", "clang", "lld", "mold", "zip",
-            "pkg-config", "libfftw3-dev", "libluajit-5.1-dev", "liblilv-dev",
-            "ladspa-sdk", "libxkbcommon-dev", "wayland-protocols", "libwayland-dev",
-            "libvulkan-dev", "libgl1-mesa-dev", "libffi-dev", "libomp-dev",
-            "ffmpeg", "libavcodec-dev", "libavformat-dev", "libavutil-dev",
-            "libswscale-dev", "libswresample-dev",
-            "qt6-base-dev", "qt6-declarative-dev", "qt6-5compat-dev",
-            "qt6-multimedia-dev", "qt6-shadertools-dev", "qt6-quick3d-dev",
-            "qt6-tools-dev", "qt6-tools-dev-tools", "qt6-svg-dev",
-            "libqt6opengl6-dev", "extra-cmake-modules",
-        ]
-        self.run_cmd(["sudo", "apt-get", "install", "-y"] + deps)
-        self.logger.log("Debian 依存関係インストール完了")
-        self.setup_carla_sdk()
-
-    def get_archive_name(self) -> str:
-        return "AviQtl-Debian-Linux-x86_64"
-
-
 class Msys2Builder(PlatformBuilder):
     def install_dependencies(self):
         if self.config.is_offline:
@@ -438,7 +405,6 @@ class XcodeBuilder(PlatformBuilder):
 
 BUILDERS: dict[str, Type[PlatformBuilder]] = {
     "arch": ArchBuilder,
-    "debian": DebianBuilder,
     "msys2": Msys2Builder,
     "xcode": XcodeBuilder,
 }
@@ -471,7 +437,6 @@ def parse_args() -> argparse.Namespace:
         epilog=(
             "使用例:\n"
             "  python BUILD.py --arch\n"
-            "  python BUILD.py --debian --offline\n"
             "  python BUILD.py --msys2 --debug\n"
             "  python BUILD.py --xcode --offline\n"
         ),
@@ -480,10 +445,6 @@ def parse_args() -> argparse.Namespace:
     target_group.add_argument(
         "--arch", action="store_true",
         help="Arch Linux 向けビルド。distrobox コンテナ (archlinux-aviqtl) 内で pacman により依存関係を管理します。",
-    )
-    target_group.add_argument(
-        "--debian", action="store_true",
-        help="Debian 向けビルド。distrobox コンテナ (debian-aviqtl) 内で apt により依存関係を管理します。",
     )
     target_group.add_argument(
         "--msys2", action="store_true",
@@ -511,7 +472,7 @@ def parse_args() -> argparse.Namespace:
 def main():
     args = parse_args()
 
-    target = next(t for t in ("arch", "debian", "msys2", "xcode") if getattr(args, t))
+    target = next(t for t in ("arch", "msys2", "xcode") if getattr(args, t))
 
     source_dir = Path.cwd()
     config = BuildConfig(
