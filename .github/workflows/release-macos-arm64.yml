@@ -19,7 +19,7 @@ jobs:
       - name: Install Dependencies
         run: |
           brew update
-          brew install qt ffmpeg luajit molten-vk ninja pkg-config dylibbundler ccache
+          brew install qt ffmpeg luajit molten-vk ninja pkg-config dylibbundler ccache extra-cmake-modules
           echo "CMAKE_PREFIX_PATH=$(brew --prefix qt)" >> $GITHUB_ENV
 
       - name: Setup ccache

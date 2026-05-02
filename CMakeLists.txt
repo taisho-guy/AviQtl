@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.25)
 project(AviQtl LANGUAGES CXX C)
 
+# Qt の Private モジュール使用に関する警告を抑制
+set(QT_NO_PRIVATE_MODULE_WARNING ON)
+
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)

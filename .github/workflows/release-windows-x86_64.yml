@@ -42,6 +42,7 @@ jobs:
             mingw-w64-ucrt-x86_64-vulkan-headers
             mingw-w64-ucrt-x86_64-pkg-config
             mingw-w64-ucrt-x86_64-mold
+            mingw-w64-ucrt-x86_64-extra-cmake-modules
             zip
 
       - name: Build
