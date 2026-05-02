@@ -3,7 +3,7 @@ name: Build and Release macOS (ARM64)
 on:
   push:
     tags:
-      - '*'
+      - '**'
   workflow_dispatch:
 
 permissions:
