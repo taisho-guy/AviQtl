@@ -38,7 +38,7 @@ CYAN   = "\033[36m"
 BOLD   = "\033[1m"
 
 def find_cpp_files(root: Path) -> list[Path]:
-    exclude_dirs = {".git", ".build_tmp", "build", "dist", ".cache", "clap", "vst3sdk"}
+    exclude_dirs = {".git", ".build_tmp", "build", "dist", ".cache"}
     result = []
     for path in root.rglob("*.cpp"):
         if any(p in exclude_dirs for p in path.parts):
@@ -61,7 +61,7 @@ def find_qml_files(root: Path) -> list[Path]:
 def find_include_dirs(root: Path) -> list[Path]:
     dirs = set()
     for path in root.rglob("*.hpp"):
-        if any(p in {".git", ".build_tmp", "build", "clap", "vst3sdk"} for p in path.parts):
+        if any(p in {".git", ".build_tmp", "build"} for p in path.parts):
             continue
         dirs.add(path.parent)
     return sorted(dirs)
@@ -137,7 +137,6 @@ def run_cppcheck(
     defines = [
         "Q_OBJECT=", "Q_INVOKABLE=", "Q_PROPERTY(...)=", "Q_SIGNALS=protected",
         "Q_SLOTS=", "Q_EMIT=", "slots=", "signals=protected:",
-        "AVIQTL_HAS_CLAP=1", "AVIQTL_HAS_VST3=1",
     ]
     for d in defines:
         cmd += [f"-D{d}"]

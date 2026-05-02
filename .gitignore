@@ -1,6 +1,5 @@
 push.fish
 carla-sdk
-clap
 
 # Builds
 build/
@@ -113,4 +112,3 @@ compile_commands.json
 *creator.user*
 
 *_qmlcache.qrc
-

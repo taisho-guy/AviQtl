@@ -1,0 +1,100 @@
+name: Build and Release Windows (x86_64)
+
+on:
+  push:
+    tags:
+      - '*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Windows (x86_64)
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          cache: true
+          install: >-
+            mingw-w64-ucrt-x86_64-toolchain
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-qt6-base
+            mingw-w64-ucrt-x86_64-qt6-declarative
+            mingw-w64-ucrt-x86_64-qt6-quick3d
+            mingw-w64-ucrt-x86_64-qt6-multimedia
+            mingw-w64-ucrt-x86_64-qt6-shadertools
+            mingw-w64-ucrt-x86_64-qt6-svg
+            mingw-w64-ucrt-x86_64-qt6-5compat
+            mingw-w64-ucrt-x86_64-qt6-tools
+            mingw-w64-ucrt-x86_64-ffmpeg
+            mingw-w64-ucrt-x86_64-luajit
+            mingw-w64-ucrt-x86_64-vulkan-loader
+            mingw-w64-ucrt-x86_64-vulkan-headers
+            mingw-w64-ucrt-x86_64-pkg-config
+            mingw-w64-ucrt-x86_64-mold
+            zip
+
+      - name: Build
+        run: |
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -Wno-dev -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          cmake --build build
+
+      - name: Show ccache stats
+        run: ccache -s
+
+      - name: Package
+        run: |
+          mkdir dist
+          cd build
+          QML_DIR=$(cygpath -w "$(pwd)/../ui/qml")
+          EXE_PATH=$(cygpath -w "$(pwd)/../dist/AviQtl.exe")
+          DIST_DIR=$(cygpath -w "$(pwd)/../dist")
+          cp AviQtl.exe ../dist/
+          windeployqt --qmldir "$QML_DIR" --no-translations --no-compiler-runtime --release "$EXE_PATH" --dir "$DIST_DIR"
+          echo "[Paths]" > ../dist/qt.conf
+          echo "Plugins = ." >> ../dist/qt.conf
+          
+          # 非Qt依存関係の自動収集
+          ldd ../dist/AviQtl.exe | grep -iv 'system32' | grep -iv 'windows' | grep '=> /' | awk '{print $3}' | while read -r dll_path; do
+            if [[ "$dll_path" != *"dist/"* ]]; then cp -vu "$dll_path" ../dist/ || true; fi
+          done
+
+          if [ -d "objects" ]; then cp -r objects ../dist/; fi
+          if [ -d "effects" ]; then cp -r effects ../dist/; fi
+          if [ -d "plugins" ]; then cp -r plugins ../dist/; fi
+          
+          cd ../dist
+          zip -r AviQtl-Windows-x64.zip .
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AviQtl-Windows-x64
+          path: dist/AviQtl-Windows-x64.zip
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Create Codeberg Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: akkuman/gitea-release-action@v1
+        with:
+          server_url: https://codeberg.org
+          token: ${{ secrets.CODEBERG_TOKEN }}
+          repository: taisho-guy/AviQtl
+          draft: false
+          prerelease: false
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          body: ""
+          files: |
+            dist/AviQtl-Windows-x64.zip

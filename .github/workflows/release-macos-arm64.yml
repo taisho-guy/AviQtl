@@ -1,0 +1,99 @@
+name: Build and Release macOS (ARM64)
+
+on:
+  push:
+    tags:
+      - '*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-macos:
+    name: macOS (ARM64)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Dependencies
+        run: |
+          brew update
+          brew install qt ffmpeg luajit molten-vk ninja pkg-config dylibbundler ccache
+          echo "CMAKE_PREFIX_PATH=$(brew --prefix qt)" >> $GITHUB_ENV
+
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          max-size: 500M
+          key: macos-ccache
+
+      - name: Build
+        run: |
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DVulkan_LIBRARY=$(brew --prefix molten-vk)/lib/libMoltenVK.dylib \
+            -DVulkan_INCLUDE_DIR=$(brew --prefix molten-vk)/include \
+            -Wno-dev
+          cmake --build build --quiet
+
+      - name: Show ccache stats
+        run: ccache -s
+
+      - name: Package
+        run: |
+          mkdir dist
+          cd build
+          if [ -d "AviQtl.app" ]; then
+            $(brew --prefix qt)/bin/macdeployqt AviQtl.app -qmldir=../ui/qml -verbose=0 || true
+            
+            dylibbundler -of -cd -b -x AviQtl.app/Contents/MacOS/AviQtl \
+              -d AviQtl.app/Contents/Frameworks \
+              -p @executable_path/../Frameworks/ \
+              -s $(brew --prefix qt)/lib \
+              -s $(brew --prefix ffmpeg)/lib \
+              -s $(brew --prefix luajit)/lib \
+              -s /opt/homebrew/lib
+            
+            find AviQtl.app/Contents -name "*.dylib" -o -name "*.so" | while read lib; do
+              dylibbundler -of -b -x "$lib" \
+                -d AviQtl.app/Contents/Frameworks \
+                -p @executable_path/../Frameworks/ \
+                -s $(brew --prefix qt)/lib \
+                -s $(brew --prefix ffmpeg)/lib \
+                -s $(brew --prefix luajit)/lib \
+                -s /opt/homebrew/lib || true
+            done
+            
+            mkdir -p AviQtl.app/Contents/Resources
+            if [ -d "objects" ]; then cp -r objects AviQtl.app/Contents/Resources/; fi
+            if [ -d "effects" ]; then cp -r effects AviQtl.app/Contents/Resources/; fi
+            if [ -d "plugins" ]; then cp -r plugins AviQtl.app/Contents/Resources/; fi
+
+            zip -r ../dist/AviQtl-macOS-ARM64.zip AviQtl.app
+          else
+            exit 1
+          fi
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AviQtl-macOS-ARM64
+          path: dist/AviQtl-macOS-ARM64.zip
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Create Codeberg Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: akkuman/gitea-release-action@v1
+        with:
+          server_url: https://codeberg.org
+          token: ${{ secrets.CODEBERG_TOKEN }}
+          repository: taisho-guy/AviQtl
+          draft: false
+          prerelease: false
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          body: ""
+          files: |
+            dist/AviQtl-macOS-ARM64.zip

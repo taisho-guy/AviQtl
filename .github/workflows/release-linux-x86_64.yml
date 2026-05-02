@@ -1,0 +1,96 @@
+name: Build and Release Linux (x86_64)
+
+on:
+  push:
+    tags:
+      - '*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux:
+    name: Linux (x86_64)
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+    steps:
+      - name: Install System Dependencies
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm \
+            base-devel git cmake ninja clang mold zip mesa \
+            vulkan-devel libxkbcommon wayland wayland-protocols \
+            libffi ffmpeg luajit fftw \
+            qt6-base qt6-declarative qt6-shadertools qt6-5compat qt6-svg qt6-multimedia qt6-quick3d
+            qt6-tools lilv ladspa carla openmp extra-cmake-modules
+
+      - uses: actions/checkout@v4
+
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          max-size: 500M
+          key: linux-ccache
+
+      - name: Build
+        env:
+          CC: clang
+          CXX: clang++
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_FLAGS="-O3 -march=x86-64-v3 -flto -fno-semantic-interposition" \
+            -DCMAKE_POLICY_DEFAULT_CMP0056=NEW \
+            -DCMAKE_SKIP_INSTALL_RPATH=ON \
+            -Wno-dev
+          cmake --build build --quiet
+
+      - name: Show ccache stats
+        run: ccache -s
+
+      - name: Package
+        run: |
+          mkdir dist
+          cd build
+          cp AviQtl ../dist/
+          if [ -d "objects" ]; then cp -r objects ../dist/; fi
+          if [ -d "effects" ]; then cp -r effects ../dist/; fi
+          # i18n ファイルの収集 (BUILD.py の挙動を再現)
+          mkdir -p ../dist/i18n
+          find . -name "*.qm" ! -path "*/CMakeFiles/*" -exec cp {} ../dist/i18n/ \;
+          # 空のディレクトリは削除
+          rmdir ../dist/i18n 2>/dev/null || true
+          
+          if [ -d "plugins" ] && [ "$(ls -A plugins)" ]; then
+            mkdir -p ../dist/plugins
+            cp -r plugins/* ../dist/plugins/
+          fi
+          cd ../dist
+          zip -r AviQtl-Linux-x86_64-v3.zip .
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AviQtl-Linux-x86_64-v3
+          path: dist/AviQtl-Linux-x86_64-v3.zip
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Create Codeberg Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: akkuman/gitea-release-action@v1
+        with:
+          server_url: https://codeberg.org
+          token: ${{ secrets.CODEBERG_TOKEN }}
+          repository: taisho-guy/AviQtl
+          draft: false
+          prerelease: false
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          body: ""
+          files: |
+            dist/AviQtl-Linux-x86_64-v3.zip

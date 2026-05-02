@@ -23,7 +23,7 @@ CMAKE_FILENAME = "CMakeLists.txt"
 # スキャン除外ディレクトリ
 EXCLUDE_DIRS: frozenset[str] = frozenset({
     ".git", ".build_tmp", "build", "dist",
-    "clap", "vst3sdk", ".cache", "__pycache__",
+    ".cache", "__pycache__",
 })
 
 
