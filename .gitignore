@@ -1,3 +1,4 @@
 dist
 build
 .build_tmp
+vendor
