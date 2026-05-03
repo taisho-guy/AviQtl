@@ -6,6 +6,10 @@
 
 <p align="center">日本語 | <a href="docs/README.en.md">English</a> | <a href="docs/README.zh-Hans.md">简体中文</a> | <a href="docs/README.zh-Hant.md">繁體中文</a> | <a href="docs/README.ko.md">한국어</a> | <a href="docs/README.es.md">Español</a> | <a href="docs/README.fr.md">Français</a> | <a href="docs/README.de.md">Deutsch</a></p>
 
+> [!IMPORTANT]
+> AviQtlは現在大規模リファクタリング中です。
+> - プレビューをQt Quick 3DからFilamentに移行し、データフローを最適化します。
+> - そのため、新機能の追加やバグ修正、ドキュメントの整備が遅れます。
 
 ## AviQtlとは
 

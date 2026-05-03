@@ -1,5 +1,6 @@
 push.fish
 carla-sdk
+vendor
 
 # Builds
 build/

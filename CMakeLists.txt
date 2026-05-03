@@ -17,7 +17,22 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     list(APPEND EXTRA_QT_COMPONENTS WaylandClient)
 endif()
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui GuiPrivate Quick QuickControls2 Quick3D Widgets Core5Compat Sql Svg Multimedia Concurrent ShaderTools LinguistTools Network ${EXTRA_QT_COMPONENTS})
+
+# --- Filament Local Static Build Setup ---
+set(FILAMENT_LOCAL_DIR "${CMAKE_SOURCE_DIR}/vendor/filament")
+if(NOT EXISTS "${FILAMENT_LOCAL_DIR}")
+    message(FATAL_ERROR "Filament binaries not found in vendor/filament.")
+endif()
+
+include_directories(SYSTEM "${FILAMENT_LOCAL_DIR}/include")
+link_directories("${FILAMENT_LOCAL_DIR}/lib/x86_64")
+
+set(FILAMENT_LIBS 
+    filament backend bluevk bluegl filabridge filaflat utils geometry smol-v zstd pthread dl
+)
+set(FILAMENT_TOOLS_DIR "${FILAMENT_LOCAL_DIR}/bin")
+
+find_package(Qt6 REQUIRED COMPONENTS Core Gui GuiPrivate Quick QuickControls2 Widgets Core5Compat Sql Svg Multimedia Concurrent ShaderTools LinguistTools Network ${EXTRA_QT_COMPONENTS})
 find_package(Vulkan REQUIRED)
 find_package(ECM REQUIRED NO_MODULE)
 list(APPEND CMAKE_MODULE_PATH ${ECM_MODULE_PATH})
@@ -200,7 +215,7 @@ target_link_libraries(
 # Carlaのライブラリパスを明示（/usr/lib/carla/ 等の非標準ディレクトリ対策）
 target_link_directories(AviQtl PRIVATE ${CARLA_LIBRARY_DIRS})
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    target_link_libraries(AviQtl PRIVATE Qt6::WaylandClient)
+    target_link_libraries(AviQtl PRIVATE ${FILAMENT_LIBS} Qt6::WaylandClient)
 endif()
 
 # ターゲットが定義された後にインクルードを追加

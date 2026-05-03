@@ -8,6 +8,10 @@
 
 > [!IMPORTANT]
 > ### 本リポジトリは[Codeberg](https://codeberg.org/taisho-guy/AviQtl)のミラーです。開発の実態はCodebergにございます。
+> #### AviQtlは現在大規模リファクタリング中です。
+> - プレビューをQt Quick 3DからFilamentに移行し、データフローを最適化します。
+> - そのため、新機能の追加やバグ修正、ドキュメントの整備が遅れます。
+
 ## AviQtlとは
 
 **AviUtl 1.10** & **ExEdit 0.92**の操作感を踏襲しつつ、**AviUtlを超える性能**を持つ動画編集ソフトを開発するプロジェクトです。
