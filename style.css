@@ -23,6 +23,10 @@ a { color: #2cde85; text-decoration: none; transition: color 0.2s; }
 a:hover { color: #6ef0b0; }
 a:visited { color: #1aab5f; }
 
+ul, ol {
+    padding-left: 40px;
+}
+
 .container {
     max-width: 900px;
     margin: 0 auto;
@@ -48,7 +52,6 @@ h2.section-header {
     margin: 30px 0 15px 0;
     font-size: 1.2em;
     font-weight: bold;
-    text-shadow: 0 0 10px rgba(44, 222, 133, 0.3);
 }
 .section-header span { color: #2cde85; opacity: 0.6; }
 
@@ -153,7 +156,6 @@ code:active { background: #2cde85; color: #090e0b; }
     color: #2cde85;
     margin: 10px 0;
     user-select: text;
-    text-shadow: 0 0 12px rgba(44, 222, 133, 0.25);
 }
 
 @media (max-width: 600px) {
