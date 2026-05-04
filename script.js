@@ -1,85 +1,55 @@
-async function fetchReleases() {
-    const repo = 'taisho-guy/AviQtl';
-    const releasesUrl = `https://codeberg.org/api/v1/repos/${repo}/releases?limit=2`;
-    
-    const infoEl = document.getElementById('download-info-row');
-    const sourceEl = document.getElementById('link-source');
-
-    const platformMap = [
-        { id: 'link-linux', patterns: ['linux'] },
-        { id: 'link-windows', patterns: ['win'] },
-        { id: 'link-apple', patterns: ['mac', 'apple', 'darwin'] }
-    ];
+// DOMContentLoadedを待たずに即時実行、ただし非同期
+const initReleases = async () => {
+    // DOMアクセスを最小限にするため、一度だけ取得
+    const downloadItems = document.querySelectorAll('.download-item[data-platform]');
+    const REPO = 'taisho-guy/AviQtl';
+    const PATTERNS = { linux: ['linux'], windows: ['win'], apple: ['mac', 'apple', 'darwin'] };
+    const info = document.getElementById('download-info-row');
 
     try {
-        const res = await fetch(releasesUrl);
-        if (!res.ok) throw new Error('API request failed');
-        
-        const releases = await res.json();
-        if (!releases || releases.length === 0) throw new Error('No releases found');
+        const res = await fetch(`https://codeberg.org/api/v1/repos/${REPO}/releases?limit=2`);
+        const [latest, prev] = await res.json();
+        if (!latest) throw 0;
 
-        const latest = releases[0];
-        const prev = releases[1];
-        const tag = latest.tag_name;
-        const assets = latest.assets;
-
-        const findAsset = (patterns) => assets.find(a => patterns.some(p => a.name.toLowerCase().includes(p)));
-        
-        const updateItem = (el, asset) => {
-            if (!el) return;
+        downloadItems.forEach(el => {
+            const p = el.dataset.platform;
             const icon = el.querySelector('.download-icon');
-            if (asset) {
-                el.href = `https://codeberg.org/${repo}/releases/download/${tag}/${asset.name}`;
-                if (icon) icon.classList.remove('is-missing');
-            } else {
-                el.href = "#";
-                el.style.pointerEvents = 'none';
-                el.classList.add('is-disabled');
-                if (icon) icon.classList.add('is-missing');
-            }
-        };
+            
+            if (p === 'source') return el.href = `https://codeberg.org/${REPO}/archive/${latest.tag_name}.zip`;
 
-        platformMap.forEach(platform => {
-            updateItem(document.getElementById(platform.id), findAsset(platform.patterns));
+            const asset = latest.assets.find(a => PATTERNS[p]?.some(s => a.name.toLowerCase().includes(s)));
+            if (asset) {
+                el.href = `https://codeberg.org/${REPO}/releases/download/${latest.tag_name}/${asset.name}`;
+                icon?.classList.remove('is-missing');
+            } else {
+                el.removeAttribute('href');
+                el.classList.add('is-disabled');
+                icon?.classList.add('is-missing');
+            }
         });
 
-        if (sourceEl) {
-            sourceEl.href = `https://codeberg.org/${repo}/archive/${tag}.zip`;
-        }
-
-        // 情報バーの更新
-        if (infoEl) {
+        if (info) {
             const date = new Date(latest.created_at).toLocaleDateString('ja-JP');
-            const compareUrl = prev 
-                ? `https://codeberg.org/${repo}/compare/${prev.tag_name}...${tag}`
-                : `https://codeberg.org/${repo}/releases/tag/${tag}`;
-                
-            const pastUrl = `https://codeberg.org/${repo}/releases`;
-
-            infoEl.innerHTML = `${tag} (${date}) / <a href="${compareUrl}" target="_blank">更新内容</a> / <a href="${pastUrl}" target="_blank">過去のリリース</a>`;
+            const comp = prev ? `compare/${prev.tag_name}...${latest.tag_name}` : `releases/tag/${latest.tag_name}`;
+            info.innerHTML = `${latest.tag_name} (${date}) / <a href="https://codeberg.org/${REPO}/${comp}" target="_blank">更新</a> / <a href="https://codeberg.org/${REPO}/releases" target="_blank">履歴</a>`;
         }
-
-    } catch (error) {
-        console.error(error);
-        if (infoEl) infoEl.textContent = 'リリースの取得に失敗しました。';
+    } catch {
+        if (info) info.textContent = 'APIエラー';
     } finally {
-        document.querySelectorAll('.download-icon').forEach(el => el.classList.remove('is-loading'));
+        document.querySelectorAll('.download-icon').forEach(i => i.classList.remove('is-loading'));
     }
-}
-fetchReleases();
+};
 
-(function() {
-    document.addEventListener('click', function(e) {
-        if (e.target.tagName === 'CODE') {
-            const text = e.target.textContent;
-            navigator.clipboard.writeText(text).then(() => {
-                e.target.style.color = 'var(--bg-color)';
-                e.target.style.background = 'var(--accent-color)';
-                setTimeout(() => {
-                    e.target.style.color = '';
-                    e.target.style.background = '';
-                }, 200);
-            });
-        }
-    });
-})();
+// requestIdleCallbackでブラウザの暇な時間に初期化
+if ('requestIdleCallback' in window) { requestIdleCallback(initReleases); }
+else { setTimeout(initReleases, 1); }
+
+document.addEventListener('click', ({target}) => {
+    if (target.tagName === 'CODE') {
+        navigator.clipboard.writeText(target.textContent).then(() => {
+            const old = target.style.cssText;
+            target.style.cssText = 'color:var(--bg);background:var(--accent)';
+            setTimeout(() => target.style.cssText = old, 200);
+        });
+    }
+});
