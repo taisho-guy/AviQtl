@@ -45,7 +45,7 @@ ul, ol {
     text-align: left;
 }
 
-.hero, .section-header, th, .footer-table {
+.hero, .section-header, th, .footer-content {
     text-align: center;
 }
 
@@ -145,10 +145,14 @@ details table {
     border: 2px solid var(--border-color);
     border-spacing: 2px;
 }
-details th { background-color: var(--header-bg); color: var(--accent-color); border: 1px solid var(--border-color); white-space: nowrap; }
-details td { border: 1px solid var(--border-color); white-space: nowrap; }
+details th { background-color: var(--header-bg); color: var(--accent-color); border: 1px solid var(--border-color); }
+details td { border: 1px solid var(--border-color); }
 
 .footer-info { font-size: 0.8em; margin-top: 20px; }
+
+.footer-content p {
+    margin: 5px 0;
+}
 
 code { background: linear-gradient(transparent 70%, rgba(44, 222, 133, 0.3) 70%); font-family: 'JetBrains Mono', monospace; color: var(--text-color); padding: 0 2px; font-weight: bold; cursor: pointer; transition: background 0.2s, color 0.2s; }
 code:hover { background: rgba(44, 222, 133, 0.4); }
@@ -168,12 +172,6 @@ code:active { background: var(--accent-color); color: var(--bg-color); }
     color: var(--accent-color);
     margin: 10px 0;
     user-select: text;
-}
-
-@media (max-width: 600px) {
-    .hero-title-static {
-        font-size: clamp(1.4rem, 6vw, 2rem);
-    }
 }
 
 .download-grid {
@@ -232,6 +230,45 @@ code:active { background: var(--accent-color); color: var(--bg-color); }
 
 .tag-link { font-weight: bold; font-size: 0.9em; }
 
+/* 究極のモバイルフレンドリー化のための最適化 */
 @media (max-width: 600px) {
-    .download-grid { grid-template-columns: repeat(2, 1fr); }
+    body {
+        padding: 15px 10px; /* 画面端の余白を縮小 */
+    }
+
+    .container {
+        width: 100%;
+        margin: 0;
+    }
+
+    .hero-title-static {
+        font-size: clamp(1.3rem, 7vw, 1.8rem);
+    }
+
+    h2.section-header {
+        font-size: 1.1em;
+        padding: 12px 5px; /* タッチしやすい高さに */
+    }
+
+    .download-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .download-item {
+        padding: 20px 5px;
+    }
+
+    /* 表のレスポンシブ対応：画面幅を超えないように制御 */
+    table:not(.footer-table) {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    th, td {
+        font-size: 0.85em;
+        word-break: break-word; /* 長い単語でのレイアウト崩れを防止 */
+    }
+
+    ul, ol { padding-left: 25px; } /* リストのインデントを節約 */
 }
