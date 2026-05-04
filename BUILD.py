@@ -239,7 +239,8 @@ class LinuxBuilderBase(PlatformBuilder):
     def package(self):
         self.config.output_dir.mkdir(parents=True, exist_ok=True)
         dest_bin = self.config.output_dir / "AviQtl"
-        src_bin = self.config.work_dir / "AviQtl"
+        # CMAKE_RUNTIME_OUTPUT_DIRECTORY = bin/ のため bin/ 下に生成される
+        src_bin = self.config.work_dir / "bin" / "AviQtl"
         if dest_bin.exists():
             dest_bin.unlink()
         if not src_bin.exists():

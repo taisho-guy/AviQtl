@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.25)
 project(AviQtl LANGUAGES CXX C)
 
+# 実行ファイルの出力先を bin/ に設定
+# qt_add_qml_module(AviQtl) が同名ディレクトリを生成するため衝突を回避
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
 # Qt の Private モジュール使用に関する警告を抑制
 set(QT_NO_PRIVATE_MODULE_WARNING ON)
 
@@ -10,7 +14,6 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Qtの標準最適化を有効化
-set(QT_QML_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/qml)
 
 set(EXTRA_QT_COMPONENTS "")
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -120,7 +123,6 @@ qt_add_executable(AviQtl
     core/src/video_encoder.cpp
     scripting/mod_engine.cpp
     ${COMMON_SHADERS}
-    ${QML_SOURCES}
 )
 
 if(APPLE)
@@ -142,16 +144,10 @@ qt_add_qml_module(AviQtl
     VERSION 1.0
     RESOURCE_PREFIX "/qt/qml"
 
-    # [追加] QML_ELEMENT マクロを持つ C++ 型を qmltyperegistrar に明示登録する。
-    # GLOB_RECURSE で既にターゲットに含まれているが、ここに列挙することで
-    # Qt の型情報生成パイプラインが確実にスキャン対象として認識する。
+    # QML_ELEMENT を持つ型のヘッダのみ指定する (.cpp は AviQtl 本体でコンパイル済み)
+    # filament_canvas / core_bridge は QML_ELEMENT なし → main.cpp の qmlRegisterType で登録
     SOURCES
         core/include/compute_effect.hpp
-        core/src/compute_effect.cpp
-        rendering/include/filament_canvas.hpp
-        rendering/src/filament_canvas.cpp
-        ui/include/bridge/core_bridge.hpp
-        ui/src/bridge/core_bridge.cpp
 
     QML_FILES
         ui/qml/MainWindow.qml
@@ -221,27 +217,21 @@ target_link_libraries(
 # Carlaのライブラリパスを明示（/usr/lib/carla/ 等の非標準ディレクトリ対策）
 target_link_directories(AviQtl PRIVATE ${CARLA_LIBRARY_DIRS})
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    # vendor/filament は libc++ (std::__1::*) でビルドされているため libc++ の存在を確認してリンク
-    find_library(LIBCXX_PATH    NAMES c++ libc++)
-    find_library(LIBCXXABI_PATH NAMES c++abi libc++abi)
-    if(LIBCXX_PATH AND LIBCXXABI_PATH)
-        message(STATUS "libc++ found: ${LIBCXX_PATH}")
-        target_link_libraries(AviQtl PRIVATE ${FILAMENT_LIBS} Qt6::WaylandClient
-            ${LIBCXX_PATH}
-            ${LIBCXXABI_PATH}
-            # carla が間接依存する fluidsynth を --as-needed 対策で明示リンク
-            fluidsynth
-        )
-    else()
-        message(FATAL_ERROR
-            "libc++ が見つかりません。\n"
-            "vendor/filament は libc++ でビルドされています。\n"
-            "以下のコマンドでインストールしてください: sudo pacman -S libc++")
-    endif()
+    target_link_libraries(AviQtl PRIVATE ${FILAMENT_LIBS} Qt6::WaylandClient
+        # vendor/filament は libc++ (LLVM ABI) でビルドされているため c++ が必須
+        c++
+        c++abi
+        # Qt6 は libstdc++ を参照するため stdc++ も残す
+        stdc++
+        # carla が間接依存する fluidsynth を --as-needed 対策で明示リンク
+        fluidsynth
+    )
 endif()
 
 # ターゲットが定義された後にインクルードを追加
 target_include_directories(AviQtl PRIVATE
+    # ルートを追加: "engine/timeline/ecs.hpp" 等のルート相対 #include を解決
+    ${CMAKE_SOURCE_DIR}
     core/include
     ui/include
     rendering/include
