@@ -31,7 +31,7 @@ const initReleases = async () => {
         if (info) {
             const date = new Date(latest.created_at).toLocaleDateString('ja-JP');
             const comp = prev ? `compare/${prev.tag_name}...${latest.tag_name}` : `releases/tag/${latest.tag_name}`;
-            info.innerHTML = `${latest.tag_name} (${date}) / <a href="https://codeberg.org/${REPO}/${comp}" target="_blank">更新</a> / <a href="https://codeberg.org/${REPO}/releases" target="_blank">履歴</a>`;
+            info.innerHTML = `${latest.tag_name} (${date}) / <a href="https://codeberg.org/${REPO}/${comp}" target="_blank">更新内容</a> / <a href="https://codeberg.org/${REPO}/releases" target="_blank">過去のバージョン</a>`;
         }
     } catch {
         if (info) info.textContent = 'APIエラー';

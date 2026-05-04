@@ -83,7 +83,7 @@ h2.section-header {
     background-color: var(--border-color);
     color: var(--accent-color);
     padding-block: 8px;
-    margin-block: var(--spacing-base) var(--spacing-tight);
+    margin-block: var(--spacing-tight);
     font-size: 1.2em;
     font-weight: bold;
 
@@ -151,9 +151,12 @@ table {
         background-color: var(--header-bg);
         color: var(--accent-color);
         border: var(--border-thin) solid var(--border-color);
-        margin-block-end: 2px;
+        margin-block-end: 0;
         cursor: pointer;
     }
+
+    &.alert .alert-title,
+    &[open] summary { margin-block-end: 2px; }
 
     & summary { display: list-item; }
 
@@ -166,6 +169,11 @@ table {
         margin-block: 0;
         margin-block-end: 2px;
         &:last-child { margin-block-end: 0; }
+
+        /* アイコン由来などの特殊なコンテナは枠線を表示しない */
+        &:is(.icon-origin-box) {
+            border-color: transparent;
+        }
     }
 
     & :is(ul, ol):not(.icon-origin-box *) {
@@ -176,7 +184,6 @@ table {
     &.alert :is(ul, ol) { padding-inline: 40px 15px; }
 }
 
-details[open] summary { margin-block-end: 2px; }
 details h3, details h4 { font-size: 1.1em; }
 
 .footer-info { font-size: 0.8em; margin-block-start: 20px; }
@@ -184,9 +191,10 @@ details h3, details h4 { font-size: 1.1em; }
 .footer-content p { margin-block: 5px; }
 
 .footer-content {
-    border-block-start: var(--border-thick) solid var(--border-color);
-    padding-block-start: 20px;
+    border-block: var(--border-thick) solid var(--border-color);
+    padding-block: 20px;
     margin-block-start: 40px;
+    margin-block-end: 20px;
 }
 
 code {
@@ -203,9 +211,9 @@ code {
 }
 
 .hero {
-    margin-block-end: 30px;
-    padding-block-end: 10px;
-    border-block-end: var(--border-thick) solid var(--border-color);
+    margin-block: 20px 30px;
+    padding-block: 10px;
+    border-block: var(--border-thick) solid var(--border-color);
     text-align: center;
 }
 
