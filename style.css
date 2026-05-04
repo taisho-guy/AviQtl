@@ -8,6 +8,11 @@
     --header-bg: #0d1f23;
     --loading-color: #00414a;
     --missing-color: #1c2a2d;
+    
+    /* レイアウト定数 */
+    --border-thick: 2px;
+    --border-thin: 1px;
+    --spacing-base: 15px;
 }
 
 .visually-hidden {
@@ -51,8 +56,8 @@ ul, ol {
 
 hr {
     border: 0;
-    border-top: 2px solid var(--border-color);
-    margin: 20px 0;
+    border-top: var(--border-thick) solid var(--border-color);
+    margin: var(--spacing-base) 0;
 }
 
 h2.section-header {
@@ -60,7 +65,7 @@ h2.section-header {
     background-color: var(--border-color);
     color: var(--accent-color);
     padding: 8px 0;
-    margin: 30px 0 15px 0;
+    margin: calc(var(--spacing-base) * 2) 0 var(--spacing-base) 0;
     font-size: 1.2em;
     font-weight: bold;
 }
@@ -68,7 +73,7 @@ h2.section-header {
 
 table {
     width: 100%;
-    border: 2px solid var(--border-color);
+    border: var(--border-thick) solid var(--border-color);
     border-collapse: separate;
     border-spacing: 2px;
     background-color: var(--bg-color);
@@ -78,12 +83,12 @@ th {
     color: var(--accent-color);
     background-color: var(--border-color);
     padding: 8px;
-    border: 1px solid var(--border-color);
+    border: var(--border-thin) solid var(--border-color);
     vertical-align: middle;
 }
 td {
     padding: 8px;
-    border: 1px solid var(--border-color);
+    border: var(--border-thin) solid var(--border-color);
     background-color: var(--bg-color);
     vertical-align: top;
 }
@@ -91,47 +96,40 @@ td {
     text-align: center;
 }
 
-.alert {
-    margin: 20px 0;
+.alert, details {
+    margin: var(--spacing-base) 0;
     padding: 2px;
-    border: 2px solid var(--border-color);
+    border: var(--border-thick) solid var(--border-color);
     background-color: var(--bg-color);
 }
-.alert-title {
+
+.alert-title, summary {
     font-weight: bold;
     padding: 8px 15px;
     background-color: var(--header-bg);
     color: var(--accent-color);
-    border: 1px solid var(--border-color);
+    border: var(--border-thin) solid var(--border-color);
     margin: 0 0 2px 0;
 }
 .alert ul, .alert ol { 
-    padding: 10px 15px 10px 40px; 
+    padding: 10px var(--spacing-base) 10px 40px; 
     margin: 0; 
-    border: 1px solid var(--border-color);
+    border: var(--border-thin) solid var(--border-color);
     background-color: var(--bg-color);
 }
 
 details {
-    background-color: var(--bg-color);
-    border: 2px solid var(--border-color);
-    margin: 10px 0;
-    padding: 2px;
     overflow-x: auto;
 }
 summary {
-    background-color: var(--header-bg);
-    border: 1px solid var(--border-color);
-    padding: 10px;
     cursor: pointer;
-    font-weight: bold;
-    color: var(--accent-color);
+    display: list-item; /* 標準的な矢印を表示するため */
 }
 details[open] summary { margin-bottom: 2px; }
 
 details > p, details > h3, details > h4, details > ul, details > ol {
     background-color: var(--bg-color);
-    border: 1px solid var(--border-color);
+    border: var(--border-thin) solid var(--border-color);
     padding: 10px;
     margin: 0 0 2px 0;
 }
@@ -142,11 +140,11 @@ details ul, details ol { padding-left: 40px; }
 details[open] summary + table, details[open] summary + p { margin-top: 0; }
 details table { 
     margin: 0; 
-    border: 2px solid var(--border-color);
+    border: var(--border-thick) solid var(--border-color);
     border-spacing: 2px;
 }
-details th { background-color: var(--header-bg); color: var(--accent-color); border: 1px solid var(--border-color); }
-details td { border: 1px solid var(--border-color); }
+details th { background-color: var(--header-bg); color: var(--accent-color); border: var(--border-thin) solid var(--border-color); }
+details td { border: var(--border-thin) solid var(--border-color); }
 
 .footer-info { font-size: 0.8em; margin-top: 20px; }
 
@@ -177,9 +175,9 @@ code:active { background: var(--accent-color); color: var(--bg-color); }
 .download-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    border: 2px solid var(--border-color);
+    border: var(--border-thick) solid var(--border-color);
     background-color: var(--bg-color);
-    margin: 15px 0;
+    margin: var(--spacing-base) 0;
     padding: 2px;
     gap: 2px;
 }
@@ -187,7 +185,7 @@ code:active { background: var(--accent-color); color: var(--bg-color); }
 .download-item {
     padding: 30px 10px;
     text-align: center;
-    border: 1px solid var(--border-color);
+    border: var(--border-thin) solid var(--border-color);
     background-color: var(--bg-color);
     display: flex;
     flex-direction: column;
@@ -199,7 +197,7 @@ code:active { background: var(--accent-color); color: var(--bg-color); }
     grid-column: 1 / -1;
     padding: 15px 10px;
     text-align: center;
-    border: 1px solid var(--border-color);
+    border: var(--border-thin) solid var(--border-color);
     background-color: var(--bg-color);
 }
 
