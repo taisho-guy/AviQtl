@@ -12,9 +12,19 @@
     /* レイアウト定数 */
     --border-thick: 2px;
     --border-thin: 1px;
-    --spacing-base: 15px;
-    --spacing-tight: 8px;
+    --spacing-base: 32px;
+    --spacing-tight: 16px;
     --op-low: 0.6;
+
+    /* コンポーネント内部用スケール */
+    --sp-gap: 2px;
+    --sp-xs: 8px;
+    --sp-sm: 10px;
+    --sp-md: 15px;
+
+    /* Box Component Defaults */
+    --box-accent: var(--border-color);
+    --box-text: var(--accent-color);
 }
 
 .visually-hidden {
@@ -39,10 +49,10 @@ body {
     overflow-x: hidden;
     line-height: 1.6;
     margin: 0;
-    padding: 20px;
+    padding: var(--spacing-base);
 
     @media (max-width: 600px) {
-        padding: 15px 10px;
+        padding-inline: 10px;
     }
 }
 a {
@@ -61,6 +71,16 @@ a {
     max-inline-size: 960px;
     margin-inline: auto;
     text-align: left;
+}
+
+/* コンテンツ末尾の余計なマージンを排除し、フッターとの隙間を正確に制御 */
+main > :last-child {
+    margin-block-end: 0;
+}
+
+/* コンテンツ内のテキスト・リストの余白をBoxコンポーネントと同期 */
+main > :is(p, ul, ol) {
+    margin-block: var(--spacing-tight);
 }
 
 .hero, .section-header, th, .footer-content, .download-info-row {
@@ -82,8 +102,8 @@ h2.section-header {
     inline-size: 100%;
     background-color: var(--border-color);
     color: var(--accent-color);
-    padding-block: 8px;
-    margin-block: var(--spacing-tight);
+    padding-block: var(--sp-xs);
+    margin-block: var(--spacing-base) 0;
     font-size: 1.2em;
     font-weight: bold;
 
@@ -100,9 +120,9 @@ table {
     inline-size: 100%;
     border: var(--border-thick) solid var(--border-color);
     border-collapse: separate;
-    border-spacing: 2px;
+    border-spacing: var(--sp-gap);
     background-color: var(--bg-color);
-    margin-block: 15px;
+    margin-block: var(--spacing-base);
 
     &:not(.footer-table) {
         @media (max-width: 600px) {
@@ -118,7 +138,7 @@ table {
     }
 
     & :is(th, td) {
-        padding: 8px;
+        padding: var(--sp-xs);
         border: var(--border-thin) solid var(--border-color);
         background-color: var(--bg-color);
         vertical-align: top;
@@ -140,40 +160,29 @@ table {
 /* Box Component (Unification of Alert and Details) */
 :is(.alert, details) {
     margin-block: var(--spacing-tight);
-    padding: 2px;
+    padding: var(--sp-gap);
     border: var(--border-thick) solid var(--border-color);
-    background-color: var(--bg-color);
-    overflow-x: auto;
+    background: var(--bg-color);
+    contain: layout;
 
     & :is(.alert-title, summary) {
         font-weight: bold;
-        padding: 8px 15px;
-        background-color: var(--header-bg);
-        color: var(--accent-color);
+        padding: var(--sp-xs) var(--sp-md);
+        background: var(--header-bg);
+        color: var(--box-text);
         border: var(--border-thin) solid var(--border-color);
-        margin-block-end: 0;
         cursor: pointer;
     }
 
-    &.alert .alert-title,
-    &[open] summary { margin-block-end: 2px; }
+    & :is(.alert-title, [open] summary) { margin-block-end: var(--sp-gap); }
 
-    & summary { display: list-item; }
-
-    /* Box内の直接の子要素に一貫した余白と境界線を適用 */
     & > :is(p, h3, h4, ul, ol, div, table) {
-        background-color: var(--bg-color);
-        border: var(--border-thin) solid transparent;
-        border-color: var(--border-color);
-        padding: 10px;
-        margin-block: 0;
-        margin-block-end: 2px;
+        background: var(--bg-color);
+        border: var(--border-thin) solid var(--border-color);
+        padding: var(--sp-sm);
+        margin-block: 0 var(--sp-gap);
         &:last-child { margin-block-end: 0; }
-
-        /* アイコン由来などの特殊なコンテナは枠線を表示しない */
-        &:is(.icon-origin-box) {
-            border-color: transparent;
-        }
+        &:is(.icon-origin-box) { border-color: transparent; }
     }
 
     & :is(ul, ol):not(.icon-origin-box *) {
@@ -181,7 +190,7 @@ table {
         @media (max-width: 600px) { padding-inline-start: 25px; }
     }
 
-    &.alert :is(ul, ol) { padding-inline: 40px 15px; }
+    &.alert-warning { --box-text: #ffcc00; --header-bg: #221a00; }
 }
 
 details h3, details h4 { font-size: 1.1em; }
@@ -192,9 +201,14 @@ details h3, details h4 { font-size: 1.1em; }
 
 .footer-content {
     border-block: var(--border-thick) solid var(--border-color);
-    padding-block: 20px;
-    margin-block-start: 40px;
-    margin-block-end: 20px;
+    padding-block: var(--spacing-tight);
+    margin-block-start: var(--spacing-base);
+    margin-block-end: 0;
+
+    & .easter-egg {
+        color: inherit;
+        &:visited { color: inherit; }
+    }
 }
 
 code {
@@ -211,8 +225,8 @@ code {
 }
 
 .hero {
-    margin-block: 20px 30px;
-    padding-block: 10px;
+    margin-block: 0px var(--spacing-base);
+    padding-block: var(--sp-sm);
     border-block: var(--border-thick) solid var(--border-color);
     text-align: center;
 }
@@ -223,6 +237,7 @@ code {
     text-align: center;
     font-size: clamp(1.6rem, 4vw, 2.5rem);
     font-weight: bold;
+    color: var(--accent-color);
     margin-block: 10px;
     /* GPU加速を促す */
     will-change: transform;
@@ -238,9 +253,9 @@ code {
     grid-template-columns: repeat(4, 1fr);
     border: var(--border-thick) solid var(--border-color);
     background-color: var(--bg-color);
-    margin-block: var(--spacing-base);
-    padding: 2px;
-    gap: 2px;
+    margin-block: var(--spacing-tight);
+    padding: var(--sp-gap);
+    gap: var(--sp-gap);
 
     @media (max-width: 600px) {
         grid-template-columns: repeat(2, 1fr);
@@ -248,15 +263,15 @@ code {
 }
 
 .download-item {
-    padding-block: 30px;
-    padding-inline: 10px;
+    padding-block: var(--spacing-tight);
+    padding-inline: var(--sp-sm);
     text-align: center;
     border: var(--border-thin) solid var(--border-color);
     background-color: var(--bg-color);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 15px;
+    gap: var(--sp-md);
 
     @media (max-width: 600px) {
         padding-block: 20px;
@@ -268,8 +283,8 @@ code {
 
 .download-info-row {
     grid-column: 1 / -1;
-    padding-block: 15px;
-    padding-inline: 10px;
+    padding-block: var(--sp-md);
+    padding-inline: var(--sp-sm);
     text-align: center;
     border: var(--border-thin) solid var(--border-color);
     background-color: var(--bg-color);
@@ -278,6 +293,7 @@ code {
 .download-icon {
     inline-size: 48px;
     block-size: 48px;
+    aspect-ratio: 1 / 1;
     background-color: var(--accent-color);
     mask-size: contain;
     mask-repeat: no-repeat;
@@ -303,8 +319,8 @@ code {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 15px;
-    padding: 10px 0;
+    gap: var(--sp-md);
+    padding: var(--sp-sm) 0;
     flex-wrap: wrap;
     .symbol { font-size: 24px; font-weight: bold; }
 }

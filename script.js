@@ -1,47 +1,59 @@
-// DOMContentLoadedを待たずに即時実行、ただし非同期
 const initReleases = async () => {
-    // DOMアクセスを最小限にするため、一度だけ取得
-    const downloadItems = document.querySelectorAll('.download-item[data-platform]');
     const REPO = 'taisho-guy/AviQtl';
     const PATTERNS = { linux: ['linux'], windows: ['win'], apple: ['mac', 'apple', 'darwin'] };
     const info = document.getElementById('download-info-row');
+    const CACHE_KEY = 'aviqtl_release_cache';
+    const CACHE_TTL = 3600000; // 1時間
+    const OBSERVER_MARGIN = '100px';
 
-    try {
-        const res = await fetch(`https://codeberg.org/api/v1/repos/${REPO}/releases?limit=2`);
-        const [latest, prev] = await res.json();
-        if (!latest) throw 0;
-
-        downloadItems.forEach(el => {
-            const p = el.dataset.platform;
-            const icon = el.querySelector('.download-icon');
-            
-            if (p === 'source') return el.href = `https://codeberg.org/${REPO}/archive/${latest.tag_name}.zip`;
-
-            const asset = latest.assets.find(a => PATTERNS[p]?.some(s => a.name.toLowerCase().includes(s)));
-            if (asset) {
-                el.href = `https://codeberg.org/${REPO}/releases/download/${latest.tag_name}/${asset.name}`;
-                icon?.classList.remove('is-missing');
-            } else {
-                el.removeAttribute('href');
-                el.classList.add('is-disabled');
-                icon?.classList.add('is-missing');
-            }
-        });
-
+    const updateUI = (latest, prev) => {
         if (info) {
             const date = new Date(latest.created_at).toLocaleDateString('ja-JP');
             const comp = prev ? `compare/${prev.tag_name}...${latest.tag_name}` : `releases/tag/${latest.tag_name}`;
             info.innerHTML = `${latest.tag_name} (${date}) / <a href="https://codeberg.org/${REPO}/${comp}" target="_blank">更新内容</a> / <a href="https://codeberg.org/${REPO}/releases" target="_blank">過去のバージョン</a>`;
         }
-    } catch {
-        if (info) info.textContent = 'APIエラー';
-    } finally {
+
+        for (const el of document.querySelectorAll('.download-item[data-platform]')) {
+            const p = el.dataset.platform;
+            if (p === 'source') { el.href = `https://codeberg.org/${REPO}/archive/${latest.tag_name}.zip`; continue; }
+
+            const asset = latest.assets.find(a => PATTERNS[p]?.some(s => a.name.toLowerCase().includes(s)));
+            el.href = asset ? `https://codeberg.org/${REPO}/releases/download/${latest.tag_name}/${asset.name}` : '#';
+            el.classList.toggle('is-disabled', !asset);
+            el.querySelector('.download-icon')?.classList.toggle('is-missing', !asset);
+        }
         document.querySelectorAll('.download-icon').forEach(i => i.classList.remove('is-loading'));
+    };
+
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) {
+        const { latest, prev, timestamp } = JSON.parse(cached);
+        if (Date.now() - timestamp < CACHE_TTL) updateUI(latest, prev);
     }
+
+    const observer = new IntersectionObserver(async ([entry]) => {
+        if (entry.isIntersecting) {
+            observer.disconnect();
+            try {
+                const res = await fetch(`https://codeberg.org/api/v1/repos/${REPO}/releases?limit=2`);
+                const [latest, prev] = await res.json();
+                if (latest) {
+                    localStorage.setItem(CACHE_KEY, JSON.stringify({ latest, prev, timestamp: Date.now() }));
+                    updateUI(latest, prev);
+                }
+            } catch {
+                if (info) info.textContent = 'APIエラー';
+            } finally {
+                document.querySelectorAll('.download-icon').forEach(i => i.classList.remove('is-loading'));
+            }
+        }
+    }, { rootMargin: OBSERVER_MARGIN });
+
+    const target = document.getElementById('download-grid');
+    if (target) observer.observe(target);
 };
 
-// requestIdleCallbackでブラウザの暇な時間に初期化
-if ('requestIdleCallback' in window) { requestIdleCallback(initReleases); }
+if ('requestIdleCallback' in window) requestIdleCallback(initReleases);
 else { setTimeout(initReleases, 1); }
 
 document.addEventListener('click', ({target}) => {

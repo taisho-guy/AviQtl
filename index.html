@@ -75,7 +75,7 @@
 
     <h2 class="section-header"><span>★</span> ダウンロード <span>★</span></h2>
 
-    <div class="alert alert-warning">
+    <div class="alert alert-note">
         <div class="alert-title">ダウンロード前にご確認下さい</div>
         <ul>
             <li>現在AviQtlはLinux(x86_64)のみをターゲットにしております。<b>Windows/macOSでのビルド可否を保証しません</b>。</li>
@@ -114,7 +114,7 @@
     </div>
 
     <h2 class="section-header"><span>★</span> ビルド手順 <span>★</span></h2>
-    <div>
+
         <p>Linuxユーザーであれば<code>BUILD.py</code>を利用してビルド可能です。</p>
         <p>1. 依存関係のインストール（環境に合わせて以下のいずれかを実行してください）：</p>
         <ul>
@@ -124,17 +124,20 @@
             <li><b>MSYS2:</b> <code>pacman -S git mingw-w64-ucrt-x86_64-pyside6</code></li>
         </ul>
         <p>2. ソースコードの取得と移動：</p>
-        <p><code>git clone https://codeberg.org/taisho-guy/AviQtl.git</code><br><code>cd AviQtl</code></p>
+        <ul>
+            <li><code>git clone https://codeberg.org/taisho-guy/AviQtl.git</code></li>
+            <li><code>cd AviQtl</code></li>
+        </ul>
         <p>3. ビルドの実行：</p>
-        <p><code>python BUILD.py</code></p>
-        <div class="alert alert-note">
-            <ul>
-                <li>Windows、macOS上でのビルド検証は行っておりません。</li>
-                <li>Distrobox内でビルドを行います。ホストの環境でビルドしたい場合は<code>BUILD.py</code>はご利用になれません。</li>
-            </ul>
-        </div>
+        <ul>
+            <li><code>python BUILD.py</code></li>
+        </ul>
+    <div class="alert alert-note">
+        <ul>
+            <li>Windows、macOS上でのビルド検証は行っておりません。</li>
+            <li>Distrobox内でビルドを行います。ホストの環境でビルドしたい場合は<code>BUILD.py</code>はご利用になれません。</li>
+        </ul>
     </div>
-
     <h2 class="section-header"><span>★</span> フィードバック・バグの報告 <span>★</span></h2>
         <p><a href="https://codeberg.org/taisho-guy/AviQtl/issues/new" target="_blank">新しいイシューを作成</a>して下さい。些細なことでも、開発に大きく役立ちます。<a href="https://codeberg.org/taisho-guy/AviQtl/issues/" target="_blank">既にあるイシューを確認</a>していただくことで、解決する場合もございます。</p>
 
@@ -245,7 +248,6 @@
             <li><a href="https://codeberg.org/taisho-guy/AviQtl/wiki" target="_blank">AviQtl Wiki</a>の拡充</li>
             <li>SNSでの宣伝や、AviQtlで編集した動画の公開</li>
         </ul>
-    </div>
     </details>
 
     <details>
@@ -315,7 +317,7 @@
     </ul>
 </main>
 <footer class="container footer-content">
-        <p><a href="https://www.gnu.org/licenses/agpl-3.0.txt" target="_blank">ライセンス</a>は<a href="https://www.gnu.org/philosophy/free-sw.html" target="_blank">フリー</a>ですので<a href="https://codeberg.org/taisho-guy/AviQtl/fork" target="_blank">ご自由にどうぞ</a>。</p>
+        <p><a href="https://www.gnu.org/licenses/agpl-3.0.txt" target="_blank" class="easter-egg">ライセンス</a>は<a href="https://www.gnu.org/philosophy/free-sw.html" target="_blank" class="easter-egg">フリー</a>ですので<a href="https://codeberg.org/taisho-guy/AviQtl/fork" target="_blank" class="easter-egg">ご自由にどうぞ</a>。</p>
         <p>by <a href="https://codeberg.org/taisho-guy" target="_blank">taisho-guy</a></p>
 </footer>
 </body>
