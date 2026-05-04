@@ -88,7 +88,7 @@ AviQtlは構造的な弱点を根本的に解決します：
 
 ### インストール手順
 1. 以下の依存関係をインストールします：
-   - Qt6全般、LuaJIT、Vulkan実装（Mesa等）、FFmpeg、Carla
+   - Qt6全般、LuaJIT、Vulkan実装（Mesa等）、FFmpeg、Carla、libc++
 2. [リリースページ](https://codeberg.org/taisho-guy/AviQtl/releases)から `AviQtl-Linux-x86_64-v3.zip` をダウンロードします。
 3. ファイルを展開し、`AviQtl` に実行権限を付与して実行します。
 

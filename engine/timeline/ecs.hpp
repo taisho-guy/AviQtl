@@ -1,5 +1,52 @@
 #pragma once
 #include "ecs_profiler.hpp"
+// PODコンポーネント定義 (仕様書第4章準拠)
+// 全フィールドは trivially_copyable なスカラー値のみ。
+// ポインタ・std::string・QString・QListの混入を厳禁とする。
+#include <cstdint>
+
+namespace AviQtl::ECS {
+
+struct ActiveComponent {
+    bool active = false;
+};
+
+struct TransformComponent {
+    float x = 0, y = 0, z = 0;
+    float scaleX = 1, scaleY = 1;
+    float rotX = 0, rotY = 0, rotZ = 0;
+    float opacity = 1;
+};
+
+struct KeyframeRefComponent {
+    uint32_t clipId = 0;
+    uint32_t effectId = 0;
+};
+
+struct RenderableComponent {
+    uint32_t textureId = 0;
+    uint32_t materialId = 0;
+    uint32_t layer = 0;
+};
+
+// FrameBuffer: コンポーネントの有無が特殊性を決める (switch禁止)
+struct RenderBoundaryComponent {
+    bool clearBelow = false;
+    uint32_t layer = 0;
+};
+
+// GroupControl: 子レイヤーへのTransform伝播マーカー
+struct GroupTransformComponent {
+    uint32_t layerCount = 1;
+};
+
+// TransformSystemが書き込むグローバル変換行列 (列優先4x4)
+struct GlobalMatrixComponent {
+    float m[16] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
+};
+
+} // namespace AviQtl::ECS
+
 #include "ssbo_layout.hpp"
 #include "string_table.hpp"
 #include <QString>

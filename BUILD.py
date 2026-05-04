@@ -273,6 +273,10 @@ class ArchBuilder(LinuxBuilderBase):
             "qt6-shadertools", "qt6-svg", "qt6-5compat", "qt6-tools",
             "lilv", "ladspa", "carla",
             "openmp", "extra-cmake-modules",
+            # vendor/filament は libc++ でビルドされているためリンクに必須
+            "libc++",
+            # carla が間接依存する fluidsynth (--as-needed 対策)
+            "fluidsynth",
         ]
         self.run_cmd(["sudo", "pacman", "-Syu", "--needed", "--noconfirm"] + deps)
         self.logger.log("Arch Linux 依存関係インストール完了")

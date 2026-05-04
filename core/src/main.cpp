@@ -1,6 +1,8 @@
 #include "../../engine/plugin/audio_plugin_manager.hpp"
 #include "../../engine/timeline/ecs.hpp"
+#include "../../rendering/include/filament_canvas.hpp"
 #include "../../scripting/mod_engine.hpp"
+#include "../../ui/include/bridge/core_bridge.hpp"
 #include "aviqtl_context.hpp"
 #include "compute_effect.hpp"
 #include "effect_registry.hpp"
@@ -97,6 +99,8 @@ auto main(int argc, char *argv[]) -> int {
     qmlRegisterType<AviQtl::UI::Effects::ComputeEffect>("AviQtl.Compute", 1, 0, "ComputeEffect");
     engine.rootContext()->setContextProperty(QStringLiteral("SettingsManager"), &AviQtl::Core::SettingsManager::instance());
     qmlRegisterUncreatableType<AviQtl::UI::TimelineController>("AviQtl.UI", 1, 0, "TimelineController", "Managed by C++");
+    qmlRegisterType<AviQtl::Rendering::FilamentCanvas>("AviQtl.Rendering", 1, 0, "FilamentCanvas");
+    qmlRegisterSingletonInstance<AviQtl::UI::CoreBridge>("AviQtl.UI", 1, 0, "CoreBridge", &AviQtl::UI::CoreBridge::instance());
 
     engine.rootContext()->setContextProperty(QStringLiteral("AviQtlVersion"), QString::fromUtf8(AviQtl::VERSION_STRING));
     engine.rootContext()->setContextProperty(QStringLiteral("AviQtlVersionCodename"), QString::fromUtf8(AviQtl::VERSION_CODENAME));

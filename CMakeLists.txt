@@ -83,6 +83,8 @@ file(GLOB_RECURSE CPP_SOURCES
     "core/include/*.hpp"
     "engine/*.cpp"
     "engine/*.hpp"
+    "rendering/src/*.cpp"
+    "rendering/include/*.hpp"
     "ui/src/*.cpp"
     "ui/include/*.hpp"
     "scripting/*.cpp"
@@ -146,6 +148,10 @@ qt_add_qml_module(AviQtl
     SOURCES
         core/include/compute_effect.hpp
         core/src/compute_effect.cpp
+        rendering/include/filament_canvas.hpp
+        rendering/src/filament_canvas.cpp
+        ui/include/bridge/core_bridge.hpp
+        ui/src/bridge/core_bridge.cpp
 
     QML_FILES
         ui/qml/MainWindow.qml
@@ -206,7 +212,7 @@ endif()
 
 # リンク設定
 target_link_libraries(
-    AviQtl PRIVATE Qt6::Core Qt6::Gui Qt6::GuiPrivate Qt6::Quick Qt6::QuickControls2 Qt6::Quick3D Qt6::Widgets Qt6::Svg Qt6::Core5Compat Qt6::Multimedia Qt6::Concurrent Qt6::Network Vulkan::Vulkan
+    AviQtl PRIVATE Qt6::Core Qt6::Gui Qt6::GuiPrivate Qt6::Quick Qt6::QuickControls2 Qt6::Widgets Qt6::Svg Qt6::Core5Compat Qt6::Multimedia Qt6::Concurrent Qt6::Network Vulkan::Vulkan
                    PkgConfig::LUAJIT
                    PkgConfig::FFMPEG
                    ${CARLA_LIBRARIES}
@@ -215,13 +221,30 @@ target_link_libraries(
 # Carlaのライブラリパスを明示（/usr/lib/carla/ 等の非標準ディレクトリ対策）
 target_link_directories(AviQtl PRIVATE ${CARLA_LIBRARY_DIRS})
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    target_link_libraries(AviQtl PRIVATE ${FILAMENT_LIBS} Qt6::WaylandClient)
+    # vendor/filament は libc++ (std::__1::*) でビルドされているため libc++ の存在を確認してリンク
+    find_library(LIBCXX_PATH    NAMES c++ libc++)
+    find_library(LIBCXXABI_PATH NAMES c++abi libc++abi)
+    if(LIBCXX_PATH AND LIBCXXABI_PATH)
+        message(STATUS "libc++ found: ${LIBCXX_PATH}")
+        target_link_libraries(AviQtl PRIVATE ${FILAMENT_LIBS} Qt6::WaylandClient
+            ${LIBCXX_PATH}
+            ${LIBCXXABI_PATH}
+            # carla が間接依存する fluidsynth を --as-needed 対策で明示リンク
+            fluidsynth
+        )
+    else()
+        message(FATAL_ERROR
+            "libc++ が見つかりません。\n"
+            "vendor/filament は libc++ でビルドされています。\n"
+            "以下のコマンドでインストールしてください: sudo pacman -S libc++")
+    endif()
 endif()
 
 # ターゲットが定義された後にインクルードを追加
 target_include_directories(AviQtl PRIVATE
     core/include
     ui/include
+    rendering/include
     ${CARLA_INCLUDE_DIRS}
 )
 
