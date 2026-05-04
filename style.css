@@ -68,7 +68,7 @@ a {
 
 
 .container {
-    max-inline-size: 960px;
+    max-inline-size: 840px;
     margin-inline: auto;
     text-align: left;
 }
@@ -80,7 +80,7 @@ main > :last-child {
 
 /* コンテンツ内のテキスト・リストの余白をBoxコンポーネントと同期 */
 main > :is(p, ul, ol) {
-    margin-block: var(--spacing-tight);
+    margin-block: var(--spacing-tight) 0;
 }
 
 .hero, .section-header, th, .footer-content, .download-info-row {
@@ -90,7 +90,7 @@ main > :is(p, ul, ol) {
 hr {
     border: 0;
     border-block-start: var(--border-thick) solid var(--border-color);
-    margin-block: var(--spacing-base);
+    margin-block: var(--spacing-base) 0;
 }
 
 .lazy-render-section {
@@ -122,7 +122,7 @@ table {
     border-collapse: separate;
     border-spacing: var(--sp-gap);
     background-color: var(--bg-color);
-    margin-block: var(--spacing-base);
+    margin-block: var(--spacing-base) 0;
 
     &:not(.footer-table) {
         @media (max-width: 600px) {
@@ -159,7 +159,7 @@ table {
 
 /* Box Component (Unification of Alert and Details) */
 :is(.alert, details) {
-    margin-block: var(--spacing-tight);
+    margin-block: var(--spacing-tight) 0;
     padding: var(--sp-gap);
     border: var(--border-thick) solid var(--border-color);
     background: var(--bg-color);
@@ -225,7 +225,7 @@ code {
 }
 
 .hero {
-    margin-block: 0px var(--spacing-base);
+    margin-block: 0;
     padding-block: var(--sp-sm);
     border-block: var(--border-thick) solid var(--border-color);
     text-align: center;
@@ -238,7 +238,7 @@ code {
     font-size: clamp(1.6rem, 4vw, 2.5rem);
     font-weight: bold;
     color: var(--accent-color);
-    margin-block: 10px;
+    margin-block: var(--sp-sm);
     /* GPU加速を促す */
     will-change: transform;
     user-select: text;
@@ -253,7 +253,7 @@ code {
     grid-template-columns: repeat(4, 1fr);
     border: var(--border-thick) solid var(--border-color);
     background-color: var(--bg-color);
-    margin-block: var(--spacing-tight);
+    margin-block: var(--spacing-tight) 0;
     padding: var(--sp-gap);
     gap: var(--sp-gap);
 
