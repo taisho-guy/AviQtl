@@ -55,7 +55,7 @@ async function fetchReleases() {
                 
             const pastUrl = `https://codeberg.org/${repo}/releases`;
 
-            elements.info.innerHTML = `最新: ${tag} (${date}) / <a href="${compareUrl}" target="_blank">更新内容</a> / <a href="${pastUrl}" target="_blank">過去のリリース</a>`;
+            elements.info.innerHTML = `${tag} (${date}) / <a href="${compareUrl}" target="_blank">更新内容</a> / <a href="${pastUrl}" target="_blank">過去のリリース</a>`;
         }
 
     } catch (error) {
@@ -72,8 +72,8 @@ fetchReleases();
         if (e.target.tagName === 'CODE') {
             const text = e.target.textContent;
             navigator.clipboard.writeText(text).then(() => {
-                e.target.style.color = '#0d0b14';
-                e.target.style.background = '#b366ff';
+                e.target.style.color = 'var(--bg-color)';
+                e.target.style.background = 'var(--accent-color)';
                 setTimeout(() => {
                     e.target.style.color = '';
                     e.target.style.background = '';
