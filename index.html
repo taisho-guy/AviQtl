@@ -11,7 +11,7 @@
 
     <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#2cde85">
+    <meta name="theme-color" content="#121b1d">
 
     <meta property="og:title" content="AviQtlのお部屋">
     <meta property="og:description" content="AviUtlの操作感を継承し、GPU加速、VST3/LV2、クロスプラットフォームに対応。性能の限界を超える次世代のオープンソース動画編集ソフト「AviQtl」公式サイト。">
@@ -97,23 +97,22 @@
         </ol>
     </div>
 
-    <div class="download-container" style="border: 2px solid #1e5c3a; background-color: #090e0b; margin: 15px 0; padding: 0;">
-        <table id="download-table" style="width: 100%; border: none; margin: 0; border-spacing: 2px; border-collapse: separate;">
-            <thead>
-                <tr>
-                    <th style="width: 10%; background-color: #0d1a12;">タグ</th>
-                    <th style="width: 15%; background-color: #0d1a12;">更新内容</th>
-                    <th style="width: 30%; background-color: #0d1a12;">ビルド</th>
-                    <th style="width: 30%; background-color: #0d1a12;">ソースコード</th>
-                    <th style="width: 15%; background-color: #0d1a12;">更新日時</th>
-                </tr>
-            </thead>
-            <tbody id="release-list">
-                <tr>
-                    <td colspan="5" style="text-align: center;">データを取得中...</td>
-                </tr>
-            </tbody>
-        </table>
+    <div class="download-grid" id="download-grid">
+        <a href="#" id="link-linux" class="download-item" title="Linux用ビルド">
+            <div class="download-icon icon-linux is-loading"></div>
+        </a>
+        <a href="#" id="link-windows" class="download-item" title="Windows用ビルド">
+            <div class="download-icon icon-windows is-loading"></div>
+        </a>
+        <a href="#" id="link-apple" class="download-item" title="macOS用ビルド">
+            <div class="download-icon icon-apple is-loading"></div>
+        </a>
+        <a href="#" id="link-source" class="download-item" title="ソースコード">
+            <div class="download-icon icon-codeberg is-loading"></div>
+        </a>
+        <div class="download-info-row" id="download-info-row">
+            最新のリリース情報を取得中...
+        </div>
     </div>
 
     <h2 class="section-header"><span>★</span> ビルド手順 <span>★</span></h2>
@@ -186,7 +185,7 @@
             <span style="font-size: 24px; font-weight: bold;">=</span>
             <img src="assets/icon.svg" alt="AviQtl" width="64" loading="lazy">
         </div>
-        <p>AviUtlとQtを組み合わせた本プロジェクトのアイデンティティを表現しています。</p>
+        <p>QtとAviUtlを組み合わせた本プロジェクトのアイデンティティを表現しています。</p>
     </details>
 
     <details>
@@ -194,7 +193,7 @@
         <p>AviQtlは「AviUtlの再発明」ではありません。AviUtlを強く意識していますが、その中身は全く異なります。</p>
         <table>
             <tr>
-                <th style="background-color: #0d1a12;">鳥瞰図</th><th style="background-color: #0d1a12;">AviQtl</th><th style="background-color: #0d1a12;">AviUtl1</th><th style="background-color: #0d1a12;">ExEdit2</th>
+                <th style="background-color: #0d1f23; color: #2cde85;">鳥瞰図</th><th style="background-color: #0d1f23; color: #2cde85;">AviQtl</th><th style="background-color: #0d1f23; color: #2cde85;">AviUtl1</th><th style="background-color: #0d1f23; color: #2cde85;">ExEdit2</th>
             </tr>
             <tr>
                 <td>基盤技術</td><td>Qt Quick/Vulkan</td><td>Win32 API</td><td>Win32 API</td>

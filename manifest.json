@@ -4,8 +4,8 @@
   "description": "AviUtlの操作感を継承した次世代動画編集ソフト「AviQtl」公式サイト",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#090e0b",
-  "theme_color": "#2cde85",
+  "background_color": "#121b1d",
+  "theme_color": "#121b1d",
   "icons": [
     {
       "src": "assets/icon.svg",

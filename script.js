@@ -1,94 +1,71 @@
 async function fetchReleases() {
     const repo = 'taisho-guy/AviQtl';
-    const tagsUrl = `https://codeberg.org/api/v1/repos/${repo}/tags?limit=11`;
-    const releasesUrl = `https://codeberg.org/api/v1/repos/${repo}/releases?limit=10`;
-    const tbody = document.getElementById('release-list');
+    const releasesUrl = `https://codeberg.org/api/v1/repos/${repo}/releases?limit=2`;
+    
+    const elements = {
+        linux: document.getElementById('link-linux'),
+        win: document.getElementById('link-windows'),
+        apple: document.getElementById('link-apple'),
+        source: document.getElementById('link-source'),
+        info: document.getElementById('download-info-row')
+    };
 
     try {
-        const [tagsRes, releasesRes] = await Promise.all([
-            fetch(tagsUrl),
-            fetch(releasesUrl)
-        ]);
-
-        if (!tagsRes.ok) throw new Error('Tags API fetch failed');
-        const tags = await tagsRes.json();
+        const res = await fetch(releasesUrl);
+        if (!res.ok) throw new Error('API request failed');
         
-        const releaseMap = {};
-        if (releasesRes.ok) {
-            const releases = await releasesRes.json();
-            releases.forEach(r => { releaseMap[r.tag_name] = r.assets; });
-        }
+        const releases = await res.json();
+        if (!releases || releases.length === 0) throw new Error('No releases found');
 
-        if (!tags || tags.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">公開されているリリースがありません。</td></tr>';
-            return;
-        }
+        const latest = releases[0];
+        const prev = releases[1];
+        const tag = latest.tag_name;
+        const assets = latest.assets;
 
-        tbody.innerHTML = '';
-        tags.slice(0, 10).forEach((tagObj, index) => {
-            const tag = tagObj.name;
-            const prevTag = tags[index + 1] ? tags[index + 1].name : null;
-            const assets = releaseMap[tag] || [];
-            
-            const tr = document.createElement('tr');
-
-            const tdTag = document.createElement('td');
-            tdTag.innerHTML = `<b>${tag}</b>`;
-
-            const tdCompare = document.createElement('td');
-            const aComp = document.createElement('a');
-            aComp.href = prevTag 
-                ? `https://codeberg.org/${repo}/compare/${prevTag}...${tag}`
-                : `https://codeberg.org/${repo}/releases/tag/${tag}`;
-            aComp.textContent = prevTag ? `${prevTag}...${tag}` : tag;
-            
-            tdCompare.appendChild(aComp);
-
-            const tdBinary = document.createElement('td');
-            if (assets.length > 0) {
-                assets.forEach(asset => {
-                    const a = document.createElement('a');
-                    a.href = `https://codeberg.org/${repo}/releases/download/${tag}/${asset.name}`;
-                    a.textContent = asset.name;
-                    tdBinary.appendChild(a);
-                    tdBinary.appendChild(document.createElement('br'));
-                });
+        const findAsset = (pattern) => assets.find(a => a.name.toLowerCase().includes(pattern.toLowerCase()));
+        
+        const updateItem = (el, asset) => {
+            if (!el) return;
+            const icon = el.querySelector('.download-icon');
+            if (asset) {
+                el.href = `https://codeberg.org/${repo}/releases/download/${tag}/${asset.name}`;
+                if (icon) icon.classList.remove('is-missing');
             } else {
-                tdBinary.innerHTML = '<span style="color: #666; font-size: 0.8em;">(ビルドなし)</span>';
+                el.href = "#";
+                el.style.pointerEvents = 'none';
+                el.classList.add('is-disabled');
+                if (icon) icon.classList.add('is-missing');
             }
+        };
 
-            const tdSource = document.createElement('td');
-            const aSrc = document.createElement('a');
-            aSrc.href = `https://codeberg.org/${repo}/archive/${tag}.zip`;
-            aSrc.textContent = `AviQtl-${tag}.zip`;
-            tdSource.appendChild(aSrc);
+        updateItem(elements.linux, findAsset('linux'));
+        updateItem(elements.win, findAsset('win'));
+        updateItem(elements.apple, findAsset('mac') || findAsset('apple') || findAsset('darwin'));
 
-            const tdDate = document.createElement('td');
-            tdDate.textContent = new Date(tagObj.commit.created).toLocaleDateString('ja-JP');
+        if (elements.source) {
+            elements.source.href = `https://codeberg.org/${repo}/archive/${tag}.zip`;
+        }
 
-            tr.appendChild(tdTag);
-            tr.appendChild(tdCompare);
-            tr.appendChild(tdBinary);
-            tr.appendChild(tdSource);
-            tr.appendChild(tdDate);
-            tbody.appendChild(tr);
-        });
+        // 情報バーの更新
+        if (elements.info) {
+            const date = new Date(latest.created_at).toLocaleDateString('ja-JP');
+            const compareUrl = prev 
+                ? `https://codeberg.org/${repo}/compare/${prev.tag_name}...${tag}`
+                : `https://codeberg.org/${repo}/releases/tag/${tag}`;
+                
+            const pastUrl = `https://codeberg.org/${repo}/releases`;
 
-        // 表の最後に「過去のリリース情報」の行を追加
-        const footTr = document.createElement('tr');
-        footTr.innerHTML = `
-            <td colspan="5" style="text-align: center; padding: 8px; vertical-align: middle;">
-                <a href="https://codeberg.org/${repo}/releases" target="_blank" style="font-weight: bold;">
-                    過去のリリース情報
-                </a>
-            </td>`;
-        tbody.appendChild(footTr);
+            elements.info.innerHTML = `最新: ${tag} (${date}) / <a href="${compareUrl}" target="_blank">更新内容</a> / <a href="${pastUrl}" target="_blank">過去のリリース</a>`;
+        }
+
     } catch (error) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #8C1D18;">リリースの取得に失敗しました。</td></tr>';
         console.error(error);
+        if (elements.info) elements.info.textContent = 'リリースの取得に失敗しました。';
+    } finally {
+        document.querySelectorAll('.download-icon').forEach(el => el.classList.remove('is-loading'));
     }
 }
-document.addEventListener('DOMContentLoaded', fetchReleases);
+fetchReleases();
 
 (function() {
     document.addEventListener('click', function(e) {

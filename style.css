@@ -1,3 +1,15 @@
+:root {
+    --bg-color: #121b1d;
+    --text-color: #d7f0e4;
+    --accent-color: #2cde85;
+    --accent-hover: #6ef0b0;
+    --accent-visited: #1aab5f;
+    --border-color: #00414a;
+    --header-bg: #0d1f23;
+    --loading-color: #00414a;
+    --missing-color: #1c2a2d;
+}
+
 .visually-hidden {
     position: absolute;
     width: 1px;
@@ -11,24 +23,24 @@
 }
 
 body {
-    background-color: #090e0b;
-    color: #d7f0e4;
+    background-color: var(--bg-color);
+    color: var(--text-color);
     font-family: 'Lexend', 'Noto Sans JP', sans-serif;
     font-weight: 400;
     line-height: 1.6;
     margin: 0;
     padding: 20px;
 }
-a { color: #2cde85; text-decoration: none; transition: color 0.2s; }
-a:hover { color: #6ef0b0; }
-a:visited { color: #1aab5f; }
+a { color: var(--accent-color); text-decoration: none; transition: color 0.2s; }
+a:hover { color: var(--accent-hover); }
+a:visited { color: var(--accent-visited); }
 
 ul, ol {
     padding-left: 40px;
 }
 
 .container {
-    max-width: 900px;
+    max-width: 960px;
     margin: 0 auto;
     text-align: left;
 }
@@ -39,41 +51,40 @@ ul, ol {
 
 hr {
     border: 0;
-    border-top: 2px solid #1e5c3a;
+    border-top: 2px solid var(--border-color);
     margin: 20px 0;
 }
 
 h2.section-header {
     width: 100%;
-    background-color: #0d1a12;
-    color: #2cde85;
-    border-bottom: 2px solid #2cde85;
+    background-color: var(--border-color);
+    color: var(--accent-color);
     padding: 8px 0;
     margin: 30px 0 15px 0;
     font-size: 1.2em;
     font-weight: bold;
 }
-.section-header span { color: #2cde85; opacity: 0.6; }
+.section-header span { color: var(--accent-color); opacity: 0.6; }
 
 table {
     width: 100%;
-    border: 2px solid #1e5c3a;
+    border: 2px solid var(--border-color);
     border-collapse: separate;
     border-spacing: 2px;
-    background-color: #090e0b;
+    background-color: var(--bg-color);
     margin: 15px 0;
 }
 th {
-    color: #2cde85;
-    background-color: #0d1a12;
+    color: var(--accent-color);
+    background-color: var(--border-color);
     padding: 8px;
-    border: 1px solid #1e5c3a;
+    border: 1px solid var(--border-color);
     vertical-align: middle;
 }
 td {
     padding: 8px;
-    border: 1px solid #1e5c3a;
-    background-color: #090e0b;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-color);
     vertical-align: top;
 }
 #download-table td {
@@ -83,34 +94,34 @@ td {
 .alert {
     margin: 20px 0;
     padding: 2px;
-    border: 2px solid #1e5c3a;
-    background-color: #090e0b;
+    border: 2px solid var(--border-color);
+    background-color: var(--bg-color);
 }
 .alert-title {
     font-weight: bold;
     padding: 8px 15px;
-    background-color: #0d1a12;
-    color: #2cde85;
-    border: 1px solid #1e5c3a;
+    background-color: var(--header-bg);
+    color: var(--accent-color);
+    border: 1px solid var(--border-color);
     margin: 0 0 2px 0;
 }
 .alert ul, .alert ol { 
     padding: 10px 15px 10px 40px; 
     margin: 0; 
-    border: 1px solid #1e5c3a;
-    background-color: #090e0b;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-color);
 }
 
 details {
-    background-color: #090e0b;
-    border: 2px solid #1e5c3a;
+    background-color: var(--bg-color);
+    border: 2px solid var(--border-color);
     margin: 10px 0;
     padding: 2px;
     overflow-x: auto;
 }
 summary {
-    background-color: #0d1a12;
-    border: 1px solid #1e5c3a;
+    background-color: var(--header-bg);
+    border: 1px solid var(--border-color);
     padding: 10px;
     cursor: pointer;
     font-weight: bold;
@@ -119,8 +130,8 @@ summary {
 details[open] summary { margin-bottom: 2px; }
 
 details > p, details > h3, details > h4, details > ul, details > ol {
-    background-color: #090e0b;
-    border: 1px solid #1e5c3a;
+    background-color: var(--bg-color);
+    border: 1px solid var(--border-color);
     padding: 10px;
     margin: 0 0 2px 0;
 }
@@ -131,16 +142,17 @@ details ul, details ol { padding-left: 40px; }
 details[open] summary + table, details[open] summary + p { margin-top: 0; }
 details table { 
     margin: 0; 
-    border: 2px solid #1e5c3a;
+    border: 2px solid var(--border-color);
     border-spacing: 2px;
 }
-details th, details td { border: 1px solid #1e5c3a; white-space: nowrap; }
+details th { background-color: var(--header-bg); color: var(--accent-color); border: 1px solid var(--border-color); white-space: nowrap; }
+details td { border: 1px solid var(--border-color); white-space: nowrap; }
 
 .footer-info { font-size: 0.8em; margin-top: 20px; }
 
-code { background: linear-gradient(transparent 70%, rgba(44, 222, 133, 0.3) 70%); font-family: 'JetBrains Mono', monospace; color: #d7f0e4; padding: 0 2px; font-weight: bold; cursor: pointer; transition: background 0.2s, color 0.2s; }
+code { background: linear-gradient(transparent 70%, rgba(44, 222, 133, 0.3) 70%); font-family: 'JetBrains Mono', monospace; color: var(--text-color); padding: 0 2px; font-weight: bold; cursor: pointer; transition: background 0.2s, color 0.2s; }
 code:hover { background: rgba(44, 222, 133, 0.4); }
-code:active { background: #2cde85; color: #090e0b; }
+code:active { background: var(--accent-color); color: var(--bg-color); }
 
 .hero {
     margin: 20px 0;
@@ -153,7 +165,7 @@ code:active { background: #2cde85; color: #090e0b; }
     text-align: center;
     font-size: clamp(1.6rem, 4vw, 2.5rem);
     font-weight: bold;
-    color: #2cde85;
+    color: var(--accent-color);
     margin: 10px 0;
     user-select: text;
 }
@@ -162,4 +174,64 @@ code:active { background: #2cde85; color: #090e0b; }
     .hero-title-static {
         font-size: clamp(1.4rem, 6vw, 2rem);
     }
+}
+
+.download-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border: 2px solid var(--border-color);
+    background-color: var(--bg-color);
+    margin: 15px 0;
+    padding: 2px;
+    gap: 2px;
+}
+
+.download-item {
+    padding: 30px 10px;
+    text-align: center;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-color);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+.download-info-row {
+    grid-column: 1 / -1;
+    padding: 15px 10px;
+    text-align: center;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-color);
+}
+
+.download-icon {
+    width: 48px;
+    height: 48px;
+    background-color: var(--accent-color); /* ここでSVGの色をテーマカラーに設定 */
+    mask-size: contain;
+    mask-repeat: no-repeat;
+    mask-position: center;
+}
+.icon-linux { mask-image: url('assets/linux.svg'); -webkit-mask-image: url('assets/linux.svg'); }
+.icon-windows { mask-image: url('assets/windows.svg'); -webkit-mask-image: url('assets/windows.svg'); }
+.icon-apple { mask-image: url('assets/apple.svg'); -webkit-mask-image: url('assets/apple.svg'); }
+.icon-codeberg { mask-image: url('assets/codeberg.svg'); -webkit-mask-image: url('assets/codeberg.svg'); }
+
+.download-icon.is-loading {
+    mask-image: url('assets/loader.svg') !important;
+    -webkit-mask-image: url('assets/loader.svg') !important;
+    background-color: var(--loading-color) !important; /* 読み込み中を示す控えめな色 */
+}
+
+.download-icon.is-missing {
+    background-color: var(--missing-color) !important;
+    opacity: 0.4;
+}
+.download-item.is-disabled { cursor: not-allowed; }
+
+.tag-link { font-weight: bold; font-size: 0.9em; }
+
+@media (max-width: 600px) {
+    .download-grid { grid-template-columns: repeat(2, 1fr); }
 }
