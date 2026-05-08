@@ -28,7 +28,7 @@ if(NOT EXISTS "${FILAMENT_LOCAL_DIR}")
 endif()
 
 include_directories(SYSTEM "${FILAMENT_LOCAL_DIR}/include")
-if(APPLE AND CMAKE_OSX_ARCHITECTURES MATCHES "arm64" OR (APPLE AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm64"))
+if(APPLE AND (CMAKE_OSX_ARCHITECTURES MATCHES "arm64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm64"))
     link_directories("${FILAMENT_LOCAL_DIR}/lib/arm64")
 else()
     link_directories("${FILAMENT_LOCAL_DIR}/lib/x86_64")
@@ -40,7 +40,11 @@ set(FILAMENT_LIBS
 set(FILAMENT_TOOLS_DIR "${FILAMENT_LOCAL_DIR}/bin")
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui GuiPrivate Quick QuickControls2 Widgets Core5Compat Sql Svg Multimedia Concurrent ShaderTools LinguistTools Network ${EXTRA_QT_COMPONENTS})
-find_package(Vulkan REQUIRED)
+if(APPLE)
+    find_package(Vulkan)
+else()
+    find_package(Vulkan REQUIRED)
+endif()
 find_package(ECM REQUIRED NO_MODULE)
 list(APPEND CMAKE_MODULE_PATH ${ECM_MODULE_PATH})
 find_package(PkgConfig REQUIRED)
@@ -212,11 +216,18 @@ endif()
 
 # リンク設定
 target_link_libraries(
-    AviQtl PRIVATE Qt6::Core Qt6::Gui Qt6::GuiPrivate Qt6::Quick Qt6::QuickControls2 Qt6::Widgets Qt6::Svg Qt6::Core5Compat Qt6::Multimedia Qt6::Concurrent Qt6::Network Vulkan::Vulkan
+    AviQtl PRIVATE Qt6::Core Qt6::Gui Qt6::GuiPrivate Qt6::Quick Qt6::QuickControls2 Qt6::Widgets Qt6::Svg Qt6::Core5Compat Qt6::Multimedia Qt6::Concurrent Qt6::Network
                    PkgConfig::LUAJIT
                    PkgConfig::FFMPEG
                    ${CARLA_LIBRARIES}
 )
+
+# VulkanはLinux/Windowsで必須。macOSではMetalを使用するためオプション
+if(NOT APPLE)
+    target_link_libraries(AviQtl PRIVATE Vulkan::Vulkan)
+elseif(Vulkan_FOUND)
+    target_link_libraries(AviQtl PRIVATE Vulkan::Vulkan)
+endif()
 
 # Carlaのライブラリパスを明示（/usr/lib/carla/ 等の非標準ディレクトリ対策）
 target_link_directories(AviQtl PRIVATE ${CARLA_LIBRARY_DIRS})

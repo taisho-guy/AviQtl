@@ -395,6 +395,7 @@ class XcodeBuilder(PlatformBuilder):
             f"{qt_prefix}/bin/macdeployqt", str(dest_app),
             f"-qmldir={self.config.source_dir / 'ui/qml'}",
             "-verbose=1",
+            "-no-codesign",  # macdeployqt の暗黙署名を無効化（後続の codesign --deep --force で統一署名する）
         ])
         self.logger.log("codesign を実行中...")
         self.run_cmd(["codesign", "--deep", "--force", "--sign", "-", str(dest_app)])
