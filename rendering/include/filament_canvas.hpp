@@ -45,12 +45,14 @@ class FilamentCanvas : public QQuickItem {
     void initFilament();
     void destroyFilament();
     void updateViewport(int w, int h);
+    void updateNativeSurfaceGeometry();
 
     int m_sceneId = -1;
     int m_currentFrame = 0;
     QQuickWindow *m_window = nullptr;
     QMetaObject::Connection m_beforeRenderingConnection;
     QMetaObject::Connection m_sceneGraphInvalidatedConnection;
+    void *m_nativeSurface = nullptr;
 
     filament::Engine *m_engine = nullptr;
     filament::Renderer *m_renderer = nullptr;

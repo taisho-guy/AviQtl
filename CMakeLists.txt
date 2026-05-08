@@ -135,6 +135,8 @@ qt_add_executable(AviQtl
 
 if(APPLE)
     set_target_properties(AviQtl PROPERTIES MACOSX_BUNDLE ON)
+    enable_language(OBJCXX)
+    set_source_files_properties(rendering/src/filament_canvas.cpp PROPERTIES LANGUAGE OBJCXX)
 endif()
 
 # Phase 2.1: シンボルのエクスポート設定 (Lua FFI用)
