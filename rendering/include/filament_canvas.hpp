@@ -4,6 +4,13 @@
 #include <QQuickItem>
 #include <utils/Entity.h>
 
+#include <memory>
+
+// Wayland 型の前方宣言 (wayland-client-core.h 不要)
+#if defined(Q_OS_LINUX)
+struct FilamentWaylandNative;
+#endif
+
 namespace filament {
 class Engine;
 class Renderer;
@@ -74,6 +81,13 @@ class FilamentCanvas : public QQuickItem {
 
     // Native surface pointer (e.g. CAMetalLayer* for Apple/Metal)
     void *m_nativeSurface = nullptr;
+
+#if defined(Q_OS_LINUX)
+    // Wayland: { wl_display*, wl_surface* } の組を SwapChain 生存期間中保持する。
+    // wl_surface* 単体を Filament に渡すと "enumerate size error" でクラッシュする。
+    // unique_ptr で管理し、wayland-client-core.h への依存をヘッダから排除する。
+    std::unique_ptr<FilamentWaylandNative> m_waylandNative;
+#endif
 };
 
 } // namespace AviQtl::Rendering

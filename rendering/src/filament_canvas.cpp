@@ -1,6 +1,10 @@
 #include "filament_canvas.hpp"
 #include <QDebug>
+#include <QGuiApplication>
+#include <qpa/qplatformnativeinterface.h>
+
 #include <QQuickWindow>
+#include <QSGRendererInterface>
 #include <filament/Camera.h>
 #include <filament/Engine.h>
 #include <filament/Renderer.h>
@@ -11,10 +15,24 @@
 #include <filament/Viewport.h>
 #include <utils/EntityManager.h>
 
-#if defined(__APPLE__)
+#if defined(Q_OS_MACOS)
 #include <CoreVideo/CoreVideo.h>
-#include <QtGui/qpa/qplatformwindow_p.h>
 #include <QuartzCore/CAMetalLayer.h>
+#endif
+
+// Wayland 型の前方宣言。
+// wayland-client-core.h は CMake の include パスに含まれない場合があるため、
+// ヘッダに依存せず opaque pointer として扱う。
+// Filament の Vulkan バックエンドが要求する構造体レイアウトは
+//   { void* display, void* surface } の順であることが仕様で保証されている。
+#if defined(Q_OS_LINUX)
+struct wl_display;
+struct wl_surface;
+
+struct FilamentWaylandNative {
+    wl_display *display = nullptr;
+    wl_surface *surface = nullptr;
+};
 #endif
 
 namespace AviQtl::Rendering {
@@ -53,26 +71,62 @@ void FilamentCanvas::initFilament() {
     if (m_engine || !m_window)
         return;
 
-    // ウィンドウハンドルの取得
-    WId wid = m_window->winId();
+    if (!m_window->isExposed())
+        return;
 
-    // デバッグログの追加
-    qDebug() << "[FilamentCanvas] Attempting init. WId:" << Qt::hex << wid << Qt::dec << "Width:" << width() << "Height:" << height();
+    void *swapChainNative = nullptr;
 
-    // Qtが内部的なダミーID（0x40000001等）を返している間は初期化を待機
-    if (wid == 0 || wid > 0x40000000) {
-        qDebug() << "[FilamentCanvas] Waiting for valid native window handle...";
+#if defined(Q_OS_LINUX)
+    QPlatformNativeInterface *ni = QGuiApplication::platformNativeInterface();
+    if (!ni) {
+        qWarning() << "[FilamentCanvas] QPlatformNativeInterface unavailable.";
         return;
     }
 
-    void *nativeWindow = reinterpret_cast<void *>(wid);
-    qDebug() << "[FilamentCanvas] Native handle verified. Initializing Filament engine...";
+    // QPlatformNativeInterface は void* を返すため、
+    // wayland-client-core.h のインクルードなしに前方宣言型へキャストできる。
+    auto *wlSurface = static_cast<wl_surface *>(ni->nativeResourceForWindow(QByteArrayLiteral("surface"), m_window));
+    auto *wlDisplay = static_cast<wl_display *>(ni->nativeResourceForIntegration(QByteArrayLiteral("wl_display")));
 
-#if defined(__APPLE__)
-    // macOS/Metal のセットアップ
+    if (wlSurface && wlDisplay) {
+        // Filament Vulkan バックエンドは wl_surface* 単体ではなく
+        // { wl_display*, wl_surface* } の構造体ポインタを要求する。
+        // wl_surface* 単体を渡すと "enumerate size error" でクラッシュする。
+        // この構造体は SwapChain が破棄されるまで生存させる必要があるため
+        // メンバ変数 m_waylandNative として保持する。
+        m_waylandNative = std::make_unique<FilamentWaylandNative>();
+        m_waylandNative->display = wlDisplay;
+        m_waylandNative->surface = wlSurface;
+        swapChainNative = m_waylandNative.get();
+        qDebug() << "[FilamentCanvas] Wayland: display=" << wlDisplay << "surface=" << wlSurface;
+    } else {
+        // X11 フォールバック
+        void *x11Handle = ni->nativeResourceForWindow(QByteArrayLiteral("handle"), m_window);
+        if (x11Handle) {
+            swapChainNative = x11Handle;
+            qDebug() << "[FilamentCanvas] X11: handle=" << x11Handle;
+        }
+    }
+#elif defined(Q_OS_WIN)
+    if (QPlatformNativeInterface *ni = QGuiApplication::platformNativeInterface()) {
+        swapChainNative = ni->nativeResourceForWindow(QByteArrayLiteral("handle"), m_window);
+    }
+#endif
+
+    // 最終フォールバック
+    if (!swapChainNative) {
+        swapChainNative = reinterpret_cast<void *>(m_window->winId());
+    }
+
+    if (!swapChainNative) {
+        qWarning() << "[FilamentCanvas] Failed to obtain native window handle.";
+        return;
+    }
+
+    qDebug() << "[FilamentCanvas] Native bridge established. SwapChain ptr:" << swapChainNative;
+
+#if defined(Q_OS_MACOS)
     m_engine = filament::Engine::create(filament::Engine::Backend::METAL);
-    // CAMetalLayer の注入処理などは platform 依存のため、ここでは簡易化
-    // 実際には updateNativeSurfaceGeometry() でレイヤーの調整を行う
 #else
     m_engine = filament::Engine::create(filament::Engine::Backend::VULKAN);
 #endif
@@ -80,20 +134,17 @@ void FilamentCanvas::initFilament() {
     if (!m_engine)
         return;
 
-    m_swapChain = m_engine->createSwapChain(nativeWindow);
+    m_swapChain = m_engine->createSwapChain(swapChainNative);
     m_renderer = m_engine->createRenderer();
     m_scene = m_engine->createScene();
     m_view = m_engine->createView();
 
-    // Entity の作成 (EntityManager の include が必要な箇所)
     m_cameraEntity = utils::EntityManager::get().create();
     m_camera = m_engine->createCamera(m_cameraEntity);
 
     m_view->setScene(m_scene);
     m_view->setCamera(m_camera);
 
-    // 【重要】トーンマッピングを無効化して、クリアカラーを「生」で表示する
-    // これにより、ライティング設定がなくても指定した色がそのまま画面に出る
     m_view->setPostProcessingEnabled(false);
 
     // 仕様書に基づき、クリアカラーを紺色 (#001A33 相当) に設定
@@ -121,6 +172,10 @@ void FilamentCanvas::destroyFilament() {
 
     filament::Engine::destroy(&m_engine);
     m_engine = nullptr;
+
+#if defined(Q_OS_LINUX)
+    m_waylandNative.reset();
+#endif
 }
 
 void FilamentCanvas::renderFrame() {
@@ -139,7 +194,7 @@ void FilamentCanvas::renderFrame() {
 void FilamentCanvas::geometryChange(const QRectF &newGeometry, const QRectF &oldGeometry) {
     QQuickItem::geometryChange(newGeometry, oldGeometry);
     updateViewport(newGeometry.width(), newGeometry.height());
-#if defined(__APPLE__)
+#if defined(Q_OS_MACOS)
     updateNativeSurfaceGeometry();
 #endif
 }
@@ -149,20 +204,19 @@ void FilamentCanvas::updateViewport(int w, int h) {
         return;
 
     const double dpr = m_window ? m_window->devicePixelRatio() : 1.0;
-    const uint32_t width = static_cast<uint32_t>(w * dpr);
-    const uint32_t height = static_cast<uint32_t>(h * dpr);
+    const uint32_t pw = static_cast<uint32_t>(w * dpr);
+    const uint32_t ph = static_cast<uint32_t>(h * dpr);
 
-    m_view->setViewport({0, 0, width, height});
+    m_view->setViewport({0, 0, pw, ph});
 
     // AviUtl互換の正投影 (Z=0をピクセル等倍)
     m_camera->setProjection(filament::Camera::Projection::ORTHO, 0, (double)w, (double)h, 0, -1.0, 1.0);
 }
 
 void FilamentCanvas::updateNativeSurfaceGeometry() {
-#if defined(__APPLE__)
+#if defined(Q_OS_MACOS)
     if (m_nativeSurface) {
         // Metal Layer のリサイズ同期
-        // [CATransaction begin]; ... [CATransaction commit];
     }
 #endif
 }

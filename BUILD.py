@@ -358,7 +358,7 @@ class ArchBuilder(LinuxBuilderBase):
             "base-devel", "git", "cmake", "ninja", "clang", "mold", "zip",
             "mesa", "vulkan-devel", "libxkbcommon", "wayland", "wayland-protocols",
             "libffi", "ffmpeg", "luajit", "fftw",
-            "qt6-base", "qt6-declarative", "qt6-quick3d", "qt6-multimedia",
+            "qt6-base", "qt6-wayland", "qt6-declarative", "qt6-quick3d", "qt6-multimedia",
             "qt6-shadertools", "qt6-svg", "qt6-5compat", "qt6-tools",
             "lilv", "ladspa", "carla",
             "openmp", "extra-cmake-modules",
