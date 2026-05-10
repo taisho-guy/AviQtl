@@ -4,6 +4,7 @@
 #include <filament/Engine.h>
 #include <filament/Renderer.h>
 #include <filament/Scene.h>
+#include <filament/Skybox.h>
 #include <filament/SwapChain.h>
 #include <filament/View.h>
 #include <filament/Viewport.h>
@@ -85,6 +86,10 @@ void FilamentCanvas::initFilament() {
     m_view->setScene(m_scene);
     m_view->setCamera(m_camera);
 
+    // 仕様書に基づき、クリアカラーを紺色 (#001A33 相当) に設定
+    m_skybox = filament::Skybox::Builder().color({0.0f, 0.1f, 0.2f, 1.0f}).build(*m_engine);
+    m_scene->setSkybox(m_skybox);
+
     updateViewport(width(), height());
 }
 
@@ -98,6 +103,7 @@ void FilamentCanvas::destroyFilament() {
         m_camera = nullptr;
     }
 
+    m_engine->destroy(m_skybox);
     m_engine->destroy(m_renderer);
     m_engine->destroy(m_view);
     m_engine->destroy(m_scene);

@@ -11,6 +11,7 @@ class Scene;
 class View;
 class Camera;
 class SwapChain;
+class Skybox;
 } // namespace filament
 
 namespace AviQtl::Rendering {
@@ -66,6 +67,7 @@ class FilamentCanvas : public QQuickItem {
     filament::View *m_view = nullptr;
     filament::Camera *m_camera = nullptr;
     filament::SwapChain *m_swapChain = nullptr;
+    filament::Skybox *m_skybox = nullptr;
 
     // Utils::Entity handles
     utils::Entity m_cameraEntity;

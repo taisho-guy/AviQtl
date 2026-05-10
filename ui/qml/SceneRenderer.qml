@@ -1,22 +1,14 @@
 import AviQtl.Rendering 1.0
 import QtQuick
 
-// SceneRendererはFilamentCanvasの薄いラッパー。
-// クリップの問い合わせや描画制御はC++コア(ECS RenderSystem)が担う。
 Item {
     id: root
 
+    // Phase 2 以降で ECS / CoreBridge との同期に使用するプロパティ
     property int sceneId: -1
     property int currentFrame: 0
-    property int sceneWidth: 1920
-    property int sceneHeight: 1080
-
-    width: sceneWidth
-    height: sceneHeight
 
     FilamentCanvas {
-        id: canvas
-
         anchors.fill: parent
         sceneId: root.sceneId
         currentFrame: root.currentFrame

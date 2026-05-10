@@ -23,22 +23,22 @@
 **目標**: Filamentがウィンドウ上に単色を描画できることを確認する。
 
 ### Step 1-1: FilamentCanvasの作成
-- [ ] `core/include/rendering/filament_canvas.hpp` を新規作成
-- [ ] `core/src/rendering/filament_canvas.cpp` を新規作成
-- [ ] Engine::create(VULKAN) → SwapChain → Renderer → Scene → View → Camera の初期化
-- [ ] `QQuickWindow::beforeRendering` に `renderFrame()` を接続
-- [ ] geometryChange で正投影カメラ(Z=0等倍)をセットアップ
+- [x] `rendering/include/filament_canvas.hpp` を新規作成
+- [x] `rendering/src/filament_canvas.cpp` を新規作成
+- [x] Engine::create(VULKAN) → SwapChain → Renderer → Scene → View → Camera の初期化
+- [x] `QQuickWindow::beforeRendering` に `renderFrame()` を接続
+- [x] geometryChange で正投影カメラ(Z=0等倍)をセットアップ
 - 確認: ビルドが通ること
 
 ### Step 1-2: CMakeLists.txtへのFilamentCanvas登録
-- [ ] `core/src/rendering/` を `file(GLOB_RECURSE)` のスキャン対象に追加されていることを確認
-- [ ] `QML_ELEMENT` マクロによりQMLに型登録されることを確認
+- [x] `rendering/src/` がスキャン対象に含まれていることを確認
+- [x] `main.cpp` の `qmlRegisterType` により QML に型登録されていることを確認
 
 ### Step 1-3: SceneRenderer.qmlの最小化
-- [ ] `ui/qml/SceneRenderer.qml` の内部実装を全削除
-- [ ] 代わりに `FilamentCanvas { anchors.fill: parent }` のみを配置
-- [ ] `CompositeView.qml` のクリップループ描画ロジックを全削除
-- 確認: 起動するとプレビュー領域がFilamentの単色(紺)で塗りつぶされること
+- [x] `ui/qml/SceneRenderer.qml` の内部実装を全削除
+- [x] 代わりに `FilamentCanvas { anchors.fill: parent }` のみを配置
+- [x] `CompositeView.qml` のクリップループ描画ロジックを全削除
+- [x] 確認: 起動するとプレビュー領域がFilamentの単色(紺)で塗りつぶされること
 
 ---
 
@@ -55,14 +55,14 @@
 - [ ] `ui/include/core_bridge.hpp` を新規作成 (QML_SINGLETON)
 - [ ] `requestSeek(int frame)` / `requestPlay()` / `requestPause()` を実装
 - [ ] ロックフリーコマンドキュー(`std::atomic`ベース)の実装
-- [ ] `main.cpp` でシングルトンをQMLエンジンに登録
+- [x] `main.cpp` でシングルトンをQMLエンジンに登録
 
 ### Step 2-3: ECSコンポーネント構造体の再定義
-- [ ] `engine/timeline/ecs.hpp` の `EffectModel*` ポインタを全廃
-- [ ] 仕様書第4章の通りにPODコンポーネント構造体を定義
+- [x] `engine/timeline/ecs.hpp` の `EffectModel*` ポインタを全廃
+- [x] 仕様書第4章の通りにPODコンポーネント構造体を定義
   - `ActiveComponent`, `TransformComponent`, `KeyframeRefComponent`
   - `RenderableComponent`, `RenderBoundaryComponent`, `GroupTransformComponent`, `GlobalMatrixComponent`
-- [ ] SoA配列アロケータ(`DenseComponentMap`)をPOD専用に整理
+- [x] SoA配列アロケータ(`DenseComponentMap`)をPOD専用に整理
 
 ### Step 2-4: CommandSystemの実装
 - [ ] `engine/timeline/ecs_system.cpp` にCommandSystemを実装
