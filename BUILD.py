@@ -157,6 +157,9 @@ class PlatformBuilder:
         lib_dir = sdk_dir / "lib"
 
         if not inc_dir.exists():
+            if self.config.is_offline:
+                self.logger.log("Carla SDK が見つかりませんが、オフラインモードのため取得をスキップします")
+                return
             self.logger.log("Carla ヘッダーを取得中...")
             temp_clone = self.config.source_dir / ".carla_tmp"
             if temp_clone.exists():
@@ -167,6 +170,9 @@ class PlatformBuilder:
             shutil.rmtree(temp_clone)
 
         if is_windows and not (lib_dir / "carla-standalone.dll").exists():
+            if self.config.is_offline:
+                self.logger.log("Carla Windows バイナリが見つかりませんが、オフラインモードのため取得をスキップします")
+                return
             self.logger.log("Carla Windows バイナリをダウンロード中...")
             lib_dir.mkdir(parents=True, exist_ok=True)
             version = "2.6.0"
@@ -178,6 +184,10 @@ class PlatformBuilder:
     def setup_filament_sdk(self, platform_suffix: str, lib_arch: str, is_universal: bool = False):
         filament_dir = self.config.source_dir / "vendor" / "filament"
         if (filament_dir / "include" / "filament" / "Engine.h").exists():
+            return
+
+        if self.config.is_offline:
+            self.logger.log("Filament SDK が見つかりませんが、オフラインモードのため取得をスキップします")
             return
 
         self.logger.log(f"Filament バイナリ ({platform_suffix}) を取得中...")
