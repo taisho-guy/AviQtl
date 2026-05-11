@@ -1,10 +1,45 @@
 #include "ecs.hpp"
 #include "ecs_profiler.hpp"
+#include "engine/plugin/audio_plugin_manager.hpp"
+#include "ui/include/bridge/core_bridge.hpp"
 #include <QDebug>
 #include <cassert>
 #include <cmath>
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 2.4: CommandSystem
+//
+// CoreBridge の SPSC リングバッファからコマンドを取り出し、ECS 状態に反映する。
+// CommandSystem は ECS の毎フレーム先頭で実行される (仕様書第5章 System 実行順序)。
+//
+// 実行順序:
+//   CommandSystem → InterpolationSystem (Phase 4) → TransformSystem (Phase 4)
+//   → RenderSystem (Phase 5)
+// ─────────────────────────────────────────────────────────────────────────────
+
 namespace AviQtl::Engine::Timeline {
+
+// ─── CommandSystem ────────────────────────────────────────────────────────────
+
+void ECS::runCommandSystem(AviQtl::UI::CoreBridge &bridge) {
+    AviQtl::UI::CoreBridge::Command cmd;
+    while (bridge.dequeueCommand(cmd)) {
+        switch (cmd.type) {
+        case AviQtl::UI::CoreBridge::CommandType::Seek:
+            m_currentFrame = cmd.value;
+            bridge.notifyFrameAdvanced(m_currentFrame);
+            break;
+        case AviQtl::UI::CoreBridge::CommandType::Play:
+            m_isPlaying = true;
+            break;
+        case AviQtl::UI::CoreBridge::CommandType::Pause:
+            m_isPlaying = false;
+            break;
+        }
+    }
+}
+
+// ─── ECS コンストラクタ / インスタンス ────────────────────────────────────────
 
 ECS::ECS() : m_editIndex(1) {
     m_activeIndex.store(0, std::memory_order_relaxed);
@@ -17,7 +52,8 @@ auto ECS::instance() -> ECS & {
     return inst;
 }
 
-// フェーズ1: std::bitset<MAX_CLIP_ID> → O(1)L1直撃
+// ─── syncClipIds ──────────────────────────────────────────────────────────────
+
 void ECS::syncClipIds(const std::bitset<MAX_CLIP_ID> &aliveFlags) {
     auto &editState = m_buffers[m_editIndex];
     bool changed = false;
@@ -31,10 +67,8 @@ void ECS::syncClipIds(const std::bitset<MAX_CLIP_ID> &aliveFlags) {
     }
 }
 
-// フェーズ7: startFrame / durationFrames を TransformComponent に追加
-// これにより GpuClipSoA の startFrames[] / durationFrames[] の正規のソースになる
-// Phase 6 では TransformComponent.startFrame が常に 0 のまま writeSSBOLayout に
-// 渡されていたため、シェーダー側で正しいタイミング計算ができていなかった
+// ─── updateClipState ──────────────────────────────────────────────────────────
+
 void ECS::updateClipState(int clipId, int layer, double time, int startFrame, int durationFrames) {
     assert(clipId >= 0 && clipId < MAX_CLIP_ID);
     auto &editState = m_buffers[m_editIndex];
@@ -59,8 +93,9 @@ void ECS::updateClipState(int clipId, int layer, double time, int startFrame, in
     ECS_PROF_INC(dirtyBitSetCount);
 }
 
-void ECS::updateAudioClipState(int clipId, int startFrame, int durationFrames, // NOLINT
-                               float volume, float pan, bool mute) {
+// ─── updateAudioClipState ─────────────────────────────────────────────────────
+
+void ECS::updateAudioClipState(int clipId, int startFrame, int durationFrames, float volume, float pan, bool mute) {
     assert(clipId >= 0 && clipId < MAX_CLIP_ID);
     auto &editState = m_buffers[m_editIndex];
     if (!editState.audioStates.contains(clipId)) {
@@ -80,7 +115,8 @@ void ECS::updateAudioClipState(int clipId, int startFrame, int durationFrames, /
     ECS_PROF_INC(dirtyBitSetCount);
 }
 
-// フェーズ2: QString → StringTable ID + SoA uint32_t
+// ─── updateMetadata ───────────────────────────────────────────────────────────
+
 static auto parseColorRGBA(const QString &colorStr) -> uint32_t {
     QString s = colorStr.trimmed();
     if (s.startsWith(u'#'))
@@ -118,12 +154,12 @@ void ECS::updateMetadata(int clipId, const QString &name, const QString &source,
     m_dirtyFlags[(m_editIndex + 2) % 3].dirty.set(cidx);
 }
 
+// ─── commit ───────────────────────────────────────────────────────────────────
+
 void ECS::commit() {
     ECS_PROF_INC(commitCount);
 
-    // フェーズ5: mailbox パターンによるバッファ競合排除
     const int justWritten = m_editIndex;
-
     const int active = m_activeIndex.load(std::memory_order_acquire);
     const int pending = m_pendingIndex.load(std::memory_order_acquire);
 
@@ -134,9 +170,9 @@ void ECS::commit() {
         next = c;
         break;
     }
-    if (next == -1) {
+    if (next == -1)
         next = (pending != -1) ? pending : (justWritten + 1) % 3;
-    }
+
     m_editIndex = next;
 
     if (m_dirtyFlags[m_editIndex].fullSync) {
@@ -164,12 +200,12 @@ void ECS::commit() {
         m_dirtyFlags[m_editIndex].dirty.reset();
     }
 
-    // フェーズ5: mailbox に deposit
     m_pendingIndex.store(justWritten, std::memory_order_release);
 }
 
+// ─── getSnapshot ─────────────────────────────────────────────────────────────
+
 auto ECS::getSnapshot() const -> const ECSState * {
-    // フェーズ5: mailbox から最新バッファを取り出して active に昇格 (lazy swap)
     int pending = m_pendingIndex.load(std::memory_order_acquire);
     if (pending != -1) {
         if (m_pendingIndex.compare_exchange_strong(pending, -1, std::memory_order_acq_rel, std::memory_order_relaxed)) {
@@ -179,33 +215,21 @@ auto ECS::getSnapshot() const -> const ECSState * {
     return &m_buffers[m_activeIndex.load(std::memory_order_acquire)];
 }
 
-// フェーズ7: GpuTransformSoA + GpuAudioSoA を廃止し GpuClipSoA 1本に統合
-// 変更点:
-//   引数: (GpuTransformSoA&, GpuAudioSoA&) → (GpuClipSoA&)
-//   SSBO 本数: 2本 → 1本 (SSBO_BINDING_CLIP = 0)
-//   startFrames / durationFrames の重複を除去 (2,064 bytes 削減)
-//   transforms.forEach を一次ループとし、同 clipId の AudioComponent を find() で結合
-//   find() は DenseComponentMap の O(1) sparse lookup のため全体は O(k) を維持
+// ─── writeSSBOLayout ─────────────────────────────────────────────────────────
+
 void ECS::writeSSBOLayout(GpuClipSoA &out) const {
     ECS_PROF_INC(ssboWriteCount);
-
     const ECSState *state = getSnapshot();
-
     out.count = 0;
     state->transforms.forEach([&](int clipId, const TransformComponent &tc) {
         if (out.count >= MAX_ACTIVE_CLIPS)
             return;
         const int idx = out.count++;
-
         out.clipIds[idx] = static_cast<int32_t>(clipId);
         out.layers[idx] = static_cast<int32_t>(tc.layer);
         out.timePositions[idx] = static_cast<float>(tc.timePosition);
-        // タイミング情報: TransformComponent が正規のソース (Phase 6 のバグ修正)
         out.startFrames[idx] = static_cast<int32_t>(tc.startFrame);
         out.durationFrames[idx] = static_cast<int32_t>(tc.durationFrames);
-
-        // Audio フィールド: AudioComponent が存在する場合のみ転写
-        // 存在しない場合 (テキスト・画像・矩形等) はデフォルト値を維持
         if (const auto *ac = state->audioStates.find(clipId)) {
             out.volumes[idx] = ac->volume;
             out.pans[idx] = ac->pan;
@@ -217,6 +241,8 @@ void ECS::writeSSBOLayout(GpuClipSoA &out) const {
         }
     });
 }
+
+// ─── その他ユーティリティ ─────────────────────────────────────────────────────
 
 auto ECS::isRenderGraphDirty() const -> bool { return m_buffers[m_editIndex].renderGraphDirty; }
 

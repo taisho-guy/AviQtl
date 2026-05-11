@@ -257,6 +257,8 @@ target_include_directories(AviQtl PRIVATE
     core/include
     ui/include
     rendering/include
+    ${PROJECT_SOURCE_DIR}/vendor/filament/include/backend
+    ${PROJECT_SOURCE_DIR}/vendor/filament/src/bluevk/include
     ${CARLA_INCLUDE_DIRS}
 )
 
