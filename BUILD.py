@@ -7,9 +7,10 @@ import argparse
 import shlex
 import urllib.request
 import platform
+import signal
 from pathlib import Path
 from dataclasses import dataclass
-from typing import Callable, List, Type
+from typing import Callable, List, Optional, Type
 from PySide6 import QtCore
 
 
@@ -61,22 +62,49 @@ class PlatformBuilder:
         self.env["DEBIAN_FRONTEND"] = "noninteractive"
         self.container_name = ""
         self.use_container = False
+        self.cancelled = False
+        self.current_proc: Optional[subprocess.Popen] = None
 
     def build(self):
+        self.check_cancelled()
         self.logger.progress(10, f"{self.config.build_type} ビルド開始")
         self.logger.section("依存関係の確認")
         self.install_dependencies()
+        self.check_cancelled()
         self.logger.section("CMake 設定")
         self.configure()
+        self.check_cancelled()
         self.logger.section("翻訳ファイル更新")
         self.update_translations()
+        self.check_cancelled()
         self.logger.section("コンパイル")
         self.compile()
+        self.check_cancelled()
         self.logger.section("パッケージング")
         self.package()
+        self.check_cancelled()
         self.logger.section("アーカイブ作成")
         self.archive()
         self.logger.progress(100, "完了")
+
+    def check_cancelled(self):
+        if self.cancelled:
+            raise RuntimeError("ビルドをキャンセルしました")
+
+    def cancel(self):
+        self.cancelled = True
+        proc = self.current_proc
+        if proc and proc.poll() is None:
+            self.logger.log("実行中のコマンドを停止しています...")
+            try:
+                if os.name != "nt":
+                    os.killpg(proc.pid, signal.SIGTERM)
+                else:
+                    proc.terminate()
+            except ProcessLookupError:
+                pass
+            except Exception:
+                proc.terminate()
 
     def install_dependencies(self):
         pass
@@ -102,6 +130,7 @@ class PlatformBuilder:
         self.logger.log(f"アーカイブ: {self.config.dist_dir / (archive_name + '.zip')}")
 
     def run_cmd(self, cmd: List[str], shell: bool = False, force_host: bool = False):
+        self.check_cancelled()
         in_container = self.use_container and not force_host
         display_cmd = ' '.join(cmd) if isinstance(cmd, list) else cmd
 
@@ -119,6 +148,10 @@ class PlatformBuilder:
             actual_cmd = f"distrobox enter {self.container_name} -- bash -lc {shlex.quote(inner)}"
             shell = True
 
+        popen_kwargs = {}
+        if os.name != "nt":
+            popen_kwargs["start_new_session"] = True
+
         proc = subprocess.Popen(
             actual_cmd,
             stdout=subprocess.PIPE,
@@ -128,10 +161,16 @@ class PlatformBuilder:
             errors="replace",
             shell=shell,
             env=self.env,
+            **popen_kwargs,
         )
-        for line in proc.stdout:
-            self.logger.log(line.rstrip())
-        proc.wait()
+        self.current_proc = proc
+        try:
+            for line in proc.stdout:
+                self.logger.log(line.rstrip())
+            proc.wait()
+        finally:
+            self.current_proc = None
+        self.check_cancelled()
         if proc.returncode != 0:
             raise subprocess.CalledProcessError(proc.returncode, actual_cmd)
 
@@ -559,15 +598,25 @@ class BuildWorker(QtCore.QThread):
     def __init__(self, config: BuildConfig):
         super().__init__()
         self.config = config
+        self.builder: Optional[PlatformBuilder] = None
+        self.cancel_requested = False
 
     def run(self):
         try:
             logger = Logger(self.log_signal.emit, self.progress_signal.emit)
-            builder = BUILDERS[self.config.target](self.config, logger)
-            builder.build()
+            self.builder = BUILDERS[self.config.target](self.config, logger)
+            if self.cancel_requested:
+                self.builder.cancel()
+            self.builder.build()
             self.finished_signal.emit(True, "ビルド成功")
         except Exception as e:
             self.finished_signal.emit(False, str(e))
+
+    def cancel(self):
+        self.cancel_requested = True
+        self.requestInterruption()
+        if self.builder:
+            self.builder.cancel()
 
 
 def parse_args() -> argparse.Namespace:
@@ -647,8 +696,29 @@ def main():
     worker.log_signal.connect(print)
     worker.progress_signal.connect(lambda val, msg: print(f"[{val}%] {msg}"))
     mode = "Container" if config.use_container else "No Container"
+    cancelled = False
+
+    def cancel_build():
+        nonlocal cancelled
+        if cancelled:
+            print("\n強制終了します。")
+            os._exit(130)
+        cancelled = True
+        print("\nビルドをキャンセルしています...")
+        worker.cancel()
+
+    signal.signal(signal.SIGINT, lambda _signum, _frame: cancel_build())
+
+    # Qt のイベントループ中でも Python が SIGINT を処理できるようにする。
+    sigint_timer = QtCore.QTimer()
+    sigint_timer.timeout.connect(lambda: None)
+    sigint_timer.start(200)
 
     def on_finished(success: bool, msg: str):
+        if cancelled:
+            print("\nビルドをキャンセルしました。")
+            app.exit(130)
+            return
         if success:
             app.quit()
         else:
@@ -658,7 +728,15 @@ def main():
     worker.finished_signal.connect(on_finished)
     print(f"ビルド開始 | ターゲット={target} | {config.build_type} | {mode} | オフライン={config.is_offline}")
     worker.start()
-    sys.exit(app.exec())
+    try:
+        exit_code = app.exec()
+    except KeyboardInterrupt:
+        cancel_build()
+        worker.wait()
+        exit_code = 130
+    if worker.isRunning():
+        worker.wait(3000)
+    sys.exit(exit_code)
 
 
 if __name__ == "__main__":

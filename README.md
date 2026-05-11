@@ -92,28 +92,43 @@ LinuxとmacOSに対応しております。Windowsビルドの問題について
 
 ## ビルド手順
 
-Linuxユーザーであれば`BUILD.py`1つで簡単にビルドできます。
+`BUILD.py`は現在のOSからビルドターゲットを自動判定します。通常は`python BUILD.py`だけで実行できます。明示する場合はLinuxで`--arch`、Windows/MSYS2で`--msys2`、macOSで`--xcode`を指定してください。
 
-- 依存関係をインストールします
+- PythonとGitを用意します
 
-  - Pacman: `sudo pacman -S --needed distrobox podman python pyside6 git`
-  - APT: `sudo apt install distrobox podman python3 python3-pyside6 git`
-  - DNF: `sudo dnf install distrobox podman python3 python3-pyside6 git`
-  - MSYS2: `pacman -S git mingw-w64-ucrt-x86_64-pyside6`
-  - Homebrew: `brew install python pyside git`
+  - システムパッケージを使う場合:
+    - Pacman: `sudo pacman -S --needed distrobox podman python pyside6 git`
+    - APT: `sudo apt install distrobox podman python3 python3-pyside6 git`
+    - DNF: `sudo dnf install distrobox podman python3 python3-pyside6 git`
+    - MSYS2: `pacman -S git mingw-w64-ucrt-x86_64-pyside6`
+    - Homebrew: `brew install python pyside git`
 
 - リポジトリをクローンします
 
   - `git clone https://codeberg.org/taisho-guy/AviQtl.git`
+  - `cd AviQtl`
+
+- pipでPySide6を用意する場合は、システムPythonへ直接インストールせず、仮想環境を作成します
+
+  - `python3 -m venv .venv`
+  - Linux/macOS: `source .venv/bin/activate`
+  - MSYS2: `source .venv/Scripts/activate`
+  - `python -m pip install --upgrade pip PySide6`
 
 - ビルドします
 
-  - `cd AviQtl`
   - `python BUILD.py`
+  - ターゲットを明示する場合:
+    - Linux: `python BUILD.py --arch`
+    - macOS: `python BUILD.py --xcode`
+    - MSYS2: `python BUILD.py --msys2`
+
+  Linuxでは既定でdistrobox/podmanコンテナを使用します。macOSでは`BUILD.py`がHomebrew経由でCMake、Ninja、Qt6等の依存関係を確認・インストールし、`macdeployqt`と`codesign`を実行して`.app`バンドルを作成します。
 
 - 実行します
 
-  - Linux/macOS: `./build/AviQtl`
+  - Linux: `./build/AviQtl`
+  - macOS: `open ./build/AviQtl.app`
   - MSYS2: `./build/AviQtl.exe`
 
 > [!IMPORTANT]
