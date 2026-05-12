@@ -5,6 +5,7 @@ vendor
 build/
 .build_tmp/
 dist
+__pycache__/
 
 # Exports
 project_context.json
