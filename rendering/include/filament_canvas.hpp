@@ -1,18 +1,12 @@
 #pragma once
 
-// ─────────────────────────────────────────────────────────────────────────────
-// filament_canvas.hpp  (フェーズ2)
+// filament_canvas.hpp  —  VulkanSharedContextQt
 //
 // 設計原則:
-//   このヘッダは MOC / mocs_compilation.cpp にインクルードされるため、
+//   MOC / mocs_compilation.cpp にインクルードされるため、
 //   Filament 内部ヘッダ (VulkanPlatform.h / bluevk/BlueVK.h) および
-//   Vulkan 型 (VkImage 等) を一切露出させてはならない。
-//
-//   すべての Filament / Vulkan 依存は filament_canvas.cpp の内部に閉じ込め、
-//   pimpl (Pointer to IMPLementation) パターンで完全隠蔽する。
-//
-// Phase: フェーズ2 (VulkanSharedContextQt 実装)
-// ─────────────────────────────────────────────────────────────────────────────
+//   Vulkan 型 (VkImage 等) を一切露出させない。
+//   すべての実装詳細は filament_canvas.cpp の pimpl に閉じ込める。
 
 #include <QMetaObject>
 #include <QQuickItem>
@@ -24,30 +18,8 @@
 
 namespace AviQtl::Rendering {
 
-// 前方宣言 — 完全定義は filament_canvas.cpp の内部にのみ存在する
-struct FilamentCanvasImpl;
+struct FilamentCanvasImpl; // 完全定義は filament_canvas.cpp のみ
 
-// ─────────────────────────────────────────────────────────────────────────────
-// FilamentCanvas
-//
-// QML から "AviQtl.Rendering" モジュール経由で使用する Filament 描画アイテム。
-//
-//   import AviQtl.Rendering 1.0
-//   FilamentCanvas { sceneId: 0; anchors.fill: parent }
-//
-// 内部アーキテクチャ (フェーズ2):
-//   QtVulkanPlatform が Qt SceneGraph の VkDevice を Filament と共有する。
-//   Filament はオフスクリーン VkImage に描画し、Qt SceneGraph は
-//   QNativeInterface::QSGVulkanTexture::fromNative() でその VkImage を
-//   QSGTexture としてラップして表示する (ゼロコピー)。
-//
-//   ┌─────────────────┐  同一 VkDevice  ┌──────────────────┐
-//   │  Qt SG (Vulkan) │ ◀────────────▶ │ Filament (Vulkan) │
-//   │  QQuickWindow   │                 │ QtVulkanPlatform  │
-//   └────────┬────────┘                 └────────┬──────────┘
-//            │ QSGVulkanTexture::fromNative()     │ VkImage
-//            └────────────────────────────────────┘
-// ─────────────────────────────────────────────────────────────────────────────
 class FilamentCanvas : public QQuickItem {
     Q_OBJECT
     QML_ELEMENT
@@ -60,9 +32,8 @@ class FilamentCanvas : public QQuickItem {
     ~FilamentCanvas() override;
 
     int sceneId() const noexcept;
-    void setSceneId(int id);
-
     int currentFrame() const noexcept;
+    void setSceneId(int id);
     void setCurrentFrame(int frame);
 
   signals:
@@ -80,7 +51,6 @@ class FilamentCanvas : public QQuickItem {
     void onSceneGraphInvalidated();
 
   private:
-    // Filament / Vulkan のすべての実装詳細を隠蔽する pimpl
     std::unique_ptr<FilamentCanvasImpl> m_impl;
 
     int m_sceneId = -1;

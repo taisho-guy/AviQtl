@@ -11,6 +11,10 @@ import QtQuick
 Item {
     id: root
 
+    // 初期化時やリサイズ中の 0x0 状態を回避するための最小サイズ
+    implicitWidth: 320
+    implicitHeight: 240
+
     property int sceneId: -1
     // CoreBridge.currentFrame を直接バインドし、QML 側で計算なし
     property int currentFrame: CoreBridge.currentFrame
