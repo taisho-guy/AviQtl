@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="../assets/splash.svg" width="256">
+  <img src="./assets/splash.svg" width="256">
 </p>
 
 <p align="center"><b>AviUtlを踏襲し凌駕する次世代動画編集ソフト</b></p>
