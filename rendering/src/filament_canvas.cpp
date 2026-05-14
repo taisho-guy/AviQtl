@@ -26,13 +26,8 @@
 #include <QVulkanFunctions>
 #include <QVulkanInstance>
 
-#include <vulkan/vulkan.h>
-// BlueVK と最新の Vulkan SDK の互換性維持のためのパッチ
-#if !defined(PFN_vkCmdSetDispatchParametersARM)
-typedef void(VKAPI_PTR *PFN_vkCmdSetDispatchParametersARM)(VkCommandBuffer commandBuffer, const void *pData);
-#endif
-
 #include <backend/platforms/VulkanPlatform.h>
+#include <vulkan/vulkan.h>
 
 #include <filament/Camera.h>
 #include <filament/Engine.h>

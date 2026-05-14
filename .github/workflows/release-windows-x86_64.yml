@@ -24,10 +24,10 @@ jobs:
         run: pip install PySide6
 
       - name: Setup Qt 6
-        uses: jurplel/setup-qt@v3
+        uses: qt-action/setup-qt@v2
         with:
           version: '6.x'
-          arch: 'win64_msvc2019_64'
+          target: 'win64_msvc2019_64'
           # プロジェクトに必要な追加モジュール
           modules: 'qtmultimedia qtshadertools qt5compat qtsvg'
 
