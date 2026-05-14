@@ -28,7 +28,7 @@ jobs:
             libxkbcommon wayland wayland-protocols libffi ffmpeg luajit fftw \
             qt6-base qt6-wayland qt6-declarative qt6-quick3d qt6-multimedia qt6-shadertools \
             qt6-svg qt6-5compat qt6-tools lilv ladspa carla openmp \
-            extra-cmake-modules libc++ fluidsynth \
+            extra-cmake-modules libc++ fluidsynth spirv-tools \
             pyside6 sudo ccache
 
       - name: Setup ccache
@@ -67,6 +67,6 @@ jobs:
 
       - name: Delete GitHub Actions Artifact
         if: success()
-        uses: geekyeggo/delete-artifact@v2
+        uses: geekyeggo/delete-artifact@v5
         with:
           name: AviQtl-Arch-Linux-x86_64

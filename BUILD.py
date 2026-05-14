@@ -498,7 +498,7 @@ class ArchBuilder(LinuxBuilderBase):
         self.logger.log("pacman -Syu --needed を実行中...")
         deps = [
             "base-devel", "git", "cmake", "ninja", "clang", "mold", "zip",
-            "mesa", "vulkan-devel", "libxkbcommon", "wayland", "wayland-protocols",
+            "mesa", "vulkan-devel", "spirv-tools", "libxkbcommon", "wayland", "wayland-protocols",
             "libffi", "ffmpeg", "luajit", "fftw",
             "qt6-base", "qt6-wayland", "qt6-declarative", "qt6-quick3d", "qt6-multimedia",
             "qt6-shadertools", "qt6-svg", "qt6-5compat", "qt6-tools",

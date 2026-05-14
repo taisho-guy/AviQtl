@@ -20,12 +20,6 @@
 
 #include <vulkan/vulkan.h>
 
-// Workaround for BlueVK generation issues with recent Vulkan headers on macOS.
-// BlueVK.h might refer to this type which is missing or named differently in some environments.
-#ifndef PFN_vkCmdSetDispatchParametersARM
-typedef void (VKAPI_PTR *PFN_vkCmdSetDispatchParametersARM)(VkCommandBuffer commandBuffer, uint32_t count, uint32_t max_thread_group_count);
-#endif
-
 #include <QDebug>
 #include <QQuickWindow>
 #include <QSGRendererInterface>

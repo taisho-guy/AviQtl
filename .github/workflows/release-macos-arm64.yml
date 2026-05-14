@@ -55,6 +55,6 @@ jobs:
 
       - name: Delete GitHub Actions Artifact
         if: success()
-        uses: geekyeggo/delete-artifact@v2
+        uses: geekyeggo/delete-artifact@v5
         with:
           name: AviQtl-macOS-Xcode-Universal
