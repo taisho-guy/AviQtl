@@ -1061,7 +1061,7 @@ class XcodeBuilder(PlatformBuilder):
         # Removed KDE specific dependencies
         deps = [
             "cmake", "ninja", "qt6", "ffmpeg", "luajit",
-            "vulkan-headers", "vulkan-loader", "pkg-config",
+            "vulkan-headers", "vulkan-loader", "spirv-tools", "pkg-config",
             "lilv", "extra-cmake-modules", "carla",
         ]
         self.run_cmd(["brew", "install"] + deps)
