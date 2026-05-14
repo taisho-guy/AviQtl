@@ -1,5 +1,6 @@
 #include "audio_plugin_manager.hpp"
 #include "../../core/include/settings_manager.hpp"
+#include <QCoreApplication>
 #include <QDebug>
 #include <QDir>
 #include <QDirIterator>
@@ -317,13 +318,17 @@ auto discoverySearchPaths() -> const QStringList & {
     static QStringList paths = {
         "/usr/lib/carla/carla-discovery-native", "/usr/local/lib/carla/carla-discovery-native", "/usr/lib64/carla/carla-discovery-native", "/usr/bin/carla-discovery-native", "/usr/local/bin/carla-discovery-native",
     };
-#if defined(__APPLE__) && !defined(Q_OS_IOS)
-    // macOS App Bundle 内の検索パスを追加
+#if defined(Q_OS_WIN) || (defined(__APPLE__) && !defined(Q_OS_IOS))
     static bool appended = false;
     if (!appended) {
-        QString appDir = QCoreApplication::applicationDirPath();
-        if (!paths.contains(appDir)) {
-            paths.prepend(appDir);
+        const QDir appDir(QCoreApplication::applicationDirPath());
+#if defined(Q_OS_WIN)
+        const QString bundledTool = appDir.filePath(QStringLiteral("carla-discovery-native.exe"));
+#else
+        const QString bundledTool = appDir.filePath(QStringLiteral("carla-discovery-native"));
+#endif
+        if (!paths.contains(bundledTool)) {
+            paths.prepend(bundledTool);
         }
         appended = true;
     }

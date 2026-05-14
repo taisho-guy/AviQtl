@@ -64,7 +64,7 @@ AviQtlは構造的な弱点を根本的に解決します：
 
 <details>
 <summary>WindowsやmacOSでも動きますか？</summary>
-LinuxとmacOSに対応しております。Windowsビルドの問題については[イシュー](https://codeberg.org/taisho-guy/AviQtl/issues/2)をご確認下さい。
+Linux、Windows、macOSに対応する方針で開発しています。WindowsではMSVC x64ビルドを既定のターゲットとしており、公式QtのMSVC版を使用します。
 </details>
 
 <details>
@@ -87,7 +87,7 @@ LinuxとmacOSに対応しております。Windowsビルドの問題について
 
 ## ビルド手順
 
-`BUILD.py`は現在のOSからビルドターゲットを自動判定します。通常は`python BUILD.py`だけで実行できます。明示する場合はLinuxで`--arch`、Windows/MSYS2で`--msys2`、macOSで`--xcode`を指定してください。
+`BUILD.py`は現在のOSからビルドターゲットを自動判定します。通常は`python BUILD.py`だけで実行できます。明示する場合はLinuxで`--arch`、Windows/MSVCで`--msvc`、Windows/MSYS2で`--msys2`、macOSで`--xcode`を指定してください。Windowsでは既定でMSVCビルドを使用します。
 
 - PythonとGitを用意します
 
@@ -97,6 +97,12 @@ LinuxとmacOSに対応しております。Windowsビルドの問題について
     - DNF: `sudo dnf install distrobox podman python3 python3-pyside6 git`
     - MSYS2: `pacman -S git mingw-w64-ucrt-x86_64-pyside6`
     - Homebrew: `brew install python pyside git`
+
+- Windows/MSVCでビルドする場合は、追加で以下を用意します
+
+  - Visual Studio 2022 Build ToolsのC++ツールセット
+  - 公式QtのMSVC x64版（例: `msvc2022_64`）
+  - vcpkg（`VCPKG_ROOT`で指定可能。見つからない場合は`BUILD.py`がリポジトリ内へ取得を試みます）
 
 - リポジトリをクローンします
 
@@ -108,6 +114,7 @@ LinuxとmacOSに対応しております。Windowsビルドの問題について
   - `python3 -m venv .venv`
   - Linux/macOS: `source .venv/bin/activate`
   - MSYS2: `source .venv/Scripts/activate`
+  - Windows/PowerShell: `.venv\Scripts\Activate.ps1`
   - `python -m pip install --upgrade pip PySide6`
 
 - ビルドします
@@ -115,19 +122,18 @@ LinuxとmacOSに対応しております。Windowsビルドの問題について
   - `python BUILD.py`
   - ターゲットを明示する場合:
     - Linux: `python BUILD.py --arch`
+    - Windows/MSVC: `python BUILD.py --msvc --qt-dir F:\Qt`
     - macOS: `python BUILD.py --xcode`
     - MSYS2: `python BUILD.py --msys2`
 
-  Linuxでは既定でdistrobox/podmanコンテナを使用します。macOSでは`BUILD.py`がHomebrew経由でCMake、Ninja、Qt6等の依存関係を確認・インストールし、`macdeployqt`と`codesign`を実行して`.app`バンドルを作成します。
+  Windows/MSVCでは公式Qtのインストール先を`--qt-dir`で指定できます。`--qt-dir`を省略した場合は`QT_MSVC_DIR`、`QT_DIR`、`QTDIR`、`PATH`からQtを検出します。Linuxでは既定でdistrobox/podmanコンテナを使用します。macOSでは`BUILD.py`がHomebrew経由でCMake、Ninja、Qt6等の依存関係を確認・インストールし、`macdeployqt`と`codesign`を実行して`.app`バンドルを作成します。
 
 - 実行します
 
   - Linux: `./build/AviQtl`
   - macOS: `open ./build/AviQtl.app`
+  - Windows/MSVC: `.\build\AviQtl.exe`
   - MSYS2: `./build/AviQtl.exe`
-
-> [!IMPORTANT]
-> - Windowsビルドには[問題](https://codeberg.org/taisho-guy/AviQtl/issues/2)がございます。
 
 ## 関連リンク
 

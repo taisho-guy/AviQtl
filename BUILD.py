@@ -7,7 +7,11 @@ import multiprocessing
 import shlex
 import urllib.request
 import platform
+import locale
 import signal
+import tempfile
+import json
+import stat
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Callable, List, Optional, Type
@@ -23,6 +27,7 @@ class BuildConfig:
     is_debug: bool
     use_container: bool
     is_offline: bool
+    qt_dir: Optional[Path] = None
 
     @property
     def build_type(self) -> str:
@@ -174,6 +179,21 @@ class PlatformBuilder:
         if proc.returncode != 0:
             raise subprocess.CalledProcessError(proc.returncode, actual_cmd)
 
+    def remove_tree(self, path: Path):
+        def make_writable_and_retry(function, target, excinfo):
+            try:
+                os.chmod(target, stat.S_IWRITE)
+                function(target)
+            except Exception:
+                raise excinfo[1]
+
+        try:
+            shutil.rmtree(path, onexc=make_writable_and_retry)
+        except TypeError:
+            def onerror(function, target, excinfo):
+                make_writable_and_retry(function, target, excinfo)
+            shutil.rmtree(path, onerror=onerror)
+
     def get_cmake_config_cmd(self) -> List[str]:
         return [
             "cmake", "-B", str(self.config.work_dir), "-G", "Ninja",
@@ -202,42 +222,76 @@ class PlatformBuilder:
             self.logger.log("Carla ヘッダーを取得中...")
             temp_clone = self.config.source_dir / ".carla_tmp"
             if temp_clone.exists():
-                shutil.rmtree(temp_clone)
+                self.remove_tree(temp_clone)
             self.run_cmd(["git", "clone", "--depth", "1", "https://github.com/falkTX/Carla.git", str(temp_clone)], force_host=True)
             inc_dir.mkdir(parents=True, exist_ok=True)
             shutil.copytree(temp_clone / "source/includes", inc_dir, dirs_exist_ok=True)
-            shutil.rmtree(temp_clone)
+            self.remove_tree(temp_clone)
 
-        if is_windows and not (lib_dir / "carla-standalone.dll").exists():
+        windows_libs = [
+            lib_dir / "libcarla_standalone2.lib",
+            lib_dir / "libcarla_native-plugin.lib",
+            lib_dir / "libcarla_host-plugin.lib",
+            lib_dir / "libcarla_utils.lib",
+        ]
+        has_windows_runtime = (lib_dir / "carla-standalone.dll").exists() or (lib_dir / "libcarla_standalone2.dll").exists()
+        has_windows_link_libs = all(path.exists() for path in windows_libs)
+        if is_windows and (not has_windows_runtime or not has_windows_link_libs):
             if self.config.is_offline:
-                self.logger.log("Carla Windows バイナリが見つかりませんが、オフラインモードのため取得をスキップします")
-                return
+                missing = [str(path) for path in windows_libs if not path.exists()]
+                if not has_windows_runtime:
+                    missing.append(str(lib_dir / "carla-standalone.dll"))
+                raise RuntimeError("Carla Windows SDK が不完全です。オフラインモードでは自動取得できません。不足: " + ", ".join(missing))
             self.logger.log("Carla Windows バイナリをダウンロード中...")
             lib_dir.mkdir(parents=True, exist_ok=True)
             version = "2.6.0"
             url = f"https://github.com/falkTX/Carla/releases/download/v{version}/Carla_{version}-win64.zip"
             self.download_and_extract(url, sdk_dir)
-            for lib_file in sdk_dir.rglob("*.dll"):
-                shutil.move(str(lib_file), lib_dir / lib_file.name)
+            for lib_file in sdk_dir.rglob("*"):
+                if not lib_file.is_file() or lib_file.parent == lib_dir:
+                    continue
+                lowered = lib_file.name.lower()
+                if not lowered.endswith((".dll", ".lib", ".def", ".exp", ".dll.a")):
+                    continue
+                dest = lib_dir / lib_file.name
+                if dest.exists():
+                    dest.unlink()
+                shutil.move(str(lib_file), dest)
+            missing_libs = [str(path) for path in windows_libs if not path.exists()]
+            if missing_libs:
+                raise RuntimeError("Carla Windows SDK の取得後も必要なリンクライブラリが見つかりません: " + ", ".join(missing_libs))
 
     def setup_filament_sdk(self, platform_suffix: str, lib_arch: str, is_universal: bool = False):
         filament_dir = self.config.source_dir / "vendor" / "filament"
         filament_include_dir = filament_dir / "include"
         bluevk_include_dir = filament_include_dir / "bluevk"
-        
-        if (filament_dir / "include" / "filament" / "Engine.h").exists():
-            # Check if BlueVK.h is also present, if not, proceed to generate it
-            if (bluevk_include_dir / "BlueVK.h").exists():
-                self.logger.log("Filament SDK と BlueVK.h は既に存在します。")
-                return
 
-        if self.config.is_offline and not (filament_dir / "include" / "filament" / "Engine.h").exists():
-            self.logger.log("Filament SDK が見つかりませんが、オフラインモードのため取得をスキップします")
+        dest_lib = filament_dir / "lib" / lib_arch
+        required_lib: Path | None = None
+        if self.config.target == "msvc":
+            runtime_dir = "mdd" if self.config.is_debug else "md"
+            required_lib = dest_lib / runtime_dir / "filament.lib"
+
+        has_engine = (filament_dir / "include" / "filament" / "Engine.h").exists()
+        has_bluevk = (bluevk_include_dir / "BlueVK.h").exists()
+        has_required_lib = required_lib is None or required_lib.exists()
+        if has_engine and has_bluevk and has_required_lib:
+            self.logger.log("Filament SDK と BlueVK.h は既に存在します。")
             return
+
+        if self.config.is_offline:
+            missing = []
+            if not has_engine:
+                missing.append(str(filament_dir / "include" / "filament" / "Engine.h"))
+            if not has_bluevk:
+                missing.append(str(bluevk_include_dir / "BlueVK.h"))
+            if required_lib is not None and not has_required_lib:
+                missing.append(str(required_lib))
+            raise RuntimeError("Filament SDK が不完全です。オフラインモードでは自動取得できません。不足: " + ", ".join(missing))
 
         self.logger.log(f"Filament バイナリ ({platform_suffix}) を取得中...")
         version = "1.71.3"
-        ext = "zip" if "windows" in platform_suffix else "tgz"
+        ext = "tgz"
         
         suffix = "mac" if is_universal else platform_suffix
         url = f"https://github.com/google/filament/releases/download/v{version}/filament-v{version}-{suffix}.{ext}"
@@ -257,13 +311,12 @@ class PlatformBuilder:
             for item in nested_dir.iterdir():
                 dest_path = filament_dir / item.name
                 if dest_path.exists():
-                    if dest_path.is_dir(): shutil.rmtree(dest_path)
+                    if dest_path.is_dir(): self.remove_tree(dest_path)
                     else: dest_path.unlink()
                 shutil.move(str(item), str(dest_path))
             nested_dir.rmdir()
 
         # CMakeLists.txt の期待する構造 (lib/x86_64 or lib/arm64) に合わせる
-        dest_lib = filament_dir / "lib" / lib_arch
         if not dest_lib.exists():
             src_lib = filament_dir / "lib" / lib_arch if is_universal else filament_dir / "lib"
             if not src_lib.exists(): src_lib = filament_dir / "lib" # 構造が直下の場合
@@ -274,7 +327,7 @@ class PlatformBuilder:
                 dest_lib.mkdir(parents=True, exist_ok=True)
                 for item in temp_lib.iterdir():
                     shutil.move(str(item), str(dest_lib / item.name))
-                shutil.rmtree(temp_lib)
+                self.remove_tree(temp_lib)
 
         # --- bluevk-gen.py のダウンロードと実行 ---
         # BlueVK.h が存在しない場合のみ生成
@@ -306,7 +359,7 @@ class PlatformBuilder:
                     "-o", str(dummy_bluevk_cpp_dir) # BlueVK.cpp を一時ディレクトリに出力
                 ], force_host=True) # ホスト環境で実行 (ネットワークアクセスと Python 環境が必要なため)
 
-                shutil.rmtree(dummy_bluevk_cpp_dir) # 一時ディレクトリをクリーンアップ
+                self.remove_tree(dummy_bluevk_cpp_dir) # 一時ディレクトリをクリーンアップ
                 bluevk_gen_script_path.unlink() # スクリプトファイルを削除
 
                 if not (bluevk_include_dir / "BlueVK.h").exists():
@@ -316,6 +369,9 @@ class PlatformBuilder:
             except Exception as e:
                 self.logger.log(f"bluevk/BlueVK.h の自動生成中にエラーが発生しました: {e}")
                 raise # 致命的なエラーとして再スロー
+
+        if required_lib is not None and not required_lib.exists():
+            raise RuntimeError(f"Filament SDK の取得後も必要なライブラリが見つかりません: {required_lib}")
 
     def download_and_extract(self, url: str, dest_dir: Path):
         tmp_file = dest_dir / "download.tmp"
@@ -525,6 +581,475 @@ class Msys2Builder(PlatformBuilder):
         return "AviQtl-MSYS2-UCRT64-x86_64"
 
 
+class MsvcBuilder(PlatformBuilder):
+    QT_ENV_VARS = ("QT_MSVC_DIR", "QT_DIR", "QTDIR")
+    QT_VCPKG_PACKAGES = {
+        "qtbase",
+        "qtdeclarative",
+        "qtquick3d",
+        "qtmultimedia",
+        "qtshadertools",
+        "qtsvg",
+        "qt5compat",
+        "qttools",
+    }
+    CARLA_DLL_PATTERNS = (
+        "carla*.dll",
+        "libcarla*.dll",
+        "CarlaVst*.dll",
+    )
+    CARLA_DLL_ALIASES = {
+        "libcarla_native-plugin.dll": "CarlaNativePlugin.dll",
+    }
+
+    def __init__(self, config: BuildConfig, logger: Logger):
+        super().__init__(config, logger)
+        if os.name != "nt":
+            raise RuntimeError("MSVC ビルドは Windows でのみ実行できます")
+        self.vcpkg_root: Path | None = None
+        default_triplet = "x64-windows" if self.config.is_debug else "x64-windows-release"
+        self.vcpkg_triplet = os.environ.get("VCPKG_DEFAULT_TRIPLET", default_triplet)
+        default_host_triplet = "x64-windows" if self.config.is_debug else self.vcpkg_triplet
+        self.vcpkg_host_triplet = os.environ.get("VCPKG_DEFAULT_HOST_TRIPLET", default_host_triplet)
+        self.vs_install_dir: Path | None = None
+        self.cmake_path: str | None = None
+        self.ninja_path: str | None = None
+        self.qt_prefix: Path | None = None
+        self.vcpkg_manifest_dir: Path | None = None
+
+    def install_dependencies(self):
+        self.setup_msvc_environment()
+        self.ensure_vcpkg()
+        self.qt_prefix = self.find_qt_prefix()
+        if not self.qt_prefix:
+            raise RuntimeError(
+                "Qt MSVC が見つかりません。公式 Qt をインストールし、--qt-dir で Qt ルート/kit を指定するか、"
+                "QT_MSVC_DIR, QT_DIR, QTDIR のいずれかを設定してください。"
+            )
+        self.logger.log(f"Qt: {self.qt_prefix}")
+        self.write_external_qt_manifest()
+        self.prepare_vcpkg_installed_tree()
+        self.setup_vcpkg_environment()
+        self.cmake_path = self.find_msvc_tool("cmake")
+        self.ninja_path = self.find_msvc_tool("ninja")
+        if not self.cmake_path:
+            raise RuntimeError("cmake が見つかりません。CMake を PATH に追加してください")
+        if not self.ninja_path:
+            raise RuntimeError("ninja が見つかりません。Ninja を PATH に追加してください")
+        if not shutil.which("cl", path=self.env.get("PATH")):
+            raise RuntimeError("cl.exe が見つかりません。vcvarsall.bat の読み込みに失敗した可能性があります")
+        self.setup_carla_sdk(is_windows=True)
+        self.setup_filament_sdk("windows", "x86_64")
+
+    def ensure_vcpkg(self):
+        vcpkg_root_env = self.env.get("VCPKG_ROOT") or os.environ.get("VCPKG_ROOT")
+        if vcpkg_root_env:
+            env_root = Path(vcpkg_root_env)
+            if not (env_root / "scripts").is_dir():
+                raise RuntimeError(f"VCPKG_ROOT が不正です。vcpkg の scripts ディレクトリが見つかりません: {env_root}")
+            if not (env_root / "vcpkg.exe").exists() and not (env_root / "bootstrap-vcpkg.bat").exists():
+                raise RuntimeError(f"VCPKG_ROOT が不完全です。vcpkg.exe または bootstrap-vcpkg.bat が見つかりません: {env_root}")
+
+        self.vcpkg_root = self.find_vcpkg_root(need_executable=True)
+        if self.vcpkg_root:
+            self.logger.log(f"vcpkg 発見: {self.vcpkg_root}")
+            self.env["VCPKG_ROOT"] = str(self.vcpkg_root)
+            return
+
+        incomplete = self.find_vcpkg_root(need_executable=False)
+        if incomplete and (incomplete / "bootstrap-vcpkg.bat").exists():
+            self.vcpkg_root = incomplete
+            self.logger.log(f"vcpkg ディレクトリを検出 (vcpkg.exe なし)。ブートストラップを試みます: {self.vcpkg_root}")
+            self._bootstrap_vcpkg()
+            self.env["VCPKG_ROOT"] = str(self.vcpkg_root)
+            return
+
+        self.vcpkg_root = self.config.source_dir / "vcpkg"
+        if self.config.is_offline:
+            raise RuntimeError("vcpkg が見つかりません。オフラインモードでは自動取得できないため、VCPKG_ROOT を設定してください。")
+        if not shutil.which("git", path=self.env.get("PATH")):
+            raise RuntimeError("git が見つかりません。vcpkg の自動取得には Git が必要です。Git をインストールするか VCPKG_ROOT を設定してください。")
+        if self.vcpkg_root.exists() and not (self.vcpkg_root / "scripts").is_dir():
+            self.logger.log(f"不完全な vcpkg ディレクトリを削除します: {self.vcpkg_root}")
+            self.remove_tree(self.vcpkg_root)
+        self.logger.log(f"vcpkg が見つかりません。{self.vcpkg_root} にクローン中...")
+        self.run_cmd(["git", "clone", "--depth", "1", "https://github.com/microsoft/vcpkg.git", str(self.vcpkg_root)], force_host=True)
+        self._bootstrap_vcpkg()
+        self.env["VCPKG_ROOT"] = str(self.vcpkg_root)
+
+    def _bootstrap_vcpkg(self):
+        bootstrap = self.vcpkg_root / "bootstrap-vcpkg.bat"
+        if not bootstrap.exists():
+            raise RuntimeError(f"vcpkg のブートストラップスクリプトが見つかりません: {bootstrap}")
+        self.logger.log("vcpkg をブートストラップ中...")
+        self.run_cmd([str(bootstrap)], force_host=True)
+        if not (self.vcpkg_root / "vcpkg.exe").exists():
+            raise RuntimeError("vcpkg のブートストラップに失敗しました。vcpkg.exe が生成されていません。ネットワーク接続を確認してください。")
+        self.logger.log("vcpkg の準備完了")
+
+    def prepare_vcpkg_installed_tree(self):
+        installed_root = self.config.work_dir / "vcpkg_installed"
+        marker = self.config.work_dir / ".vcpkg-triplets"
+        expected = (
+            f"target={self.vcpkg_triplet}\n"
+            f"host={self.vcpkg_host_triplet}\n"
+            f"qt={self.qt_prefix or 'vcpkg'}\n"
+        )
+        status_file = installed_root / "vcpkg" / "status"
+        info_dir = installed_root / "vcpkg" / "info"
+        has_installed_status = (
+            status_file.exists()
+            and "Status: install ok installed" in status_file.read_text(encoding="utf-8", errors="ignore")
+        )
+        has_package_lists = info_dir.exists() and any(info_dir.glob("*.list"))
+        is_consistent = not has_installed_status or has_package_lists
+        if marker.exists() and marker.read_text(encoding="utf-8") == expected and is_consistent:
+            return
+
+        if installed_root.exists():
+            self.logger.log("古い、または不完全な vcpkg_installed を削除します")
+            self.remove_tree(installed_root)
+        self.config.work_dir.mkdir(parents=True, exist_ok=True)
+        marker.write_text(expected, encoding="utf-8")
+
+    def write_external_qt_manifest(self):
+        manifest_in = self.config.source_dir / "vcpkg.json"
+        manifest_out_dir = self.config.work_dir / "vcpkg-manifest"
+        manifest_out = manifest_out_dir / "vcpkg.json"
+        data = json.loads(manifest_in.read_text(encoding="utf-8"))
+        data["name"] = f"{data.get('name', 'aviqtl')}-msvc-external-qt"
+        data["dependencies"] = [
+            dep for dep in data.get("dependencies", [])
+            if (dep if isinstance(dep, str) else dep.get("name")) not in self.QT_VCPKG_PACKAGES
+        ]
+        manifest_out_dir.mkdir(parents=True, exist_ok=True)
+        manifest_out.write_text(json.dumps(data, indent=4) + "\n", encoding="utf-8")
+        self.vcpkg_manifest_dir = manifest_out_dir
+
+    def configure(self):
+        self.run_cmd(self.get_cmake_config_cmd())
+
+    def update_translations(self):
+        self.run_cmd([self.cmake_path or "cmake", "--build", str(self.config.work_dir), "--target", "AviQtl_lupdate"])
+
+    def compile(self):
+        j = multiprocessing.cpu_count()
+        self.logger.log(f"並列ジョブ数: {j}")
+        self.run_cmd([self.cmake_path or "cmake", "--build", str(self.config.work_dir), "-j", str(j)])
+
+    def find_vcvarsall(self) -> Path | None:
+        candidates = []
+        for var in ("VCVARSALL", "VCVARSALL_BAT"):
+            value = os.environ.get(var)
+            if value:
+                candidates.append(Path(value))
+
+        vswhere_roots = [
+            Path(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")) / "Microsoft Visual Studio" / "Installer" / "vswhere.exe",
+            Path(r"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe"),
+        ]
+        for vswhere in vswhere_roots:
+            if not vswhere.exists():
+                continue
+            for args in (
+                ["-latest", "-products", "*", "-requires", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", "-property", "installationPath"],
+                ["-latest", "-products", "*", "-property", "installationPath"],
+            ):
+                try:
+                    result = subprocess.run([str(vswhere)] + args, capture_output=True, text=True, encoding=locale.getpreferredencoding(False), errors="replace")
+                except OSError:
+                    continue
+                if result.returncode == 0 and result.stdout.strip():
+                    candidates.append(Path(result.stdout.strip()) / "VC" / "Auxiliary" / "Build" / "vcvarsall.bat")
+
+        for var in ("VSINSTALLDIR", "VCINSTALLDIR"):
+            value = os.environ.get(var)
+            if value:
+                root = Path(value)
+                candidates.append(root / "VC" / "Auxiliary" / "Build" / "vcvarsall.bat")
+                candidates.append(root.parent / "Auxiliary" / "Build" / "vcvarsall.bat")
+
+        candidates.extend([
+            Path(r"C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat"),
+            Path(r"C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat"),
+            Path(r"C:\Program Files\Microsoft Visual Studio\2022\Professional\VC\Auxiliary\Build\vcvarsall.bat"),
+            Path(r"C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat"),
+        ])
+
+        for candidate in candidates:
+            if candidate.exists():
+                return candidate
+        return None
+
+    def setup_msvc_environment(self):
+        vcvarsall = self.find_vcvarsall()
+        if not vcvarsall:
+            raise RuntimeError("vcvarsall.bat が見つかりません。Visual Studio Build Tools の C++ ツールセットをインストールしてください")
+        self.logger.log(f"vcvarsall: {vcvarsall}")
+        self.vs_install_dir = vcvarsall.parents[3]
+        wrapper_path = None
+        try:
+            with tempfile.NamedTemporaryFile("w", suffix=".bat", delete=False, encoding="utf-8") as wrapper:
+                wrapper.write("@echo off\n")
+                wrapper.write(f'call "{vcvarsall}" x64 > nul\n')
+                wrapper.write("if errorlevel 1 exit /b %errorlevel%\n")
+                wrapper.write("set\n")
+                wrapper_path = wrapper.name
+            proc = subprocess.run(
+                ["cmd.exe", "/d", "/c", wrapper_path],
+                capture_output=True,
+                text=True,
+                encoding=locale.getpreferredencoding(False),
+                errors="replace",
+            )
+            if proc.returncode != 0:
+                raise RuntimeError(f"vcvarsall.bat の実行に失敗しました:\n{proc.stdout}\n{proc.stderr}")
+            for line in proc.stdout.splitlines():
+                if "=" not in line:
+                    continue
+                key, _, value = line.partition("=")
+                self.env[key] = value
+            if "Path" in self.env:
+                self.env["PATH"] = self.env["Path"]
+            elif "PATH" in self.env:
+                self.env["Path"] = self.env["PATH"]
+            self.sanitize_msvc_environment()
+        finally:
+            if wrapper_path:
+                try:
+                    Path(wrapper_path).unlink()
+                except OSError:
+                    pass
+
+    def is_msys_path(self, path: str | None) -> bool:
+        if not path:
+            return False
+        lowered = path.replace("/", "\\").lower()
+        return "\\msys2\\" in lowered or "\\mingw" in lowered or "\\ucrt64\\" in lowered
+
+    def sanitize_msvc_environment(self):
+        for name in ("PATH", "Path", "PKG_CONFIG_PATH", "CMAKE_PREFIX_PATH"):
+            value = self.env.get(name)
+            if not value:
+                continue
+            filtered = [part for part in value.split(os.pathsep) if part and not self.is_msys_path(part)]
+            if filtered:
+                self.env[name] = os.pathsep.join(filtered)
+            else:
+                self.env.pop(name, None)
+        if "PATH" in self.env:
+            self.env["Path"] = self.env["PATH"]
+        elif "Path" in self.env:
+            self.env["PATH"] = self.env["Path"]
+
+    def find_msvc_tool(self, name: str) -> str | None:
+        exe = f"{name}.exe"
+        env_name = f"{name.upper()}_EXE"
+        if self.env.get(env_name) and Path(self.env[env_name]).exists():
+            return self.env[env_name]
+
+        candidates = []
+        if self.vs_install_dir:
+            if name == "cmake":
+                candidates.append(self.vs_install_dir / "Common7" / "IDE" / "CommonExtensions" / "Microsoft" / "CMake" / "CMake" / "bin" / exe)
+            elif name == "ninja":
+                candidates.append(self.vs_install_dir / "Common7" / "IDE" / "CommonExtensions" / "Microsoft" / "CMake" / "Ninja" / exe)
+        if self.vcpkg_root:
+            candidates.append(self.vcpkg_root / "downloads" / "tools" / name / exe)
+
+        for candidate in candidates:
+            if candidate.exists():
+                return str(candidate)
+
+        found = shutil.which(exe, path=self.env.get("PATH"))
+        if found and not self.is_msys_path(found):
+            return found
+        if found:
+            self.logger.log(f"警告: MSYS2/MinGW の {exe} を検出したため MSVC ビルドでは使用しません: {found}")
+        return None
+
+    def find_vcpkg_root(self, *, need_executable: bool = True) -> Path | None:
+        candidates = []
+        vcpkg_root_env = self.env.get("VCPKG_ROOT") or os.environ.get("VCPKG_ROOT")
+        if vcpkg_root_env:
+            candidates.append(Path(vcpkg_root_env))
+        candidates.extend([
+            Path.home() / "vcpkg",
+            Path(r"C:\vcpkg"),
+            self.config.source_dir / "vcpkg",
+        ])
+        if self.vs_install_dir:
+            candidates.append(self.vs_install_dir / "VC" / "vcpkg")
+        for candidate in candidates:
+            if not (candidate / "scripts").is_dir():
+                continue
+            if need_executable and not (candidate / "vcpkg.exe").exists():
+                continue
+            return candidate
+        return None
+
+    def vcpkg_installed_dir(self) -> Path:
+        return self.config.work_dir / "vcpkg_installed" / self.vcpkg_triplet
+
+    def setup_vcpkg_environment(self):
+        if not self.vcpkg_root:
+            return
+        installed = self.vcpkg_installed_dir()
+        self.env["VCPKG_DEFAULT_TRIPLET"] = self.vcpkg_triplet
+        self.env["VCPKG_DEFAULT_HOST_TRIPLET"] = self.vcpkg_host_triplet
+        paths = [
+            installed / "bin",
+            installed / "tools" / "pkgconf",
+            installed / "tools" / "pkg-config",
+        ]
+        if self.qt_prefix:
+            paths.insert(0, self.qt_prefix / "bin")
+        else:
+            paths.append(installed / "tools" / "Qt6" / "bin")
+        self.env["PATH"] = os.pathsep.join([str(path) for path in paths if path.exists()] + [self.env.get("PATH", "")])
+        self.env["Path"] = self.env["PATH"]
+        pkg_paths = [installed / "lib" / "pkgconfig"]
+        if self.config.is_debug:
+            pkg_paths.append(installed / "debug" / "lib" / "pkgconfig")
+        existing_pkg_path = self.env.get("PKG_CONFIG_PATH", "")
+        self.env["PKG_CONFIG_PATH"] = os.pathsep.join([str(path) for path in pkg_paths if path.exists()] + ([existing_pkg_path] if existing_pkg_path else []))
+        self.logger.log(f"vcpkg: {self.vcpkg_root} (target={self.vcpkg_triplet}, host={self.vcpkg_host_triplet}), installed: {installed}")
+
+    def resolve_qt_prefix(self, path: Path) -> Path | None:
+        if (path / "bin" / "windeployqt.exe").exists():
+            return path
+        candidates = sorted(path.glob("*/*msvc*_64/bin/windeployqt.exe"), reverse=True)
+        if candidates:
+            return candidates[0].parent.parent
+        return None
+
+    def find_qt_prefix(self) -> Path | None:
+        if self.config.qt_dir:
+            qt_prefix = self.resolve_qt_prefix(self.config.qt_dir)
+            if qt_prefix:
+                return qt_prefix
+            raise RuntimeError(f"指定された Qt ディレクトリから MSVC 版 Qt を検出できません: {self.config.qt_dir}")
+
+        for name in self.QT_ENV_VARS:
+            value = self.env.get(name) or os.environ.get(name)
+            if value:
+                qt_prefix = self.resolve_qt_prefix(Path(value))
+                if qt_prefix:
+                    return qt_prefix
+        deployqt = shutil.which("windeployqt", path=self.env.get("PATH"))
+        if deployqt and not self.is_msys_path(deployqt):
+            return Path(deployqt).parent.parent
+        if deployqt:
+            self.logger.log(f"警告: MSYS2/MinGW の windeployqt を検出したため MSVC ビルドでは使用しません: {deployqt}")
+        for qt_root in (Path(r"C:\Qt"),):
+            if qt_root.exists():
+                qt_prefix = self.resolve_qt_prefix(qt_root)
+                if qt_prefix:
+                    return qt_prefix
+        return None
+
+    def get_cmake_config_cmd(self) -> List[str]:
+        cmd = [
+            self.cmake_path or "cmake", "-B", str(self.config.work_dir), "-G", "Ninja",
+            f"-DCMAKE_BUILD_TYPE={self.config.build_type}",
+            f"-DCMAKE_MAKE_PROGRAM={self.ninja_path or 'ninja'}",
+        ]
+        cmd.extend(["-DCMAKE_C_COMPILER=cl", "-DCMAKE_CXX_COMPILER=cl"])
+        if self.vcpkg_root:
+            cmd.extend([
+                f"-DCMAKE_TOOLCHAIN_FILE={self.vcpkg_root / 'scripts/buildsystems/vcpkg.cmake'}",
+                f"-DVCPKG_TARGET_TRIPLET={self.vcpkg_triplet}",
+                f"-DVCPKG_HOST_TRIPLET={self.vcpkg_host_triplet}",
+                f"-DVCPKG_OVERLAY_TRIPLETS={self.config.source_dir / 'triplets'}",
+            ])
+            if self.vcpkg_manifest_dir:
+                cmd.append(f"-DVCPKG_MANIFEST_DIR={self.vcpkg_manifest_dir}")
+        if self.qt_prefix:
+            cmd.append(f"-DCMAKE_PREFIX_PATH={self.qt_prefix}")
+        if (self.config.source_dir / "vendor" / "carla").exists():
+            cmd.append(f"-DCARLA_SDK_DIR={self.config.source_dir / 'vendor' / 'carla'}")
+        cmd.append(str(self.config.source_dir))
+        return cmd
+
+    def find_windeployqt(self) -> str | None:
+        if self.qt_prefix:
+            deployqt = self.qt_prefix / "bin" / "windeployqt.exe"
+            if deployqt.exists():
+                return str(deployqt)
+        deployqt = shutil.which("windeployqt", path=self.env.get("PATH"))
+        if deployqt and not self.is_msys_path(deployqt):
+            return deployqt
+        if deployqt:
+            self.logger.log(f"警告: MSYS2/MinGW の windeployqt を検出したため MSVC ビルドでは使用しません: {deployqt}")
+        return None
+
+    def package(self):
+        self.config.output_dir.mkdir(parents=True, exist_ok=True)
+        dest_bin = self.config.output_dir / "AviQtl.exe"
+        src_bin = self.config.work_dir / "bin" / "AviQtl.exe"
+        if dest_bin.exists():
+            dest_bin.unlink()
+        if not src_bin.exists():
+            raise FileNotFoundError(f"実行ファイルが見つかりません: {src_bin}")
+        shutil.copy2(src_bin, dest_bin)
+        self.copy_assets(self.config.output_dir)
+        self.copy_carla_runtime()
+
+        deployqt = self.find_windeployqt()
+        if not deployqt:
+            raise RuntimeError("windeployqt が見つかりません。Qt MSVC の bin ディレクトリを PATH に追加するか QT_MSVC_DIR を設定してください")
+        self.logger.log("windeployqt を実行中...")
+        self.run_cmd([
+            deployqt,
+            "--qmldir", str(self.config.source_dir / "ui/qml"),
+            "--no-translations", "--no-compiler-runtime",
+            "--release" if not self.config.is_debug else "--debug",
+            str(dest_bin),
+            "--dir", str(self.config.output_dir),
+        ])
+        with open(self.config.output_dir / "qt.conf", "w", encoding="utf-8") as f:
+            f.write("[Paths]\nPlugins = .\n")
+        self.logger.log(f"実行ファイル: {dest_bin}")
+
+    def get_archive_name(self) -> str:
+        return "AviQtl-MSVC-x86_64"
+
+    def copy_carla_runtime(self):
+        carla_lib = self.config.source_dir / "vendor" / "carla" / "lib"
+        if not carla_lib.exists():
+            return
+        copied = set()
+        for pattern in self.CARLA_DLL_PATTERNS:
+            for dll in carla_lib.glob(pattern):
+                if dll.name in copied:
+                    continue
+                shutil.copy2(dll, self.config.output_dir / dll.name)
+                copied.add(dll.name)
+                if dll.name in self.CARLA_DLL_ALIASES:
+                    alias = self.CARLA_DLL_ALIASES[dll.name]
+                    shutil.copy2(dll, self.config.output_dir / alias)
+                    copied.add(alias)
+        discovery = self.find_carla_discovery_tool()
+        if discovery:
+            shutil.copy2(discovery, self.config.output_dir / "carla-discovery-native.exe")
+            copied.add("carla-discovery-native.exe")
+        if copied:
+            self.logger.log(f"Carla ランタイムを同梱: {len(copied)} files")
+
+    def find_carla_discovery_tool(self) -> Path | None:
+        carla_root = self.config.source_dir / "vendor" / "carla"
+        candidates = [
+            carla_root / "carla-discovery-native.exe",
+            carla_root / "Carla" / "carla-discovery-native.exe",
+        ]
+        candidates.extend(carla_root.glob("**/Carla/carla-discovery-native.exe"))
+        candidates.extend(carla_root.glob("**/carla-discovery-native.exe"))
+        for candidate in candidates:
+            if candidate.exists():
+                return candidate
+        return None
+
+
 class XcodeBuilder(PlatformBuilder):
     def install_dependencies(self):
         if self.config.is_offline:
@@ -561,7 +1086,7 @@ class XcodeBuilder(PlatformBuilder):
         src_app = self.config.work_dir / "bin" / "AviQtl.app"
         dest_app = self.config.output_dir / "AviQtl.app"
         if dest_app.exists():
-            shutil.rmtree(dest_app)
+            self.remove_tree(dest_app)
         if not src_app.exists():
             raise FileNotFoundError(f"App バンドルが見つかりません: {src_app}")
         shutil.copytree(src_app, dest_app)
@@ -597,7 +1122,7 @@ class XcodeBuilder(PlatformBuilder):
         ]
         for d in duplicate_qml_dirs:
             if d.exists():
-                shutil.rmtree(d)
+                self.remove_tree(d)
                 self.logger.log(f"  削除: {d}")
 
         # carla-discovery-native をバイナリ同梱
@@ -633,6 +1158,7 @@ class XcodeBuilder(PlatformBuilder):
 BUILDERS: dict[str, Type[PlatformBuilder]] = {
     "arch": ArchBuilder,
     "msys2": Msys2Builder,
+    "msvc": MsvcBuilder,
     "xcode": XcodeBuilder,
 }
 
@@ -675,6 +1201,8 @@ def parse_args() -> argparse.Namespace:
             "使用例:\n"
             "  python BUILD.py --arch\n"
             "  python BUILD.py --msys2 --debug\n"
+            "  python BUILD.py --msvc --qt-dir F:\\Qt\n"
+            "  python BUILD.py --qt-dir F:\\Qt  # Windows では既定で MSVC\n"
             "  python BUILD.py --xcode --offline\n"
         ),
     )
@@ -686,6 +1214,10 @@ def parse_args() -> argparse.Namespace:
     target_group.add_argument(
         "--msys2", action="store_true",
         help="Windows (MSYS2) 向けビルド",
+    )
+    target_group.add_argument(
+        "--msvc", action="store_true",
+        help="Windows (MSVC x64) 向けビルド。vcvarsall.bat を自動検出して MSVC 環境を読み込みます。",
     )
     target_group.add_argument(
         "--xcode", action="store_true",
@@ -703,27 +1235,43 @@ def parse_args() -> argparse.Namespace:
         "--no-container", action="store_true",
         help="Linux ターゲットでコンテナを使わずホスト環境でビルドします (非推奨)。",
     )
+    parser.add_argument(
+        "--qt-dir", type=Path,
+        help="MSVC ビルドで使用する公式 Qt のディレクトリ。未指定時は QT_MSVC_DIR, QT_DIR, QTDIR, PATH を確認します。MSVC では Qt が必須です。",
+    )
     return parser.parse_args()
 
 
+def determine_target(args: argparse.Namespace, system_name: str | None = None) -> str | None:
+    if args.arch:
+        return "arch"
+    if args.msys2:
+        return "msys2"
+    if args.msvc:
+        return "msvc"
+    if args.xcode:
+        return "xcode"
+    system_name = (system_name or platform.system()).lower()
+    return {
+        "linux": "arch",
+        "windows": "msvc",
+        "darwin": "xcode",
+    }.get(system_name)
+
+
 def main():
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
     args = parse_args()
 
     # ターゲットの決定
-    target = None
-    if args.arch: target = "arch"
-    elif args.msys2: target = "msys2"
-    elif args.xcode: target = "xcode"
-    else:
-        # フラグがない場合は現在の OS から判定
-        target = {
-            "linux": "arch",
-            "windows": "msys2",
-            "darwin": "xcode"
-        }.get(platform.system().lower())
+    target = determine_target(args)
 
     if not target:
-        print("エラー: ビルドターゲットを特定できません。--arch, --msys2, --xcode のいずれかを指定してください。")
+        print("エラー: ビルドターゲットを特定できません。--arch, --msys2, --msvc, --xcode のいずれかを指定してください。")
         sys.exit(1)
 
     source_dir = Path.cwd()
@@ -736,6 +1284,7 @@ def main():
         # コンテナ利用は Linux かつ --no-container が指定されていない場合のみ
         use_container=(target == "arch" and not args.no_container),
         is_offline=args.offline,
+        qt_dir=args.qt_dir,
     )
 
     app = QtCore.QCoreApplication(sys.argv)

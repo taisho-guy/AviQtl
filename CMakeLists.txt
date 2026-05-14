@@ -28,15 +28,25 @@ if(NOT EXISTS "${FILAMENT_LOCAL_DIR}")
 endif()
 
 include_directories(SYSTEM "${FILAMENT_LOCAL_DIR}/include")
-if(APPLE AND (CMAKE_OSX_ARCHITECTURES MATCHES "arm64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm64"))
-    link_directories("${FILAMENT_LOCAL_DIR}/lib/arm64")
+if(MSVC)
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        set(FILAMENT_MSVC_RUNTIME_DIR "mdd")
+    else()
+        set(FILAMENT_MSVC_RUNTIME_DIR "md")
+    endif()
+    set(FILAMENT_LIB_DIR "${FILAMENT_LOCAL_DIR}/lib/x86_64/${FILAMENT_MSVC_RUNTIME_DIR}")
+elseif(APPLE AND (CMAKE_OSX_ARCHITECTURES MATCHES "arm64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm64"))
+    set(FILAMENT_LIB_DIR "${FILAMENT_LOCAL_DIR}/lib/arm64")
 else()
-    link_directories("${FILAMENT_LOCAL_DIR}/lib/x86_64")
+    set(FILAMENT_LIB_DIR "${FILAMENT_LOCAL_DIR}/lib/x86_64")
 endif()
 
-set(FILAMENT_LIBS 
-    filament backend bluevk bluegl filabridge filaflat utils geometry smol-v zstd pthread dl
-)
+link_directories("${FILAMENT_LIB_DIR}")
+
+set(FILAMENT_LIBS filament backend bluevk bluegl filabridge filaflat utils geometry smol-v zstd)
+if(NOT WIN32)
+    list(APPEND FILAMENT_LIBS pthread dl)
+endif()
 set(FILAMENT_TOOLS_DIR "${FILAMENT_LOCAL_DIR}/bin")
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui GuiPrivate Quick QuickControls2 Widgets Core5Compat Sql Svg Multimedia Concurrent ShaderTools LinguistTools Network ${EXTRA_QT_COMPONENTS})
@@ -58,15 +68,24 @@ if(WIN32)
         set(CARLA_SDK_DIR "${CMAKE_SOURCE_DIR}/vendor/carla")
     endif()
 
-    # Windowsでは手動指定を優先し、なければpkg-configを試す
+    # Windows では Carla 公式バイナリに pkg-config が含まれないため手動指定を優先
     find_path(CARLA_INCLUDE_DIR NAMES CarlaBackend.h PATHS ${CARLA_SDK_DIR}/include)
-    find_library(CARLA_LIBRARY NAMES carla-standalone PATHS ${CARLA_SDK_DIR}/lib ${CARLA_SDK_DIR})
+    find_library(CARLA_STANDALONE_LIBRARY NAMES libcarla_standalone2 carla_standalone2 carla-standalone PATHS ${CARLA_SDK_DIR}/lib ${CARLA_SDK_DIR})
+    find_library(CARLA_NATIVE_PLUGIN_LIBRARY NAMES libcarla_native-plugin carla_native-plugin carla-native-plugin PATHS ${CARLA_SDK_DIR}/lib ${CARLA_SDK_DIR})
+    find_library(CARLA_HOST_PLUGIN_LIBRARY NAMES libcarla_host-plugin carla_host-plugin carla-host-plugin PATHS ${CARLA_SDK_DIR}/lib ${CARLA_SDK_DIR})
+    find_library(CARLA_UTILS_LIBRARY NAMES libcarla_utils carla_utils carla-utils PATHS ${CARLA_SDK_DIR}/lib ${CARLA_SDK_DIR})
 
-    if(CARLA_INCLUDE_DIR AND CARLA_LIBRARY)
+    if(CARLA_INCLUDE_DIR AND CARLA_STANDALONE_LIBRARY AND CARLA_NATIVE_PLUGIN_LIBRARY AND CARLA_HOST_PLUGIN_LIBRARY AND CARLA_UTILS_LIBRARY)
         set(CARLA_FOUND TRUE)
         set(CARLA_INCLUDE_DIRS ${CARLA_INCLUDE_DIR})
-        set(CARLA_LIBRARIES ${CARLA_LIBRARY})
-        message(STATUS "Found Carla manually: ${CARLA_LIBRARY}")
+        set(CARLA_LIBRARY_DIRS ${CARLA_SDK_DIR}/lib)
+        set(CARLA_LIBRARIES
+            ${CARLA_STANDALONE_LIBRARY}
+            ${CARLA_NATIVE_PLUGIN_LIBRARY}
+            ${CARLA_HOST_PLUGIN_LIBRARY}
+            ${CARLA_UTILS_LIBRARY}
+        )
+        message(STATUS "Found Carla manually: ${CARLA_LIBRARIES}")
     endif()
     # If not found manually, try pkg-config
     if(NOT CARLA_FOUND)
@@ -253,6 +272,8 @@ elseif(APPLE)
         "-framework CoreVideo"
         "-framework QuartzCore"
     )
+elseif(MSVC)
+    target_link_libraries(AviQtl PRIVATE ${FILAMENT_LIBS} opengl32)
 endif()
 
 # ターゲットが定義された後にインクルードを追加
@@ -268,6 +289,9 @@ target_include_directories(AviQtl PRIVATE
 
 # コンパイルオプション (ジェネレータ式で条件分岐を統合)
 target_compile_features(AviQtl PRIVATE cxx_std_23)
+if(MSVC)
+    set_target_properties(AviQtl PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+endif()
 target_compile_options(AviQtl PRIVATE
     $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:GNU>>:
         -Wall -Wextra -Wpedantic
@@ -284,10 +308,21 @@ target_compile_options(AviQtl PRIVATE
         -Wno-non-virtual-dtor
         -fno-direct-access-external-data
     >
+    $<$<CXX_COMPILER_ID:MSVC>:
+        /W4
+        /permissive-
+        /utf-8
+    >
+    $<$<AND:$<CXX_COMPILER_ID:MSVC>,$<CONFIG:Release>>:
+        /GL
+    >
 )
 target_link_options(AviQtl PRIVATE
     $<$<AND:$<CXX_COMPILER_ID:Clang>,$<PLATFORM_ID:Linux>>:
         -flto=thin
+    >
+    $<$<AND:$<CXX_COMPILER_ID:MSVC>,$<CONFIG:Release>>:
+        /LTCG
     >
 )
 
