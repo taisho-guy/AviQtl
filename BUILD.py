@@ -228,38 +228,51 @@ class PlatformBuilder:
             shutil.copytree(temp_clone / "source/includes", inc_dir, dirs_exist_ok=True)
             self.remove_tree(temp_clone)
 
-        windows_libs = [
-            lib_dir / "libcarla_standalone2.dll",
-            lib_dir / "libcarla_native-plugin.dll",
-            lib_dir / "libcarla_host-plugin.dll",
-            lib_dir / "libcarla_utils.dll",
+        windows_dlls = [
+            "libcarla_standalone2.dll",
+            "libcarla_native-plugin.dll",
+            "libcarla_host-plugin.dll",
+            "libcarla_utils.dll",
         ]
-        has_windows_runtime = (lib_dir / "carla-standalone.dll").exists() or (lib_dir / "libcarla_standalone2.dll").exists()
-        has_windows_link_libs = all(path.exists() for path in windows_libs)
-        if is_windows and (not has_windows_runtime or not has_windows_link_libs):
+        runtime_dir = sdk_dir / "runtime"
+        has_runtime = runtime_dir.exists() and all((runtime_dir / d).exists() for d in windows_dlls)
+        if is_windows and not has_runtime:
             if self.config.is_offline:
-                missing = [str(path) for path in windows_libs if not path.exists()]
-                if not has_windows_runtime:
-                    missing.append(str(lib_dir / "carla-standalone.dll"))
-                raise RuntimeError("Carla Windows SDK が不完全です。オフラインモードでは自動取得できません。不足: " + ", ".join(missing))
+                raise RuntimeError("Carla Windowsランタイムが不完全です。オフラインモードでは自動取得できません: " + str(runtime_dir))
             self.logger.log("Carla Windows バイナリをダウンロード中...")
-            lib_dir.mkdir(parents=True, exist_ok=True)
             version = "2.5.10"
             url = f"https://github.com/falkTX/Carla/releases/download/v{version}/Carla-{version}-win64.zip"
-            self.download_and_extract(url, sdk_dir)
-            for lib_file in sdk_dir.rglob("*"):
-                if not lib_file.is_file() or lib_file.parent == lib_dir:
-                    continue
-                lowered = lib_file.name.lower()
-                if not lowered.endswith((".dll", ".lib", ".def", ".exp", ".dll.a")):
-                    continue
-                dest = lib_dir / lib_file.name
-                if dest.exists():
-                    dest.unlink()
-                shutil.move(str(lib_file), dest)
-            missing_libs = [str(path) for path in windows_libs if not path.exists()]
-            if missing_libs:
-                raise RuntimeError("Carla Windows SDK の取得後も必要なリンクライブラリが見つかりません: " + ", ".join(missing_libs))
+            tmp_extract = sdk_dir / "_carla_extract_tmp"
+            if tmp_extract.exists():
+                self.remove_tree(tmp_extract)
+            tmp_extract.mkdir(parents=True, exist_ok=True)
+            self.download_and_extract(url, tmp_extract)
+
+            # ZIP内のトップレベルディレクトリを探す (Carla-2.5.10-win64/)
+            top_dirs = [d for d in tmp_extract.iterdir() if d.is_dir()]
+            if not top_dirs:
+                raise RuntimeError("Carla ZIPの展開結果にディレクトリが見つかりません")
+            extracted_root = top_dirs[0]
+
+            # Carla/サブディレクトリを runtime/ に保存
+            carla_subdir = extracted_root / "Carla"
+            if not carla_subdir.exists():
+                raise RuntimeError(f"Carla ZIP内に Carla/ サブディレクトリが見つかりません: {extracted_root}")
+            if runtime_dir.exists():
+                self.remove_tree(runtime_dir)
+            shutil.copytree(str(carla_subdir), str(runtime_dir))
+
+            # lib/ にDLLをコピー (CMake find_library およびリンク用)
+            lib_dir.mkdir(parents=True, exist_ok=True)
+            for dll_name in windows_dlls:
+                src = runtime_dir / dll_name
+                if src.exists():
+                    shutil.copy2(str(src), str(lib_dir / dll_name))
+                else:
+                    self.logger.log(f"  警告: {dll_name} が runtime/ に見つかりません")
+
+            self.remove_tree(tmp_extract)
+            self.logger.log(f"Carla ランタイム セットアップ完了: {runtime_dir}")
 
 
     def download_and_extract(self, url: str, dest_dir: Path):
@@ -475,38 +488,23 @@ class Msys2Builder(PlatformBuilder):
         self.logger.log(f"実行ファイル: {dest_bin}")
 
     def copy_carla_runtime(self):
-        carla_lib = self.config.source_dir / "vendor" / "carla" / "lib"
-        if not carla_lib.exists():
+        """Carlaランタイム一式 (runtime/ディレクトリ) をパッケージに同梱する"""
+        carla_runtime = self.config.source_dir / "vendor" / "carla" / "runtime"
+        if not carla_runtime.exists():
+            self.logger.log("Carla runtime/ が見つかりません。Carla を同梱しません")
             return
-        copied = set()
-        for pattern in self.CARLA_DLL_PATTERNS:
-            for dll in carla_lib.glob(pattern):
-                if dll.name in copied:
-                    continue
-                shutil.copy2(dll, self.config.output_dir / dll.name)
-                copied.add(dll.name)
-                if dll.name in self.CARLA_DLL_ALIASES:
-                    alias = self.CARLA_DLL_ALIASES[dll.name]
-                    shutil.copy2(dll, self.config.output_dir / alias)
-                    copied.add(alias)
-        discovery = self.find_carla_discovery_tool()
-        if discovery:
-            shutil.copy2(discovery, self.config.output_dir / "carla-discovery-native.exe")
-            copied.add("carla-discovery-native.exe")
-        if copied:
-            self.logger.log(f"Carla ランタイムを同梱: {len(copied)} files")
+        dest = self.config.output_dir / "Carla"
+        if dest.exists():
+            self.remove_tree(dest)
+        shutil.copytree(str(carla_runtime), str(dest))
+        self.logger.log(f"Carla ランタイムを同梱: {dest}")
 
     def find_carla_discovery_tool(self) -> Path | None:
-        carla_root = self.config.source_dir / "vendor" / "carla"
-        candidates = [
-            carla_root / "carla-discovery-native.exe",
-            carla_root / "Carla" / "carla-discovery-native.exe",
-        ]
-        candidates.extend(carla_root.glob("**/Carla/carla-discovery-native.exe"))
-        candidates.extend(carla_root.glob("**/carla-discovery-native.exe"))
-        for candidate in candidates:
-            if candidate.exists():
-                return candidate
+        # runtime/ 内の carla-discovery-native.exe を探す
+        carla_runtime = self.config.source_dir / "vendor" / "carla" / "runtime"
+        candidate = carla_runtime / "carla-discovery-native.exe"
+        if candidate.exists():
+            return candidate
         return None
 
     def get_archive_name(self) -> str:
