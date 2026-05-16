@@ -249,6 +249,13 @@ auto TimelineController::clips() const -> QVariantList {
         }
         map.insert(QStringLiteral("params"), params);
 
+        // エフェクトモデルのポインタリストを直接渡す (QMLでの一貫性のため)
+        QList<QObject *> effList;
+        for (auto *eff : clip.effects) {
+            effList.append(eff);
+        }
+        map.insert(QStringLiteral("effectModels"), QVariant::fromValue(effList));
+
         list.append(map);
     }
     return list;

@@ -11,8 +11,9 @@ ApplicationWindow {
     id: mainWin
 
     function syncCompositeView() {
+        // 修正: compositeViewLoader.item ではなく compositeView を直接渡す
         if (Workspace.currentTimeline)
-            Workspace.currentTimeline.setCompositeView(compositeViewLoader.item);
+            Workspace.currentTimeline.setCompositeView(compositeView);
 
     }
 
@@ -70,8 +71,8 @@ ApplicationWindow {
     }
     // 起動時に自分自身(Window)をコントローラーに渡す
     Component.onCompleted: {
+        // 修正: visible プロパティを削除
         syncCompositeView();
-
     }
 
     // 末尾到達時に一時停止するだけのシンプルなロジック
@@ -678,47 +679,51 @@ ApplicationWindow {
 
         }
 
-        Item {
-            id: previewHost
+        CompositeView {
+            id: compositeView
 
-            readonly property bool hasProject: Workspace.currentTimeline && Workspace.currentTimeline.project
-            readonly property int projectWidth: hasProject ? Workspace.currentTimeline.project.width : 0
-            readonly property int projectHeight: hasProject ? Workspace.currentTimeline.project.height : 0
-            readonly property real previewScale: projectWidth > 0 && projectHeight > 0 ? Math.min(width / projectWidth, height / projectHeight) : 1
+            // タイムラインの存在に依存するプロパティ
+            sceneId: Workspace.currentTimeline ? Workspace.currentTimeline.currentSceneId : -1
+            currentFrame: (Workspace.currentTimeline && Workspace.currentTimeline.transport) ? Workspace.currentTimeline.transport.currentFrame : 0
+            // 修正: clips プロパティへの依存を明示し、リアクティブなバインディングにする
+            // C++ 側で clips プロパティの NOTIFY が呼ばれると、この式が再評価されます。
+            clipModel: {
+                var _trigger = Workspace.currentTimeline ? Workspace.currentTimeline.clips : null;
+                if (Workspace.currentTimeline && sceneId >= 0)
+                    return Workspace.currentTimeline.getSceneClips(sceneId);
 
+                return [];
+            }
             Layout.fillWidth: true
             Layout.fillHeight: true
-            clip: true
-
-            Loader {
-                id: compositeViewLoader
-
-                active: previewHost.hasProject
-                width: previewHost.projectWidth
-                height: previewHost.projectHeight
-                scale: previewHost.previewScale
-                transformOrigin: Item.TopLeft
-                x: (previewHost.width - width * scale) / 2
-                y: (previewHost.height - height * scale) / 2
-                onItemChanged: syncCompositeView()
-
-                sourceComponent: CompositeView {
-                    projectWidth: previewHost.projectWidth
-                    projectHeight: previewHost.projectHeight
-                    sceneId: Workspace.currentTimeline ? Workspace.currentTimeline.currentSceneId : -1
-                    currentFrame: (Workspace.currentTimeline && Workspace.currentTimeline.transport) ? Workspace.currentTimeline.transport.currentFrame : 0
-                }
-
+            onClipModelChanged: {
+                console.log("[Debug] MainWindow -> CompositeView: clipModel property actually CHANGED. size:", clipModel ? clipModel.length : 0);
+            }
+            onSceneIdChanged: {
+                console.log("[Debug] MainWindow -> CompositeView: sceneId changed to:", sceneId);
+            }
+            layerStates: {
+                // WindowManager.timelineVisible を依存関係に含めることでタイムライン生成後に再評価させる
+                var dummy = WindowManager.timelineVisible;
+                var tlWin = WindowManager.getWindow("timeline");
+                return tlWin ? tlWin.globalLayerStates : ({
+                });
             }
 
             Connections {
                 function onGlobalLayerStatesChanged() {
-                    if (compositeViewLoader.item)
-                        compositeViewLoader.item.layerStates = WindowManager.getWindow("timeline").globalLayerStates;
-
+                    compositeView.layerStates = WindowManager.getWindow("timeline").globalLayerStates;
                 }
 
                 target: WindowManager.getWindow("timeline")
+            }
+
+            Connections {
+                function onCurrentTimelineChanged() {
+                    syncCompositeView();
+                }
+
+                target: Workspace
             }
 
         }

@@ -653,11 +653,12 @@ void AudioPluginManager::initialize() {
     }
     m_initialized = true;
 
-    auto future = QtConcurrent::run([this] -> void {
+    // スキャンを非同期で開始し、完了後にシグナルを発行する
+    // waitForFinished() はメインスレッドをブロックするため削除
+    QtConcurrent::run([this] -> void {
         scanPlugins();
         emit pluginsReady(static_cast<int>(m_plugins.size()));
     });
-    future.waitForFinished();
 }
 
 void AudioPluginManager::scanPlugins() {

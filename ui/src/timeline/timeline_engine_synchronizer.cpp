@@ -1,6 +1,5 @@
 #include "timeline_engine_synchronizer.hpp"
 #include "bridge/core_bridge.hpp"
-#include "clip_model.hpp"
 #include "engine/timeline/ecs.hpp"
 #include "engine/timeline/ecs_profiler.hpp"
 #include "timeline_controller.hpp"
@@ -20,7 +19,7 @@
 
 namespace AviQtl::UI {
 
-TimelineEngineSynchronizer::TimelineEngineSynchronizer(TimelineController *controller, QObject *parent) : QObject(parent), m_controller(controller), m_clipModel(new ClipModel(controller->transport(), this)) {}
+TimelineEngineSynchronizer::TimelineEngineSynchronizer(TimelineController *controller, QObject *parent) : QObject(parent), m_controller(controller) {}
 
 int TimelineEngineSynchronizer::buildIntervalTree(int left, int right) {
     if (left > right)

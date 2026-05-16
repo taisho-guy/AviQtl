@@ -261,117 +261,6 @@ class PlatformBuilder:
             if missing_libs:
                 raise RuntimeError("Carla Windows SDK の取得後も必要なリンクライブラリが見つかりません: " + ", ".join(missing_libs))
 
-    def setup_filament_sdk(self, platform_suffix: str, lib_arch: str, is_universal: bool = False):
-        filament_dir = self.config.source_dir / "vendor" / "filament"
-        filament_include_dir = filament_dir / "include"
-        bluevk_include_dir = filament_include_dir / "bluevk"
-
-        dest_lib = filament_dir / "lib" / lib_arch
-        required_lib: Path | None = None
-        if self.config.target == "msvc":
-            runtime_dir = "mdd" if self.config.is_debug else "md"
-            required_lib = dest_lib / runtime_dir / "filament.lib"
-
-        has_engine = (filament_dir / "include" / "filament" / "Engine.h").exists()
-        has_bluevk = (bluevk_include_dir / "BlueVK.h").exists()
-        has_required_lib = required_lib is None or required_lib.exists()
-        if has_engine and has_bluevk and has_required_lib:
-            self.logger.log("Filament SDK と BlueVK.h は既に存在します。")
-            return
-
-        if self.config.is_offline:
-            missing = []
-            if not has_engine:
-                missing.append(str(filament_dir / "include" / "filament" / "Engine.h"))
-            if not has_bluevk:
-                missing.append(str(bluevk_include_dir / "BlueVK.h"))
-            if required_lib is not None and not has_required_lib:
-                missing.append(str(required_lib))
-            raise RuntimeError("Filament SDK が不完全です。オフラインモードでは自動取得できません。不足: " + ", ".join(missing))
-
-        self.logger.log(f"Filament バイナリ ({platform_suffix}) を取得中...")
-        version = "1.71.3"
-        ext = "tgz"
-        
-        suffix = "mac" if is_universal else platform_suffix
-        url = f"https://github.com/google/filament/releases/download/v{version}/filament-v{version}-{suffix}.{ext}"
-        
-        filament_dir.mkdir(parents=True, exist_ok=True)
-        self.download_and_extract(url, filament_dir)
-
-        # 階層が一段深い場合 (filament-v1.71.3-mac/... 等) の平坦化
-        # 配布元やOSによって 'filament' だったり圧縮ファイル名そのものだったりするため、
-        # 存在する方を nested_dir として処理する。
-        archive_root = f"filament-v{version}-{suffix}"
-        nested_dir = filament_dir / "filament"
-        if not nested_dir.is_dir():
-            nested_dir = filament_dir / archive_root
-
-        if nested_dir.is_dir():
-            for item in nested_dir.iterdir():
-                dest_path = filament_dir / item.name
-                if dest_path.exists():
-                    if dest_path.is_dir(): self.remove_tree(dest_path)
-                    else: dest_path.unlink()
-                shutil.move(str(item), str(dest_path))
-            nested_dir.rmdir()
-
-        # CMakeLists.txt の期待する構造 (lib/x86_64 or lib/arm64) に合わせる
-        if not dest_lib.exists():
-            src_lib = filament_dir / "lib" / lib_arch if is_universal else filament_dir / "lib"
-            if not src_lib.exists(): src_lib = filament_dir / "lib" # 構造が直下の場合
-            
-            if src_lib.exists():
-                temp_lib = filament_dir / "_lib_tmp"
-                shutil.move(str(src_lib), str(temp_lib))
-                dest_lib.mkdir(parents=True, exist_ok=True)
-                for item in temp_lib.iterdir():
-                    shutil.move(str(item), str(dest_lib / item.name))
-                self.remove_tree(temp_lib)
-
-        # --- bluevk-gen.py のダウンロードと実行 ---
-        # BlueVK.h が存在しない場合のみ生成
-        if not (bluevk_include_dir / "BlueVK.h").exists():
-            self.logger.log("bluevk/BlueVK.h を生成中...")
-            version = "1.71.3" # Filament SDK のバージョンと合わせる
-            bluevk_gen_script_url = f"https://raw.githubusercontent.com/google/filament/v{version}/libs/bluevk/bluevk-gen.py"
-            bluevk_gen_script_path = self.config.temp_base / "bluevk-gen.py"
-            
-            # Ensure temp_base exists
-            self.config.temp_base.mkdir(parents=True, exist_ok=True)
-
-            try:
-                self.logger.log(f"  bluevk-gen.py をダウンロード: {bluevk_gen_script_url}")
-                urllib.request.urlretrieve(bluevk_gen_script_url, bluevk_gen_script_path)
-                
-                # Create the target directory for BlueVK.h
-                bluevk_include_dir.mkdir(parents=True, exist_ok=True)
-
-                # Run bluevk-gen.py to generate BlueVK.h and BlueVK.cpp
-                # BlueVK.cpp はプリビルド済みライブラリに含まれるため、一時ディレクトリに出力して破棄する
-                dummy_bluevk_cpp_dir = self.config.temp_base / "bluevk_cpp_dummy"
-                dummy_bluevk_cpp_dir.mkdir(exist_ok=True)
-
-                self.run_cmd([
-                    sys.executable, # 現在の Python インタープリタを使用
-                    str(bluevk_gen_script_path),
-                    "-I", str(filament_include_dir), # BlueVK.h を vendor/filament/include/bluevk に出力
-                    "-o", str(dummy_bluevk_cpp_dir) # BlueVK.cpp を一時ディレクトリに出力
-                ], force_host=True) # ホスト環境で実行 (ネットワークアクセスと Python 環境が必要なため)
-
-                self.remove_tree(dummy_bluevk_cpp_dir) # 一時ディレクトリをクリーンアップ
-                bluevk_gen_script_path.unlink() # スクリプトファイルを削除
-
-                if not (bluevk_include_dir / "BlueVK.h").exists():
-                    raise FileNotFoundError(f"BlueVK.h の生成に失敗しました: {bluevk_include_dir / 'BlueVK.h'} が見つかりません。")
-                self.logger.log("bluevk/BlueVK.h の生成が完了しました。")
-
-            except Exception as e:
-                self.logger.log(f"bluevk/BlueVK.h の自動生成中にエラーが発生しました: {e}")
-                raise # 致命的なエラーとして再スロー
-
-        if required_lib is not None and not required_lib.exists():
-            raise RuntimeError(f"Filament SDK の取得後も必要なライブラリが見つかりません: {required_lib}")
 
     def download_and_extract(self, url: str, dest_dir: Path):
         tmp_file = dest_dir / "download.tmp"
@@ -479,9 +368,6 @@ class ArchBuilder(LinuxBuilderBase):
         self.container_name = "archlinux-aviqtl"
         self.image_name = "archlinux:latest"
 
-    def install_dependencies(self):
-        # 共通の SDK セットアップ (コンテナ内外問わずビルドに必須)
-        self.setup_filament_sdk("linux", "x86_64")
 
         if not self.use_container:
             self.logger.log("No Container モード: システムパッケージのインストールをスキップ")
@@ -504,8 +390,6 @@ class ArchBuilder(LinuxBuilderBase):
             "qt6-shadertools", "qt6-svg", "qt6-5compat", "qt6-tools",
             "lilv", "ladspa", "carla",
             "openmp", "extra-cmake-modules",
-            # vendor/filament は libc++ でビルドされているためリンクに必須
-            "libc++",
             # carla が間接依存する fluidsynth (--as-needed 対策)
             "fluidsynth",
         ]
@@ -544,7 +428,6 @@ class Msys2Builder(PlatformBuilder):
         self.run_cmd(["pacman", "-Syu", "--needed", "--noconfirm"] + deps)
         self.logger.log("MSYS2 依存関係インストール完了")
         self.setup_carla_sdk(is_windows=True)
-        self.setup_filament_sdk("windows", "x86_64")
 
     def get_cmake_config_cmd(self) -> List[str]:
         cmd = super().get_cmake_config_cmd()
@@ -639,7 +522,6 @@ class MsvcBuilder(PlatformBuilder):
         if not shutil.which("cl", path=self.env.get("PATH")):
             raise RuntimeError("cl.exe が見つかりません。vcvarsall.bat の読み込みに失敗した可能性があります")
         self.setup_carla_sdk(is_windows=True)
-        self.setup_filament_sdk("windows", "x86_64")
 
     def ensure_vcpkg(self):
         vcpkg_root_env = self.env.get("VCPKG_ROOT") or os.environ.get("VCPKG_ROOT")
@@ -1068,7 +950,6 @@ class XcodeBuilder(PlatformBuilder):
         self.logger.log("macOS 依存関係インストール完了")
         
         # macOS は Universal バイナリを使用
-        self.setup_filament_sdk("mac", "arm64" if platform.machine() == "arm64" else "x86_64", is_universal=True)
 
     def get_cmake_config_cmd(self) -> List[str]:
         cmd = super().get_cmake_config_cmd()

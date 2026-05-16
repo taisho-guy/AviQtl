@@ -82,7 +82,7 @@
         <translation>图层更改</translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="309"/>
+        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="316"/>
         <source>複数クリップリサイズ: %1</source>
         <translation>调整多个片段大小：%1</translation>
     </message>
@@ -166,32 +166,32 @@
 <context>
     <name>BaseObject</name>
     <message>
-        <location filename="../ui/qml/common/BaseObject.qml" line="52"/>
+        <location filename="../ui/qml/common/BaseObject.qml" line="43"/>
         <source>通常</source>
         <translation>正常</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/BaseObject.qml" line="53"/>
+        <location filename="../ui/qml/common/BaseObject.qml" line="44"/>
         <source>スクリーン</source>
         <translation>滤色</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/BaseObject.qml" line="56"/>
+        <location filename="../ui/qml/common/BaseObject.qml" line="47"/>
         <source>乗算</source>
         <translation>正片叠底</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/BaseObject.qml" line="59"/>
+        <location filename="../ui/qml/common/BaseObject.qml" line="50"/>
         <source>オーバーレイ</source>
         <translation>叠加</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/BaseObject.qml" line="62"/>
+        <location filename="../ui/qml/common/BaseObject.qml" line="53"/>
         <source>焼き込み</source>
         <translation>颜色加深</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/BaseObject.qml" line="65"/>
+        <location filename="../ui/qml/common/BaseObject.qml" line="56"/>
         <source>覆い焼き</source>
         <translation>颜色减淡</translation>
     </message>
@@ -771,216 +771,216 @@
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="61"/>
+        <location filename="../ui/qml/MainWindow.qml" line="62"/>
         <source>AviQtl - プレビュー</source>
         <translation>AviQtl - 预览</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="100"/>
+        <location filename="../ui/qml/MainWindow.qml" line="101"/>
         <source>新規プロジェクト</source>
         <translation>新建项目</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="112"/>
+        <location filename="../ui/qml/MainWindow.qml" line="113"/>
         <source>プロジェクトの上書き保存</source>
         <translation>覆盖保存项目</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="129"/>
-        <location filename="../ui/qml/MainWindow.qml" line="546"/>
+        <location filename="../ui/qml/MainWindow.qml" line="130"/>
+        <location filename="../ui/qml/MainWindow.qml" line="547"/>
         <source>プロジェクトを開く</source>
         <translation>打开项目</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="140"/>
+        <location filename="../ui/qml/MainWindow.qml" line="141"/>
         <source>プロジェクトを名前を付けて保存...</source>
         <translation>项目另存为...</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="149"/>
-        <location filename="../ui/qml/MainWindow.qml" line="1100"/>
+        <location filename="../ui/qml/MainWindow.qml" line="150"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1105"/>
         <source>終了</source>
         <translation>退出</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="164"/>
+        <location filename="../ui/qml/MainWindow.qml" line="165"/>
         <source>元に戻す</source>
         <translation>撤销</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="177"/>
+        <location filename="../ui/qml/MainWindow.qml" line="178"/>
         <source>やり直す</source>
         <translation>重做</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="190"/>
+        <location filename="../ui/qml/MainWindow.qml" line="191"/>
         <source>再生 / 一時停止</source>
         <translation>播放 / 暂停</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="203"/>
+        <location filename="../ui/qml/MainWindow.qml" line="204"/>
         <source>クリップを分割</source>
         <translation>分割片段</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="225"/>
+        <location filename="../ui/qml/MainWindow.qml" line="226"/>
         <source>削除</source>
         <translation>删除</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="238"/>
+        <location filename="../ui/qml/MainWindow.qml" line="239"/>
         <source>コピー</source>
         <translation>复制</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="251"/>
+        <location filename="../ui/qml/MainWindow.qml" line="252"/>
         <source>カット</source>
         <translation>剪切</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="264"/>
+        <location filename="../ui/qml/MainWindow.qml" line="265"/>
         <source>貼り付け</source>
         <translation>粘贴</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="279"/>
+        <location filename="../ui/qml/MainWindow.qml" line="280"/>
         <source>複製</source>
         <translation>复制副本</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="295"/>
+        <location filename="../ui/qml/MainWindow.qml" line="296"/>
         <source>1フレーム進む</source>
         <translation>前进 1 帧</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="308"/>
+        <location filename="../ui/qml/MainWindow.qml" line="309"/>
         <source>1フレーム戻る</source>
         <translation>后退 1 帧</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="321"/>
+        <location filename="../ui/qml/MainWindow.qml" line="322"/>
         <source>先頭へ移動</source>
         <translation>移动到开头</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="334"/>
+        <location filename="../ui/qml/MainWindow.qml" line="335"/>
         <source>末尾へ移動</source>
         <translation>移动到末尾</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="347"/>
+        <location filename="../ui/qml/MainWindow.qml" line="348"/>
         <source>ズームイン</source>
         <translation>放大</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="362"/>
+        <location filename="../ui/qml/MainWindow.qml" line="363"/>
         <source>ズームアウト</source>
         <translation>缩小</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="377"/>
+        <location filename="../ui/qml/MainWindow.qml" line="378"/>
         <source>レイヤーを上へ移動</source>
         <translation>上移图层</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="390"/>
+        <location filename="../ui/qml/MainWindow.qml" line="391"/>
         <source>レイヤーを下へ移動</source>
         <translation>下移图层</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="403"/>
+        <location filename="../ui/qml/MainWindow.qml" line="404"/>
         <source>1フレーム左へ移動</source>
         <translation>向左移动 1 帧</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="416"/>
+        <location filename="../ui/qml/MainWindow.qml" line="417"/>
         <source>1フレーム右へ移動</source>
         <translation>向右移动 1 帧</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="427"/>
+        <location filename="../ui/qml/MainWindow.qml" line="428"/>
         <source>エラー</source>
         <translation>错误</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="436"/>
+        <location filename="../ui/qml/MainWindow.qml" line="437"/>
         <source>保存の確認</source>
         <translation>保存确认</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="470"/>
+        <location filename="../ui/qml/MainWindow.qml" line="471"/>
         <source>プロジェクトに保存されていない変更があります。
 続行する前に保存しますか？</source>
         <translation>项目中有未保存的更改。
 继续之前要保存吗？</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="525"/>
+        <location filename="../ui/qml/MainWindow.qml" line="526"/>
         <source>名前を付けて保存</source>
         <translation>另存为</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="868"/>
+        <location filename="../ui/qml/MainWindow.qml" line="873"/>
         <source>速度</source>
         <translation>速度</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1057"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1062"/>
         <source>ファイル</source>
         <translation>文件</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1086"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1091"/>
         <source>メディアの書き出し...</source>
         <translation>导出媒体...</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1128"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1133"/>
         <source>プロジェクト設定</source>
         <translation>项目设置</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1141"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1146"/>
         <source>環境設定</source>
         <translation>偏好设置</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1180"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1185"/>
         <source>ツール</source>
         <translation>工具</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1183"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1188"/>
         <source>パッケージマネージャー</source>
         <translation>软件包管理器</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1125"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1130"/>
         <source>設定</source>
         <translation>设置</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1109"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1114"/>
         <source>編集</source>
         <translation>编辑</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1154"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1159"/>
         <source>表示</source>
         <translation>显示</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1157"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1162"/>
         <source>タイムラインの表示</source>
         <translation>显示时间线</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1167"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1172"/>
         <source>設定ダイアログの表示</source>
         <translation>显示设置对话框</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1194"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1199"/>
         <source>バージョン情報</source>
         <translation>版本信息</translation>
     </message>
@@ -1492,6 +1492,14 @@
         <location filename="../ui/qml/settings/ShortcutSettingsPage.qml" line="78"/>
         <source>未設定</source>
         <translation>未设置</translation>
+    </message>
+</context>
+<context>
+    <name>SplashWindow</name>
+    <message>
+        <location filename="../ui/qml/SplashWindow.qml" line="7"/>
+        <source>AviQtl を起動中...</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>

@@ -1,6 +1,5 @@
 #pragma once
 #include "../../engine/audio_mixer.hpp"
-#include "clip_model.hpp"
 #include "effect_model.hpp"
 #include "project_service.hpp"
 #include "selection_service.hpp"
@@ -50,8 +49,6 @@ class TimelineController : public QObject {
     Q_PROPERTY(bool isClipActive READ isClipActive NOTIFY isClipActiveChanged)
     Q_PROPERTY(QString activeObjectType READ activeObjectType NOTIFY activeObjectTypeChanged)
     Q_PROPERTY(QVariantList clips READ clips NOTIFY clipsChanged)
-    Q_PROPERTY(AviQtl::UI::ClipModel *clipModel READ clipModel CONSTANT)
-    Q_PROPERTY(AviQtl::UI::ClipModel *renderModel READ renderModel CONSTANT)
     Q_PROPERTY(int selectedLayer READ selectedLayer WRITE setSelectedLayer NOTIFY selectedLayerChanged)
     Q_PROPERTY(QVariantList scenes READ scenes NOTIFY scenesChanged)
     Q_PROPERTY(int currentSceneId READ currentSceneId NOTIFY currentSceneIdChanged)
@@ -100,8 +97,6 @@ class TimelineController : public QObject {
 
     Q_INVOKABLE static void log(const QString &msg);
     QVariantList clips() const;
-    ClipModel *clipModel() const { return m_engineSync->clipModel(); }
-    ClipModel *renderModel() const { return m_engineSync->renderModel(); }
 
     // クリップの配置・長さを更新 (ID指定)
     Q_INVOKABLE void updateClip(int id, int layer, int startFrame, int duration);

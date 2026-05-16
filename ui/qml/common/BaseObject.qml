@@ -7,9 +7,6 @@ Node {
     // _tmRev と同じカウンタ方式: property var 配列要素への直接依存は
     // QML エンジンが追跡できないため Connections 経由で強制通知する
     // 【統一API】キーフレーム優先評価（全オブジェクトで使用可能）
-    // _paramRev を読むことで Connections→onParamsChanged() への依存を確立する。
-    // property var の配列要素に対する直接依存は QML エンジンが追跡できないため、
-    // _tmRev と同じカウンタ方式を採用する。
 
     id: base
 
@@ -21,18 +18,12 @@ Node {
     property int sceneId: -1
     property int clipStartFrame: 0
     property int clipDurationFrames: 0
-    // CompositeView の FB 収集ロジックから参照される公開プロパティ
-    // clipNode (CompositeView の delegate) から layer 番号を注入する
-    // clipNode.clipLayerRole は model.layer と同期、
-    // fbRendererOutput は NodeLoader.onItemChanged で接続される
-    property int clipLayerRole: -1
     // NodeLoader.onItemChanged で注入されるレイヤー番号
     property int clipLayer: -1
     // CompositeView の clipNode から直接セット
     // FB 収集対象: 変換済み2Dキャプチャアイテム
     // FB 収集対象: 変換済み2Dキャプチャアイテム (外部から item.fbCaptureItem でアクセス可能)
     property alias fbCaptureItem: _fbCaptureItemImpl
-    property Item fbRendererOutput: _fbCaptureItemImpl
     // --- 座標変換のモジュール化 ---
     // transformエフェクトのモデルを探す
     readonly property var transformModel: {
@@ -238,33 +229,6 @@ Node {
             item.effectModel = root.transformModel;
             item.frame = root.relFrame;
         }
-    }
-
-    Connections {
-        function onParamsChanged() {
-            _tmRev++;
-        }
-
-        function onKeyframeTracksChanged() {
-            _tmRev++;
-        }
-
-        target: transformModel
-        ignoreUnknownSignals: true
-    }
-
-    Connections {
-        function onClipEffectsChanged(changedClipId) {
-            if (changedClipId === clipId)
-                rawEffectModels = Workspace.currentTimeline.getClipEffectsModel(clipId);
-
-        }
-
-        function onClipsChanged() {
-            rawEffectModels = Workspace.currentTimeline.getClipEffectsModel(clipId);
-        }
-
-        target: Workspace.currentTimeline
     }
 
     // ─── 2D変換済みキャプチャアイテム ─────────────────────────────

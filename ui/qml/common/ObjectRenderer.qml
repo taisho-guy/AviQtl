@@ -6,9 +6,6 @@ Item {
     required property Item originalSource
     required property var effectModels
     required property int relFrame
-    property var clipEvalParams: ({
-    })
-    property int _paramRev: 0
     property alias output: textureSource
     readonly property Item finalItem: textureSource.sourceItem
 
@@ -48,25 +45,21 @@ Item {
                     return ;
 
                 if ("source" in item)
-                    item.source = inputSource;
+                    item.source = Qt.binding(function() {
+                    return inputSource;
+                });
 
                 if ("params" in item)
-                    item.params = modelData.params;
+                    item.params = Qt.binding(function() {
+                    return modelData.params;
+                });
 
                 if ("effectModel" in item)
                     item.effectModel = modelData;
 
                 if ("frame" in item)
-                    item.frame = renderer.relFrame;
-
-                if ("clipEvalParams" in item)
-                    item.clipEvalParams = Qt.binding(function() {
-                    return renderer.clipEvalParams;
-                });
-
-                if ("_paramRev" in item)
-                    item._paramRev = Qt.binding(function() {
-                    return renderer._paramRev;
+                    item.frame = Qt.binding(function() {
+                    return renderer.relFrame;
                 });
 
             }
@@ -83,27 +76,6 @@ Item {
 
                 }
             }
-
-            Connections {
-                function onRelFrameChanged() {
-                    if (effectLoader.status === Loader.Ready && effectLoader.item && "frame" in effectLoader.item)
-                        effectLoader.item.frame = renderer.relFrame;
-
-                }
-
-                target: renderer
-            }
-
-            Connections {
-                function onParamsChanged() {
-                    if (effectLoader.status === Loader.Ready && effectLoader.item && "params" in effectLoader.item)
-                        effectLoader.item.params = modelData.params;
-
-                }
-
-                target: modelData
-            }
-
         }
 
     }
@@ -114,8 +86,6 @@ Item {
         function findFinalOutput(defaultSource) {
             for (var i = effectChain.count - 1; i >= 0; i--) {
                 var loader = effectChain.itemAt(i);
-                // width/height チェックを除去: anchors.fill: parent で親に追従するため
-                // サイズが 0 の場合は item が存在することだけを確認する
                 if (loader && loader.status === Loader.Ready && loader.active && loader.item)
                     return loader.item;
 

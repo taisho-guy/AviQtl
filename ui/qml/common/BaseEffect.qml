@@ -13,22 +13,10 @@ Item {
     property int frame: 0
     // QMLバインディング再評価用（params/keyframes変更を確実に検知）
     property int _rev: 0
-    property var clipEvalParams: ({
-    })
-    property int _paramRev: 0
 
     // 【統一API】キーフレーム優先評価（ECS同期）
     function evalParam(key, fallback) {
-        var _ = base._paramRev;
-        if (base.clipEvalParams && base.effectModel && base.effectModel.id) {
-            var effParams = base.clipEvalParams[base.effectModel.id];
-            if (effParams !== undefined && effParams[key] !== undefined) {
-                var v = effParams[key];
-                if (v !== undefined && v !== null)
-                    return v;
-
-            }
-        }
+        var _ = base._rev;
         if (base.params && base.params[key] !== undefined)
             return base.params[key];
 

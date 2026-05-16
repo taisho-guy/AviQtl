@@ -25,6 +25,8 @@ void VideoFrameStore::setVideoFrameSafe(const QString &key, const QVideoFrame &f
         return;
     }
 
+    qDebug() << "[Debug] VideoFrameStore: setVideoFrameSafe called for key:" << key << "valid:" << frame.isValid() << "size:" << frame.size();
+
     QPointer<QVideoSink> sink;
     {
         QMutexLocker locker(&m_mutex);

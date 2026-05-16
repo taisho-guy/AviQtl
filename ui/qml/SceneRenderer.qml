@@ -1,37 +1,62 @@
-// SceneRenderer: Filament の描画面を QML に埋め込むラッパー。
-// Phase 1: FilamentCanvas (ヘッドレス SwapChain + QSGSimpleTextureNode blit) で
-//          Wayland ネイティブ描画を実現する。
-
-import AviQtl.Rendering 1.0
-import AviQtl.UI 1.0
 import QtQuick
+import "common" as Common
 
-// Phase 2: CoreBridge.currentFrame を FilamentCanvas.currentFrame に接続し、
-//          タイムラインのシーク・再生がプレビューに反映されるようにする。
 Item {
     id: root
 
     property int sceneId: -1
-    // CoreBridge.currentFrame を直接バインドし、QML 側で計算なし
-    property int currentFrame: CoreBridge.currentFrame
-    // プロジェクト解像度 (CompositeView から伝播する)
-    property int projectWidth: 1920
-    property int projectHeight: 1080
+    property int currentFrame: 0
+    property var timelineBridge: null
+    // 外部公開用プロパティ (Decoderがサイズ調整に使用)
+    property int sceneWidth: 1920
+    property int sceneHeight: 1080
+    // シーン情報を取得
+    property var sceneInfo: {
+        if (!timelineBridge || sceneId < 0)
+            return null;
 
-    // implicitSize はプロジェクト解像度に合わせる
-    // anchors.fill を使うため親が実際のウィンドウサイズを決める
-    implicitWidth: projectWidth
-    implicitHeight: projectHeight
+        var scenes = timelineBridge.scenes;
+        for (var i = 0; i < scenes.length; i++) {
+            if (scenes[i].id === sceneId)
+                return scenes[i];
 
-    FilamentCanvas {
+        }
+        return null;
+    }
+
+    onSceneInfoChanged: {
+        if (sceneInfo) {
+            sceneWidth = sceneInfo.width || 1920;
+            sceneHeight = sceneInfo.height || 1080;
+        }
+    }
+    width: sceneWidth
+    height: sceneHeight
+
+    CompositeView {
+        id: compositeView
+
         anchors.fill: parent
+        // 外部から注入されたデータを使用
+        clipModel: (root.timelineBridge && root.sceneId >= 0) ? root.timelineBridge.getSceneClips(root.sceneId) : []
         sceneId: root.sceneId
+        projectWidth: root.sceneWidth
+        projectHeight: root.sceneHeight
         currentFrame: root.currentFrame
-        // プロジェクト解像度を Filament に伝える
-        // Filament はこのサイズで固定レンダリングし、
-        // ウィンドウリサイズは Qt SG が anchors.fill で scale する
-        projectWidth: root.projectWidth
-        projectHeight: root.projectHeight
+        layerStates: {
+            var tlWin = WindowManager.getWindow("timeline");
+            return tlWin ? tlWin.globalLayerStates : ({
+            });
+        }
+
+        Connections {
+            function onGlobalLayerStatesChanged() {
+                compositeView.layerStates = WindowManager.getWindow("timeline").globalLayerStates;
+            }
+
+            target: WindowManager.getWindow("timeline")
+        }
+
     }
 
 }

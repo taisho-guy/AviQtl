@@ -1,5 +1,4 @@
 #pragma once
-#include "clip_model.hpp"
 #include "timeline_types.hpp"
 #include <QObject>
 #include <QPointer>
@@ -8,7 +7,6 @@
 
 namespace AviQtl::UI {
 class TimelineController;
-class ClipModel;
 
 // O(log n + k) の区間検索を実現するための Interval Tree ノード
 struct IntervalNode {
@@ -23,8 +21,6 @@ class TimelineEngineSynchronizer : public QObject {
   public:
     explicit TimelineEngineSynchronizer(TimelineController *controller, QObject *parent = nullptr);
 
-    ClipModel *clipModel() const { return m_clipModel; }
-    ClipModel *renderModel() const { return m_renderModel; }
     int timelineDuration() const { return m_timelineDuration; }
 
     void updateActiveClipsList();
@@ -35,8 +31,6 @@ class TimelineEngineSynchronizer : public QObject {
     void queryIntervalTree(int nodeIdx, int frame, QList<ClipData *> &result);
 
     TimelineController *m_controller;
-    ClipModel *m_clipModel;
-    ClipModel *m_renderModel{};
 
     QList<ClipData *> m_sortedClips;
     std::vector<IntervalNode> m_intervalTree;
