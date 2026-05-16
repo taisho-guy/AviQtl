@@ -244,8 +244,8 @@ class PlatformBuilder:
                 raise RuntimeError("Carla Windows SDK が不完全です。オフラインモードでは自動取得できません。不足: " + ", ".join(missing))
             self.logger.log("Carla Windows バイナリをダウンロード中...")
             lib_dir.mkdir(parents=True, exist_ok=True)
-            version = "2.6.0"
-            url = f"https://github.com/falkTX/Carla/releases/download/v{version}/Carla_{version}-win64.zip"
+            version = "2.5.10"
+            url = f"https://github.com/falkTX/Carla/releases/download/v{version}/Carla-{version}-win64.zip"
             self.download_and_extract(url, sdk_dir)
             for lib_file in sdk_dir.rglob("*"):
                 if not lib_file.is_file() or lib_file.parent == lib_dir:
