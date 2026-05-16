@@ -40,13 +40,21 @@ if(WIN32)
     if(NOT CARLA_SDK_DIR)
         set(CARLA_SDK_DIR "${CMAKE_SOURCE_DIR}/vendor/carla")
     endif()
-    find_path(CARLA_INCLUDE_DIR NAMES CarlaBackend.h PATHS ${CARLA_SDK_DIR}/include)
-    find_library(CARLA_LIBRARY NAMES carla_standalone2 carla-standalone PATHS ${CARLA_SDK_DIR}/lib ${CARLA_SDK_DIR})
-    if(CARLA_INCLUDE_DIR AND CARLA_LIBRARY)
-        set(CARLA_FOUND TRUE)
-        set(CARLA_INCLUDE_DIRS ${CARLA_INCLUDE_DIR})
-        set(CARLA_LIBRARIES ${CARLA_LIBRARY})
+    # インクルードパスはライブラリ検出と独立して設定
+    if(EXISTS "${CARLA_SDK_DIR}/include/CarlaBackend.h")
+        set(CARLA_INCLUDE_DIRS "${CARLA_SDK_DIR}/include")
     endif()
+    # MSYS2/MinGW では .dll を直接リンクする (.lib/.dll.a が不在のため)
+    set(_carla_dll_dir "${CARLA_SDK_DIR}/lib")
+    foreach(_carla_dll
+            libcarla_standalone2.dll
+            libcarla_native-plugin.dll
+            libcarla_host-plugin.dll
+            libcarla_utils.dll)
+        if(EXISTS "${_carla_dll_dir}/${_carla_dll}")
+            list(APPEND CARLA_LIBRARIES "${_carla_dll_dir}/${_carla_dll}")
+        endif()
+    endforeach()
 else()
     pkg_check_modules(CARLA IMPORTED_TARGET REQUIRED carla-standalone carla-native-plugin carla-host-plugin carla-utils)
 endif()
