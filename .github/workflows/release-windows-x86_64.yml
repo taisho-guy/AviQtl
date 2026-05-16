@@ -22,7 +22,7 @@ jobs:
           update: true
           install: >-
             mingw-w64-ucrt-x86_64-python
-            mingw-w64-ucrt-x86_64-python-pyside6
+            mingw-w64-ucrt-x86_64-pyside6
 
       - name: Build and Package
         shell: msys2 {0}
