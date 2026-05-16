@@ -272,8 +272,10 @@ class PlatformBuilder:
             # .tgz (tar.gz) の場合は shutil.unpack_archive が自動判別するが、
             # 環境によって .tgz を認識しない場合があるためフォーマットを明示
             fmt = None
-            if url.endswith(".tgz"):
+            if url.endswith(".tgz") or url.endswith(".tar.gz"):
                 fmt = "gztar"
+            elif url.endswith(".zip"):
+                fmt = "zip"
             
             shutil.unpack_archive(str(tmp_file), str(dest_dir), format=fmt)
         finally:
