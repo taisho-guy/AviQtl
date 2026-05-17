@@ -689,9 +689,13 @@ ApplicationWindow {
             // C++ 側で clips プロパティの NOTIFY が呼ばれると、この式が再評価されます。
             clipModel: {
                 var _trigger = Workspace.currentTimeline ? Workspace.currentTimeline.clips : null;
-                if (Workspace.currentTimeline && sceneId >= 0)
-                    return Workspace.currentTimeline.getSceneClips(sceneId);
-
+                if (Workspace.currentTimeline && sceneId >= 0) {
+                    var clips = Workspace.currentTimeline.getSceneClips(sceneId);
+                    // レイヤー番号昇順でソートすることで、描画ツリー上でも正しい順序（奥から手前）で生成されるようにする
+                    return clips.sort((a, b) => {
+                        return a.layer - b.layer;
+                    });
+                }
                 return [];
             }
             Layout.fillWidth: true

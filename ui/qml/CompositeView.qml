@@ -332,6 +332,10 @@ Item {
                 x: effectiveTransform.x
                 y: -effectiveTransform.y
                 z: effectiveTransform.z
+                // Z座標を物理的に変更せずに描画順を制御する。
+                // renderOrder が小さいほど先に描画される（奥になる）ため、
+                // AviUtl互換のレイヤー順序が維持される。
+                renderOrder: clipLayerRole
                 // 中心座標 (Pivot)
                 pivot: Qt.vector3d(tParams.anchorX || 0, -(tParams.anchorY || 0), tParams.anchorZ || 0)
                 // 3軸回転

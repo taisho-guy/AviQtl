@@ -655,7 +655,7 @@ void AudioPluginManager::initialize() {
 
     // スキャンを非同期で開始し、完了後にシグナルを発行する
     // waitForFinished() はメインスレッドをブロックするため削除
-    QtConcurrent::run([this] -> void {
+    (void)QtConcurrent::run([this] -> void {
         scanPlugins();
         emit pluginsReady(static_cast<int>(m_plugins.size()));
     });

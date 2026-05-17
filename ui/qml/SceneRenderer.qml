@@ -38,7 +38,15 @@ Item {
 
         anchors.fill: parent
         // 外部から注入されたデータを使用
-        clipModel: (root.timelineBridge && root.sceneId >= 0) ? root.timelineBridge.getSceneClips(root.sceneId) : []
+        clipModel: {
+            if (root.timelineBridge && root.sceneId >= 0) {
+                var clips = root.timelineBridge.getSceneClips(root.sceneId);
+                return clips.sort((a, b) => {
+                    return a.layer - b.layer;
+                });
+            }
+            return [];
+        }
         sceneId: root.sceneId
         projectWidth: root.sceneWidth
         projectHeight: root.sceneHeight

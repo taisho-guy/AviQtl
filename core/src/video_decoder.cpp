@@ -418,7 +418,10 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) { // NOLINT(bugprone-
                     }
 
                     QVideoFrameFormat format(QSize(mdecCtx->width, mdecCtx->height), qtFmt);
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
                     QVideoFrame videoFrame(new FFmpegVideoBuffer(ownedFrame, format), format);
+#pragma clang diagnostic pop
                     av_frame_free(&ownedFrame);
 
                     videoFrame.setStartTime(-1);

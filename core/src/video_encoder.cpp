@@ -171,9 +171,12 @@ auto VideoEncoder::open(const Config &config) -> bool {
     } else {
         // SWエンコードのデフォルト
         m_encCtx->pix_fmt = AV_PIX_FMT_YUV420P;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         if (codec->pix_fmts != nullptr) {
             m_encCtx->pix_fmt = codec->pix_fmts[0];
         }
+#pragma clang diagnostic pop
     }
 
     // ビットレート制御 (CBR/VBR) - 簡易設定
@@ -271,7 +274,10 @@ auto VideoEncoder::addAudioStream(int sampleRate, int channels) -> bool {
         return false;
     }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     m_audioEncCtx->sample_fmt = (codec->sample_fmts != nullptr) ? codec->sample_fmts[0] : AV_SAMPLE_FMT_FLTP;
+#pragma clang diagnostic pop
     m_audioEncCtx->bit_rate = m_config.audioBitrate;
     m_audioEncCtx->sample_rate = sampleRate;
     av_channel_layout_default(&m_audioEncCtx->ch_layout, channels);

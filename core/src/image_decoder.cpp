@@ -120,8 +120,11 @@ void ImageDecoder::decodeImage(const QString &path) {
         m_store->setFrameSafe(QString::number(clipId()), m_cachedImage);
 
         QVideoFrameFormat fmt(QSize(rgbaFrame->width, rgbaFrame->height), QVideoFrameFormat::Format_RGBA8888);
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         auto *buf = new FFmpegVideoBuffer(rgbaFrame, fmt);
         QVideoFrame vf(buf, fmt);
+#pragma clang diagnostic pop
         m_cachedVideoFrame = vf;
 
         // FFmpegVideoBuffer が av_frame_ref 済みなので解放可能
