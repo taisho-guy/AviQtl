@@ -87,15 +87,16 @@ Common.BaseEffect {
     }
 
     // 🚀 2Dテクスチャエフェクトとしてのシェーダー適用
+    // （二重変形による境界見切れバグ防止のため、テクスチャ自体の変形は恒等値に固定する）
     ShaderEffect {
         property variant source: root.sourceProxy
         // アフィン変換 uniform バインド
-        property real translationX: root.output2dX
-        property real translationY: root.output2dY
-        property real scale: root.output2dScale
-        property real rotationZ: root.output2dRotationZ * Math.PI / 180 // ラジアン変換
-        property real cx: root.outputCx
-        property real cy: root.outputCy
+        property real translationX: 0
+        property real translationY: 0
+        property real scale: 1
+        property real rotationZ: 0
+        property real cx: 0
+        property real cy: 0
         property real opacityValue: root.outputOpacity
         property real targetWidth: root.width
         property real targetHeight: root.height
