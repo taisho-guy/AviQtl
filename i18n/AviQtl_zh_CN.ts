@@ -798,7 +798,7 @@
     </message>
     <message>
         <location filename="../ui/qml/MainWindow.qml" line="150"/>
-        <location filename="../ui/qml/MainWindow.qml" line="1110"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1111"/>
         <source>終了</source>
         <translation>退出</translation>
     </message>
@@ -920,67 +920,67 @@
         <translation>另存为</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="878"/>
+        <location filename="../ui/qml/MainWindow.qml" line="879"/>
         <source>速度</source>
         <translation>速度</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1067"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1068"/>
         <source>ファイル</source>
         <translation>文件</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1096"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1097"/>
         <source>メディアの書き出し...</source>
         <translation>导出媒体...</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1138"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1139"/>
         <source>プロジェクト設定</source>
         <translation>项目设置</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1151"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1152"/>
         <source>環境設定</source>
         <translation>偏好设置</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1190"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1191"/>
         <source>ツール</source>
         <translation>工具</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1193"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1194"/>
         <source>パッケージマネージャー</source>
         <translation>软件包管理器</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1135"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1136"/>
         <source>設定</source>
         <translation>设置</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1119"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1120"/>
         <source>編集</source>
         <translation>编辑</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1164"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1165"/>
         <source>表示</source>
         <translation>显示</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1167"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1168"/>
         <source>タイムラインの表示</source>
         <translation>显示时间线</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1177"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1178"/>
         <source>設定ダイアログの表示</source>
         <translation>显示设置对话框</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1212"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1213"/>
         <source>バージョン情報</source>
         <translation>版本信息</translation>
     </message>
@@ -1127,47 +1127,47 @@
         <translation type="vanished">自定义</translation>
     </message>
     <message>
-        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="67"/>
+        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="66"/>
         <source>幅 (横):</source>
         <translation>宽度（横向）：</translation>
     </message>
     <message>
-        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="83"/>
+        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="82"/>
         <source>高さ (縦):</source>
         <translation>高度（纵向）：</translation>
     </message>
     <message>
-        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="99"/>
+        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="98"/>
         <source>フレームレート (FPS):</source>
         <translation>帧率 (FPS)：</translation>
     </message>
     <message>
-        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="115"/>
+        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="114"/>
         <source>サンプリングレート:</source>
         <translation>采样率：</translation>
     </message>
     <message>
-        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="163"/>
+        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="162"/>
         <source>新規プロジェクトを作成</source>
         <translation>创建新项目</translation>
     </message>
     <message>
-        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="185"/>
+        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="184"/>
         <source>最近使ったプロジェクト</source>
         <translation>最近使用的项目</translation>
     </message>
     <message>
-        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="214"/>
+        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="213"/>
         <source>無題のプロジェクト</source>
         <translation>未命名项目</translation>
     </message>
     <message>
-        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="252"/>
+        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="251"/>
         <source>既存プロジェクトを開く...</source>
         <translation>打开现有项目...</translation>
     </message>
     <message>
-        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="268"/>
+        <location filename="../ui/qml/ProjectLauncherWindow.qml" line="267"/>
         <source>プロジェクトファイルを開く</source>
         <translation>打开项目文件</translation>
     </message>
@@ -1420,6 +1420,20 @@
         <location filename="../ui/src/timeline/timeline_effect.cpp" line="263"/>
         <source>エフェクト順序変更 (%1件)</source>
         <translation>更改效果顺序（%1 项）</translation>
+    </message>
+</context>
+<context>
+    <name>SceneSettingsWindow</name>
+    <message>
+        <location filename="../ui/qml/SceneSettingsWindow.qml" line="37"/>
+        <location filename="../ui/qml/SceneSettingsWindow.qml" line="67"/>
+        <source>新規シーン作成</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/SceneSettingsWindow.qml" line="67"/>
+        <source>シーン設定</source>
+        <translation type="unfinished">场景设置</translation>
     </message>
 </context>
 <context>
@@ -1904,7 +1918,7 @@
         <translation>时间线</translation>
     </message>
     <message>
-        <location filename="../ui/qml/TimelineWindow.qml" line="127"/>
+        <location filename="../ui/qml/TimelineWindow.qml" line="131"/>
         <source>シーン %1</source>
         <translation>场景 %1</translation>
     </message>

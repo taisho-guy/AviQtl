@@ -6,16 +6,47 @@ import "common" as Common
 Common.AviQtlWindow {
     id: root
 
+    property bool isCreationMode: false // 新規作成モードか既存シーン編集モードか
     property int targetSceneId: -1
-    property int currentFrames: 0 // 既存のフレーム数を保持するためのプロパティ
+
+    // 新規シーン作成モードでダイアログを開く
+    function openForCreate(defaultName) {
+        isCreationMode = true; // 新規作成モード
+        targetSceneId = -1; // 新規作成なのでIDは未定
+        nameField.text = defaultName;
+        // プロジェクトのデフォルト設定を初期値として使用
+        if (Workspace.currentTimeline && Workspace.currentTimeline.project) {
+            widthField.value = Workspace.currentTimeline.project.width;
+            heightField.value = Workspace.currentTimeline.project.height;
+            fpsField.value = Math.round(Workspace.currentTimeline.project.fps * 100);
+        } else {
+            widthField.value = SettingsManager ? SettingsManager.value("defaultProjectWidth", 1920) : 1920;
+            heightField.value = SettingsManager ? SettingsManager.value("defaultProjectHeight", 1080) : 1080;
+            fpsField.value = Math.round((SettingsManager ? SettingsManager.value("defaultProjectFps", 60) : 60) * 100);
+        }
+        // グリッド設定はデフォルト値
+        modeCombo.currentIndex = 0;
+        // Auto
+        // Auto
+        bpmField.text = "120";
+        offsetField.text = "0";
+        intervalField.text = "10";
+        subdivisionField.text = "4";
+        enableSnapCheck.checked = true;
+        snapRangeField.value = 10;
+        root.title = qsTr("新規シーン作成"); // タイトルを新規作成用に設定
+        root.show();
+        root.raise();
+        root.requestActivate();
+    }
 
     function openForScene(sceneId, name, w, h, fps, frames, gMode, gBpm, gOffset, gInterval, gSub, eSnap, mSnapRange) {
+        isCreationMode = false; // 既存シーンの編集モード
         targetSceneId = sceneId;
         nameField.text = name;
         widthField.value = w;
         heightField.value = h;
         fpsField.value = Math.round(fps * 100);
-        currentFrames = frames;
         if (gMode === "BPM")
             modeCombo.currentIndex = 1;
         else if (gMode === "Frame")
@@ -33,7 +64,7 @@ Common.AviQtlWindow {
         root.requestActivate();
     }
 
-    title: "シーン設定"
+    title: isCreationMode ? qsTr("新規シーン作成") : qsTr("シーン設定")
     width: 450
     height: 550
 
@@ -263,7 +294,9 @@ Common.AviQtlWindow {
                     text: "OK"
                     highlighted: true
                     onClicked: {
-                        if (targetSceneId !== -1 && Workspace.currentTimeline) {
+                        if (Workspace.currentTimeline) {
+                            // フレーム数はUIで管理していないため、既存の値またはデフォルト値を維持する
+                            var framesToApply = isCreationMode ? (SettingsManager ? SettingsManager.value("defaultProjectFrames", 300) : 300) : Workspace.currentTimeline.getSceneDuration(targetSceneId);
                             var mKey = "Auto";
                             if (modeCombo.currentIndex === 1)
                                 mKey = "BPM";
@@ -271,7 +304,19 @@ Common.AviQtlWindow {
                             if (modeCombo.currentIndex === 2)
                                 mKey = "Frame";
 
-                            Workspace.currentTimeline.updateSceneSettings(targetSceneId, nameField.text, widthField.value, heightField.value, fpsField.realValue, currentFrames, mKey, parseFloat(bpmField.text) || 120, parseFloat(offsetField.text) || 0, parseInt(intervalField.text) || 10, parseInt(subdivisionField.text) || 4, enableSnapCheck.checked, snapRangeField.value);
+                            // 新規作成モードと編集モードで処理を分岐
+                            if (isCreationMode) {
+                                // createScene() は内部でシーンを作成し、currentSceneId をそのIDに設定し、
+                                // そのシーンに自動的に切り替えるため、その後の updateSceneSettings は
+                                // 新しい currentSceneId に対して行われる。
+                                Workspace.currentTimeline.createScene(nameField.text);
+                                // 作成されたシーンに設定を適用
+                                // currentSceneId は既に新しいシーンのIDになっている
+                                Workspace.currentTimeline.updateSceneSettings(Workspace.currentTimeline.currentSceneId, nameField.text, widthField.value, heightField.value, fpsField.realValue, framesToApply, mKey, parseFloat(bpmField.text) || 120, parseFloat(offsetField.text) || 0, parseInt(intervalField.text) || 10, parseInt(subdivisionField.text) || 4, enableSnapCheck.checked, snapRangeField.value);
+                            } else if (targetSceneId !== -1) {
+                                // 既存シーンの編集モードの場合
+                                Workspace.currentTimeline.updateSceneSettings(targetSceneId, nameField.text, widthField.value, heightField.value, fpsField.realValue, framesToApply, mKey, parseFloat(bpmField.text) || 120, parseFloat(offsetField.text) || 0, parseInt(intervalField.text) || 10, parseInt(subdivisionField.text) || 4, enableSnapCheck.checked, snapRangeField.value);
+                            }
                         }
                         root.hide();
                     }

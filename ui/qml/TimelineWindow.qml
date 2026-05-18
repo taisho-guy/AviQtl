@@ -59,6 +59,7 @@ Common.AviQtlWindow {
                         TabButton {
                             id: tabBtn
 
+                            implicitWidth: Math.max(100, contentItem.implicitWidth + leftPadding + rightPadding)
                             checked: Workspace.currentTimeline && Workspace.currentTimeline.currentSceneId === modelData.id
                             onClicked: {
                                 if (Workspace.currentTimeline)
@@ -124,7 +125,12 @@ Common.AviQtlWindow {
                 flat: true
                 Layout.preferredWidth: 40
                 Layout.fillHeight: true
-                onClicked: Workspace.currentTimeline.createScene(qsTr("シーン %1").arg(sceneRepeater.count + 1))
+                onClicked: {
+                    var win = WindowManager.getWindow("sceneSettings");
+                    if (win)
+                        win.openForCreate(qsTr("シーン %1").arg(sceneRepeater.count + 1));
+
+                }
 
                 contentItem: Common.AviQtlIcon {
                     iconName: "add_line"

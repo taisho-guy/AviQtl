@@ -607,6 +607,7 @@ ApplicationWindow {
                             TabButton {
                                 id: projectTabBtn
 
+                                implicitWidth: Math.max(120, contentItem.implicitWidth + leftPadding + rightPadding)
                                 checked: Workspace && Workspace.currentIndex === index
                                 onClicked: {
                                     if (Workspace)
