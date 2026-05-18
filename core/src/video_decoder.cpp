@@ -79,6 +79,7 @@ auto VideoDecoder::open(const QString &path) -> bool {
     close();
     mlastDecodedFrame = -1;
     mindex.clear();
+    m_prevKeyframe.clear();
 
     if (avformat_open_input(&mfmtCtx, path.toStdString().c_str(), nullptr, nullptr) != 0) {
         return false;
@@ -177,6 +178,16 @@ auto VideoDecoder::buildIndex() -> bool {
         }
         return a.dts < b.dts;
     });
+
+    // Build O(1) keyframe lookup table
+    m_prevKeyframe.resize(mindex.size());
+    int lastKey = 0;
+    for (size_t i = 0; i < mindex.size(); ++i) {
+        if (mindex[i].isKeyframe) {
+            lastKey = static_cast<int>(i);
+        }
+        m_prevKeyframe[i] = lastKey;
+    }
     return true;
 }
 
@@ -297,10 +308,7 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) { // NOLINT(bugprone-
     }
 
     if (needSeek) {
-        int keyIndex = targetFrame;
-        while (keyIndex > 0 && !mindex[keyIndex].isKeyframe) {
-            --keyIndex;
-        }
+        int keyIndex = m_prevKeyframe[targetFrame];
         int64_t seekPts = mindex[keyIndex].pts;
         int ret = av_seek_frame(mfmtCtx, mstreamIndex, seekPts, AVSEEK_FLAG_BACKWARD);
         if (ret < 0) {

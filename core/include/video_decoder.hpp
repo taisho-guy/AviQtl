@@ -69,6 +69,7 @@ class VideoDecoder : public AviQtl::Core::MediaDecoder {
 
     int mlastDecodedFrame = -1;
     std::vector<FrameIndexEntry> mindex;
+    std::vector<int> m_prevKeyframe; ///< m_prevKeyframe[i] = index of the closest keyframe before or at frame i
     QCache<int, QVideoFrame> mframeCache;
     std::atomic<int> mlastRequestedFrame{-1};
     std::atomic<bool> mclosing{false};
