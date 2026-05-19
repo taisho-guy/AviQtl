@@ -10,6 +10,16 @@ ApplicationWindow {
 
     id: mainWin
 
+    // ショートカットの有効判定ヘルパー
+    // 1. 入力系コントロール（TextField等）にフォーカスがある場合は無効化する
+    readonly property bool _isInputFocused: {
+        var item = Qt.application.focusItem;
+        if (!item)
+            return false; // フォーカスを持つアイテムがない場合は入力中ではない
+
+        return item.hasOwnProperty("echoMode") || (item.hasOwnProperty("selectionStart") && item.readOnly === false);
+    }
+
     function syncCompositeView() {
         // 修正: compositeViewLoader.item ではなく compositeView を直接渡す
         if (Workspace.currentTimeline)
@@ -59,6 +69,7 @@ ApplicationWindow {
     height: 360
     x: 100
     y: 100
+    objectName: "mainWindow"
     title: qsTr("AviQtl - プレビュー")
     onClosing: (close) => {
         // 一旦クローズをキャンセルし、全タブの未保存確認を行ってから終了する
@@ -96,7 +107,7 @@ ApplicationWindow {
     Action {
         id: newAction
 
-        property string shortcutText: SettingsManager ? SettingsManager.shortcut("project.new", "Ctrl+N") : "Ctrl+N"
+        property string shortcutText: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["project.new"]) || "Ctrl+N"
 
         text: qsTr("新規プロジェクト")
         onTriggered: {
@@ -108,7 +119,7 @@ ApplicationWindow {
     Action {
         id: saveProjectAction // プロジェクトの上書き保存用アクション
 
-        property string shortcutText: SettingsManager ? SettingsManager.shortcut("project.save", "Ctrl+S") : "Ctrl+S"
+        property string shortcutText: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["project.save"]) || "Ctrl+S"
 
         text: qsTr("プロジェクトの上書き保存")
         onTriggered: {
@@ -125,7 +136,7 @@ ApplicationWindow {
     Action {
         id: loadAction
 
-        property string shortcutText: SettingsManager ? SettingsManager.shortcut("project.open", "Ctrl+O") : "Ctrl+O"
+        property string shortcutText: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["project.open"]) || "Ctrl+O"
 
         text: qsTr("プロジェクトを開く")
         onTriggered: {
@@ -136,16 +147,29 @@ ApplicationWindow {
     Action {
         id: saveAsProjectAction // プロジェクトを名前を付けて保存用アクション
 
-        property string shortcutText: SettingsManager ? SettingsManager.shortcut("project.saveAs", "Ctrl+Shift+S") : "Ctrl+Shift+S"
+        property string shortcutText: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["project.saveAs"]) || "Ctrl+Shift+S"
 
         text: qsTr("プロジェクトを名前を付けて保存...")
         onTriggered: saveDialog.open()
     }
 
     Action {
+        id: exportAction
+
+        property string shortcutText: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["project.export"]) || "Ctrl+E"
+
+        text: qsTr("メディアの書き出し...")
+        onTriggered: {
+            exportDialog.x = mainWin.x + (mainWin.width - exportDialog.width) / 2;
+            exportDialog.y = mainWin.y + (mainWin.height - exportDialog.height) / 2;
+            exportDialog.open();
+        }
+    }
+
+    Action {
         id: quitAction
 
-        property string shortcutText: SettingsManager ? SettingsManager.shortcut("app.quit", "Ctrl+Q") : "Ctrl+Q"
+        property string shortcutText: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["app.quit"]) || "Ctrl+Q"
 
         text: qsTr("終了")
         onTriggered: {
@@ -158,9 +182,76 @@ ApplicationWindow {
     }
 
     Action {
+        id: systemSettingsAction
+
+        property string shortcutText: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["app.settings"]) || "Ctrl+P"
+
+        text: qsTr("環境設定")
+        onTriggered: {
+            if (WindowManager)
+                WindowManager.systemSettingsVisible = true;
+
+        }
+    }
+
+    Action {
+        id: projectSettingsAction
+
+        property string shortcutText: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["project.settings"]) || "Alt+Enter"
+
+        text: qsTr("プロジェクト設定")
+        onTriggered: {
+            if (WindowManager)
+                WindowManager.projectSettingsVisible = true;
+
+        }
+    }
+
+    Action {
+        id: showTimelineAction
+
+        property string shortcutText: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["view.timeline"]) || "F3"
+
+        text: qsTr("タイムラインの表示")
+        onTriggered: {
+            if (WindowManager)
+                WindowManager.timelineVisible = true;
+
+        }
+    }
+
+    Action {
+        id: showObjectSettingsAction
+
+        property string shortcutText: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["view.objectSettings"]) || "F4"
+
+        text: qsTr("設定ダイアログの表示")
+        onTriggered: {
+            if (WindowManager)
+                WindowManager.objectSettingsVisible = true;
+
+        }
+    }
+
+    Action {
+        id: addSceneAction
+
+        property string shortcutText: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["timeline.addScene"]) || "Ctrl+T"
+
+        text: qsTr("新規シーン作成")
+        onTriggered: {
+            var win = WindowManager.getWindow("sceneSettings");
+            if (win) {
+                var count = Workspace.currentTimeline ? Workspace.currentTimeline.scenes.length : 0;
+                win.openForCreate(qsTr("シーン %1").arg(count + 1));
+            }
+        }
+    }
+
+    Action {
         id: undoAction
 
-        property string shortcutText: SettingsManager ? SettingsManager.shortcut("edit.undo", "Ctrl+Z") : "Ctrl+Z"
+        property string shortcutText: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["edit.undo"]) || "Ctrl+Z"
 
         text: qsTr("元に戻す")
         onTriggered: {
@@ -173,7 +264,7 @@ ApplicationWindow {
     Action {
         id: redoAction
 
-        property string shortcutText: SettingsManager ? SettingsManager.shortcut("edit.redo", "Ctrl+Shift+Z") : "Ctrl+Shift+Z"
+        property string shortcutText: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["edit.redo"]) || "Ctrl+Shift+Z"
 
         text: qsTr("やり直す")
         onTriggered: {
@@ -186,7 +277,7 @@ ApplicationWindow {
     Action {
         id: playPauseAction
 
-        property string shortcutText: SettingsManager ? SettingsManager.shortcut("transport.playPause", "Space") : "Space"
+        property string shortcutText: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["transport.playPause"]) || "Space"
 
         text: qsTr("再生 / 一時停止")
         onTriggered: {
@@ -199,7 +290,7 @@ ApplicationWindow {
     Action {
         id: splitAction
 
-        property string shortcutText: SettingsManager ? SettingsManager.shortcut("timeline.split", "S") : "S"
+        property string shortcutText: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["timeline.split"]) || "S"
 
         text: qsTr("クリップを分割")
         onTriggered: {
@@ -219,9 +310,69 @@ ApplicationWindow {
     }
 
     Action {
+        id: currentSceneSettingsAction
+
+        property string shortcutText: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["timeline.sceneSettings"]) || "Alt+S"
+
+        text: qsTr("現在のシーン設定...")
+        onTriggered: {
+            if (Workspace.currentTimeline) {
+                var info = Workspace.currentTimeline.getSceneInfo(Workspace.currentTimeline.currentSceneId);
+                var win = WindowManager.getWindow("sceneSettings");
+                if (win && info)
+                    win.openForScene(info.id, info.name, info.width, info.height, info.fps, info.totalFrames);
+
+            }
+        }
+    }
+
+    Action {
+        id: removeCurrentSceneAction
+
+        property string shortcutText: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["timeline.removeScene"]) || "Ctrl+Shift+Delete"
+
+        text: qsTr("現在のシーンを削除")
+        onTriggered: {
+            if (Workspace.currentTimeline && Workspace.currentTimeline.currentSceneId !== 0)
+                Workspace.currentTimeline.removeScene(Workspace.currentTimeline.currentSceneId);
+
+        }
+    }
+
+    Action {
+        id: toggleLayerLockAction
+
+        property string shortcutText: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["timeline.layerLock"]) || "Ctrl+L"
+
+        text: qsTr("レイヤーロック切替")
+        onTriggered: {
+            if (Workspace.currentTimeline) {
+                var l = Workspace.currentTimeline.selectedLayer;
+                var isLocked = Workspace.currentTimeline.isLayerLocked(l);
+                Workspace.currentTimeline.setLayerState(l, !isLocked, 0); // 0: Lock
+            }
+        }
+    }
+
+    Action {
+        id: toggleLayerHideAction
+
+        property string shortcutText: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["timeline.layerHide"]) || "Ctrl+H"
+
+        text: qsTr("レイヤー表示切替")
+        onTriggered: {
+            if (Workspace.currentTimeline) {
+                var l = Workspace.currentTimeline.selectedLayer;
+                var isHidden = Workspace.currentTimeline.isLayerHidden(l);
+                Workspace.currentTimeline.setLayerState(l, !isHidden, 1); // 1: Hidden
+            }
+        }
+    }
+
+    Action {
         id: deleteAction
 
-        property string shortcutText: SettingsManager ? SettingsManager.shortcut("edit.delete", "Delete") : "Delete"
+        property string shortcutText: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["edit.delete"]) || "Delete"
 
         text: qsTr("削除")
         onTriggered: {
@@ -234,7 +385,7 @@ ApplicationWindow {
     Action {
         id: copyAction
 
-        property string shortcutText: SettingsManager ? SettingsManager.shortcut("edit.copy", "Ctrl+C") : "Ctrl+C"
+        property string shortcutText: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["edit.copy"]) || "Ctrl+C"
 
         text: qsTr("コピー")
         onTriggered: {
@@ -247,7 +398,7 @@ ApplicationWindow {
     Action {
         id: cutAction
 
-        property string shortcutText: SettingsManager ? SettingsManager.shortcut("edit.cut", "Ctrl+X") : "Ctrl+X"
+        property string shortcutText: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["edit.cut"]) || "Ctrl+X"
 
         text: qsTr("カット")
         onTriggered: {
@@ -260,7 +411,7 @@ ApplicationWindow {
     Action {
         id: pasteAction
 
-        property string shortcutText: SettingsManager ? SettingsManager.shortcut("edit.paste", "Ctrl+V") : "Ctrl+V"
+        property string shortcutText: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["edit.paste"]) || "Ctrl+V"
 
         text: qsTr("貼り付け")
         onTriggered: {
@@ -275,7 +426,7 @@ ApplicationWindow {
     Action {
         id: duplicateAction
 
-        property string shortcutText: SettingsManager ? SettingsManager.shortcut("edit.duplicate", "Ctrl+D") : "Ctrl+D"
+        property string shortcutText: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["edit.duplicate"]) || "Ctrl+D"
 
         text: qsTr("複製")
         onTriggered: {
@@ -291,7 +442,7 @@ ApplicationWindow {
     Action {
         id: nextFrameAction
 
-        property string shortcutText: SettingsManager ? SettingsManager.shortcut("transport.nextFrame", "Right") : "Right"
+        property string shortcutText: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["transport.nextFrame"]) || "Right"
 
         text: qsTr("1フレーム進む")
         onTriggered: {
@@ -304,7 +455,7 @@ ApplicationWindow {
     Action {
         id: prevFrameAction
 
-        property string shortcutText: SettingsManager ? SettingsManager.shortcut("transport.prevFrame", "Left") : "Left"
+        property string shortcutText: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["transport.prevFrame"]) || "Left"
 
         text: qsTr("1フレーム戻る")
         onTriggered: {
@@ -317,7 +468,7 @@ ApplicationWindow {
     Action {
         id: jumpStartAction
 
-        property string shortcutText: SettingsManager ? SettingsManager.shortcut("transport.jumpStart", "Home") : "Home"
+        property string shortcutText: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["transport.jumpStart"]) || "Home"
 
         text: qsTr("先頭へ移動")
         onTriggered: {
@@ -330,7 +481,7 @@ ApplicationWindow {
     Action {
         id: jumpEndAction
 
-        property string shortcutText: SettingsManager ? SettingsManager.shortcut("transport.jumpEnd", "End") : "End"
+        property string shortcutText: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["transport.jumpEnd"]) || "End"
 
         text: qsTr("末尾へ移動")
         onTriggered: {
@@ -343,7 +494,7 @@ ApplicationWindow {
     Action {
         id: zoomInAction
 
-        property string shortcutText: SettingsManager ? SettingsManager.shortcut("view.zoomIn", "Ctrl++") : "Ctrl++"
+        property string shortcutText: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["view.zoomIn"]) || "Ctrl++"
 
         text: qsTr("ズームイン")
         onTriggered: {
@@ -358,7 +509,7 @@ ApplicationWindow {
     Action {
         id: zoomOutAction
 
-        property string shortcutText: SettingsManager ? SettingsManager.shortcut("view.zoomOut", "Ctrl+-") : "Ctrl+-"
+        property string shortcutText: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["view.zoomOut"]) || "Ctrl+-"
 
         text: qsTr("ズームアウト")
         onTriggered: {
@@ -373,7 +524,7 @@ ApplicationWindow {
     Action {
         id: moveUpAction
 
-        property string shortcutText: SettingsManager ? SettingsManager.shortcut("timeline.moveUp", "Alt+Up") : "Alt+Up"
+        property string shortcutText: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["timeline.moveUp"]) || "Alt+Up"
 
         text: qsTr("レイヤーを上へ移動")
         onTriggered: {
@@ -386,7 +537,7 @@ ApplicationWindow {
     Action {
         id: moveDownAction
 
-        property string shortcutText: SettingsManager ? SettingsManager.shortcut("timeline.moveDown", "Alt+Down") : "Alt+Down"
+        property string shortcutText: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["timeline.moveDown"]) || "Alt+Down"
 
         text: qsTr("レイヤーを下へ移動")
         onTriggered: {
@@ -399,7 +550,7 @@ ApplicationWindow {
     Action {
         id: nudgeLeftAction
 
-        property string shortcutText: SettingsManager ? SettingsManager.shortcut("timeline.nudgeLeft", "Alt+Left") : "Alt+Left"
+        property string shortcutText: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["timeline.nudgeLeft"]) || "Alt+Left"
 
         text: qsTr("1フレーム左へ移動")
         onTriggered: {
@@ -412,7 +563,7 @@ ApplicationWindow {
     Action {
         id: nudgeRightAction
 
-        property string shortcutText: SettingsManager ? SettingsManager.shortcut("timeline.nudgeRight", "Alt+Right") : "Alt+Right"
+        property string shortcutText: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["timeline.nudgeRight"]) || "Alt+Right"
 
         text: qsTr("1フレーム右へ移動")
         onTriggered: {
@@ -916,145 +1067,212 @@ ApplicationWindow {
     Shortcut {
         sequence: newAction.shortcutText
         context: Qt.ApplicationShortcut
+        enabled: !_isInputFocused
         onActivated: newAction.trigger()
     }
 
     Shortcut {
         sequence: saveProjectAction.shortcutText
         context: Qt.ApplicationShortcut
+        enabled: !_isInputFocused
         onActivated: saveProjectAction.trigger()
     }
 
     Shortcut {
         sequence: loadAction.shortcutText
         context: Qt.ApplicationShortcut
+        enabled: !_isInputFocused
         onActivated: loadAction.trigger()
     }
 
     Shortcut {
         sequence: saveAsProjectAction.shortcutText
         context: Qt.ApplicationShortcut
+        enabled: !_isInputFocused
         onActivated: saveAsProjectAction.trigger()
+    }
+
+    Shortcut {
+        sequence: exportAction.shortcutText
+        context: Qt.ApplicationShortcut
+        enabled: !_isInputFocused
+        onActivated: exportAction.trigger()
     }
 
     Shortcut {
         sequence: quitAction.shortcutText
         context: Qt.ApplicationShortcut
+        enabled: !_isInputFocused
         onActivated: quitAction.trigger()
+    }
+
+    Shortcut {
+        sequence: systemSettingsAction.shortcutText
+        context: Qt.ApplicationShortcut
+        enabled: !_isInputFocused
+        onActivated: systemSettingsAction.trigger()
     }
 
     Shortcut {
         sequence: undoAction.shortcutText
         context: Qt.ApplicationShortcut
+        enabled: !_isInputFocused
         onActivated: undoAction.trigger()
     }
 
     Shortcut {
         sequence: redoAction.shortcutText
         context: Qt.ApplicationShortcut
+        enabled: !_isInputFocused
         onActivated: redoAction.trigger()
     }
 
     Shortcut {
         sequence: playPauseAction.shortcutText
         context: Qt.ApplicationShortcut
+        // 再生・停止は入力中であっても（Spaceキー等）グローバルに効くのが一般的
+        enabled: !_isInputFocused
         onActivated: playPauseAction.trigger()
     }
 
     Shortcut {
         sequence: splitAction.shortcutText
-        context: Qt.ApplicationShortcut
+        context: Qt.WindowShortcut
+        enabled: !_isInputFocused
         onActivated: splitAction.trigger()
     }
 
     Shortcut {
         sequence: deleteAction.shortcutText
         context: Qt.WindowShortcut
+        enabled: !_isInputFocused
         onActivated: deleteAction.trigger()
     }
 
     Shortcut {
         sequence: copyAction.shortcutText
-        context: Qt.ApplicationShortcut
+        context: Qt.WindowShortcut
+        enabled: !_isInputFocused
         onActivated: copyAction.trigger()
     }
 
     Shortcut {
         sequence: cutAction.shortcutText
-        context: Qt.ApplicationShortcut
+        context: Qt.WindowShortcut
+        enabled: !_isInputFocused
         onActivated: cutAction.trigger()
     }
 
     Shortcut {
         sequence: pasteAction.shortcutText
-        context: Qt.ApplicationShortcut
+        context: Qt.WindowShortcut
+        enabled: !_isInputFocused
         onActivated: pasteAction.trigger()
     }
 
     Shortcut {
         sequence: duplicateAction.shortcutText
-        context: Qt.ApplicationShortcut
+        context: Qt.WindowShortcut
+        enabled: !_isInputFocused
         onActivated: duplicateAction.trigger()
     }
 
     Shortcut {
         sequence: nextFrameAction.shortcutText
         context: Qt.ApplicationShortcut
+        enabled: !_isInputFocused
         onActivated: nextFrameAction.trigger()
     }
 
     Shortcut {
         sequence: prevFrameAction.shortcutText
         context: Qt.ApplicationShortcut
+        enabled: !_isInputFocused
         onActivated: prevFrameAction.trigger()
     }
 
     Shortcut {
         sequence: jumpStartAction.shortcutText
         context: Qt.ApplicationShortcut
+        enabled: !_isInputFocused
         onActivated: jumpStartAction.trigger()
     }
 
     Shortcut {
         sequence: jumpEndAction.shortcutText
         context: Qt.ApplicationShortcut
+        enabled: !_isInputFocused
         onActivated: jumpEndAction.trigger()
     }
 
     Shortcut {
         sequence: zoomInAction.shortcutText
         context: Qt.ApplicationShortcut
+        enabled: !_isInputFocused
         onActivated: zoomInAction.trigger()
     }
 
     Shortcut {
         sequence: zoomOutAction.shortcutText
         context: Qt.ApplicationShortcut
+        enabled: !_isInputFocused
         onActivated: zoomOutAction.trigger()
     }
 
     Shortcut {
         sequence: moveUpAction.shortcutText
-        context: Qt.ApplicationShortcut
+        context: Qt.WindowShortcut
+        enabled: !_isInputFocused
         onActivated: moveUpAction.trigger()
     }
 
     Shortcut {
         sequence: moveDownAction.shortcutText
-        context: Qt.ApplicationShortcut
+        context: Qt.WindowShortcut
+        enabled: !_isInputFocused
         onActivated: moveDownAction.trigger()
     }
 
     Shortcut {
         sequence: nudgeLeftAction.shortcutText
-        context: Qt.ApplicationShortcut
+        context: Qt.WindowShortcut
+        enabled: !_isInputFocused
         onActivated: nudgeLeftAction.trigger()
     }
 
     Shortcut {
         sequence: nudgeRightAction.shortcutText
-        context: Qt.ApplicationShortcut
+        context: Qt.WindowShortcut
+        enabled: !_isInputFocused
         onActivated: nudgeRightAction.trigger()
+    }
+
+    Shortcut {
+        sequence: projectSettingsAction.shortcutText
+        context: Qt.ApplicationShortcut
+        enabled: !_isInputFocused
+        onActivated: projectSettingsAction.trigger()
+    }
+
+    Shortcut {
+        sequence: showTimelineAction.shortcutText
+        context: Qt.ApplicationShortcut
+        enabled: !_isInputFocused
+        onActivated: showTimelineAction.trigger()
+    }
+
+    Shortcut {
+        sequence: showObjectSettingsAction.shortcutText
+        context: Qt.ApplicationShortcut
+        enabled: !_isInputFocused
+        onActivated: showObjectSettingsAction.trigger()
+    }
+
+    Shortcut {
+        sequence: addSceneAction.shortcutText
+        context: Qt.ApplicationShortcut
+        enabled: !_isInputFocused
+        onActivated: addSceneAction.trigger()
     }
 
     // View3D の背後に黒背景を強制しない
@@ -1094,14 +1312,8 @@ ApplicationWindow {
             }
 
             Common.IconMenuItem {
-                text: qsTr("メディアの書き出し...")
+                action: exportAction
                 iconName: "movie_line"
-                enabled: Workspace.currentTimeline && Workspace.currentTimeline.project
-                onTriggered: {
-                    exportDialog.x = mainWin.x + (mainWin.width - exportDialog.width) / 2;
-                    exportDialog.y = mainWin.y + (mainWin.height - exportDialog.height) / 2;
-                    exportDialog.open();
-                }
             }
 
             MenuSeparator {
@@ -1136,26 +1348,16 @@ ApplicationWindow {
             title: qsTr("設定")
 
             Common.IconMenuItem {
-                text: qsTr("プロジェクト設定")
+                action: projectSettingsAction
                 iconName: "settings_4_line"
-                onTriggered: {
-                    if (WindowManager)
-                        WindowManager.projectSettingsVisible = true;
-
-                }
             }
 
             MenuSeparator {
             }
 
             Common.IconMenuItem {
-                text: qsTr("環境設定")
+                action: systemSettingsAction
                 iconName: "settings_3_line"
-                onTriggered: {
-                    if (WindowManager)
-                        WindowManager.systemSettingsVisible = true;
-
-                }
             }
 
         }
@@ -1165,23 +1367,13 @@ ApplicationWindow {
             title: qsTr("表示")
 
             Common.IconMenuItem {
-                text: qsTr("タイムラインの表示")
+                action: showTimelineAction
                 iconName: "layout_bottom_line"
-                onTriggered: {
-                    if (WindowManager)
-                        WindowManager.timelineVisible = true;
-
-                }
             }
 
             Common.IconMenuItem {
-                text: qsTr("設定ダイアログの表示")
+                action: showObjectSettingsAction
                 iconName: "equalizer_line"
-                onTriggered: {
-                    if (WindowManager)
-                        WindowManager.objectSettingsVisible = true;
-
-                }
             }
 
         }

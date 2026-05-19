@@ -5,6 +5,9 @@ import "common" as Common
 import "timeline" // サブフォルダのモジュールをインポート
 
 Common.AviQtlWindow {
+    // ─── タイムライン専用ショートカット (WindowShortcut) ───
+    // これにより、メインウィンドウや設定ダイアログとの競合を避けつつ、確実に動作させます。
+
     id: timelineWindow
 
     // 定数・設定
@@ -18,6 +21,14 @@ Common.AviQtlWindow {
     // レイヤー状態のグローバル管理（LayerHeaderからの通知を受け取る）
     property var globalLayerStates: ({
     })
+    // 入力フォーカス判定
+    readonly property bool _isInputFocused: {
+        var item = Qt.application.focusItem;
+        if (!item)
+            return false; // フォーカスを持つアイテムがない場合は入力中ではない
+
+        return item.hasOwnProperty("echoMode") || (item.hasOwnProperty("selectionStart") && item.readOnly === false);
+    }
 
     function getLayerVisible(layer) {
         var state = globalLayerStates[layer];
@@ -25,6 +36,7 @@ Common.AviQtlWindow {
     }
 
     title: qsTr("タイムライン")
+    objectName: "timelineWindow"
     width: 1280
     height: 300
 
@@ -206,6 +218,79 @@ Common.AviQtlWindow {
 
         }
 
+    }
+
+    Shortcut {
+        sequence: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["edit.delete"]) || "Delete"
+        context: Qt.WindowShortcut
+        enabled: !_isInputFocused && Workspace.currentTimeline
+        onActivated: Workspace.currentTimeline.deleteSelectedClips()
+    }
+
+    Shortcut {
+        sequence: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["timeline.split"]) || "S"
+        context: Qt.WindowShortcut
+        enabled: !_isInputFocused && Workspace.currentTimeline
+        onActivated: Workspace.currentTimeline.splitSelectedClips(Workspace.currentTimeline.transport.currentFrame)
+    }
+
+    Shortcut {
+        sequence: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["edit.copy"]) || "Ctrl+C"
+        context: Qt.WindowShortcut
+        enabled: !_isInputFocused && Workspace.currentTimeline
+        onActivated: Workspace.currentTimeline.copySelectedClips()
+    }
+
+    Shortcut {
+        sequence: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["edit.cut"]) || "Ctrl+X"
+        context: Qt.WindowShortcut
+        enabled: !_isInputFocused && Workspace.currentTimeline
+        onActivated: Workspace.currentTimeline.cutSelectedClips()
+    }
+
+    Shortcut {
+        sequence: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["edit.paste"]) || "Ctrl+V"
+        context: Qt.WindowShortcut
+        enabled: !_isInputFocused && Workspace.currentTimeline
+        onActivated: Workspace.currentTimeline.pasteClip(Workspace.currentTimeline.transport.currentFrame, Workspace.currentTimeline.selectedLayer)
+    }
+
+    Shortcut {
+        sequence: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["edit.duplicate"]) || "Ctrl+D"
+        context: Qt.WindowShortcut
+        enabled: !_isInputFocused && Workspace.currentTimeline
+        onActivated: {
+            Workspace.currentTimeline.copySelectedClips();
+            Workspace.currentTimeline.pasteClip(Workspace.currentTimeline.transport.currentFrame, Workspace.currentTimeline.selectedLayer);
+        }
+    }
+
+    Shortcut {
+        sequence: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["timeline.moveUp"]) || "Alt+Up"
+        context: Qt.WindowShortcut
+        enabled: !_isInputFocused && Workspace.currentTimeline
+        onActivated: Workspace.currentTimeline.moveSelectedClips(-1, 0)
+    }
+
+    Shortcut {
+        sequence: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["timeline.moveDown"]) || "Alt+Down"
+        context: Qt.WindowShortcut
+        enabled: !_isInputFocused && Workspace.currentTimeline
+        onActivated: Workspace.currentTimeline.moveSelectedClips(1, 0)
+    }
+
+    Shortcut {
+        sequence: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["timeline.nudgeLeft"]) || "Alt+Left"
+        context: Qt.WindowShortcut
+        enabled: !_isInputFocused && Workspace.currentTimeline
+        onActivated: Workspace.currentTimeline.moveSelectedClips(0, -1)
+    }
+
+    Shortcut {
+        sequence: (SettingsManager.settings.shortcuts && SettingsManager.settings.shortcuts["timeline.nudgeRight"]) || "Alt+Right"
+        context: Qt.WindowShortcut
+        enabled: !_isInputFocused && Workspace.currentTimeline
+        onActivated: Workspace.currentTimeline.moveSelectedClips(0, 1)
     }
 
 }

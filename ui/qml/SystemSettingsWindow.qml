@@ -37,8 +37,14 @@ Common.AviQtlWindow {
         "id": "project.saveAs",
         "name": qsTr("名前を付けて保存")
     }, {
+        "id": "project.export",
+        "name": qsTr("メディアの書き出し")
+    }, {
         "id": "app.quit",
         "name": qsTr("終了")
+    }, {
+        "id": "app.settings",
+        "name": qsTr("環境設定")
     }, {
         "id": "edit.undo",
         "name": qsTr("元に戻す")
@@ -82,6 +88,15 @@ Common.AviQtlWindow {
         "id": "view.zoomOut",
         "name": qsTr("ズームアウト")
     }, {
+        "id": "view.timeline",
+        "name": qsTr("タイムラインの表示")
+    }, {
+        "id": "view.objectSettings",
+        "name": qsTr("設定ダイアログの表示")
+    }, {
+        "id": "project.settings",
+        "name": qsTr("プロジェクト設定")
+    }, {
         "id": "timeline.split",
         "name": qsTr("クリップを分割")
     }, {
@@ -96,6 +111,21 @@ Common.AviQtlWindow {
     }, {
         "id": "timeline.nudgeRight",
         "name": qsTr("1フレーム右へ移動")
+    }, {
+        "id": "timeline.addScene",
+        "name": qsTr("新規シーン作成")
+    }, {
+        "id": "timeline.sceneSettings",
+        "name": qsTr("現在のシーン設定")
+    }, {
+        "id": "timeline.removeScene",
+        "name": qsTr("現在のシーンを削除")
+    }, {
+        "id": "timeline.layerLock",
+        "name": qsTr("現在のレイヤーをロック/解除")
+    }, {
+        "id": "timeline.layerHide",
+        "name": qsTr("現在のレイヤーを表示/非表示")
     }]
 
     function getShortcutValue(actionId, fallback) {

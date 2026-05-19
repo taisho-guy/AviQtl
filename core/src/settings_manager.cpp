@@ -116,7 +116,9 @@ auto SettingsManager::defaultShortcutSettings() -> QVariantMap {
             {"project.save", "Ctrl+S"},
             {"project.open", "Ctrl+O"},
             {"project.saveAs", "Ctrl+Shift+S"},
+            {"project.export", "Ctrl+E"},
             {"app.quit", "Ctrl+Q"},
+            {"app.settings", "Ctrl+P"},
 
             // Edit
             {"edit.undo", "Ctrl+Z"},
@@ -137,13 +139,21 @@ auto SettingsManager::defaultShortcutSettings() -> QVariantMap {
             // View
             {"view.zoomIn", "Ctrl++"},
             {"view.zoomOut", "Ctrl+-"},
+            {"view.timeline", "F3"},
+            {"view.objectSettings", "F4"},
+            {"project.settings", "Alt+Enter"},
 
             // Timeline
             {"timeline.split", "S"},
             {"timeline.moveUp", "Alt+Up"},
             {"timeline.moveDown", "Alt+Down"},
             {"timeline.nudgeLeft", "Alt+Left"},
-            {"timeline.nudgeRight", "Alt+Right"}};
+            {"timeline.nudgeRight", "Alt+Right"},
+            {"timeline.addScene", "Ctrl+T"},
+            {"timeline.sceneSettings", "Alt+S"},
+            {"timeline.removeScene", "Ctrl+Shift+Delete"},
+            {"timeline.layerLock", "Ctrl+L"},
+            {"timeline.layerHide", "Ctrl+H"}};
 }
 
 auto SettingsManager::getSettingsFilePath() -> QString {
