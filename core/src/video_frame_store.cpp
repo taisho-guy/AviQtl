@@ -32,8 +32,9 @@ void VideoFrameStore::setVideoFrameSafe(const QString &key, const QVideoFrame &f
         QMutexLocker locker(&m_mutex);
         m_lastVideoFrames.insert(key, frame);
 
-        if (m_sinks.contains(key) && !m_sinks.value(key).isNull()) {
-            sink = m_sinks.value(key);
+        auto it = m_sinks.find(key);
+        if (it != m_sinks.end() && !it.value().isNull()) {
+            sink = it.value();
         }
     }
 
@@ -51,11 +52,12 @@ auto VideoFrameStore::sink(const QString &key) -> QVideoSink * {
     }
 
     QMutexLocker locker(&m_mutex);
-    if (!m_sinks.contains(key) || m_sinks.value(key).isNull()) {
+    auto it = m_sinks.find(key);
+    if (it == m_sinks.end() || it.value().isNull()) {
         auto *s = new QVideoSink(this);
-        m_sinks.insert(key, s);
+        it = m_sinks.insert(key, s);
     }
-    return m_sinks.value(key);
+    return it.value();
 }
 
 void VideoFrameStore::registerSink(const QString &key, QVideoSink *sink) {
@@ -68,8 +70,9 @@ void VideoFrameStore::registerSink(const QString &key, QVideoSink *sink) {
     {
         QMutexLocker locker(&m_mutex);
 
-        if (m_sinks.contains(key) && !m_sinks.value(key).isNull() && m_sinks.value(key)->parent() == this) {
-            m_sinks.value(key)->deleteLater();
+        auto it = m_sinks.find(key);
+        if (it != m_sinks.end() && !it.value().isNull() && it.value()->parent() == this) {
+            it.value()->deleteLater();
         }
 
         m_sinks.insert(key, sink);
@@ -80,17 +83,19 @@ void VideoFrameStore::registerSink(const QString &key, QVideoSink *sink) {
                     return;
                 }
                 QMutexLocker locker(&self->m_mutex);
-                if (self->m_sinks.contains(key)) {
-                    QVideoSink *current = self->m_sinks.value(key).data();
+                auto sinkIt = self->m_sinks.find(key);
+                if (sinkIt != self->m_sinks.end()) {
+                    QVideoSink *current = sinkIt.value().data();
                     if (current == nullptr || current == rawSink) {
-                        self->m_sinks.remove(key);
+                        self->m_sinks.erase(sinkIt);
                     }
                 }
             });
         }
 
-        if (m_lastVideoFrames.contains(key)) {
-            last = m_lastVideoFrames.value(key);
+        auto lastIt = m_lastVideoFrames.find(key);
+        if (lastIt != m_lastVideoFrames.end()) {
+            last = lastIt.value();
         }
     }
 

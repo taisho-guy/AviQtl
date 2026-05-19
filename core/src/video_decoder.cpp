@@ -293,8 +293,8 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) { // NOLINT(bugprone-
         return;
     }
 
-    if (mframeCache.contains(targetFrame)) {
-        mstore->setVideoFrameSafe(QString::number(clipId()), *mframeCache.object(targetFrame));
+    if (QVideoFrame *cached = mframeCache.object(targetFrame)) {
+        mstore->setVideoFrameSafe(QString::number(clipId()), *cached);
         QMetaObject::invokeMethod(this, [this, targetFrame]() -> void { emit frameReady(targetFrame); }, Qt::QueuedConnection);
         return;
     }
@@ -451,8 +451,8 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) { // NOLINT(bugprone-
     }
     av_packet_free(&pkt);
 
-    if (mframeCache.contains(targetFrame)) {
-        mstore->setVideoFrameSafe(QString::number(clipId()), *mframeCache.object(targetFrame));
+    if (QVideoFrame *cached = mframeCache.object(targetFrame)) {
+        mstore->setVideoFrameSafe(QString::number(clipId()), *cached);
         QPointer<VideoDecoder> self(this);
         QMetaObject::invokeMethod(
             this,

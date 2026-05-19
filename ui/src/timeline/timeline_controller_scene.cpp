@@ -93,6 +93,6 @@ void TimelineController::updateViewport(double x, double y) {
     // 将来的に、描画範囲外のクリップのレンダリング計算をスキップする等の最適化に使用できます。
     Q_UNUSED(x)
     Q_UNUSED(y)
-} // NOLINT(bugprone-easily-swappable-parameters)
+}
 
 } // namespace AviQtl::UI

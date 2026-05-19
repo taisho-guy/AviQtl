@@ -114,7 +114,8 @@ auto AudioMixer::mix(int currentFrame, double fps, int samplesPerFrame) -> std::
         if (audio.mute) {
             continue;
         }
-        if (!m_decoders.contains(clipId)) {
+        auto decIt = m_decoders.find(clipId);
+        if (decIt == m_decoders.end()) {
             continue;
         }
 
@@ -124,15 +125,19 @@ auto AudioMixer::mix(int currentFrame, double fps, int samplesPerFrame) -> std::
 
         // 位相と連続再生の管理
         double startTime = static_cast<double>(currentFrame - audio.startFrame) / fps;
-        if (m_clipLastFrame.contains(clipId) && currentFrame == m_clipLastFrame.value(clipId) + 1) {
-            startTime = m_clipPhase.value(clipId);
+        auto lastFrameIt = m_clipLastFrame.find(clipId);
+        if (lastFrameIt != m_clipLastFrame.end() && currentFrame == lastFrameIt.value() + 1) {
+            auto phaseIt = m_clipPhase.find(clipId);
+            if (phaseIt != m_clipPhase.end()) {
+                startTime = phaseIt.value();
+            }
         } else {
             // シークまたは初回再生時
             m_clipPhase.insert(clipId, startTime);
         }
         m_clipLastFrame.insert(clipId, currentFrame);
 
-        auto *decoder = m_decoders[clipId];
+        auto *decoder = decIt->second;
         std::vector<float> clipSamples;
 
         if (std::abs(m_playbackSpeed - 1.0) > 0.01) {
@@ -178,8 +183,9 @@ auto AudioMixer::mix(int currentFrame, double fps, int samplesPerFrame) -> std::
         }
 
         // プラグインチェーンを適用
-        if (m_chains.contains(clipId)) {
-            m_chains.value(clipId)->process(clipSamples.data(), samplesPerFrame);
+        auto chainIt = m_chains.find(clipId);
+        if (chainIt != m_chains.end()) {
+            chainIt.value()->process(clipSamples.data(), samplesPerFrame);
         }
 
         float leftVol = audio.volume * (audio.pan <= 0 ? 1.0F : 1.0F - audio.pan);
@@ -232,11 +238,11 @@ void AudioMixer::reset() {
 }
 
 auto AudioMixer::getChain(int clipId) -> Plugin::AudioPluginChain & {
-    // m_chains[clipId] will default-construct an AudioPluginChain if it doesn't exist.
-    if (!m_chains.contains(clipId)) {
-        m_chains.insert(clipId, std::make_shared<Plugin::AudioPluginChain>());
+    auto it = m_chains.find(clipId);
+    if (it == m_chains.end()) {
+        it = m_chains.insert(clipId, std::make_shared<Plugin::AudioPluginChain>());
     }
-    return *m_chains.value(clipId);
+    return *it.value();
 }
 
 void AudioMixer::clearChain(int clipId) { m_chains.remove(clipId); }

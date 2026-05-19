@@ -110,7 +110,6 @@ void TimelineController::setupConnections() {
 void TimelineController::onPlayingChanged() { m_mediaManager->onPlayingChanged(); }
 
 void TimelineController::onCurrentFrameChanged() {
-    [[maybe_unused]] int nextFrame = m_transport->currentFrame();
     m_mediaManager->onCurrentFrameChanged();
     updateActiveClipsList();
 }
