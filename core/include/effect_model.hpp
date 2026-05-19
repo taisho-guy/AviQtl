@@ -40,8 +40,9 @@ class EffectModel : public QObject {
         auto getModeParams = [](const QVariant &v) { return v.toMap().value(QStringLiteral("modeParams")).toMap(); };
         auto getBezierParams = [](const QVariant &v) -> std::vector<double> {
             const auto map = v.toMap();
-            if (map.contains(QStringLiteral("points"))) {
-                QVariantList lst = map.value(QStringLiteral("points")).toList();
+            auto it = map.find(QStringLiteral("points"));
+            if (it != map.end()) {
+                QVariantList lst = it.value().toList();
                 std::vector<double> pts;
                 pts.reserve(static_cast<std::size_t>(lst.size()));
                 for (const auto &val : std::as_const(lst))
@@ -80,9 +81,13 @@ class EffectModel : public QObject {
             std::vector<double> params;
             if (type == QStringLiteral("custom"))
                 params = getBezierParams(track[i]);
-            if (!easingFunctions().contains(type))
+            const auto &funcs = easingFunctions();
+            auto efIt = funcs.find(type);
+            if (efIt == funcs.end()) {
                 type = QStringLiteral("linear");
-            return static_cast<float>(a + (b - a) * easingFunctions().value(type)(tRaw, params));
+                efIt = funcs.find(type);
+            }
+            return static_cast<float>(a + (b - a) * efIt.value()(tRaw, params));
         }
         return static_cast<float>(getValueD(track.back()));
     }
@@ -306,8 +311,9 @@ class EffectModel : public QObject {
         auto getModeParams = [](const QVariant &v) { return v.toMap().value(QStringLiteral("modeParams")).toMap(); };
         auto getBezierParams = [](const QVariant &v) -> std::vector<double> {
             const auto map = v.toMap();
-            if (map.contains(QStringLiteral("points"))) {
-                QVariantList lst = map.value(QStringLiteral("points")).toList();
+            auto it = map.find(QStringLiteral("points"));
+            if (it != map.end()) {
+                QVariantList lst = it.value().toList();
                 std::vector<double> pts;
                 for (const auto &val : std::as_const(lst))
                     pts.push_back(val.toDouble());
@@ -339,9 +345,13 @@ class EffectModel : public QObject {
                     std::vector<double> params;
                     if (type == QStringLiteral("custom"))
                         params = getBezierParams(track[i]);
-                    if (!easingFunctions().contains(type))
+                    const auto &funcs = easingFunctions();
+                    auto efIt = funcs.find(type);
+                    if (efIt == funcs.end()) {
                         type = QStringLiteral("linear");
-                    const double t = easingFunctions().value(type)(tRaw, params);
+                        efIt = funcs.find(type);
+                    }
+                    const double t = efIt.value()(tRaw, params);
                     return QColor(static_cast<int>(c0.red() + (c1.red() - c0.red()) * t), static_cast<int>(c0.green() + (c1.green() - c0.green()) * t), static_cast<int>(c0.blue() + (c1.blue() - c0.blue()) * t),
                                   static_cast<int>(c0.alpha() + (c1.alpha() - c0.alpha()) * t))
                         .name(QColor::HexArgb);
@@ -362,9 +372,13 @@ class EffectModel : public QObject {
             std::vector<double> params;
             if (type == QStringLiteral("custom"))
                 params = getBezierParams(track[i]);
-            if (!easingFunctions().contains(type))
+            const auto &funcs = easingFunctions();
+            auto efIt = funcs.find(type);
+            if (efIt == funcs.end()) {
                 type = QStringLiteral("linear");
-            return a + (b - a) * easingFunctions().value(type)(tRaw, params);
+                efIt = funcs.find(type);
+            }
+            return a + (b - a) * efIt.value()(tRaw, params);
         }
         return getValue(track.back());
     }
@@ -633,10 +647,12 @@ class EffectModel : public QObject {
         kf[QStringLiteral("frame")] = frame;
         kf[QStringLiteral("value")] = value;
         kf[QStringLiteral("interp")] = interp;
-        if (options.contains(QStringLiteral("points")))
-            kf[QStringLiteral("points")] = options.value(QStringLiteral("points"));
-        if (options.contains(QStringLiteral("modeParams")))
-            kf[QStringLiteral("modeParams")] = options.value(QStringLiteral("modeParams"));
+        auto it = options.find(QStringLiteral("points"));
+        if (it != options.end())
+            kf[QStringLiteral("points")] = it.value();
+        it = options.find(QStringLiteral("modeParams"));
+        if (it != options.end())
+            kf[QStringLiteral("modeParams")] = it.value();
 
         bool updated = false;
         for (int i = 0; i < points.size(); ++i) {

@@ -118,8 +118,9 @@ auto TimelineController::getProjectInfo(const QString &fileUrl) -> QVariantMap {
     }
 
     QJsonObject root = doc.object();
-    if (root.contains(QStringLiteral("settings"))) {
-        result = root.value(QStringLiteral("settings")).toObject().toVariantMap();
+    auto it = root.find(QStringLiteral("settings"));
+    if (it != root.end()) {
+        result = it.value().toObject().toVariantMap();
     }
 
     return result;
