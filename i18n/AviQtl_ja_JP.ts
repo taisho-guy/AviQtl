@@ -213,27 +213,27 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="346"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="347"/>
         <source>終了色 (f%1)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="391"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="393"/>
         <source>ファイルを選択</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="530"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="532"/>
         <source>設定</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="606"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="608"/>
         <source>フォントを選択</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="622"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="624"/>
         <source>デフォルト</source>
         <translation type="unfinished"></translation>
     </message>
@@ -741,27 +741,27 @@
 <context>
     <name>LayerHeader</name>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="178"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="180"/>
         <source>表示/非表示を切り替え</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="192"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="194"/>
         <source>ロックを解除</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="192"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="194"/>
         <source>ロック</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="205"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="207"/>
         <source>すべて表示</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="215"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="217"/>
         <source>すべて非表示</source>
         <translation type="unfinished"></translation>
     </message>
@@ -796,7 +796,7 @@
     </message>
     <message>
         <location filename="../ui/qml/MainWindow.qml" line="175"/>
-        <location filename="../ui/qml/MainWindow.qml" line="1324"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1327"/>
         <source>終了</source>
         <translation type="unfinished"></translation>
     </message>
@@ -947,12 +947,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1031"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1034"/>
         <source>速度</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1287"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1290"/>
         <source>ファイル</source>
         <translation type="unfinished"></translation>
     </message>
@@ -972,27 +972,27 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1384"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1387"/>
         <source>ツール</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1387"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1390"/>
         <source>パッケージマネージャー</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1349"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1352"/>
         <source>設定</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1333"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1336"/>
         <source>編集</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1368"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1371"/>
         <source>表示</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1007,7 +1007,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1406"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1409"/>
         <source>バージョン情報</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1447,42 +1447,42 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="506"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="508"/>
         <source>削除</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="506"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="508"/>
         <source>選択した %1 件を削除</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="818"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="821"/>
         <source> (直線)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="819"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="822"/>
         <source> (加速)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="820"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="823"/>
         <source> (減速)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="821"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="824"/>
         <source> (加減速)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="822"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="825"/>
         <source> (ベジェ)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="1283"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="1302"/>
         <source>エフェクトを追加</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1971,7 +1971,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/TimelineWindow.qml" line="144"/>
+        <location filename="../ui/qml/TimelineWindow.qml" line="146"/>
         <source>シーン %1</source>
         <translation type="unfinished"></translation>
     </message>

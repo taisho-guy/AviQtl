@@ -274,6 +274,7 @@ Loader {
 
                     anchors.fill: parent
                     hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
                     onClicked: {
                         var c = colorRow._startVal || "#ffffff";
                         // HexArgb (#aarrggbb) を Qt color 型に安全変換
@@ -350,6 +351,7 @@ Loader {
 
                     anchors.fill: parent
                     hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
                     enabled: colorRow._rightInteractive
                     onClicked: {
                         var c = colorRow._endVal || "#ffffff";

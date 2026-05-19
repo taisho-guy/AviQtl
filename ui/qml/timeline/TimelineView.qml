@@ -148,8 +148,6 @@ ScrollView {
     }
 
     clip: true
-    ScrollBar.horizontal.policy: ScrollBar.AlwaysOn
-    ScrollBar.vertical.policy: ScrollBar.AlwaysOn
 
     Flickable {
         // unified loop handles viewport updates now
@@ -348,6 +346,7 @@ ScrollView {
             anchors.fill: parent
             z: -1
             acceptedButtons: Qt.LeftButton
+            cursorShape: Qt.ArrowCursor
             onReleased: (mouse) => {
                 var scale = Workspace.currentTimeline ? Workspace.currentTimeline.timelineScale : 1;
                 var frame = timelineViewRoot.snapFrame(mouse.x / scale);
@@ -362,6 +361,7 @@ ScrollView {
             z: -1
             acceptedButtons: Qt.RightButton
             preventStealing: true
+            cursorShape: boxSelecting ? Qt.CrossCursor : Qt.ArrowCursor
             onPressed: (mouse) => {
                 boxSelecting = false;
                 boxSelectionStart = mapToItem(timelineFlickable.contentItem, mouse.x, mouse.y);
@@ -689,6 +689,48 @@ ScrollView {
             id: menuSeparatorComp
 
             MenuSeparator {
+            }
+
+        }
+
+    }
+
+    ScrollBar.horizontal: ScrollBar {
+        id: hbar
+
+        policy: ScrollBar.AlwaysOn
+
+        contentItem: Rectangle {
+            implicitHeight: 6
+            radius: 3
+            color: hbar.pressed ? palette.highlight : palette.mid
+            opacity: hbar.hovered || hbar.pressed ? 1 : 0.5
+
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.NoButton
+                cursorShape: hbar.pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+            }
+
+        }
+
+    }
+
+    ScrollBar.vertical: ScrollBar {
+        id: vbar
+
+        policy: ScrollBar.AlwaysOn
+
+        contentItem: Rectangle {
+            implicitWidth: 6
+            radius: 3
+            color: vbar.pressed ? palette.highlight : palette.mid
+            opacity: vbar.hovered || vbar.pressed ? 1 : 0.5
+
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.NoButton
+                cursorShape: vbar.pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
             }
 
         }

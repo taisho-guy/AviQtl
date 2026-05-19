@@ -219,7 +219,7 @@ Item {
             anchors.rightMargin: clipResizeHandleWidth
             acceptedButtons: Qt.LeftButton
             hoverEnabled: true
-            cursorShape: clipDelegate.isLayerLocked ? Qt.ForbiddenCursor : Qt.OpenHandCursor
+            cursorShape: clipDelegate.isLayerLocked ? Qt.ForbiddenCursor : (pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor)
             preventStealing: true
             onPressed: (mouse) => {
                 timelineViewRoot.beginDragAutoScroll(function() {

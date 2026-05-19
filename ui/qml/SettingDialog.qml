@@ -375,6 +375,8 @@ Common.AviQtlWindow {
                         MouseArea {
                             anchors.fill: parent
                             acceptedButtons: Qt.LeftButton | Qt.RightButton
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
                             onClicked: (mouse) => {
                                 if (mouse.button === Qt.RightButton) {
                                     if (!sidebarList.isSelected(index)) {
@@ -604,6 +606,7 @@ Common.AviQtlWindow {
                                 anchors.right: parent.right
                                 anchors.verticalCenter: parent.verticalCenter
                                 flat: true
+                                hoverEnabled: true
                                 width: 24
                                 height: 24
                                 onClicked: Workspace.currentTimeline.removeEffect(targetClipId, effectRoot.effectIndex)
@@ -995,7 +998,7 @@ Common.AviQtlWindow {
 
                                                 anchors.fill: parent
                                                 hoverEnabled: true
-                                                cursorShape: kfItem.originalFrame === 0 ? Qt.ArrowCursor : Qt.OpenHandCursor
+                                                cursorShape: kfItem.originalFrame === 0 ? Qt.ArrowCursor : (pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor)
                                                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                                                 onClicked: function(mouse) {
                                                     if (mouse.button === Qt.RightButton && kfItem.originalFrame !== 0)
@@ -1159,6 +1162,7 @@ Common.AviQtlWindow {
                                     anchors.right: parent.right
                                     anchors.verticalCenter: parent.verticalCenter
                                     flat: true
+                                    hoverEnabled: true
                                     width: 24
                                     height: 24
                                     onClicked: Workspace.currentTimeline.removeAudioPlugin(targetClipId, audioEffectRoot.effectIndex)
@@ -1199,6 +1203,21 @@ Common.AviQtlWindow {
 
                 }
 
+            }
+
+        }
+
+        handle: Rectangle {
+            implicitWidth: 4
+            implicitHeight: 4
+            color: SplitView.isPressed ? palette.highlight : palette.mid
+            // ホバー時またはドラッグ時のみ表示
+            opacity: (SplitView.isPressed || SplitView.isHovered) ? 1 : 0
+
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.NoButton
+                cursorShape: Qt.SplitHCursor
             }
 
         }

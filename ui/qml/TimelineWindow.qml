@@ -107,6 +107,7 @@ Common.AviQtlWindow {
                                 Button {
                                     flat: true
                                     visible: modelData.id !== 0
+                                    hoverEnabled: true
                                     Layout.preferredWidth: 20
                                     Layout.preferredHeight: 20
                                     onClicked: {
@@ -137,6 +138,7 @@ Common.AviQtlWindow {
             Button {
                 flat: true
                 Layout.preferredWidth: 40
+                hoverEnabled: true
                 Layout.fillHeight: true
                 onClicked: {
                     var win = WindowManager.getWindow("sceneSettings");

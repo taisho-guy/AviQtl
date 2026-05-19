@@ -215,27 +215,27 @@
         <translation>选择颜色</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="346"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="347"/>
         <source>終了色 (f%1)</source>
         <translation>结束颜色 (f%1)</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="391"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="393"/>
         <source>ファイルを選択</source>
         <translation>选择文件</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="530"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="532"/>
         <source>設定</source>
         <translation>设置</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="606"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="608"/>
         <source>フォントを選択</source>
         <translation>选择字体</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="622"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="624"/>
         <source>デフォルト</source>
         <translation>默认</translation>
     </message>
@@ -743,27 +743,27 @@
 <context>
     <name>LayerHeader</name>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="178"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="180"/>
         <source>表示/非表示を切り替え</source>
         <translation>切换显示/隐藏</translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="192"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="194"/>
         <source>ロックを解除</source>
         <translation>解除锁定</translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="192"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="194"/>
         <source>ロック</source>
         <translation>锁定</translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="205"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="207"/>
         <source>すべて表示</source>
         <translation>全部显示</translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="215"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="217"/>
         <source>すべて非表示</source>
         <translation>全部隐藏</translation>
     </message>
@@ -798,7 +798,7 @@
     </message>
     <message>
         <location filename="../ui/qml/MainWindow.qml" line="175"/>
-        <location filename="../ui/qml/MainWindow.qml" line="1324"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1327"/>
         <source>終了</source>
         <translation>退出</translation>
     </message>
@@ -950,12 +950,12 @@
         <translation>另存为</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1031"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1034"/>
         <source>速度</source>
         <translation>速度</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1287"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1290"/>
         <source>ファイル</source>
         <translation>文件</translation>
     </message>
@@ -975,27 +975,27 @@
         <translation>偏好设置</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1384"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1387"/>
         <source>ツール</source>
         <translation>工具</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1387"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1390"/>
         <source>パッケージマネージャー</source>
         <translation>软件包管理器</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1349"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1352"/>
         <source>設定</source>
         <translation>设置</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1333"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1336"/>
         <source>編集</source>
         <translation>编辑</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1368"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1371"/>
         <source>表示</source>
         <translation>显示</translation>
     </message>
@@ -1010,7 +1010,7 @@
         <translation>显示设置对话框</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1406"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1409"/>
         <source>バージョン情報</source>
         <translation>版本信息</translation>
     </message>
@@ -1506,42 +1506,42 @@
         <translation>设置对话框</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="506"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="508"/>
         <source>削除</source>
         <translation>删除</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="506"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="508"/>
         <source>選択した %1 件を削除</source>
         <translation>删除选中的 %1 项</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="818"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="821"/>
         <source> (直線)</source>
         <translation>（直线）</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="819"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="822"/>
         <source> (加速)</source>
         <translation>（加速）</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="820"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="823"/>
         <source> (減速)</source>
         <translation>（减速）</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="821"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="824"/>
         <source> (加減速)</source>
         <translation>（加减速）</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="822"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="825"/>
         <source> (ベジェ)</source>
         <translation>（贝塞尔）</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="1283"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="1302"/>
         <source>エフェクトを追加</source>
         <translation>添加效果</translation>
     </message>
@@ -2030,7 +2030,7 @@
         <translation>时间线</translation>
     </message>
     <message>
-        <location filename="../ui/qml/TimelineWindow.qml" line="144"/>
+        <location filename="../ui/qml/TimelineWindow.qml" line="146"/>
         <source>シーン %1</source>
         <translation>场景 %1</translation>
     </message>

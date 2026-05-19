@@ -784,6 +784,7 @@ ApplicationWindow {
                                         flat: true
                                         Layout.preferredWidth: 20
                                         Layout.preferredHeight: 20
+                                        hoverEnabled: true
                                         onClicked: {
                                             // 未保存確認後にタブを閉じる
                                             checkSaveAndExecute(function() {
@@ -816,6 +817,7 @@ ApplicationWindow {
             Button {
                 flat: true
                 Layout.preferredWidth: 40
+                hoverEnabled: true
                 Layout.fillHeight: true
                 onClicked: {
                     // ランチャーで幅・高さ・fps を選ばせてから新規タブを作成する
@@ -971,6 +973,7 @@ ApplicationWindow {
                         Layout.preferredWidth: 32
                         Layout.preferredHeight: 32
                         flat: true
+                        hoverEnabled: true
                         onClicked: {
                             if (Workspace.currentTimeline && Workspace.currentTimeline.transport)
                                 Workspace.currentTimeline.transport.setCurrentFrame_seek(Math.max(0, Workspace.currentTimeline.transport.currentFrame - 1));

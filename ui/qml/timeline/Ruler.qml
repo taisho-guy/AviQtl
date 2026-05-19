@@ -188,6 +188,7 @@ Rectangle {
             MouseArea {
                 anchors.fill: parent
                 hoverEnabled: true
+                cursorShape: pressed ? Qt.ClosedHandCursor : Qt.PointingHandCursor
                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                 onPressed: (mouse) => {
                     if (mouse.button === Qt.LeftButton && targetFlickable && Workspace.currentTimeline && Workspace.currentTimeline.transport) {

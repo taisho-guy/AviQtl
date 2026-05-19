@@ -215,27 +215,27 @@ This software is released under the GNU Affero General Public License Version 3.
         <translation>Select Color</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="346"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="347"/>
         <source>終了色 (f%1)</source>
         <translation>End color (f%1)</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="391"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="393"/>
         <source>ファイルを選択</source>
         <translation>Select File</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="530"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="532"/>
         <source>設定</source>
         <translation>Settings</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="606"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="608"/>
         <source>フォントを選択</source>
         <translation>Select Font</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="622"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="624"/>
         <source>デフォルト</source>
         <translation>Default</translation>
     </message>
@@ -743,27 +743,27 @@ This software is released under the GNU Affero General Public License Version 3.
 <context>
     <name>LayerHeader</name>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="178"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="180"/>
         <source>表示/非表示を切り替え</source>
         <translation>Toggle visibility</translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="192"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="194"/>
         <source>ロックを解除</source>
         <translation>Unlock</translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="192"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="194"/>
         <source>ロック</source>
         <translation>Lock</translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="205"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="207"/>
         <source>すべて表示</source>
         <translation>Show All</translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="215"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="217"/>
         <source>すべて非表示</source>
         <translation>Hide All</translation>
     </message>
@@ -798,7 +798,7 @@ This software is released under the GNU Affero General Public License Version 3.
     </message>
     <message>
         <location filename="../ui/qml/MainWindow.qml" line="175"/>
-        <location filename="../ui/qml/MainWindow.qml" line="1324"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1327"/>
         <source>終了</source>
         <translation>Exit</translation>
     </message>
@@ -950,12 +950,12 @@ Save before continuing?</translation>
         <translation>Save As</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1031"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1034"/>
         <source>速度</source>
         <translation>Speed</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1287"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1290"/>
         <source>ファイル</source>
         <translation>File</translation>
     </message>
@@ -975,27 +975,27 @@ Save before continuing?</translation>
         <translation>Preferences</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1384"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1387"/>
         <source>ツール</source>
         <translation>Tools</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1387"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1390"/>
         <source>パッケージマネージャー</source>
         <translation>Package Manager</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1349"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1352"/>
         <source>設定</source>
         <translation>Settings</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1333"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1336"/>
         <source>編集</source>
         <translation>Edit</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1368"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1371"/>
         <source>表示</source>
         <translation>View</translation>
     </message>
@@ -1010,7 +1010,7 @@ Save before continuing?</translation>
         <translation>Show Settings Dialog</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1406"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1409"/>
         <source>バージョン情報</source>
         <translation>About</translation>
     </message>
@@ -1506,42 +1506,42 @@ Save before continuing?</translation>
         <translation>Settings Dialog</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="506"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="508"/>
         <source>削除</source>
         <translation>Delete</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="506"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="508"/>
         <source>選択した %1 件を削除</source>
         <translation>Delete %1 selected items</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="818"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="821"/>
         <source> (直線)</source>
         <translation> (Linear)</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="819"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="822"/>
         <source> (加速)</source>
         <translation> (Ease In)</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="820"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="823"/>
         <source> (減速)</source>
         <translation> (Ease Out)</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="821"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="824"/>
         <source> (加減速)</source>
         <translation> (Ease In/Out)</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="822"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="825"/>
         <source> (ベジェ)</source>
         <translation> (Bezier)</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="1283"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="1302"/>
         <source>エフェクトを追加</source>
         <translation>Add Effect</translation>
     </message>
@@ -2030,7 +2030,7 @@ Save before continuing?</translation>
         <translation>Timeline</translation>
     </message>
     <message>
-        <location filename="../ui/qml/TimelineWindow.qml" line="144"/>
+        <location filename="../ui/qml/TimelineWindow.qml" line="146"/>
         <source>シーン %1</source>
         <translation>Scene %1</translation>
     </message>
