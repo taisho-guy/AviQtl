@@ -698,11 +698,12 @@ void AudioPluginManager::scanPlugins() {
     QList<PluginInfo> newPlugins;
     QHash<QString, PluginInfo> newMap;
 
+    const auto &settings = AviQtl::Core::SettingsManager::instance();
     for (const FormatConfig &cfg : std::as_const(formats())) {
         if (m_stopRequested) {
             break;
         }
-        bool isEnabled = AviQtl::Core::SettingsManager::instance().value(QStringLiteral("pluginEnable") + cfg.format, true).toBool();
+        bool isEnabled = settings.value(QStringLiteral("pluginEnable") + cfg.format, true).toBool();
         if (!isEnabled) {
             continue;
         }

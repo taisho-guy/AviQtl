@@ -137,20 +137,23 @@ void TimelineMediaManager::updateMediaDecoders() {
 
             QUrl sourceUrl = getClipSourceUrl(clip);
             if (!sourceUrl.isValid() || sourceUrl.isEmpty()) {
-                if (m_decoders.contains(clip.id)) {
-                    if (qobject_cast<AviQtl::Core::AudioDecoder *>(m_decoders.value(clip.id)) != nullptr) {
+                auto it = m_decoders.find(clip.id);
+                if (it != m_decoders.end()) {
+                    auto decoder = it.value();
+                    if (qobject_cast<AviQtl::Core::AudioDecoder *>(decoder) != nullptr) {
                         m_audioMixer->unregisterDecoder(clip.id);
                     }
-                    if (m_decoders.value(clip.id)) {
-                        m_decoders.value(clip.id)->deleteLater();
+                    if (decoder) {
+                        decoder->deleteLater();
                     }
-                    m_decoders.remove(clip.id);
+                    m_decoders.erase(it);
                 }
                 continue;
             }
 
-            if (m_decoders.contains(clip.id)) {
-                AviQtl::Core::MediaDecoder *existingDecoder = m_decoders.value(clip.id);
+            auto itExisting = m_decoders.find(clip.id);
+            if (itExisting != m_decoders.end()) {
+                AviQtl::Core::MediaDecoder *existingDecoder = itExisting.value();
                 if (existingDecoder != nullptr) {
                     // If the source has changed, we must recreate the decoder
                     if (existingDecoder->source() != sourceUrl) {
@@ -158,12 +161,12 @@ void TimelineMediaManager::updateMediaDecoders() {
                             m_audioMixer->unregisterDecoder(clip.id);
                         }
                         existingDecoder->deleteLater();
-                        m_decoders.remove(clip.id);
+                        m_decoders.erase(itExisting);
                     } else {
                         continue;
                     }
                 } else {
-                    m_decoders.remove(clip.id);
+                    m_decoders.erase(itExisting);
                 }
             }
 

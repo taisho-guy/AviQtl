@@ -38,9 +38,10 @@ auto TimelineExportManager::exportImageSequence(const QString &dir, int quality)
     if (baseName.endsWith(QLatin1String(".png"))) {
         baseName.chop(4);
     }
-    const int sequencePadding = AviQtl::Core::SettingsManager::instance().value(QStringLiteral("exportSequencePadding"), 6).toInt();
-    const int timeoutMs = AviQtl::Core::SettingsManager::instance().value(QStringLiteral("exportFrameGrabTimeoutMs"), 2000).toInt();
-    const int progressInterval = AviQtl::Core::SettingsManager::instance().value(QStringLiteral("exportProgressInterval"), 5).toInt();
+    auto &settings = AviQtl::Core::SettingsManager::instance();
+    const int sequencePadding = settings.value(QStringLiteral("exportSequencePadding"), 6).toInt();
+    const int timeoutMs = settings.value(QStringLiteral("exportFrameGrabTimeoutMs"), 2000).toInt();
+    const int progressInterval = settings.value(QStringLiteral("exportProgressInterval"), 5).toInt();
 
     QQuickItem *view = m_controller->compositeView();
     if (view != nullptr) {
@@ -114,6 +115,10 @@ void TimelineExportManager::runExport(const AviQtl::Core::VideoEncoder::Config &
         QMetaObject::invokeMethod(view, [view] -> void { view->setProperty("exportMode", true); }, Qt::BlockingQueuedConnection);
     }
 
+    auto &exportSettings = AviQtl::Core::SettingsManager::instance();
+    const int grabTimeout = exportSettings.value(QStringLiteral("exportFrameGrabTimeoutMs"), 2000).toInt();
+    const int progInterval = exportSettings.value(QStringLiteral("exportProgressInterval"), 5).toInt();
+
     for (int frame = startFrame; frame < endFrame; ++frame) {
         if (m_cancelRequested.load()) {
             emit exportFinished(false, tr("キャンセルされました"));
@@ -129,7 +134,6 @@ void TimelineExportManager::runExport(const AviQtl::Core::VideoEncoder::Config &
             if (grab) {
                 QEventLoop loop;
                 connect(grab.get(), &QQuickItemGrabResult::ready, &loop, &QEventLoop::quit);
-                const int grabTimeout = AviQtl::Core::SettingsManager::instance().value(QStringLiteral("exportFrameGrabTimeoutMs"), 2000).toInt();
                 QTimer::singleShot(grabTimeout, &loop, &QEventLoop::quit);
                 loop.exec();
                 img = grab->image();
@@ -143,7 +147,6 @@ void TimelineExportManager::runExport(const AviQtl::Core::VideoEncoder::Config &
         encoder.pushAudio(audio.data(), samplesNeeded);
 
         const int done = frame - startFrame + 1;
-        const int progInterval = AviQtl::Core::SettingsManager::instance().value(QStringLiteral("exportProgressInterval"), 5).toInt();
         if (done % progInterval == 0 || done == totalFrames) {
             emit exportProgressChanged(done * 100 / totalFrames, done, totalFrames);
         }

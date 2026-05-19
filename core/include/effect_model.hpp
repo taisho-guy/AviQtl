@@ -563,7 +563,7 @@ class EffectModel : public QObject {
     Q_INVOKABLE QStringList availableEasings() const {
         QStringList keys;
         keys << QStringLiteral("none");
-        auto funcs = easingFunctions();
+        const auto &funcs = easingFunctions();
         for (auto it = funcs.begin(); it != funcs.end(); ++it)
             keys << it.key();
         keys << QStringLiteral("random") << QStringLiteral("alternate");
@@ -672,10 +672,9 @@ class EffectModel : public QObject {
 
     Q_INVOKABLE QVariantMap evaluatedParams(int frame, double fps = 60.0) const {
         QVariantMap out;
-        // 全てのキーを網羅するために m_params から開始
-        auto keys = m_params.keys();
-        for (const QString &paramName : std::as_const(keys)) {
-            out[paramName] = evaluatedParam(paramName, frame, fps);
+        // 全てのキーを網羅するために m_params から開始 (avoid temporary QList from keys())
+        for (auto it = m_params.cbegin(); it != m_params.cend(); ++it) {
+            out[it.key()] = evaluatedParam(it.key(), frame, fps);
         }
         return out;
     }

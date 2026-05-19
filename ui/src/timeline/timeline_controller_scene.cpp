@@ -49,24 +49,20 @@ auto TimelineController::getSceneClips(int sceneId) const -> QVariantList {
         params.insert(QStringLiteral("durationFrames"), clip.durationFrames);
         params.insert(QStringLiteral("id"), clip.id);
 
-        for (auto *eff : clip.effects) {
-            if (!eff->isEnabled()) {
-                continue;
-            }
-            // キーフレーム評価を行わず生パラメータまたはデフォルト値を渡す
-            // SceneObject内で時間に応じて評価されるため
-            QVariantMap p = eff->params();
-            for (auto it = p.begin(); it != p.end(); ++it) {
-                params.insert(it.key(), it.value());
-            }
-        }
-        map.insert(QStringLiteral("params"), params);
-
         // エフェクトモデルのポインタリストを直接渡す (QMLでの一貫性のため)
         QList<QObject *> effList;
         for (auto *eff : clip.effects) {
+            if (eff->isEnabled()) {
+                // キーフレーム評価を行わず生パラメータまたはデフォルト値を渡す
+                // SceneObject内で時間に応じて評価されるため
+                QVariantMap p = eff->params();
+                for (auto it = p.begin(); it != p.end(); ++it) {
+                    params.insert(it.key(), it.value());
+                }
+            }
             effList.append(eff);
         }
+        map.insert(QStringLiteral("params"), params);
         map.insert(QStringLiteral("effectModels"), QVariant::fromValue(effList));
 
         list.append(map);

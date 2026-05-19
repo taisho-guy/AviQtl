@@ -11,8 +11,6 @@ namespace AviQtl::UI {
 // 最適化: ClipIDを導入
 using ClipID = int;
 
-class EffectModel; // 前方宣言
-
 struct Keyframe {
     int frame;
     float value;
