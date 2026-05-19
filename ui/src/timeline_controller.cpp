@@ -158,8 +158,6 @@ auto TimelineController::resolveDragDelta(int clipId, int deltaFrame, int deltaL
     if (clip == nullptr) {
         return {0, 0};
     }
-    // NOLINT(bugprone-easily-swappable-parameters)
-    // 1. 衝突判定を含めた座標解決
     QPoint resolved = m_timeline->resolveDragPosition(clipId, clip->layer + deltaLayer, clip->startFrame + deltaFrame, batchIds);
 
     int dF = resolved.x() - clip->startFrame;

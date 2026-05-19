@@ -4,18 +4,6 @@
 // すべてのフィールドが trivially_copyable であるため memcpy が安全。
 //
 // GLSL 対応:
-//   layout(std430, binding=0) readonly buffer ClipSSBO {
-//       int  count;
-//       int  _pad[3];
-//       int  clipIds[MAX_ACTIVE_CLIPS];
-//       int  layers[MAX_ACTIVE_CLIPS];
-//       float timePositions[MAX_ACTIVE_CLIPS];
-//       int  startFrames[MAX_ACTIVE_CLIPS];
-//       int  durationFrames[MAX_ACTIVE_CLIPS];
-//       float volumes[MAX_ACTIVE_CLIPS];
-//       float pans[MAX_ACTIVE_CLIPS];
-//       int  mutes[MAX_ACTIVE_CLIPS];
-//   };
 #include <array>
 #include <cstdint>
 #include <type_traits>

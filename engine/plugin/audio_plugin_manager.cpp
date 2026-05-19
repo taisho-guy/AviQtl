@@ -405,7 +405,7 @@ auto normalizeCategoryTitle(QString category) -> QString {
     }
     if (lower == QLatin1String("utility") || lower == QLatin1String("tools") || lower == QStringLiteral("tool")) {
         return QStringLiteral("Utility");
-    } // NOLINT(bugprone-easily-swappable-parameters)
+    }
     if (lower == QLatin1String("other") || lower == QLatin1String("unknown") || lower == QLatin1String("misc") || lower == QLatin1String("none") || lower == QStringLiteral("null")) {
         return QStringLiteral("Other");
     }
@@ -451,7 +451,7 @@ auto categoryRank(const QString &category) -> int {
     }
     if (c == QStringLiteral("Utility")) {
         return 6;
-    } // NOLINT(bugprone-easily-swappable-parameters)
+    }
     if (c == QStringLiteral("Synth")) {
         return 7;
     }
@@ -509,7 +509,7 @@ auto parseDiscoveryOutput(const QString &output, const QString &format, const QS
             }
             inBlock = false;
         }
-    } // NOLINT(bugprone-easily-swappable-parameters)
+    }
     return results;
 }
 

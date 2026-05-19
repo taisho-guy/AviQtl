@@ -10,15 +10,10 @@
 #include "transport_service.hpp"
 #include <QAbstractListModel>
 #include <QDebug>
-#include <QJsonArray>
-#include <QJsonDocument>
-#include <QJsonObject>
 #include <QObject>
 #include <QPoint>
 #include <QPointer>
 #include <QQuickItem>
-#include <QQuickRenderControl>
-#include <QQuickWindow>
 #include <QVariant>
 #include <QtMath>
 #include <memory>

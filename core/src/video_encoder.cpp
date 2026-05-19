@@ -248,7 +248,6 @@ auto VideoEncoder::open(const QVariantMap &configMap) -> bool {
     // codecName defaults to h264_vaapi if not present
     return open(config);
 }
-// NOLINT(bugprone-easily-swappable-parameters)
 auto VideoEncoder::addAudioStream(int sampleRate, int channels) -> bool {
     std::scoped_lock lock(m_mutex);
     if (m_fmtCtx == nullptr) {
