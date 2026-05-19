@@ -31,15 +31,15 @@ Item {
     signal clipDoubleClicked(int clipId)
 
     x: (resizeDraftStart >= 0 ? resizeDraftStart : Math.max(0, modelData.startFrame + dragDeltaStart)) * scale
-    y: Math.max(0, modelData.layer + dragDeltaLayer) * layerHeight
+    y: (Math.max(0, modelData.layer + dragDeltaLayer) + 0.1) * layerHeight
     width: (resizeDraftDuration >= 0 ? resizeDraftDuration : modelData.durationFrames) * scale
-    height: layerHeight
+    height: layerHeight * 0.8
     z: modelData.layer
 
     Rectangle {
         visible: clipDelegate.isSelected && (modelData.groupLayerCount > 0)
         x: 0
-        y: layerHeight
+        y: layerHeight * 0.9
         width: parent.width
         height: modelData.groupLayerCount * layerHeight
         color: Qt.rgba(palette.highlight.r, palette.highlight.g, palette.highlight.b, 0.18)
@@ -55,7 +55,6 @@ Item {
         readonly property color _baseColor: _rawColor !== "" ? _rawColor : Qt.darker(palette.highlight, 1.6)
 
         anchors.fill: parent
-        anchors.bottomMargin: 2
         color: isSelected ? (_rawColor !== "" ? Qt.lighter(_rawColor, 1.3) : palette.highlight) : "transparent"
         gradient: isSelected ? null : clipGradient
         border.color: isSelected ? palette.highlight : palette.midlight
