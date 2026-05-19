@@ -616,7 +616,6 @@ auto TimelineController::getEffectParameters(int clipId, int effectIndex) const 
     if (clipId < 0) {
         return list;
     }
-    // NOLINT(bugprone-easily-swappable-parameters)
     auto &chain = m_mediaManager->audioMixer()->getChain(clipId);
     auto *plugin = chain.get(effectIndex);
     if (plugin != nullptr) {

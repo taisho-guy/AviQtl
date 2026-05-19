@@ -151,8 +151,9 @@ auto ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
             EffectMetadata meta = EffectRegistry::instance().getEffect(effId);
             auto *eff = new UI::EffectModel(effId, eObj.value(QStringLiteral("name")).toString(), meta.kind, meta.categories, eObj.value(QStringLiteral("params")).toObject().toVariantMap(), meta.qmlSource, meta.uiDefinition, timeline);
             eff->setEnabled(eObj.value(QStringLiteral("enabled")).toBool(true));
-            if (eObj.contains(QStringLiteral("keyframes"))) {
-                eff->setKeyframeTracks(eObj.value(QStringLiteral("keyframes")).toObject().toVariantMap());
+            auto it = eObj.find(QStringLiteral("keyframes"));
+            if (it != eObj.end()) {
+                eff->setKeyframeTracks(it.value().toObject().toVariantMap());
             }
             clip.effects.append(eff);
         }
