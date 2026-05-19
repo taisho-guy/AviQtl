@@ -359,7 +359,7 @@ ScrollView {
 
         MouseArea {
             anchors.fill: parent
-            z: 999
+            z: -1
             acceptedButtons: Qt.RightButton
             preventStealing: true
             onPressed: (mouse) => {
@@ -435,6 +435,7 @@ ScrollView {
 
         MouseArea {
             anchors.fill: parent
+            z: -1
             acceptedButtons: Qt.NoButton
             onWheel: (wheel) => {
                 timelineViewRoot.autoScrollSuspended = true;

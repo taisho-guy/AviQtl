@@ -218,6 +218,7 @@ Item {
             anchors.leftMargin: clipResizeHandleWidth
             anchors.rightMargin: clipResizeHandleWidth
             acceptedButtons: Qt.LeftButton
+            hoverEnabled: true
             cursorShape: clipDelegate.isLayerLocked ? Qt.ForbiddenCursor : Qt.OpenHandCursor
             preventStealing: true
             onPressed: (mouse) => {
@@ -350,7 +351,7 @@ Item {
                 property bool resizing: false
 
                 anchors.fill: parent
-                cursorShape: Qt.SizeHorCursor
+                cursorShape: clipDelegate.isLayerLocked ? Qt.ForbiddenCursor : Qt.SizeHorCursor
                 hoverEnabled: true
                 preventStealing: true
                 onPressed: (mouse) => {
@@ -423,7 +424,7 @@ Item {
                 property bool resizing: false
 
                 anchors.fill: parent
-                cursorShape: Qt.SizeHorCursor
+                cursorShape: clipDelegate.isLayerLocked ? Qt.ForbiddenCursor : Qt.SizeHorCursor
                 hoverEnabled: true
                 preventStealing: true
                 onPressed: (mouse) => {
