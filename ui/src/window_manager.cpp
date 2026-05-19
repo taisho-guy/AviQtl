@@ -20,20 +20,45 @@ auto WindowManager::instance() -> WindowManager & {
 void WindowManager::spawnInitialWindows(QQmlEngine *engine) {
     m_engine = engine;
 
-    // ランチャーを経由せず直接メインウィンドウ群を生成する
+    // ユーザーが即座に見るウィンドウのみ生成
+    // その他のウィンドウは初回アクセス時に遅延生成する
     spawnWindow(engine, QStringLiteral("main"), QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/MainWindow.qml"), tr("AviQtl メインプレビュー"), 640, 480, 100, 100, true);
     spawnWindow(engine, QStringLiteral("timeline"), QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/TimelineWindow.qml"), tr("タイムライン"), 1280, 300, 100, 600, true);
-    spawnWindow(engine, QStringLiteral("projectSettings"), QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/ProjectSettingsWindow.qml"), tr("プロジェクト設定"), 450, 250, 800, 100, false);
-    spawnWindow(engine, QStringLiteral("objectSettings"), QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/SettingDialog.qml"), tr("オブジェクト設定"), 400, 600, 800, 420, false);
-    spawnWindow(engine, QStringLiteral("systemSettings"), QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/SystemSettingsWindow.qml"), tr("システム設定"), 600, 500, 200, 200, false);
-    spawnWindow(engine, QStringLiteral("about"), QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/AboutWindow.qml"), tr("AviQtlについて"), 400, 250, 400, 300, false);
-    spawnWindow(engine, QStringLiteral("sceneSettings"), QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/SceneSettingsWindow.qml"), tr("シーン設定"), 450, 300, 300, 200, false);
-    spawnWindow(engine, QStringLiteral("export"), QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/ExportDialog.qml"), tr("メディアの書き出し"), 620, 580, 240, 160, false);
-    spawnWindow(engine, QStringLiteral("easingConfig"), QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/common/EasingConfigWindow.qml"), tr("補間設定"), 820, 540, 420, 180, false);
-    spawnWindow(engine, QStringLiteral("packageManager"), QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/PackageManagerWindow.qml"), tr("パッケージマネージャー"), 600, 400, 500, 300, false);
 
     // タブが 0 の状態で起動しているので、ランチャーを即座に表示する
     showLauncher();
+}
+
+static void ensureWindowCreated(QQmlEngine *engine, QHash<QString, QPointer<QQuickWindow>> &windows, const QString &id) {
+    if (windows.contains(id) && !windows.value(id).isNull()) {
+        return;
+    }
+    if (!engine) {
+        return;
+    }
+
+    // 各ウィンドウの遅延生成パラメータを集中定義
+    // NOLINTBEGIN(bugprone-easily-swappable-parameters)
+    if (id == QStringLiteral("projectSettings")) {
+        WindowManager::instance().spawnWindow(engine, id, QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/ProjectSettingsWindow.qml"), WindowManager::tr("プロジェクト設定"), 450, 250, 800, 100, false);
+    } else if (id == QStringLiteral("objectSettings")) {
+        WindowManager::instance().spawnWindow(engine, id, QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/SettingDialog.qml"), WindowManager::tr("オブジェクト設定"), 400, 600, 800, 420, false);
+    } else if (id == QStringLiteral("systemSettings")) {
+        WindowManager::instance().spawnWindow(engine, id, QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/SystemSettingsWindow.qml"), WindowManager::tr("システム設定"), 600, 500, 200, 200, false);
+    } else if (id == QStringLiteral("about")) {
+        WindowManager::instance().spawnWindow(engine, id, QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/AboutWindow.qml"), WindowManager::tr("AviQtlについて"), 400, 250, 400, 300, false);
+    } else if (id == QStringLiteral("sceneSettings")) {
+        WindowManager::instance().spawnWindow(engine, id, QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/SceneSettingsWindow.qml"), WindowManager::tr("シーン設定"), 450, 300, 300, 200, false);
+    } else if (id == QStringLiteral("export")) {
+        WindowManager::instance().spawnWindow(engine, id, QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/ExportDialog.qml"), WindowManager::tr("メディアの書き出し"), 620, 580, 240, 160, false);
+    } else if (id == QStringLiteral("easingConfig")) {
+        WindowManager::instance().spawnWindow(engine, id, QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/common/EasingConfigWindow.qml"), WindowManager::tr("補間設定"), 820, 540, 420, 180, false);
+    } else if (id == QStringLiteral("packageManager")) {
+        WindowManager::instance().spawnWindow(engine, id, QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/PackageManagerWindow.qml"), WindowManager::tr("パッケージマネージャー"), 600, 400, 500, 300, false);
+    } else {
+        qWarning() << "[WindowManager] Unknown lazy window id:" << id;
+    }
+    // NOLINTEND(bugprone-easily-swappable-parameters)
 }
 
 void WindowManager::showLauncher(QQmlEngine *engine) {
@@ -138,6 +163,17 @@ void WindowManager::registerWindow(const QString &id, QQuickWindow *win) {
         });
     }
 
+    // ランチャーが閉じられ、かつまだ main が生成されていなければ全終了
+    if (id == QStringLiteral("launcher")) {
+        connect(win, &QQuickWindow::closing, this, [this](QQuickCloseEvent *e) -> void {
+            Q_UNUSED(e);
+            auto mainWin = m_windows.value(QStringLiteral("main"));
+            if (!mainWin || mainWin.isNull()) {
+                requestQuit();
+            }
+        });
+    }
+
     emitVisibilityChanged(id);
 }
 
@@ -161,6 +197,7 @@ auto WindowManager::isVisible(const QString &id) const -> bool {
     return w ? w->isVisible() : false;
 }
 void WindowManager::setVisible(const QString &id, bool visible) {
+    ensureWindowCreated(m_engine, m_windows, id);
     QPointer<QQuickWindow> w = m_windows.value(id);
     if (!w) {
         return;
@@ -177,6 +214,7 @@ void WindowManager::setVisible(const QString &id, bool visible) {
 }
 void WindowManager::toggleVisible(const QString &id) { setVisible(id, !isVisible(id)); }
 void WindowManager::raiseWindow(const QString &id) {
+    ensureWindowCreated(m_engine, m_windows, id);
     QPointer<QQuickWindow> w = m_windows.value(id);
     if (!w) {
         return;
@@ -186,7 +224,10 @@ void WindowManager::raiseWindow(const QString &id) {
     w->requestActivate();
 }
 
-auto WindowManager::getWindow(const QString &id) const -> QObject * { return m_windows.value(id); }
+auto WindowManager::getWindow(const QString &id) -> QObject * {
+    ensureWindowCreated(m_engine, m_windows, id);
+    return m_windows.value(id);
+}
 
 void WindowManager::requestQuit() {
     // 全Windowを閉じる

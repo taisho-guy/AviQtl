@@ -14,8 +14,8 @@ class WindowManager : public QObject {
     Q_PROPERTY(bool systemSettingsVisible READ systemSettingsVisible WRITE setSystemSettingsVisible NOTIFY systemSettingsVisibleChanged)
 
   public:
-    Q_INVOKABLE Q_INVOKABLE bool isVisible(const QString &id) const;
-    Q_INVOKABLE Q_INVOKABLE QObject *getWindow(const QString &id) const;
+    Q_INVOKABLE bool isVisible(const QString &id) const;
+    Q_INVOKABLE QObject *getWindow(const QString &id);
     Q_INVOKABLE bool timelineVisible() const;
     Q_INVOKABLE bool projectSettingsVisible() const;
     Q_INVOKABLE bool objectSettingsVisible() const;

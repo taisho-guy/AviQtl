@@ -82,12 +82,12 @@ auto main(int argc, char *argv[]) -> int {
         app.installTranslator(&translator);
     }
 
-    // 設定
-    Core::SettingsManager::instance();
+    // 設定・テーマ初期化（SettingsManagerはコンストラクタで設定をロードし、ThemeControllerがテーマを適用する）
+    auto &settings = Core::SettingsManager::instance();
     Core::ThemeController::instance();
 
     // スプラッシュ
-    int splashSize = Core::SettingsManager::instance().value(QStringLiteral("splashSize"), 128).toInt();
+    int splashSize = settings.value(QStringLiteral("splashSize"), 128).toInt();
     QSplashScreen splash(QIcon(QStringLiteral(":/assets/splash.svg")).pixmap(splashSize, splashSize));
     splash.show();
 
@@ -113,11 +113,10 @@ auto main(int argc, char *argv[]) -> int {
 
     QTimer luaTimer;
     QObject::connect(&luaTimer, &QTimer::timeout, [&]() { modEngine.onUpdate(); });
-    luaTimer.start(Core::SettingsManager::instance().value(QStringLiteral("luaHookIntervalMs"), 16).toInt());
+    luaTimer.start(settings.value(QStringLiteral("luaHookIntervalMs"), 16).toInt());
 
     // プラグインロード
     QTimer::singleShot(10, [&]() {
-        Core::initializeStandardEffects();
         modEngine.initialize(nullptr);
         modEngine.loadPlugins();
 

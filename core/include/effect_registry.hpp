@@ -59,7 +59,4 @@ class EffectRegistry {
     std::vector<QString> m_orderedIds;
 };
 
-// 標準エフェクト初期化関数
-void initializeStandardEffects();
-
 } // namespace AviQtl::Core

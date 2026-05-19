@@ -13,10 +13,6 @@
 
 namespace AviQtl::Core {
 
-void initializeStandardEffects() {
-    // 外部JSON経由で読み込むため、何もしない
-}
-
 void EffectRegistry::loadEffectsFromDirectory(const QString &path) {
     QDir dir(path);
     if (!dir.exists()) {

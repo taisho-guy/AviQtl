@@ -113,54 +113,46 @@
 <context>
     <name>AviQtl::UI::WindowManager</name>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="24"/>
+        <location filename="../ui/src/window_manager.cpp" line="25"/>
         <source>AviQtl メインプレビュー</source>
         <translation>AviQtl 主预览</translation>
     </message>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="25"/>
+        <location filename="../ui/src/window_manager.cpp" line="26"/>
         <source>タイムライン</source>
         <translation>时间线</translation>
     </message>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="26"/>
         <source>プロジェクト設定</source>
-        <translation>项目设置</translation>
+        <translation type="vanished">项目设置</translation>
     </message>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="27"/>
         <source>オブジェクト設定</source>
-        <translation>对象设置</translation>
+        <translation type="vanished">对象设置</translation>
     </message>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="28"/>
         <source>システム設定</source>
-        <translation>系统设置</translation>
+        <translation type="vanished">系统设置</translation>
     </message>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="29"/>
         <source>AviQtlについて</source>
-        <translation>关于 AviQtl</translation>
+        <translation type="vanished">关于 AviQtl</translation>
     </message>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="30"/>
         <source>シーン設定</source>
-        <translation>场景设置</translation>
+        <translation type="vanished">场景设置</translation>
     </message>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="31"/>
         <source>メディアの書き出し</source>
-        <translation>导出媒体</translation>
+        <translation type="vanished">导出媒体</translation>
     </message>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="32"/>
         <source>補間設定</source>
-        <translation>插值设置</translation>
+        <translation type="vanished">插值设置</translation>
     </message>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="33"/>
         <source>パッケージマネージャー</source>
-        <translation>软件包管理器</translation>
+        <translation type="vanished">软件包管理器</translation>
     </message>
 </context>
 <context>
@@ -200,6 +192,7 @@
     <name>ControlLoader</name>
     <message>
         <location filename="../ui/qml/common/ControlLoader.qml" line="30"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="32"/>
         <location filename="../ui/qml/common/ControlLoader.qml" line="32"/>
         <source>パラメータ</source>
         <translation>参数</translation>
@@ -323,6 +316,7 @@
     <message>
         <location filename="../ui/qml/common/EasingConfigWindow.qml" line="775"/>
         <location filename="../ui/qml/common/EasingConfigWindow.qml" line="979"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="979"/>
         <source>直線</source>
         <translation>直线</translation>
     </message>
@@ -378,6 +372,7 @@
     </message>
     <message>
         <location filename="../ui/qml/common/EasingConfigWindow.qml" line="808"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="982"/>
         <location filename="../ui/qml/common/EasingConfigWindow.qml" line="982"/>
         <source>カスタム</source>
         <translation>自定义</translation>
@@ -473,6 +468,7 @@
     <message>
         <location filename="../ui/qml/ExportDialog.qml" line="74"/>
         <location filename="../ui/qml/ExportDialog.qml" line="496"/>
+        <location filename="../ui/qml/ExportDialog.qml" line="496"/>
         <source>キャンセル</source>
         <translation>取消</translation>
     </message>
@@ -519,6 +515,7 @@
     <message>
         <location filename="../ui/qml/ExportDialog.qml" line="172"/>
         <location filename="../ui/qml/ExportDialog.qml" line="342"/>
+        <location filename="../ui/qml/ExportDialog.qml" line="342"/>
         <source>コーデック:</source>
         <translation>编解码器：</translation>
     </message>
@@ -559,6 +556,7 @@
     </message>
     <message>
         <location filename="../ui/qml/ExportDialog.qml" line="300"/>
+        <location filename="../ui/qml/ExportDialog.qml" line="383"/>
         <location filename="../ui/qml/ExportDialog.qml" line="383"/>
         <source>ビットレート:</source>
         <translation>比特率：</translation>
@@ -788,6 +786,7 @@
     <message>
         <location filename="../ui/qml/MainWindow.qml" line="142"/>
         <location filename="../ui/qml/MainWindow.qml" line="699"/>
+        <location filename="../ui/qml/MainWindow.qml" line="699"/>
         <source>プロジェクトを開く</source>
         <translation>打开项目</translation>
     </message>
@@ -798,6 +797,7 @@
     </message>
     <message>
         <location filename="../ui/qml/MainWindow.qml" line="175"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1324"/>
         <location filename="../ui/qml/MainWindow.qml" line="1324"/>
         <source>終了</source>
         <translation>退出</translation>
@@ -1451,11 +1451,52 @@
         <source>エフェクト順序変更 (%1件)</source>
         <translation>更改效果顺序（%1 项）</translation>
     </message>
+    <message>
+        <location filename="../ui/src/window_manager.cpp" line="43"/>
+        <source>プロジェクト設定</source>
+        <translation type="unfinished">项目设置</translation>
+    </message>
+    <message>
+        <location filename="../ui/src/window_manager.cpp" line="45"/>
+        <source>オブジェクト設定</source>
+        <translation type="unfinished">对象设置</translation>
+    </message>
+    <message>
+        <location filename="../ui/src/window_manager.cpp" line="47"/>
+        <source>システム設定</source>
+        <translation type="unfinished">系统设置</translation>
+    </message>
+    <message>
+        <location filename="../ui/src/window_manager.cpp" line="49"/>
+        <source>AviQtlについて</source>
+        <translation type="unfinished">关于 AviQtl</translation>
+    </message>
+    <message>
+        <location filename="../ui/src/window_manager.cpp" line="51"/>
+        <source>シーン設定</source>
+        <translation type="unfinished">场景设置</translation>
+    </message>
+    <message>
+        <location filename="../ui/src/window_manager.cpp" line="53"/>
+        <source>メディアの書き出し</source>
+        <translation type="unfinished">导出媒体</translation>
+    </message>
+    <message>
+        <location filename="../ui/src/window_manager.cpp" line="55"/>
+        <source>補間設定</source>
+        <translation type="unfinished">插值设置</translation>
+    </message>
+    <message>
+        <location filename="../ui/src/window_manager.cpp" line="57"/>
+        <source>パッケージマネージャー</source>
+        <translation type="unfinished">软件包管理器</translation>
+    </message>
 </context>
 <context>
     <name>SceneSettingsWindow</name>
     <message>
         <location filename="../ui/qml/SceneSettingsWindow.qml" line="37"/>
+        <location filename="../ui/qml/SceneSettingsWindow.qml" line="67"/>
         <location filename="../ui/qml/SceneSettingsWindow.qml" line="67"/>
         <source>新規シーン作成</source>
         <translation type="unfinished"></translation>
@@ -1599,6 +1640,7 @@
     </message>
     <message>
         <location filename="../ui/qml/SystemSettingsWindow.qml" line="29"/>
+        <location filename="../ui/qml/SystemSettingsWindow.qml" line="249"/>
         <location filename="../ui/qml/SystemSettingsWindow.qml" line="249"/>
         <source>新規プロジェクト</source>
         <translation>新建项目</translation>

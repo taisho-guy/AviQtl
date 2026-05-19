@@ -516,7 +516,8 @@ auto parseDiscoveryOutput(const QString &output, const QString &format, const QS
 // 1ファイルに対してディスカバリを実行
 // stdout の逐次読み出しでバッファ詰まりデッドロックを回避
 // stdin を /dev/null に向けて子プロセスによる端末状態の汚染を防ぐ
-auto runDiscovery(const QString &tool, const QString &type, const QString &format, const QString &target, std::atomic<bool> &stopFlag) -> QList<PluginInfo> {
+auto runDiscovery(const QString &tool, const QString &type, const QString &format, const QString &target, std::atomic<bool> &stopFlag,
+                    int waitStartedMs, int timeoutMs, int waitReadyReadMs, int waitFinishedMs) -> QList<PluginInfo> {
     if (stopFlag) {
         return {};
     }
@@ -526,7 +527,7 @@ auto runDiscovery(const QString &tool, const QString &type, const QString &forma
     proc.setProcessChannelMode(QProcess::SeparateChannels);
     proc.start(tool, {type, target});
 
-    if (!proc.waitForStarted(AviQtl::Core::SettingsManager::instance().value(QStringLiteral("pluginDiscoveryWaitStartedMs"), 3000).toInt())) {
+    if (!proc.waitForStarted(waitStartedMs)) {
         qWarning() << "[Discovery] 起動失敗:" << target;
         return {};
     }
@@ -534,18 +535,17 @@ auto runDiscovery(const QString &tool, const QString &type, const QString &forma
     QByteArray output;
     QElapsedTimer timer;
     timer.start();
-    const int kTimeoutMs = AviQtl::Core::SettingsManager::instance().value(QStringLiteral("pluginDiscoveryTimeoutMs"), 5000).toInt();
 
     while (!stopFlag) {
-        proc.waitForReadyRead(AviQtl::Core::SettingsManager::instance().value(QStringLiteral("pluginDiscoveryWaitReadyReadMs"), 200).toInt());
+        proc.waitForReadyRead(waitReadyReadMs);
         output += proc.readAllStandardOutput();
         if (proc.state() == QProcess::NotRunning) {
             break;
         }
-        if (timer.elapsed() > kTimeoutMs) {
+        if (timer.elapsed() > timeoutMs) {
             qWarning() << "[Discovery] タイムアウト:" << target;
             proc.kill();
-            proc.waitForFinished(AviQtl::Core::SettingsManager::instance().value(QStringLiteral("pluginDiscoveryWaitFinishedMs"), 1000).toInt());
+            proc.waitForFinished(waitFinishedMs);
             break;
         }
     }
@@ -576,8 +576,17 @@ auto discoverFormat(const QString &tool, const FormatConfig &cfg, std::atomic<bo
         qWarning() << "[AudioPluginManager]" << cfg.format << "はインストール済みCarlaバージョンで未対応のためスキップ";
         return {};
     }
+
+    // 起動期に不変な設定値を一括読み出し（繰り返し SettingsManager を叩かない）
+    const auto &sm = AviQtl::Core::SettingsManager::instance();
+    QStringList searchPaths = sm.value(QStringLiteral("pluginPaths") + cfg.format, QStringList()).toStringList();
+    const int discoveryThreads = sm.value(QStringLiteral("pluginDiscoveryThreads"), std::max(2, QThread::idealThreadCount() - 1)).toInt();
+    const int waitStartedMs = sm.value(QStringLiteral("pluginDiscoveryWaitStartedMs"), 3000).toInt();
+    const int timeoutMs = sm.value(QStringLiteral("pluginDiscoveryTimeoutMs"), 5000).toInt();
+    const int waitReadyReadMs = sm.value(QStringLiteral("pluginDiscoveryWaitReadyReadMs"), 200).toInt();
+    const int waitFinishedMs = sm.value(QStringLiteral("pluginDiscoveryWaitFinishedMs"), 1000).toInt();
+
     QStringList targets;
-    QStringList searchPaths = AviQtl::Core::SettingsManager::instance().value(QStringLiteral("pluginPaths") + cfg.format, QStringList()).toStringList();
     QSet<QString> visited;
 
     for (const QString &dirPath : std::as_const(searchPaths)) {
@@ -618,13 +627,14 @@ auto discoverFormat(const QString &tool, const FormatConfig &cfg, std::atomic<bo
     QMutex mutex;
 
     QThreadPool pool;
-    pool.setMaxThreadCount(AviQtl::Core::SettingsManager::instance().value(QStringLiteral("pluginDiscoveryThreads"), std::max(2, QThread::idealThreadCount() - 1)).toInt());
+    pool.setMaxThreadCount(discoveryThreads);
 
     QtConcurrent::blockingMap(&pool, targets, [&](const QString &target) -> void {
         if (stopFlag) {
             return;
         }
-        QList<PluginInfo> res = runDiscovery(tool, cfg.type, cfg.format, target, stopFlag);
+        QList<PluginInfo> res = runDiscovery(tool, cfg.type, cfg.format, target, stopFlag,
+                                                waitStartedMs, timeoutMs, waitReadyReadMs, waitFinishedMs);
         if (!res.isEmpty()) {
             QMutexLocker lock(&mutex);
             all += res;
