@@ -1,16 +1,41 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Dialogs
 import QtQuick.Layouts
 import "common" as Common
 
 Common.AviQtlWindow {
     id: root
 
+    property string searchQuery: ""
+
     title: qsTr("パッケージマネージャー")
     width: 600
     height: 400
     minimumWidth: 500
     minimumHeight: 300
+
+    // AviQtl本体のアップデート通知ダイアログ
+    MessageDialog {
+        id: selfUpdateDialog
+
+        property string newVersion: ""
+        property string downloadUrl: ""
+
+        title: qsTr("AviQtl アップデート")
+        text: qsTr("新しいバージョンのAviQtl (%1) が利用可能です。\nダウンロードURL: %2\n\nアプリケーションを再起動して適用してください。").arg(newVersion).arg(downloadUrl)
+        buttons: MessageDialog.Ok
+    }
+
+    Connections {
+        function onSelfUpdateAvailable(newVersion, downloadUrl) {
+            selfUpdateDialog.newVersion = newVersion;
+            selfUpdateDialog.downloadUrl = downloadUrl;
+            selfUpdateDialog.open();
+        }
+
+        target: PackageManager
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -113,23 +138,129 @@ Common.AviQtlWindow {
             }
 
             TextField {
+                id: searchField
+
                 placeholderText: qsTr("検索...")
                 Layout.preferredWidth: 200
+                onTextChanged: root.searchQuery = text
             }
 
         }
 
-        Rectangle {
+        ListView {
+            id: packageListView
+
             Layout.fillWidth: true
             Layout.fillHeight: true
-            color: palette.base
-            border.color: palette.mid
-            border.width: 1
+            clip: true
+            spacing: 8
+            model: {
+                if (!PackageManager)
+                    return [];
+
+                // packageList プロパティへの依存関係を作成し、同期完了時に再評価を促す
+                var _ = PackageManager.packageList;
+                return PackageManager.searchPackages(root.searchQuery);
+            }
 
             Label {
                 anchors.centerIn: parent
-                text: PackageManager && PackageManager.isBusy ? PackageManager.statusText : qsTr("（後で実装: パッケージリスト）")
-                color: palette.text
+                visible: packageListView.count === 0 && !PackageManager.isBusy
+                text: root.searchQuery === "" ? qsTr("パッケージリストが空です。同期して最新情報を取得してください。") : qsTr("検索結果がありません。")
+                color: palette.mid
+            }
+
+            BusyIndicator {
+                anchors.centerIn: parent
+                running: PackageManager && PackageManager.isBusy
+                visible: running
+            }
+
+            delegate: Frame {
+                readonly property string installedVer: modelData.installed_version || ""
+                readonly property string latestVer: modelData.latest_version || ""
+                readonly property bool hasUpdate: installedVer !== "" && latestVer !== "" && installedVer !== latestVer
+
+                width: packageListView.width
+                padding: 12
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: 4
+
+                    RowLayout {
+                        Layout.fillWidth: true
+
+                        Label {
+                            text: modelData.display_name || modelData.id
+                            font.bold: true
+                            font.pixelSize: 14
+                            Layout.fillWidth: true
+                            elide: Text.ElideRight
+                        }
+
+                        Label {
+                            text: modelData.type || "unknown"
+                            font.pixelSize: 10
+                            color: "white"
+                            padding: 4
+
+                            background: Rectangle {
+                                color: palette.highlight
+                                radius: 4
+                            }
+
+                        }
+
+                    }
+
+                    Label {
+                        text: modelData.description || ""
+                        Layout.fillWidth: true
+                        wrapMode: Text.WordWrap
+                        font.pixelSize: 12
+                        color: palette.text
+                        opacity: 0.8
+                        visible: text !== ""
+                    }
+
+                    Label {
+                        text: qsTr("最新バージョン: ") + (latestVer || "---")
+                        font.pixelSize: 11
+                        color: palette.mid
+                        visible: latestVer !== ""
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+
+                        Label {
+                            text: modelData.author ? "Author: " + modelData.author : ""
+                            font.pixelSize: 11
+                            color: palette.mid
+                            Layout.fillWidth: true
+                            visible: modelData.author !== undefined
+                        }
+
+                        Label {
+                            text: qsTr("インストール済み: ") + installedVer
+                            font.pixelSize: 11
+                            color: "#44cc88"
+                            visible: installedVer !== "" && !hasUpdate
+                        }
+
+                        Button {
+                            text: hasUpdate ? qsTr("アップデート") : qsTr("インストール")
+                            highlighted: true
+                            enabled: !PackageManager.isBusy && (installedVer === "" || hasUpdate)
+                            visible: installedVer === "" || hasUpdate
+                            onClicked: PackageManager.installPackage(modelData.id)
+                        }
+
+                    }
+
+                }
+
             }
 
         }

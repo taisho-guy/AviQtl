@@ -2,6 +2,15 @@
   "repository_name": "AviQtl Default Repository",
   "packages": [
     {
+      "id": "org.aviqtl.app",
+      "display_name": "AviQtl Application",
+      "description": "The main AviQtl application itself.",
+      "author": "Taisho Guy",
+      "type": "application",
+      "release_feed": "https://codeberg.org/taisho-guy/AviQtl/releases.atom",
+      "download_url_template": "https://codeberg.org/taisho-guy/AviQtl/releases/download/{VERSION}/AviQtl-{VERSION}-win64.zip"
+    },
+    {
       "id": "org.aviqtl.effects.blur",
       "display_name": "Advanced Blur Effect",
       "description": "High-performance GLSL Blur implementation",

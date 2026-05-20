@@ -967,29 +967,55 @@ This software is released under the GNU Affero General Public License Version 3.
 <context>
     <name>AviQtl::Core::PackageManager</name>
     <message>
-        <location filename="../core/src/package_manager.cpp" line="14"/>
+        <location filename="../core/src/package_manager.cpp" line="79"/>
         <source>待機中</source>
         <translation>Waiting</translation>
     </message>
     <message>
-        <location filename="../core/src/package_manager.cpp" line="60"/>
+        <location filename="../core/src/package_manager.cpp" line="146"/>
+        <source>キャッシュからパッケージをロードしました（更新を確認するには「同期」を押してください）</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../core/src/package_manager.cpp" line="178"/>
         <source>リポジトリを同期中...</source>
         <translation>Synchronizing repository...</translation>
     </message>
     <message>
-        <location filename="../core/src/package_manager.cpp" line="66"/>
+        <location filename="../core/src/package_manager.cpp" line="265"/>
+        <location filename="../core/src/package_manager.cpp" line="276"/>
         <source>同期完了</source>
         <translation>Synchronization complete</translation>
     </message>
     <message>
-        <location filename="../core/src/package_manager.cpp" line="76"/>
+        <location filename="../core/src/package_manager.cpp" line="316"/>
         <source>パッケージのインストール中: %1</source>
         <translation>Installing package: %1</translation>
     </message>
     <message>
-        <location filename="../core/src/package_manager.cpp" line="95"/>
+        <location filename="../core/src/package_manager.cpp" line="337"/>
+        <source>パッケージが見つかりません: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../core/src/package_manager.cpp" line="344"/>
         <source>インストール完了: %1</source>
         <translation>Installation complete: %1</translation>
+    </message>
+    <message>
+        <location filename="../core/src/package_manager.cpp" line="355"/>
+        <source>AviQtlのアップデートがダウンロード可能です。再起動して適用してください。</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../core/src/package_manager.cpp" line="385"/>
+        <source>パッケージを削除中: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../core/src/package_manager.cpp" line="410"/>
+        <source>削除完了: %1</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -1959,34 +1985,76 @@ Save before continuing?</translation>
 <context>
     <name>PackageManagerWindow</name>
     <message>
-        <location filename="../ui/qml/PackageManagerWindow.qml" line="9"/>
+        <location filename="../ui/qml/PackageManagerWindow.qml" line="12"/>
         <source>パッケージマネージャー</source>
         <translation>Package Manager</translation>
     </message>
     <message>
-        <location filename="../ui/qml/PackageManagerWindow.qml" line="22"/>
+        <location filename="../ui/qml/PackageManagerWindow.qml" line="25"/>
+        <source>AviQtl アップデート</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/PackageManagerWindow.qml" line="26"/>
+        <source>新しいバージョンのAviQtl (%1) が利用可能です。
+ダウンロードURL: %2
+
+アプリケーションを再起動して適用してください。</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/PackageManagerWindow.qml" line="47"/>
         <source>リポジトリ設定</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/PackageManagerWindow.qml" line="44"/>
+        <location filename="../ui/qml/PackageManagerWindow.qml" line="69"/>
         <source>追加</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/PackageManagerWindow.qml" line="105"/>
+        <location filename="../ui/qml/PackageManagerWindow.qml" line="130"/>
         <source>リポジトリを同期</source>
         <translation>Sync Repository</translation>
     </message>
     <message>
-        <location filename="../ui/qml/PackageManagerWindow.qml" line="116"/>
+        <location filename="../ui/qml/PackageManagerWindow.qml" line="143"/>
         <source>検索...</source>
         <translation>Search...</translation>
     </message>
     <message>
-        <location filename="../ui/qml/PackageManagerWindow.qml" line="131"/>
+        <location filename="../ui/qml/PackageManagerWindow.qml" line="169"/>
+        <source>パッケージリストが空です。同期して最新情報を取得してください。</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/PackageManagerWindow.qml" line="169"/>
+        <source>検索結果がありません。</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/PackageManagerWindow.qml" line="228"/>
+        <source>最新バージョン: </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/PackageManagerWindow.qml" line="246"/>
+        <source>インストール済み: </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/PackageManagerWindow.qml" line="253"/>
+        <source>アップデート</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/PackageManagerWindow.qml" line="253"/>
+        <source>インストール</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>（後で実装: パッケージリスト）</source>
-        <translation>(To be implemented later: package list)</translation>
+        <translation type="vanished">(To be implemented later: package list)</translation>
     </message>
 </context>
 <context>
