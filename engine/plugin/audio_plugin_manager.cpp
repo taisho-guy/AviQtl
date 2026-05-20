@@ -588,11 +588,17 @@ auto discoverFormat(const QString &tool, const FormatConfig &cfg, std::atomic<bo
     QStringList targets;
     QSet<QString> visited;
 
+    const QDir appDir(QCoreApplication::applicationDirPath());
+    QString resPath = QDir(appDir.absolutePath() + QStringLiteral("/../Resources")).canonicalPath();
+    const QDir resDir(resPath.isEmpty() ? appDir.absolutePath() : resPath);
+
     for (const QString &dirPath : std::as_const(searchPaths)) {
         if (stopFlag) {
             break;
         }
-        QDir d(dirPath);
+        // 相対パスを解決
+        QString absPath = QDir::isAbsolutePath(dirPath) ? dirPath : resDir.absoluteFilePath(dirPath);
+        QDir d(absPath);
         if (!d.exists()) {
             continue;
         }

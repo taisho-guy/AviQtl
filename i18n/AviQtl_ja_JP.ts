@@ -1729,7 +1729,7 @@
     </message>
     <message>
         <location filename="../ui/qml/MainWindow.qml" line="175"/>
-        <location filename="../ui/qml/MainWindow.qml" line="1329"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1335"/>
         <source>終了</source>
         <translation type="unfinished"></translation>
     </message>

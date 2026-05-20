@@ -10,7 +10,7 @@ Common.AviQtlWindow {
     property var draftSettings: ({
     })
     property alias currentTabIndex: tabBar.currentIndex
-    property var pluginFormats: ["LADSPA", "DSSI", "LV2", "VST2", "VST3", "CLAP", "SF2", "SFZ", "JSFX"]
+    property var pluginFormats: ["LADSPA", "DSSI", "LV2", "VST2", "VST3", "CLAP", "SF2", "SFZ", "JSFX", "Effects", "Objects"]
     property var themeValues: ["Dark", "Light", "System"]
     property var themeLabels: [qsTr("ダーク"), qsTr("ライト"), qsTr("システムに従う")]
     property var timeUnitValues: ["frame", "second"]

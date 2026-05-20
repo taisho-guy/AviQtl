@@ -7,6 +7,7 @@
 #include <QSplashScreen>
 #include <QTimer>
 #include <QTranslator>
+#include <utility>
 
 // Core Headers
 #include "compute_effect.hpp"
@@ -120,8 +121,30 @@ auto main(int argc, char *argv[]) -> int {
         modEngine.initialize(nullptr);
         modEngine.loadPlugins();
 
-        Core::EffectRegistry::instance().loadEffectsFromDirectory(resourceDir + QStringLiteral("/effects"));
-        Core::EffectRegistry::instance().loadEffectsFromDirectory(resourceDir + QStringLiteral("/objects"));
+        auto &sm = Core::SettingsManager::instance();
+
+        auto loadRegistry = [&](const QString &key) {
+            if (sm.value(QStringLiteral("pluginEnable") + key, true).toBool()) {
+                const QStringList paths = sm.value(QStringLiteral("pluginPaths") + key).toStringList();
+                const QDir appDir(QCoreApplication::applicationDirPath());
+                // macOS bundle 用の Resources ディレクトリも考慮
+                QString resPath = QDir(appDir.absolutePath() + QStringLiteral("/../Resources")).canonicalPath();
+                const QDir resDir(resPath.isEmpty() ? appDir.absolutePath() : resPath);
+
+                for (const QString &path : paths) {
+                    if (!path.isEmpty()) {
+                        // 相対パスの場合はアプリ（またはResources）ディレクトリを起点として解決
+                        QString absolutePath = QDir::isAbsolutePath(path) ? path : resDir.absoluteFilePath(path);
+                        if (QFile::exists(absolutePath)) {
+                            Core::EffectRegistry::instance().loadEffectsFromDirectory(absolutePath);
+                        }
+                    }
+                }
+            }
+        };
+
+        loadRegistry(QStringLiteral("Effects"));
+        loadRegistry(QStringLiteral("Objects"));
 
         // シグナル発行がバックグラウンドスレッドからのため、
         // 第三引数に &app (メインスレッド所属) を渡してメインスレッドで実行されるようにする

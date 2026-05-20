@@ -20,6 +20,10 @@ auto getDefaultPluginPaths(const QString &type, const QStringList &envVars, cons
         }
     }
     paths << (QDir::homePath() + QLatin1String("/.") + type);
+
+    // アプリケーションディレクトリからの相対パスとして追加。これにより配布時のポータビリティを確保。
+    paths << type;
+
     paths << defaultDirs;
     paths.removeDuplicates();
     return paths;
@@ -51,6 +55,10 @@ SettingsManager::SettingsManager(QObject *parent) : QObject(parent) {
         {"pluginPathsSFZ", getDefaultPluginPaths(QStringLiteral("sfz"), {QStringLiteral("SFZ_PATH")}, {QStringLiteral("/usr/share/sounds/sfz")})},
         {"pluginEnableJSFX", true},
         {"pluginPathsJSFX", getDefaultPluginPaths(QStringLiteral("jsfx"), {}, {})},
+        {"pluginEnableEffects", true},
+        {"pluginPathsEffects", getDefaultPluginPaths(QStringLiteral("effects"), {QStringLiteral("AVIQTL_EFFECTS_PATH")}, {})},
+        {"pluginEnableObjects", true},
+        {"pluginPathsObjects", getDefaultPluginPaths(QStringLiteral("objects"), {QStringLiteral("AVIQTL_OBJECTS_PATH")}, {})},
         {"maxImageSize", 8192},
         {"cacheSize", 512},
         {"undoCount", 32},

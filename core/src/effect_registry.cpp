@@ -29,13 +29,7 @@ auto localizeUiMetadataValue(const QVariant &value) -> QVariant {
     if (value.metaType().id() == QMetaType::QVariantMap) {
         QVariantMap map = value.toMap();
         static const QSet<QString> translatableKeys = {
-            QStringLiteral("label"),
-            QStringLiteral("title"),
-            QStringLiteral("text"),
-            QStringLiteral("name"),
-            QStringLiteral("filter"),
-            QStringLiteral("placeholder"),
-            QStringLiteral("unit"),
+            QStringLiteral("label"), QStringLiteral("title"), QStringLiteral("text"), QStringLiteral("name"), QStringLiteral("filter"), QStringLiteral("placeholder"), QStringLiteral("unit"),
         };
 
         for (auto it = map.begin(); it != map.end(); ++it) {
@@ -78,9 +72,11 @@ auto localizeUiMetadataValue(const QVariant &value) -> QVariant {
 void EffectRegistry::loadEffectsFromDirectory(const QString &path) {
     QDir dir(path);
     if (!dir.exists()) {
-        qWarning().noquote() << QStringLiteral("Effect directory not found:") << path;
         return;
     }
+
+    int loadedCount = 0;
+    qDebug().noquote() << "[EffectRegistry] スキャン中:" << path;
 
     // *.json ファイルをサブディレクトリを含めて検索
     QDirIterator it(path, {QStringLiteral("*.json")}, QDir::Files, QDirIterator::Subdirectories);
@@ -160,7 +156,7 @@ void EffectRegistry::loadEffectsFromDirectory(const QString &path) {
         if (qmlFileName.startsWith(QStringLiteral("qrc:"))) {
             meta.qmlSource = qmlFileName;
             registerEffect(meta);
-            qDebug().noquote() << QStringLiteral("外部エフェクトをロード:") << name << QStringLiteral("(") << id << QStringLiteral(") from") << file.fileName();
+            loadedCount++;
             continue;
         }
 
@@ -171,13 +167,15 @@ void EffectRegistry::loadEffectsFromDirectory(const QString &path) {
         if (QFile::exists(absoluteQmlPath)) {
             meta.qmlSource = QUrl::fromLocalFile(absoluteQmlPath).toString();
         } else {
-            qWarning() << QStringLiteral("参照されているQMLファイルが見つかりません。エフェクト:") << id << QStringLiteral("パス:") << absoluteQmlPath;
+            qWarning().noquote() << "[EffectRegistry] 参照されているQMLファイルが見つかりません。エフェクト:" << id << "パス:" << absoluteQmlPath;
             continue;
         }
 
         registerEffect(meta);
-        qDebug().noquote() << QStringLiteral("外部エフェクトをロード:") << name << QStringLiteral("(") << id << QStringLiteral(") from") << file.fileName();
+        loadedCount++;
     }
+
+    qDebug().noquote() << "[EffectRegistry]" << dir.dirName() << "→" << loadedCount << "個";
 }
 
 } // namespace AviQtl::Core
