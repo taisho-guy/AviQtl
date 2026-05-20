@@ -15,11 +15,10 @@ struct TransformComponent {
 };
 struct KeyframeRefComponent {
     uint32_t clipId = 0;
-    uint32_t effectId = 0;
 };
 struct RenderableComponent {
     uint32_t textureId = 0;
-    uint32_t materialId = 0;
+    uint32_t psoId = 0;
     uint32_t layer = 0;
 };
 struct RenderBoundaryComponent {
@@ -176,8 +175,7 @@ static_assert(sizeof(MetadataComponent) == 20, "MetadataComponent size check fai
 static_assert(std::is_trivially_copyable_v<MetadataComponent>);
 
 struct RenderComponent {
-    bool needsUpdate = true;
-    uint32_t effectChainId = 0;
+    // Placeholder: fields will be defined when RenderSystem reads renderStates
 };
 static_assert(std::is_trivially_copyable_v<RenderComponent>);
 
