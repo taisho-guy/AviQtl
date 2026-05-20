@@ -3,6 +3,7 @@ import os
 import subprocess
 import shutil
 import argparse
+import re
 import multiprocessing
 import shlex
 import urllib.request
@@ -392,7 +393,7 @@ class LinuxBuilderBase(PlatformBuilder):
 
     def get_cmake_config_cmd(self) -> List[str]:
         cmd = super().get_cmake_config_cmd()
-        cmd.extend(["-DCMAKE_C_COMPILER=clang", "-DCMAKE_CXX_COMPILER=clang++"])
+        cmd.extend(["-DCMAKE_C_COMPILER=clang", "-DCMAKE_CXX_COMPILER=clang++"]) # clang/clang++ は ArchBuilder のみ
         if not self.config.is_debug:
             cmd.extend([
                 "-DCMAKE_CXX_FLAGS=-O3 -flto -fno-semantic-interposition -funsafe-math-optimizations",
@@ -422,7 +423,7 @@ class ArchBuilder(LinuxBuilderBase):
         self.container_name = "archlinux-aviqtl"
         self.image_name = "archlinux:latest"
 
-
+    def install_dependencies(self):
         if not self.use_container:
             self.logger.log("No Container モード: システムパッケージのインストールをスキップ")
             return
@@ -485,7 +486,7 @@ class Msys2Builder(PlatformBuilder):
 
     def get_cmake_config_cmd(self) -> List[str]:
         cmd = super().get_cmake_config_cmd()
-        cmd.append("-DCMAKE_BUILD_TYPE=Release")
+        # super().get_cmake_config_cmd() で既に CMAKE_BUILD_TYPE が設定されているため削除
         if (self.config.source_dir / "vendor" / "carla").exists():
             cmd.append(f"-DCARLA_SDK_DIR={Path(self.config.source_dir / 'vendor' / 'carla').as_posix()}")
         cmd.append(str(self.config.source_dir))
@@ -1002,11 +1003,11 @@ class MsvcBuilder(PlatformBuilder):
         return None
 
     def get_cmake_config_cmd(self) -> List[str]:
-        cmd = [
-            self.cmake_path or "cmake", "-B", str(self.config.work_dir), "-G", "Ninja",
-            f"-DCMAKE_BUILD_TYPE={self.config.build_type}",
-            f"-DCMAKE_MAKE_PROGRAM={self.ninja_path or 'ninja'}",
-        ]
+        cmd = super().get_cmake_config_cmd()
+        # 固定インデックスでの書き換えは脆弱なため、必要に応じてフラグを追加するように修正
+        if self.ninja_path:
+            cmd.append(f"-DCMAKE_MAKE_PROGRAM={self.ninja_path}")
+
         cmd.extend(["-DCMAKE_C_COMPILER=cl", "-DCMAKE_CXX_COMPILER=cl"])
         if self.vcpkg_root:
             cmd.extend([
@@ -1124,7 +1125,7 @@ class XcodeBuilder(PlatformBuilder):
 
     def get_cmake_config_cmd(self) -> List[str]:
         cmd = super().get_cmake_config_cmd()
-        cmd.append("-DCMAKE_BUILD_TYPE=Release")
+        # super().get_cmake_config_cmd() で既に CMAKE_BUILD_TYPE が設定されているため削除
         try:
             brew_prefix = subprocess.check_output(["brew", "--prefix"], text=True).strip()
         except Exception:
@@ -1291,6 +1292,15 @@ def parse_args() -> argparse.Namespace:
         "--qt-dir", type=Path,
         help="MSVC ビルドで使用する公式 Qt のディレクトリ。未指定時は QT_MSVC_DIR, QT_DIR, QTDIR, PATH を確認します。MSVC では Qt が必須です。",
     )
+    # --version と --codename は parse_args() の直下に追加
+    parser.add_argument(
+        "--version", type=str, default="0.0.0",
+        help="アプリケーションのバージョンを指定 (例: 0.1.0 または 0.1.0-Anon)。"
+    )
+    parser.add_argument(
+        "--codename", type=str, default="Maoka",
+        help="コードネームを指定 (例: Maoka)。"
+    )
     return parser.parse_args()
 
 
@@ -1337,7 +1347,18 @@ def main():
         use_container=(target == "arch" and not args.no_container),
         is_offline=args.offline,
         qt_dir=args.qt_dir,
+        # Assign version info from args to config
+        version_string=args.version,
+        version_codename=args.codename,
     )
+
+    # Parse major, minor, patch from version_string
+    match = re.match(r"(\d+)\.(\d+)\.(\d+)", args.version)
+    if match:
+        config.version_major = int(match.group(1))
+        config.version_minor = int(match.group(2))
+        config.version_patch = int(match.group(3))
+    # Removed the unmatched ')' here
 
     app = QtCore.QCoreApplication(sys.argv)
     worker = BuildWorker(config)

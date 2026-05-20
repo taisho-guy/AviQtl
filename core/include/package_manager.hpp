@@ -1,5 +1,6 @@
 #pragma once
 #include <QObject>
+#include <QQueue>
 #include <QStringList>
 #include <QVariantList>
 #include <QVariantMap>
@@ -14,6 +15,7 @@ class PackageManager : public QObject {
     Q_PROPERTY(QVariantList packageList READ packageList NOTIFY packageListChanged)
     Q_PROPERTY(QString statusText READ statusText NOTIFY statusTextChanged)
     Q_PROPERTY(double progress READ progress NOTIFY progressChanged)
+    Q_PROPERTY(bool hasUpdatesAvailable READ hasUpdatesAvailable NOTIFY hasUpdatesAvailableChanged)
     Q_PROPERTY(QStringList repositories READ repositories NOTIFY repositoriesChanged)
 
   public:
@@ -21,6 +23,7 @@ class PackageManager : public QObject {
 
     bool isBusy() const { return m_isBusy; }
     QString statusText() const { return m_statusText; }
+    bool hasUpdatesAvailable() const { return m_hasUpdatesAvailable; }
     double progress() const { return m_progress; }
     QVariantList packageList() const { return m_packageList; }
     QStringList repositories() const;
@@ -29,6 +32,7 @@ class PackageManager : public QObject {
     Q_INVOKABLE void addRepository(const QString &url);
     Q_INVOKABLE void removeRepository(const QString &url);
     Q_INVOKABLE void installPackage(const QString &packageId);
+    Q_INVOKABLE void upgradeAllPackages();
     Q_INVOKABLE void removePackage(const QString &packageId);
     Q_INVOKABLE QVariantList searchPackages(const QString &query) const;
     Q_INVOKABLE QVariantList getInstalledPackages() const;
@@ -39,6 +43,7 @@ class PackageManager : public QObject {
     void packageListChanged();
     void progressChanged();
     void repositoryRefreshed();
+    void hasUpdatesAvailableChanged();
     void repositoriesChanged();
     void packageInstalled(const QString &packageId);
     void packageRemoved(const QString &packageId);
@@ -54,6 +59,8 @@ class PackageManager : public QObject {
     void setProgress(double p);
     void loadCachedPackages();
     void updatePackageLatestVersion(const QString &id, const QString &version);
+    void setHasUpdatesAvailable(bool available);
+    void processUpgradeQueue();
 
     bool m_isBusy = false;
     QVariantList m_packageList;
@@ -62,6 +69,8 @@ class PackageManager : public QObject {
 
     QString m_statusText;
     double m_progress = 0.0;
+    bool m_hasUpdatesAvailable = false;
+    QQueue<QString> m_upgradeQueue;
 };
 
 } // namespace AviQtl::Core

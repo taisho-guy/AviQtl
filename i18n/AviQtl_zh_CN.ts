@@ -972,48 +972,68 @@
         <translation>等待中</translation>
     </message>
     <message>
-        <location filename="../core/src/package_manager.cpp" line="146"/>
+        <location filename="../core/src/package_manager.cpp" line="153"/>
         <source>キャッシュからパッケージをロードしました（更新を確認するには「同期」を押してください）</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/src/package_manager.cpp" line="178"/>
+        <location filename="../core/src/package_manager.cpp" line="186"/>
         <source>リポジトリを同期中...</source>
         <translation>正在同步仓库...</translation>
     </message>
     <message>
-        <location filename="../core/src/package_manager.cpp" line="266"/>
-        <location filename="../core/src/package_manager.cpp" line="281"/>
+        <location filename="../core/src/package_manager.cpp" line="275"/>
+        <location filename="../core/src/package_manager.cpp" line="302"/>
         <source>同期完了</source>
         <translation>同步完成</translation>
     </message>
     <message>
-        <location filename="../core/src/package_manager.cpp" line="321"/>
+        <location filename="../core/src/package_manager.cpp" line="355"/>
         <source>パッケージのインストール中: %1</source>
         <translation>正在安装软件包：%1</translation>
     </message>
     <message>
-        <location filename="../core/src/package_manager.cpp" line="342"/>
+        <location filename="../core/src/package_manager.cpp" line="482"/>
+        <source>アップグレード可能なパッケージはありません。</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../core/src/package_manager.cpp" line="487"/>
+        <source>すべてのパッケージをアップグレード中...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../core/src/package_manager.cpp" line="494"/>
+        <source>すべてのアップグレードが完了しました</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../core/src/package_manager.cpp" line="500"/>
+        <source>パッケージをアップグレード中: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../core/src/package_manager.cpp" line="343"/>
         <source>パッケージが見つかりません: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/src/package_manager.cpp" line="349"/>
+        <location filename="../core/src/package_manager.cpp" line="360"/>
         <source>インストール完了: %1</source>
         <translation>安装完成：%1</translation>
     </message>
     <message>
-        <location filename="../core/src/package_manager.cpp" line="360"/>
+        <location filename="../core/src/package_manager.cpp" line="371"/>
         <source>AviQtlのアップデートがダウンロード可能です。再起動して適用してください。</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/src/package_manager.cpp" line="390"/>
+        <location filename="../core/src/package_manager.cpp" line="408"/>
         <source>パッケージを削除中: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/src/package_manager.cpp" line="415"/>
+        <location filename="../core/src/package_manager.cpp" line="433"/>
         <source>削除完了: %1</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2013,42 +2033,52 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/PackageManagerWindow.qml" line="130"/>
+        <location filename="../ui/qml/PackageManagerWindow.qml" line="132"/>
         <source>リポジトリを同期</source>
         <translation>同步仓库</translation>
     </message>
     <message>
-        <location filename="../ui/qml/PackageManagerWindow.qml" line="143"/>
+        <location filename="../ui/qml/PackageManagerWindow.qml" line="139"/>
+        <source>すべてアップグレード</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/PackageManagerWindow.qml" line="153"/>
         <source>検索...</source>
         <translation>搜索...</translation>
     </message>
     <message>
-        <location filename="../ui/qml/PackageManagerWindow.qml" line="169"/>
-        <source>パッケージリストが空です。同期して最新情報を取得してください。</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/qml/PackageManagerWindow.qml" line="169"/>
+        <location filename="../ui/qml/PackageManagerWindow.qml" line="179"/>
         <source>検索結果がありません。</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/PackageManagerWindow.qml" line="228"/>
+        <location filename="../ui/qml/PackageManagerWindow.qml" line="179"/>
+        <source>パッケージリストが空です。リポジトリを同期して最新情報を取得してください。</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/PackageManagerWindow.qml" line="238"/>
         <source>最新バージョン: </source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/PackageManagerWindow.qml" line="246"/>
+        <location filename="../ui/qml/PackageManagerWindow.qml" line="256"/>
         <source>インストール済み: </source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/PackageManagerWindow.qml" line="253"/>
+        <location filename="../ui/qml/PackageManagerWindow.qml" line="263"/>
+        <source>アップデートあり: </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/PackageManagerWindow.qml" line="270"/>
         <source>アップデート</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/PackageManagerWindow.qml" line="253"/>
+        <location filename="../ui/qml/PackageManagerWindow.qml" line="270"/>
         <source>インストール</source>
         <translation type="unfinished"></translation>
     </message>

@@ -102,6 +102,13 @@ void PackageManager::setProgress(double p) {
     emit progressChanged();
 }
 
+void PackageManager::setHasUpdatesAvailable(bool available) {
+    if (m_hasUpdatesAvailable == available)
+        return;
+    m_hasUpdatesAvailable = available;
+    emit hasUpdatesAvailableChanged();
+}
+
 void PackageManager::loadCachedPackages() {
     const QString repoPath = QCoreApplication::applicationDirPath() + QStringLiteral("/repos");
     QDir dir(repoPath);
@@ -144,6 +151,7 @@ void PackageManager::loadCachedPackages() {
     }
     emit packageListChanged();
     setStatus(tr("キャッシュからパッケージをロードしました（更新を確認するには「同期」を押してください）"));
+    setHasUpdatesAvailable(false); // 起動時はアップデート不明
 }
 
 QStringList PackageManager::repositories() const { return SettingsManager::instance().value(QStringLiteral("packageRepositoryUrls")).toStringList(); }
@@ -261,11 +269,24 @@ void PackageManager::refreshRepositories() {
                                 }
 
                                 if (m_pendingRequests <= 0) {
+                                    // すべてのRSSリクエストが完了したら、最終的な状態を更新
                                     setBusy(false);
                                     setProgress(1.0);
                                     setStatus(tr("同期完了"));
                                     emit repositoryRefreshed();
                                     emit packageListChanged();
+
+                                    // アップデートの有無を再評価
+                                    bool anyUpdates = false;
+                                    for (const auto &p : m_packageList) {
+                                        const QVariantMap item = p.toMap();
+                                        if (item.value(QStringLiteral("installed_version")).toString() != item.value(QStringLiteral("latest_version")).toString() && !item.value(QStringLiteral("installed_version")).toString().isEmpty() &&
+                                            !item.value(QStringLiteral("latest_version")).toString().isEmpty()) {
+                                            anyUpdates = true;
+                                            break;
+                                        }
+                                    }
+                                    setHasUpdatesAvailable(anyUpdates);
                                 }
                             });
                         }
@@ -298,6 +319,7 @@ void PackageManager::updatePackageLatestVersion(const QString &id, const QString
             if (item.value(QStringLiteral("latest_version")).toString() != version) {
                 item[QStringLiteral("latest_version")] = version;
                 m_packageList[i] = item;
+                // hasUpdatesAvailable の状態は refreshRepositories の最後でまとめて更新される
                 emit packageListChanged();
             }
             break;
@@ -309,40 +331,29 @@ void PackageManager::installPackage(const QString &packageId) {
     if (m_isBusy)
         return;
 
-    QString versionToInstall = "unknown";
-    for (const auto &p : std::as_const(m_packageList)) {
-        if (p.toMap().value(QStringLiteral("id")).toString() == packageId) {
-            versionToInstall = p.toMap().value(QStringLiteral("latest_version")).toString();
-            break;
-        }
-    }
-
-    setBusy(true);
-    setStatus(tr("パッケージのインストール中: %1").arg(packageId));
-    setProgress(0.0);
-
-    // 1. 対象パッケージの特定
     QVariantMap pkg;
-    QString downloadUrl;
     for (const auto &p : std::as_const(m_packageList)) {
         if (p.toMap().value(QStringLiteral("id")).toString() == packageId) {
             pkg = p.toMap();
-            versionToInstall = pkg.value(QStringLiteral("latest_version")).toString();
-            if (versionToInstall.isEmpty())
-                versionToInstall = "0.0.1"; // Fallback
-
-            // ダウンロードURLの構築
-            downloadUrl = pkg.value(QStringLiteral("download_url_template")).toString();
-            downloadUrl.replace(QStringLiteral("{VERSION}"), versionToInstall);
             break;
         }
     }
 
     if (pkg.isEmpty()) {
         emit errorOccurred(tr("パッケージが見つかりません: %1").arg(packageId));
-        setBusy(false);
         return;
     }
+
+    QString versionToInstall = pkg.value(QStringLiteral("latest_version")).toString();
+    if (versionToInstall.isEmpty())
+        versionToInstall = QStringLiteral("0.0.1");
+
+    QString downloadUrl = pkg.value(QStringLiteral("download_url_template")).toString();
+    downloadUrl.replace(QStringLiteral("{VERSION}"), versionToInstall);
+
+    setBusy(true);
+    setStatus(tr("パッケージのインストール中: %1").arg(packageId));
+    setProgress(0.0);
 
     QTimer::singleShot(1500, this, [this, packageId, versionToInstall, downloadUrl]() {
         setProgress(1.0);
@@ -370,15 +381,22 @@ void PackageManager::installPackage(const QString &packageId) {
         emit packageInstalled(packageId);
 
         // リストの状態を更新
+        bool anyUpdates = false;
         for (int i = 0; i < m_packageList.size(); ++i) {
             QVariantMap item = m_packageList[i].toMap();
             if (item.value("id").toString() == packageId) {
                 item[QStringLiteral("installed_version")] = versionToInstall;
                 m_packageList[i] = item;
                 emit packageListChanged();
-                break;
+            }
+            // アップデートの有無を再評価
+            const QString installedVer = item.value(QStringLiteral("installed_version")).toString();
+            const QString latestVer = item.value(QStringLiteral("latest_version")).toString();
+            if (!installedVer.isEmpty() && !latestVer.isEmpty() && compareVersions(latestVer, installedVer) > 0) {
+                anyUpdates = true;
             }
         }
+        setHasUpdatesAvailable(anyUpdates);
     });
 }
 
@@ -444,6 +462,44 @@ QVariantList PackageManager::getInstalledPackages() const {
         list.append(pkg);
     }
     return list;
+}
+
+void PackageManager::upgradeAllPackages() {
+    if (m_isBusy)
+        return;
+
+    m_upgradeQueue.clear();
+    for (const auto &p : m_packageList) {
+        const QVariantMap item = p.toMap();
+        const QString installedVer = item.value(QStringLiteral("installed_version")).toString();
+        const QString latestVer = item.value(QStringLiteral("latest_version")).toString();
+        if (!installedVer.isEmpty() && !latestVer.isEmpty() && compareVersions(latestVer, installedVer) > 0) {
+            m_upgradeQueue.enqueue(item.value(QStringLiteral("id")).toString());
+        }
+    }
+
+    if (m_upgradeQueue.isEmpty()) {
+        setStatus(tr("アップグレード可能なパッケージはありません。"));
+        return;
+    }
+
+    setBusy(true);
+    setStatus(tr("すべてのパッケージをアップグレード中..."));
+    processUpgradeQueue();
+}
+
+void PackageManager::processUpgradeQueue() {
+    if (m_upgradeQueue.isEmpty()) {
+        setBusy(false);
+        setStatus(tr("すべてのアップグレードが完了しました"));
+        setHasUpdatesAvailable(false); // すべてアップグレードされたので、利用可能なアップデートはない
+        return;
+    }
+
+    QString nextPackageId = m_upgradeQueue.dequeue();
+    setStatus(tr("パッケージをアップグレード中: %1").arg(nextPackageId));
+    // installPackage が完了すると、その中で processUpgradeQueue() が再度呼ばれる
+    installPackage(nextPackageId);
 }
 
 } // namespace AviQtl::Core

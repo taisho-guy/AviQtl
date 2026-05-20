@@ -124,6 +124,8 @@ Common.AviQtlWindow {
         }
 
         RowLayout {
+            // スペーサー
+
             Layout.fillWidth: true
 
             Button {
@@ -131,6 +133,14 @@ Common.AviQtlWindow {
                 icon.name: "refresh-line"
                 enabled: PackageManager && !PackageManager.isBusy
                 onClicked: PackageManager.refreshRepositories()
+            }
+
+            Button {
+                text: qsTr("すべてアップグレード")
+                icon.name: "upload-cloud-line"
+                highlighted: true
+                enabled: PackageManager && !PackageManager.isBusy && PackageManager.hasUpdatesAvailable
+                onClicked: PackageManager.upgradeAllPackages()
             }
 
             Item {
@@ -166,7 +176,7 @@ Common.AviQtlWindow {
             Label {
                 anchors.centerIn: parent
                 visible: packageListView.count === 0 && !PackageManager.isBusy
-                text: root.searchQuery === "" ? qsTr("パッケージリストが空です。同期して最新情報を取得してください。") : qsTr("検索結果がありません。")
+                text: root.searchQuery === "" ? qsTr("パッケージリストが空です。リポジトリを同期して最新情報を取得してください。") : qsTr("検索結果がありません。")
                 color: palette.mid
             }
 
@@ -247,6 +257,13 @@ Common.AviQtlWindow {
                             font.pixelSize: 11
                             color: "#44cc88"
                             visible: installedVer !== "" && !hasUpdate
+                        }
+
+                        Label {
+                            text: qsTr("アップデートあり: ") + latestVer
+                            font.pixelSize: 11
+                            color: palette.highlight
+                            visible: hasUpdate
                         }
 
                         Button {
