@@ -109,6 +109,32 @@ add_library(AviQtl_Core STATIC ${CORE_SOURCES} ${CORE_HEADERS})
 target_include_directories(AviQtl_Core PUBLIC core/include ${CMAKE_SOURCE_DIR})
 target_link_libraries(AviQtl_Core PUBLIC Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Concurrent Qt6::Network Qt6::Multimedia Qt6::Qml PkgConfig::FFMPEG PkgConfig::LUAJIT)
 
+# Define version macros for AviQtl_Core
+# These will be used by core/include/version.hpp
+if(NOT DEFINED AVIQTL_VERSION_MAJOR)
+    set(AVIQTL_VERSION_MAJOR 0)
+endif()
+if(NOT DEFINED AVIQTL_VERSION_MINOR)
+    set(AVIQTL_VERSION_MINOR 0)
+endif()
+if(NOT DEFINED AVIQTL_VERSION_PATCH)
+    set(AVIQTL_VERSION_PATCH 0)
+endif()
+if(NOT DEFINED AVIQTL_VERSION_STRING)
+    set(AVIQTL_VERSION_STRING "0.0.0")
+endif()
+if(NOT DEFINED AVIQTL_VERSION_CODENAME)
+    set(AVIQTL_VERSION_CODENAME "Maoka")
+endif()
+
+target_compile_definitions(AviQtl_Core PUBLIC
+    AVIQTL_VERSION_MAJOR=${AVIQTL_VERSION_MAJOR}
+    AVIQTL_VERSION_MINOR=${AVIQTL_VERSION_MINOR}
+    AVIQTL_VERSION_PATCH=${AVIQTL_VERSION_PATCH}
+    AVIQTL_VERSION_STRING="${AVIQTL_VERSION_STRING}"
+    AVIQTL_VERSION_CODENAME="${AVIQTL_VERSION_CODENAME}"
+)
+
 # --- Module: Engine ---
 file(GLOB_RECURSE ENGINE_SOURCES "engine/*.cpp")
 file(GLOB_RECURSE ENGINE_HEADERS "engine/*.hpp")

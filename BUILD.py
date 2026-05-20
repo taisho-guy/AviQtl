@@ -29,6 +29,13 @@ class BuildConfig:
     is_offline: bool
     qt_dir: Optional[Path] = None
 
+    # Versioning fields
+    version_major: int = 0
+    version_minor: int = 0
+    version_patch: int = 0
+    version_string: str = "0.0.0"
+    version_codename: str = "Maoka"
+
     @property
     def build_type(self) -> str:
         return "Debug" if self.is_debug else "Release"

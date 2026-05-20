@@ -262,12 +262,17 @@ void PackageManager::refreshRepositories() {
 
                                 if (m_pendingRequests <= 0) {
                                     setBusy(false);
+                                    setProgress(1.0);
                                     setStatus(tr("同期完了"));
+                                    emit repositoryRefreshed();
+                                    emit packageListChanged();
                                 }
                             });
                         }
                         m_packageList.append(p);
                     }
+                    // メタデータの解析が終わった時点で一度リストを更新（ユーザーに即座に表示）
+                    emit packageListChanged();
                 }
             }
 
@@ -275,8 +280,8 @@ void PackageManager::refreshRepositories() {
                 setProgress(1.0);
                 setStatus(tr("同期完了"));
                 setBusy(false);
-                emit packageListChanged();
                 emit repositoryRefreshed();
+                emit packageListChanged();
             } else {
                 QStringList urls = repositories();
                 if (urls.size() > 0)

@@ -982,38 +982,38 @@
         <translation>正在同步仓库...</translation>
     </message>
     <message>
-        <location filename="../core/src/package_manager.cpp" line="265"/>
-        <location filename="../core/src/package_manager.cpp" line="276"/>
+        <location filename="../core/src/package_manager.cpp" line="266"/>
+        <location filename="../core/src/package_manager.cpp" line="281"/>
         <source>同期完了</source>
         <translation>同步完成</translation>
     </message>
     <message>
-        <location filename="../core/src/package_manager.cpp" line="316"/>
+        <location filename="../core/src/package_manager.cpp" line="321"/>
         <source>パッケージのインストール中: %1</source>
         <translation>正在安装软件包：%1</translation>
     </message>
     <message>
-        <location filename="../core/src/package_manager.cpp" line="337"/>
+        <location filename="../core/src/package_manager.cpp" line="342"/>
         <source>パッケージが見つかりません: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/src/package_manager.cpp" line="344"/>
+        <location filename="../core/src/package_manager.cpp" line="349"/>
         <source>インストール完了: %1</source>
         <translation>安装完成：%1</translation>
     </message>
     <message>
-        <location filename="../core/src/package_manager.cpp" line="355"/>
+        <location filename="../core/src/package_manager.cpp" line="360"/>
         <source>AviQtlのアップデートがダウンロード可能です。再起動して適用してください。</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/src/package_manager.cpp" line="385"/>
+        <location filename="../core/src/package_manager.cpp" line="390"/>
         <source>パッケージを削除中: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/src/package_manager.cpp" line="410"/>
+        <location filename="../core/src/package_manager.cpp" line="415"/>
         <source>削除完了: %1</source>
         <translation type="unfinished"></translation>
     </message>
