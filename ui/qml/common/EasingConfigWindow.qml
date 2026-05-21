@@ -636,20 +636,22 @@ ApplicationWindow {
                     }
 
                     MouseArea {
+                        // cp1
+                        // cp2
+                        // new anchor
+
                         id: dragArea
 
                         property int dragIdx: -1
 
                         function findNearest(mx, my) {
                             var bz = root.bezierParams;
-                            var best = -1, bestD = 14 * 14;
+                            var best = -1, bestD = 12 * 12; // ヒット判定距離 (px)
                             for (var seg = 0; seg < bz.length; seg += 6) {
-                                var pts = [[bz[seg], bz[seg + 1]], [bz[seg + 2], bz[seg + 3]], (seg + 6 < bz.length) ? [bz[seg + 4], bz[seg + 5]] : null];
+                                // cp1, cp2, and endAnchor
+                                var pts = [[bz[seg], bz[seg + 1]], [bz[seg + 2], bz[seg + 3]], [bz[seg + 4], bz[seg + 5]]];
                                 var indices = [seg, seg + 2, seg + 4];
                                 for (var pi = 0; pi < 3; pi++) {
-                                    if (!pts[pi])
-                                        continue;
-
                                     var px = previewCanvas.lxToPx(pts[pi][0]);
                                     var py = previewCanvas.lyToPy(pts[pi][1]);
                                     var dx = mx - px, dy = my - py;
@@ -664,10 +666,56 @@ ApplicationWindow {
 
                         anchors.fill: parent
                         enabled: root.selectedType === "custom"
-                        acceptedButtons: Qt.LeftButton
-                        cursorShape: dragIdx >= 0 ? Qt.CrossCursor : Qt.ArrowCursor
+                        acceptedButtons: Qt.LeftButton | Qt.RightButton
+                        cursorShape: dragIdx >= 0 ? Qt.ClosedHandCursor : (findNearest(mouseX, mouseY) >= 0 ? Qt.PointingHandCursor : Qt.ArrowCursor)
+                        onDoubleClicked: (mouse) => {
+                            if (mouse.button !== Qt.LeftButton)
+                                return ;
+
+                            var lx = previewCanvas.pxToLx(mouse.x);
+                            var ly = previewCanvas.pyToLy(mouse.y);
+                            if (lx <= 0.01 || lx >= 0.99)
+                                return ;
+
+                            var p = root.bezierParams.slice();
+                            // 挿入位置を特定 (endX の昇順を維持)
+                            var insertIdx = 0;
+                            for (var i = 0; i < p.length; i += 6) {
+                                if (lx < p[i + 4]) {
+                                    insertIdx = i;
+                                    break;
+                                }
+                                insertIdx = i + 6;
+                            }
+                            // 新しいセグメントを構築
+                            // 前のアンカーを取得
+                            var prevX = (insertIdx === 0) ? 0 : p[insertIdx - 2];
+                            var prevY = (insertIdx === 0) ? 0 : p[insertIdx - 1];
+                            // 前後の中間付近に制御点を配置する簡易初期化
+                            var newSeg = [prevX + (lx - prevX) * 0.33, prevY + (ly - prevY) * 0.33, prevX + (lx - prevX) * 0.66, prevY + (ly - prevY) * 0.66, lx, ly];
+                            p.splice(insertIdx, 0, newSeg[0], newSeg[1], newSeg[2], newSeg[3], newSeg[4], newSeg[5]);
+                            // 次のセグメントの制御点も少し調整（連続性を保つため）
+                            if (insertIdx + 6 < p.length) {
+                                p[insertIdx + 6] = lx + (p[insertIdx + 10] - lx) * 0.33;
+                                p[insertIdx + 7] = ly + (p[insertIdx + 11] - ly) * 0.33;
+                            }
+                            root.bezierParams = p;
+                        }
+                        onClicked: (mouse) => {
+                            if (mouse.button === Qt.RightButton) {
+                                var hit = findNearest(mouse.x, mouse.y);
+                                // アンカーポイント（4, 10, 16...）かつ最後ではない場合のみ削除
+                                if (hit >= 4 && (hit + 2) % 6 === 0 && hit < root.bezierParams.length - 2) {
+                                    var p = root.bezierParams.slice();
+                                    p.splice(hit - 4, 6);
+                                    root.bezierParams = p;
+                                }
+                            }
+                        }
                         onPressed: (mouse) => {
-                            dragIdx = findNearest(mouse.x, mouse.y);
+                            if (mouse.button === Qt.LeftButton)
+                                dragIdx = findNearest(mouse.x, mouse.y);
+
                         }
                         onPositionChanged: (mouse) => {
                             if (dragIdx < 0)
@@ -675,9 +723,27 @@ ApplicationWindow {
 
                             var lx = previewCanvas.pxToLx(mouse.x);
                             var ly = previewCanvas.pyToLy(mouse.y);
-                            // X軸クランプ（X は 0-1 必須、Y は範囲外 OK）
                             var p = root.bezierParams.slice();
-                            p[dragIdx] = Math.max(0, Math.min(1, lx));
+                            // 境界条件の処理
+                            var isLastAnchor = (dragIdx === p.length - 2);
+                            if (isLastAnchor) {
+                                // 終端アンカーは (1,1) 固定
+                                lx = 1;
+                                ly = 1;
+                            } else if ((dragIdx + 2) % 6 === 0) {
+                                // 中間アンカーの場合、前後のアンカーを越えないようにする
+                                var prevA = (dragIdx < 6) ? 0 : p[dragIdx - 6];
+                                var nextA = p[dragIdx + 6]; // 次の cp1x ではなく次の anchorX は +6
+                                // 正確には次のアンカーは dragIdx + 6 (cp1) + 4 = dragIdx + 10
+                                if (dragIdx + 6 < p.length)
+                                    nextA = p[dragIdx + 6];
+
+                                lx = Math.max(0.001, Math.min(0.999, lx));
+                            } else {
+                                // 制御点 (cp)
+                                lx = Math.max(0, Math.min(1, lx));
+                            }
+                            p[dragIdx] = lx;
                             p[dragIdx + 1] = ly;
                             root.bezierParams = p;
                         }
