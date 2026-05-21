@@ -1306,164 +1306,179 @@
 <context>
     <name>EasingConfigWindow</name>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="372"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="382"/>
         <source>補間設定: %1</source>
         <translation>插值设置：%1</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="409"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="419"/>
         <source>プレビュー</source>
         <translation>预览</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="419"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="429"/>
         <source>ズーム:</source>
         <translation>缩放：</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="682"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="694"/>
         <source>右ドラッグ:パン  ホイール:ズーム</source>
         <translation>右键拖动：平移  滚轮：缩放</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="682"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="694"/>
         <source>  左ドラッグ:ハンドル</source>
         <translation>  左键拖动：控制柄</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="691"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="703"/>
+        <source>詳細設定</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="712"/>
+        <source>振幅:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="738"/>
+        <source>周期:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="768"/>
         <source>制御点</source>
         <translation>控制点</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="775"/>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="979"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="852"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1056"/>
         <source>直線</source>
         <translation>直线</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="778"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="855"/>
         <source>サイン</source>
         <translation>正弦</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="781"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="858"/>
         <source>2次</source>
         <translation>二次</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="784"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="861"/>
         <source>3次</source>
         <translation>三次</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="787"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="864"/>
         <source>4次</source>
         <translation>四次</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="790"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="867"/>
         <source>5次</source>
         <translation>五次</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="793"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="870"/>
         <source>指数</source>
         <translation>指数</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="796"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="873"/>
         <source>円</source>
         <translation>圆形</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="799"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="876"/>
         <source>戻る</source>
         <translation>回退</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="802"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="879"/>
         <source>弾性</source>
         <translation>弹性</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="805"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="882"/>
         <source>跳ね返り</source>
         <translation>弹跳</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="808"/>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="982"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="885"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1059"/>
         <source>カスタム</source>
         <translation>自定义</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="819"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="896"/>
         <source>種類</source>
         <translation>类型</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="832"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="909"/>
         <source>検索...</source>
         <translation>搜索...</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="985"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1062"/>
         <source>加減速</source>
         <translation>加减速</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="988"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1065"/>
         <source>減加速</source>
         <translation>减加速</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="991"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1068"/>
         <source>加速</source>
         <translation>加速</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="994"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1071"/>
         <source>減速</source>
         <translation>减速</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1041"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1118"/>
         <source>補間方法:</source>
         <translation>插值方式：</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1053"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1130"/>
         <source>瞬間移動</source>
         <translation>瞬间移动</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1056"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1133"/>
         <source>直線移動</source>
         <translation>直线移动</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1059"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1136"/>
         <source>曲線移動</source>
         <translation>曲线移动</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1062"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1139"/>
         <source>ランダム移動</source>
         <translation>随机移动</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1065"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1142"/>
         <source>反復移動</source>
         <translation>重复移动</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1088"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1165"/>
         <source>更新間隔:</source>
         <translation>更新间隔：</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1101"/>
+        <location filename="../ui/qml/common/EasingConfigWindow.qml" line="1178"/>
         <source>フレーム</source>
         <translation>帧</translation>
     </message>

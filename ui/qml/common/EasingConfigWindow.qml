@@ -15,6 +15,8 @@ ApplicationWindow {
     property string selectedType: "none"
     property int stepFrames: 1
     property var bezierParams: [0.33, 0, 0.66, 1, 1, 1]
+    property double elasticAmplitude: 1
+    property double elasticPeriod: 0.3
     property real previewScale: 1 // 0.25 ～ 4.0
     property real previewOffsetX: 0 // 論理座標 (0-1空間) での平行移動
     property real previewOffsetY: 0
@@ -197,17 +199,17 @@ ApplicationWindow {
             return Math.pow(2, -10 * t) * Math.sin((10 * t - 0.75) * c4e) + 1;
         }
         if (type === "ease_in_out_elastic") {
-            var c5 = 2 * Math.PI / 4.5;
+            var c5 = 2 * Math.PI / (root.elasticPeriod * 1.5);
             if (t === 0)
                 return 0;
 
             if (t === 1)
                 return 1;
 
-            return t < 0.5 ? -(Math.pow(2, 20 * t - 10) * Math.sin((20 * t - 11.125) * c5)) / 2 : (Math.pow(2, -20 * t + 10) * Math.sin((20 * t - 11.125) * c5)) / 2 + 1;
+            return t < 0.5 ? -(root.elasticAmplitude * Math.pow(2, 20 * t - 10) * Math.sin((20 * t - 11.125) * c5)) / 2 : (root.elasticAmplitude * Math.pow(2, -20 * t + 10) * Math.sin((20 * t - 11.125) * c5)) / 2 + 1;
         }
         if (type === "ease_out_in_elastic") {
-            var c4 = 2 * Math.PI / 3;
+            var c4 = 2 * Math.PI / root.elasticPeriod;
             if (t === 0)
                 return 0;
 
@@ -215,10 +217,10 @@ ApplicationWindow {
                 return 1;
 
             var eout = (u) => {
-                return Math.pow(2, -10 * u) * Math.sin((u * 10 - 0.75) * c4) + 1;
+                return root.elasticAmplitude * Math.pow(2, -10 * u) * Math.sin((u - root.elasticPeriod / 4) * c4) + 1;
             };
             var ein = (u) => {
-                return -Math.pow(2, 10 * u - 10) * Math.sin((u * 10 - 10.75) * c4);
+                return -root.elasticAmplitude * Math.pow(2, 10 * u - 10) * Math.sin((u - 1 - root.elasticPeriod / 4) * c4);
             };
             return t < 0.5 ? eout(2 * t) / 2 : ein(2 * t - 1) / 2 + 0.5;
         }
@@ -323,6 +325,8 @@ ApplicationWindow {
             const kf = track[i];
             selectedType = kf.interp || "none";
             stepFrames = (kf.modeParams && kf.modeParams.stepFrames) ? kf.modeParams.stepFrames : 1;
+            elasticAmplitude = (kf.modeParams && kf.modeParams.amplitude) ? kf.modeParams.amplitude : 1;
+            elasticPeriod = (kf.modeParams && kf.modeParams.period) ? kf.modeParams.period : 0.3;
             if (selectedType === "bezier")
                 selectedType = "custom";
 
@@ -364,6 +368,12 @@ ApplicationWindow {
         if (selectedType === "random" || selectedType === "alternate")
             options.modeParams = {
             "stepFrames": Math.max(1, stepFrames)
+        };
+
+        if (selectedType.indexOf("elastic") !== -1)
+            options.modeParams = {
+            "amplitude": elasticAmplitude,
+            "period": elasticPeriod
         };
 
         Workspace.currentTimeline.setKeyframe(clipId, effectIndex, paramName, keyframeFrame, kf.value, options);
@@ -502,11 +512,12 @@ ApplicationWindow {
                             var ctx = getContext("2d");
                             var w = width, h = height;
                             ctx.clearRect(0, 0, w, h);
-                            ctx.fillStyle = "#1e1e1e";
+                            ctx.fillStyle = root.palette.window;
                             ctx.fillRect(0, 0, w, h);
                             // グリッド (論理0-1の格子)
-                            ctx.strokeStyle = "#333";
+                            ctx.strokeStyle = root.palette.mid;
                             ctx.lineWidth = 0.5;
+                            ctx.globalAlpha = 0.3;
                             for (var gi = 0; gi <= 4; gi++) {
                                 var gx = lxToPx(gi / 4), gy = lyToPy(gi / 4);
                                 ctx.beginPath();
@@ -518,20 +529,21 @@ ApplicationWindow {
                                 ctx.lineTo(w, gy);
                                 ctx.stroke();
                             }
+                            ctx.globalAlpha = 1;
                             // 有効領域枠 (0-1 矩形)
-                            ctx.strokeStyle = "#555";
+                            ctx.strokeStyle = root.palette.mid;
                             ctx.lineWidth = 1;
                             var x0 = lxToPx(0), x1 = lxToPx(1), y0 = lyToPy(0), y1 = lyToPy(1);
                             ctx.strokeRect(x0, y1, x1 - x0, y0 - y1);
                             // 対角線 (linear 参照)
-                            ctx.strokeStyle = "#444";
+                            ctx.strokeStyle = root.palette.mid;
                             ctx.lineWidth = 1;
                             ctx.beginPath();
                             ctx.moveTo(x0, y0);
                             ctx.lineTo(x1, y1);
                             ctx.stroke();
                             // カーブ本体
-                            ctx.strokeStyle = "#4488ff";
+                            ctx.strokeStyle = root.palette.highlight;
                             ctx.lineWidth = 2;
                             ctx.beginPath();
                             var steps = 128;
@@ -552,7 +564,7 @@ ApplicationWindow {
                                     var c2px = lxToPx(bz[seg + 2]), c2py = lyToPy(bz[seg + 3]);
                                     var enpx = lxToPx(bz[seg + 4]), enpy = lyToPy(bz[seg + 5]);
                                     // タンジェントライン
-                                    ctx.strokeStyle = "#888";
+                                    ctx.strokeStyle = root.palette.dark;
                                     ctx.lineWidth = 0.8;
                                     ctx.setLineDash([3, 3]);
                                     ctx.beginPath();
@@ -565,7 +577,7 @@ ApplicationWindow {
                                     ctx.stroke();
                                     ctx.setLineDash([]);
                                     // cp1
-                                    ctx.fillStyle = "#fff";
+                                    ctx.fillStyle = root.palette.text;
                                     ctx.beginPath();
                                     ctx.arc(c1px, c1py, 5, 0, 2 * Math.PI);
                                     ctx.fill();
@@ -575,7 +587,7 @@ ApplicationWindow {
                                     ctx.fill();
                                     // anchor (中間のみ)
                                     if (seg + 6 < bz.length) {
-                                        ctx.fillStyle = "#ffdd00";
+                                        ctx.fillStyle = root.palette.highlight;
                                         ctx.beginPath();
                                         ctx.arc(enpx, enpy, 6, 0, 2 * Math.PI);
                                         ctx.fill();
@@ -585,7 +597,7 @@ ApplicationWindow {
                                 }
                             }
                             // 座標軸ラベル
-                            ctx.fillStyle = "#666";
+                            ctx.fillStyle = root.palette.mid;
                             ctx.font = "10px sans-serif";
                             ctx.fillText("0", lxToPx(-0.03), lyToPy(-0.04));
                             ctx.fillText("1", lxToPx(0.97), lyToPy(-0.04));
@@ -682,6 +694,71 @@ ApplicationWindow {
                         text: qsTr("右ドラッグ:パン  ホイール:ズーム") + (root.selectedType === "custom" ? qsTr("  左ドラッグ:ハンドル") : "")
                         font.pixelSize: 9
                         color: palette.mid
+                    }
+
+                }
+
+                // 詳細パラメータ調整 (Elastic等)
+                GroupBox {
+                    title: qsTr("詳細設定")
+                    visible: selectedType.indexOf("elastic") !== -1
+                    Layout.fillWidth: true
+
+                    ColumnLayout {
+                        anchors.fill: parent
+
+                        RowLayout {
+                            Label {
+                                text: qsTr("振幅:")
+                                Layout.preferredWidth: 40
+                            }
+
+                            Slider {
+                                id: ampSlider
+
+                                from: 0.1
+                                to: 5
+                                value: root.elasticAmplitude
+                                onMoved: {
+                                    root.elasticAmplitude = value;
+                                    root.requestPreview();
+                                }
+                                Layout.fillWidth: true
+                            }
+
+                            Label {
+                                text: root.elasticAmplitude.toFixed(2)
+                                Layout.preferredWidth: 30
+                            }
+
+                        }
+
+                        RowLayout {
+                            Label {
+                                text: qsTr("周期:")
+                                Layout.preferredWidth: 40
+                            }
+
+                            Slider {
+                                id: perSlider
+
+                                from: 0.05
+                                to: 1
+                                value: root.elasticPeriod
+                                onMoved: {
+                                    root.elasticPeriod = value;
+                                    root.requestPreview();
+                                }
+                                Layout.fillWidth: true
+                            }
+
+                            Label {
+                                text: root.elasticPeriod.toFixed(2)
+                                Layout.preferredWidth: 30
+                            }
+
+                        }
+
                     }
 
                 }
@@ -944,10 +1021,10 @@ ApplicationWindow {
                                                         var ctx = getContext("2d");
                                                         var w = width, h = height;
                                                         ctx.clearRect(0, 0, w, h);
-                                                        ctx.fillStyle = isCurrent ? "#1a2a3a" : "#1a1a1a";
+                                                        ctx.fillStyle = isCurrent ? Qt.darker(root.palette.highlight, 2.5) : root.palette.window;
                                                         ctx.fillRect(0, 0, w, h);
                                                         // カーブ
-                                                        ctx.strokeStyle = isCurrent ? "#88ccff" : "#4488ff";
+                                                        ctx.strokeStyle = isCurrent ? root.palette.brightText : root.palette.highlight;
                                                         ctx.lineWidth = 1.5;
                                                         ctx.beginPath();
                                                         var steps = 48;

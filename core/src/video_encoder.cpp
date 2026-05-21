@@ -711,5 +711,3 @@ void VideoEncoder::close() {
 }
 
 } // namespace AviQtl::Core
- 
- 
