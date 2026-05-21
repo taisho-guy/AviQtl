@@ -549,8 +549,8 @@ auto VideoEncoder::processAudio(const std::vector<float> &samples) -> bool {
     av_audio_fifo_write(m_audioFifo, reinterpret_cast<void **>(convertedData), sampleCount);
 
     if (convertedData != nullptr) {
-        av_freep(static_cast<void *>(&convertedData[0]));
-        free(static_cast<void *>(convertedData));
+        av_freep(static_cast<void *>(&convertedData[0])); // sample buffer
+        av_freep(static_cast<void *>(&convertedData));    // pointer array (av_malloc'd, not C free)
     }
 
     // 3. エンコーダーのフレームサイズ分溜まったらエンコード
