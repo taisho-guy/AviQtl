@@ -77,7 +77,10 @@
     </section>
 
     <h2 class="section-header"><span>★</span> インフォメーション <span>★</span></h2>
-    <p>私は2026年度受験生になりますから、開発速度が低下します。ご了承下さい。</p>
+    <ul>
+        <li>私 taisho-guy は2026年度受験生になりますから、開発速度が低下します。ご了承下さい。</li>
+        <li>現在AviQtlは開発初期段階です（2026/1/20開発開始）。技術プレビューとしてお楽しみ下さい。</li>
+    </ul>
 
     <h2 class="section-header"><span>★</span> ダウンロード <span>★</span></h2>
 
@@ -212,28 +215,68 @@ python -m pip install --upgrade pip PySide6</code></pre>
         <p>AviQtlは「AviUtlの再発明」ではありません。AviUtlを強く意識していますが、その中身は全く異なります。</p>
         <table>
             <tr>
-                <th style="background-color: #0d1f23; color: #2cde85;">鳥瞰図</th><th style="background-color: #0d1f23; color: #2cde85;">AviQtl</th><th style="background-color: #0d1f23; color: #2cde85;">AviUtl1</th><th style="background-color: #0d1f23; color: #2cde85;">ExEdit2</th>
+                <th style="background-color: #0d1f23; color: #2cde85;">鳥瞰図</th>
+                <th style="background-color: #0d1f23; color: #2cde85;">AviQtl</th>
+                <th style="background-color: #0d1f23; color: #2cde85;">ExEdit0</th>
+                <th style="background-color: #0d1f23; color: #2cde85;">ExEdit2</th>
+                <th style="background-color: #0d1f23; color: #2cde85;">Beutl</th>
+                <th style="background-color: #0d1f23; color: #2cde85;">YMM4</th>
             </tr>
             <tr>
-                <td>基盤技術</td><td>Qt Quick/Vulkan</td><td>Win32 API</td><td>Win32 API</td>
+                <td>基盤</td>
+                <td>Qt Quick</td>
+                <td>Win32 API</td>
+                <td>Win32 API</td>
+                <td>SkiaSharp</td>
+                <td>WPF</td>
             </tr>
             <tr>
-                <td>並列処理モデル</td><td>データ駆動型並列処理</td><td>シングルスレッド</td><td>マルチスレッド</td>
+                <td>処理</td>
+                <td>データ志向型並列処理</td>
+                <td>シングルスレッド</td>
+                <td>マルチスレッド</td>
+                <td>SceneGraph並列描画</td>
+                <td>基本シングルスレッド</td>
             </tr>
             <tr>
-                <td>メモリ空間</td><td>64bit</td><td>32bit (最大4GB)</td><td>64bit</td>
+                <td>メモリ</td>
+                <td>64bit</td>
+                <td>32bit</td>
+                <td>64bit</td>
+                <td>64bit</td>
+                <td>64bit</td>
             </tr>
             <tr>
-                <td>プレビュー描画</td><td>Vulkan</td><td>GDI</td><td>Direct3D</td>
+                <td>描画</td>
+                <td>Vulkan/Metal/DX12</td>
+                <td>GDI</td>
+                <td>DX11</td>
+                <td>OpenGLバックエンド</td>
+                <td>WPF</td>
             </tr>
             <tr>
-                <td>音声エンジン</td><td>Carla (VST3/LV2等)</td><td>貧弱</td><td>貧弱</td>
+                <td>音声</td>
+                <td>Carla (VST3/LV2等)</td>
+                <td>貧弱</td>
+                <td>貧弱</td>
+                <td>貧弱</td>
+                <td>合成音声対応</td>
             </tr>
             <tr>
-                <td>プラグイン方式</td><td>LuaJIT/C++/QML/GLSL</td><td>Lua/C++</td><td>LuaJIT/C++</td>
+                <td>拡張</td>
+                <td>LuaJIT/C++/QML/GLSL</td>
+                <td>Lua/C++</td>
+                <td>LuaJIT/C++</td>
+                <td>C#</td>
+                <td>EXO</td>
             </tr>
             <tr>
-                <td>対応可能OS</td><td>Linux, Windows, macOS等</td><td>Windows</td><td>Windows</td>
+                <td>OS</td>
+                <td>Linux/Windows/macOS</td>
+                <td>Windows</td>
+                <td>Windows</td>
+                <td>Windows/macOS/Linux</td>
+                <td>Windows</td>
             </tr>
         </table>
         <p>AviQtlはExEdit2も解決できない構造的弱点を根本的に覆します。</p>
