@@ -19,10 +19,10 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     list(APPEND EXTRA_QT_COMPONENTS WaylandClient)
 endif()
 
-find_package(Qt6 REQUIRED COMPONENTS 
-    Core Gui GuiPrivate Quick QuickControls2 Quick3D 
-    Widgets Core5Compat Sql Svg Multimedia Concurrent 
-    ShaderTools LinguistTools Network ${EXTRA_QT_COMPONENTS}
+find_package(Qt6 REQUIRED COMPONENTS
+    Core Gui GuiPrivate Quick QuickControls2 Quick3D
+    Widgets Core5Compat Sql Svg Multimedia Concurrent
+    ShaderTools LinguistTools Network Test ${EXTRA_QT_COMPONENTS}
 )
 
 if(APPLE)
@@ -86,12 +86,16 @@ set(UI_DEPENDENT_SOURCES
     "core/src/compute_render_node.cpp"
     "core/src/video_frame_provider.cpp"
     "core/src/video_frame_store.cpp"
+    "core/src/image_decoder.cpp"
+    "core/src/video_decoder.cpp"
 )
 set(UI_DEPENDENT_HEADERS
     "core/include/compute_render_node.hpp"
     "core/include/video_frame_provider.hpp"
     "core/include/video_frame_store.hpp"
     "core/include/effect_model.hpp"
+    "core/include/image_decoder.hpp"
+    "core/include/video_decoder.hpp"
 )
 
 foreach(F ${UI_DEPENDENT_SOURCES})
@@ -287,3 +291,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT DEFINED CMAKE_LINKER_TYPE)
         set(CMAKE_LINKER_TYPE MOLD CACHE STRING "" FORCE)
     endif()
 endif()
+
+# --- Tests ---
+enable_testing()
+add_subdirectory(tests)
