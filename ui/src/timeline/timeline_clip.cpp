@@ -104,6 +104,35 @@ void TimelineService::insertLayers(int targetLayer, int count, bool above) {
     m_undoStack->endMacro();
 }
 
+void TimelineService::shiftLayers(int startLayer, int endLayer, int delta) {
+    if (delta == 0 || startLayer > endLayer)
+        return;
+
+    m_undoStack->beginMacro(delta > 0 ? tr("レイヤーをまとめて下へ移動") : tr("レイヤーをまとめて上へ移動"));
+
+    // 現在のシーンのクリップのコピーを取得
+    QList<ClipData> sceneClips = clips(); // 処理中のリスト変更を避けるためコピー
+
+    // 移動方向に応じてソート（衝突回避のため）
+    if (delta > 0) {
+        // 下方向への移動：下のレイヤーから順に処理
+        std::sort(sceneClips.begin(), sceneClips.end(), [](const ClipData &a, const ClipData &b) { return a.layer > b.layer; });
+    } else {
+        // 上方向への移動：上のレイヤーから順に処理
+        std::sort(sceneClips.begin(), sceneClips.end(), [](const ClipData &a, const ClipData &b) { return a.layer < b.layer; });
+    }
+
+    for (const auto &clip : sceneClips) {
+        // 指定された範囲内のレイヤーに属するクリップのみを対象とする
+        if (clip.layer >= startLayer && clip.layer <= endLayer) {
+            int newLayer = std::max(0, clip.layer + delta);
+            updateClip(clip.id, newLayer, clip.startFrame, clip.durationFrames);
+        }
+    }
+
+    m_undoStack->endMacro();
+}
+
 void TimelineService::applyClipBatchMove(const QVariantList &moves) {
     if (moves.isEmpty()) {
         return;

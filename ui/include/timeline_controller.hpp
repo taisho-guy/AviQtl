@@ -93,6 +93,7 @@ class TimelineController : public QObject {
     // クリップの配置・長さを更新 (ID指定)
     Q_INVOKABLE void updateClip(int id, int layer, int startFrame, int duration);
     Q_INVOKABLE void insertLayers(int targetLayer, int count, bool above);
+    Q_INVOKABLE void shiftLayers(int startLayer, int endLayer, int delta);
     Q_INVOKABLE void moveSelectedClips(int deltaLayer, int deltaFrame);
     Q_INVOKABLE void applyClipBatchMove(const QVariantList &moves);
     Q_INVOKABLE void resizeSelectedClips(int deltaStartFrame, int deltaDuration);

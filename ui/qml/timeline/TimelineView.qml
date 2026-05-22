@@ -599,6 +599,10 @@ ScrollView {
             case "clip.split":
                 Workspace.currentTimeline.splitClip(targetClipId, contextClickFrame);
                 break;
+            case "clip.duplicate":
+                Workspace.currentTimeline.copySelectedClips();
+                Workspace.currentTimeline.pasteClip(Workspace.currentTimeline.cursorFrame, Workspace.currentTimeline.selectedLayer);
+                break;
             case "clip.cut":
                 if (shouldApplyToSelection())
                     Workspace.currentTimeline.cutSelectedClips();
@@ -681,6 +685,54 @@ ScrollView {
                 }
             }
 
+            function buildEffectMenu(parentMenu, items) {
+                for (var i = 0; i < items.length; ++i) {
+                    var node = items[i];
+                    if (node.isCategory) {
+                        var subMenu = subMenuComp.createObject(timelineViewRoot, {
+                            "title": node.title
+                        });
+                        buildEffectMenu(subMenu, node.children);
+                        parentMenu.addMenu(subMenu);
+                    } else {
+                        var effItem = menuItemComp.createObject(timelineViewRoot, {
+                            "text": node.name,
+                            "iconName": "magic_line"
+                        });
+                        (function(id) {
+                            effItem.triggered.connect(() => {
+                                Workspace.currentTimeline.addEffect(targetClipId, id);
+                            });
+                        })(node.id);
+                        parentMenu.addItem(effItem);
+                    }
+                }
+            }
+
+            function buildAudioPluginMenu(parentMenu) {
+                var categories = Workspace.currentTimeline.getPluginCategories();
+                for (var c = 0; c < categories.length; c++) {
+                    var catName = categories[c];
+                    var subMenu = subMenuComp.createObject(timelineViewRoot, {
+                        "title": catName
+                    });
+                    var plugins = Workspace.currentTimeline.getPluginsByCategory(catName);
+                    for (var p = 0; p < plugins.length; p++) {
+                        (function(pluginData) {
+                            var plugItem = menuItemComp.createObject(timelineViewRoot, {
+                                "text": pluginData.name,
+                                "iconName": "music_line"
+                            });
+                            plugItem.triggered.connect(() => {
+                                Workspace.currentTimeline.addAudioPlugin(targetClipId, pluginData.id);
+                            });
+                            subMenu.addItem(plugItem);
+                        })(plugins[p]);
+                    }
+                    parentMenu.addMenu(subMenu);
+                }
+            }
+
             // 非同期の destroy を避け、同期的にアイテムを削除・破棄することで
             // Kirigami/KDE Menuの実装におけるレイアウト計算のタイミング問題を回避する
             while (contextMenu.count > 0) {
@@ -708,9 +760,19 @@ ScrollView {
             } else if (targetType === "clip") {
                 contextMenu.addItem(createMenuItem(qsTr("削除"), "clip.delete", "delete_bin_line"));
                 contextMenu.addItem(createMenuItem(qsTr("分割"), "clip.split", "scissors_cut_line"));
+                contextMenu.addItem(createMenuItem(qsTr("複製"), "clip.duplicate", "file_copy_2_line"));
                 addSeparator();
                 contextMenu.addItem(createMenuItem(qsTr("切り取り"), "clip.cut", "scissors_line"));
                 contextMenu.addItem(createMenuItem(qsTr("コピー"), "clip.copy", "file_copy_line"));
+                addSeparator();
+                var addEffSub = createSubMenu(qsTr("エフェクトを追加"));
+                if (Workspace.currentTimeline.isAudioClip(targetClipId)) {
+                    buildAudioPluginMenu(addEffSub);
+                } else {
+                    var effects = Workspace.currentTimeline.getAvailableEffects();
+                    buildEffectMenu(addEffSub, effects);
+                }
+                contextMenu.addMenu(addEffSub);
             }
         }
 

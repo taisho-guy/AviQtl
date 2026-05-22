@@ -182,7 +182,7 @@ Rectangle {
         property bool isAbove: true
 
         anchors.centerIn: Overlay.overlay
-        title: isAbove ? qsTr("上に複数レイヤーを挿入") : qsTr("下に複数レイヤーを挿入")
+        title: qsTr("複数レイヤーを挿入")
         standardButtons: Dialog.Ok | Dialog.Cancel
         modal: true
         onAccepted: {
@@ -238,21 +238,113 @@ Rectangle {
 
     }
 
+    // 複数レイヤー移動用ダイアログ
+    Dialog {
+        id: moveLayersDialog
+
+        property bool isDown: true
+
+        anchors.centerIn: Overlay.overlay
+        title: qsTr("このレイヤー以降をまとめて移動")
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        modal: true
+        onAccepted: {
+            if (Workspace.currentTimeline) {
+                var delta = isDown ? moveCountSpin.value : -moveCountSpin.value;
+                Workspace.currentTimeline.shiftLayers(fromLayerSpin.value - 1, toLayerSpin.value - 1, delta);
+            }
+        }
+
+        ColumnLayout {
+            spacing: 10
+
+            Label {
+                text: qsTr("対象レイヤーの範囲:")
+            }
+
+            RowLayout {
+                SpinBox {
+                    id: fromLayerSpin
+
+                    from: 1
+                    to: headerRoot.layerCount
+                    value: layerMenu.layerIndex + 1
+                    editable: true
+                }
+
+                Label {
+                    text: "～"
+                }
+
+                SpinBox {
+                    id: toLayerSpin
+
+                    from: 1
+                    to: headerRoot.layerCount
+                    value: headerRoot.layerCount
+                    editable: true
+                }
+
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                height: 1
+                color: palette.mid
+                opacity: 0.3
+            }
+
+            Label {
+                text: qsTr("移動量 (行数):")
+            }
+
+            SpinBox {
+                id: moveCountSpin
+
+                from: 1
+                to: 100
+                value: 1
+                editable: true
+            }
+
+            Label {
+                text: qsTr("方向:")
+            }
+
+            RowLayout {
+                RadioButton {
+                    text: qsTr("上へ")
+                    checked: !moveLayersDialog.isDown
+                    onToggled: {
+                        if (checked)
+                            moveLayersDialog.isDown = false;
+
+                    }
+                }
+
+                RadioButton {
+                    text: qsTr("下へ")
+                    checked: moveLayersDialog.isDown
+                    onToggled: {
+                        if (checked)
+                            moveLayersDialog.isDown = true;
+
+                    }
+                }
+
+            }
+
+        }
+
+    }
+
     // レイヤーコンテキストメニュー
     Menu {
         id: layerMenu
 
         property int layerIndex: 0
 
-        Common.IconMenuItem {
-            text: qsTr("表示/非表示を切り替え")
-            iconName: headerRoot.getLayerVisible(layerMenu.layerIndex) ? "eye_off_line" : "eye_line"
-            onTriggered: {
-                var visible = headerRoot.getLayerVisible(layerMenu.layerIndex);
-                headerRoot.setLayerVisible(layerMenu.layerIndex, !visible);
-            }
-        }
-
+        // --- 挿入系 ---
         MenuSeparator {
         }
 
@@ -277,30 +369,58 @@ Rectangle {
         }
 
         Common.IconMenuItem {
-            text: qsTr("上に複数レイヤーを挿入...")
+            text: qsTr("複数レイヤーを挿入...")
             iconName: "apps_2_add_line"
+            onTriggered: insertLayersDialog.open()
+        }
+
+        // --- 移動系 ---
+        MenuSeparator {
+        }
+
+        Common.IconMenuItem {
+            text: qsTr("このレイヤーの内容を1行下へ")
+            iconName: "arrow_down_line"
             onTriggered: {
-                insertLayersDialog.isAbove = true;
-                insertLayersDialog.open();
+                if (Workspace.currentTimeline)
+                    Workspace.currentTimeline.shiftLayers(layerMenu.layerIndex, layerMenu.layerIndex, 1);
+
             }
         }
 
         Common.IconMenuItem {
-            text: qsTr("下に複数レイヤーを挿入...")
-            iconName: "apps_2_add_line"
+            text: qsTr("このレイヤーの内容を1行上へ")
+            iconName: "arrow_up_line"
             onTriggered: {
-                insertLayersDialog.isAbove = false;
-                insertLayersDialog.open();
+                if (Workspace.currentTimeline)
+                    Workspace.currentTimeline.shiftLayers(layerMenu.layerIndex, layerMenu.layerIndex, -1);
+
             }
+        }
+
+        Common.IconMenuItem {
+            text: qsTr("範囲を指定してレイヤー移動...")
+            iconName: "drag_move_2_line"
+            onTriggered: moveLayersDialog.open()
         }
 
         MenuSeparator {
         }
 
+        // --- 状態設定系 ---
+        Common.IconMenuItem {
+            text: headerRoot.getLayerVisible(layerMenu.layerIndex) ? qsTr("このレイヤーを非表示にする") : qsTr("このレイヤーを表示する")
+            iconName: headerRoot.getLayerVisible(layerMenu.layerIndex) ? "eye_off_line" : "eye_line"
+            onTriggered: {
+                var visible = headerRoot.getLayerVisible(layerMenu.layerIndex);
+                headerRoot.setLayerVisible(layerMenu.layerIndex, !visible);
+            }
+        }
+
         Common.IconMenuItem {
             text: {
                 var locked = headerRoot.getLayerLocked(layerMenu.layerIndex);
-                return locked ? qsTr("ロックを解除") : qsTr("ロック");
+                return locked ? qsTr("このレイヤーのロックを解除") : qsTr("このレイヤーをロックする");
             }
             iconName: headerRoot.getLayerLocked(layerMenu.layerIndex) ? "lock_unlock_line" : "lock_line"
             onTriggered: {
@@ -309,11 +429,12 @@ Rectangle {
             }
         }
 
+        // --- 一括操作系 ---
         MenuSeparator {
         }
 
         Common.IconMenuItem {
-            text: qsTr("すべて表示")
+            text: qsTr("すべてのレイヤーを表示")
             iconName: "eye_line"
             onTriggered: {
                 for (var i = 0; i < headerRoot.layerCount; i++) {
@@ -323,7 +444,7 @@ Rectangle {
         }
 
         Common.IconMenuItem {
-            text: qsTr("すべて非表示")
+            text: qsTr("すべてのレイヤーを非表示")
             iconName: "eye_off_line"
             onTriggered: {
                 for (var i = 0; i < headerRoot.layerCount; i++) {
