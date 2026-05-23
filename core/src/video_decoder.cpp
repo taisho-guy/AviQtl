@@ -370,7 +370,7 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) { // NOLINT(bugprone-
     targetFrame = std::max(targetFrame, 0);
     targetFrame = std::min(targetFrame, static_cast<int>(mindex.size()) - 1);
 
-    const QString clipKey = QString::number(clipId());
+    const QString &clipKey = clipIdString();
 
     // 1. GOPキャッシュのチェック (MLT O(1) パス)
     QVideoFrame cachedFrame;

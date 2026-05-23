@@ -314,20 +314,7 @@ void TimelineMediaManager::requestVideoFrame(int clipId, int relFrame) { // NOLI
         return;
     }
 
-    const ClipData *targetClip = nullptr;
-    const auto &scenes = m_controller->timeline()->getAllScenes();
-    for (const auto &scene : std::as_const(scenes)) {
-        for (const auto &c : std::as_const(scene.clips)) {
-            if (c.id == clipId) {
-                targetClip = &c;
-                break;
-            }
-        }
-        if (targetClip != nullptr) {
-            break;
-        }
-    }
-
+    const ClipData *targetClip = m_controller->timeline()->findClipById(clipId);
     if (targetClip == nullptr) {
         return;
     }

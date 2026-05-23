@@ -27,7 +27,7 @@ void ImageDecoder::seek(qint64 ms) {
     Q_UNUSED(ms);
     if (m_isReady && m_cachedVideoFrame.isValid()) {
         // すでにデコード済みの場合は、ストアに再通知してSink（画面）を更新する
-        m_store->setVideoFrameSafe(QString::number(clipId()), m_cachedVideoFrame);
+        m_store->setVideoFrameSafe(clipIdString(), m_cachedVideoFrame);
     } else if (!m_future.isRunning()) {
         load();
     }
@@ -140,7 +140,7 @@ void ImageDecoder::decodeImage(const QString &path) {
         // QQuickImageProvider 用に QImage としても保存する（これがプレビューされない直接的な原因）
         QImage img(rgbaFrame->data[0], rgbaFrame->width, rgbaFrame->height, rgbaFrame->linesize[0], QImage::Format_RGBA8888);
         m_cachedImage = img.copy();
-        const QString clipIdStr = QString::number(clipId());
+        const QString &clipIdStr = clipIdString();
         m_store->setFrameSafe(clipIdStr, m_cachedImage);
 
         QVideoFrameFormat fmt(QSize(rgbaFrame->width, rgbaFrame->height), QVideoFrameFormat::Format_RGBA8888);

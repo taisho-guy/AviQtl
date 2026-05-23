@@ -50,6 +50,9 @@ class AudioMixer : public QObject {
     double m_playbackSpeed = 1.0;
     QHash<int, double> m_clipPhase;
     QHash<int, int> m_clipLastFrame;
+
+    std::vector<float> m_masterBuffer;
+    int m_lastSamplesPerFrame = 0;
 };
 
 } // namespace AviQtl::Engine

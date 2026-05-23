@@ -24,6 +24,7 @@ class MediaDecoder : public QObject {
 
     bool isReady() const { return m_isReady; }
     int clipId() const { return m_clipId; }
+    const QString &clipIdString() const { return m_clipIdString; }
     QUrl source() const { return m_source; }
 
   signals:
@@ -37,6 +38,7 @@ class MediaDecoder : public QObject {
     virtual void startDecoding() = 0;
 
     int m_clipId;
+    QString m_clipIdString;
     QUrl m_source;
     int m_sampleRate = 48000;
     std::atomic<bool> m_isReady{false};

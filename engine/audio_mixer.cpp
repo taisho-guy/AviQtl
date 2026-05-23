@@ -85,8 +85,15 @@ auto AudioMixer::isReady() const -> bool {
 }
 
 auto AudioMixer::mix(int currentFrame, double fps, int samplesPerFrame) -> std::vector<float> { // NOLINT(bugprone-easily-swappable-parameters)
-    // 1. マスターバッファの初期化（無音）
-    std::vector<float> masterBuffer(static_cast<std::size_t>(samplesPerFrame) * 2, 0.0F);
+    // 1. マスターバッファの初期化（無音）— バッファを再利用して毎フレームの確保を回避
+    std::size_t newSize = static_cast<std::size_t>(samplesPerFrame) * 2;
+    if (newSize != static_cast<std::size_t>(m_lastSamplesPerFrame) * 2) {
+        m_masterBuffer.assign(newSize, 0.0F);
+        m_lastSamplesPerFrame = samplesPerFrame;
+    } else {
+        std::fill(m_masterBuffer.begin(), m_masterBuffer.end(), 0.0F);
+    }
+    auto &masterBuffer = m_masterBuffer;
 
     // 2. ECSから現在の音声コンポーネントを取得
     const auto *state = Timeline::ECS::instance().getSnapshot();
@@ -159,12 +166,12 @@ auto AudioMixer::mix(int currentFrame, double fps, int samplesPerFrame) -> std::
                 }
             }
             // 次のフレームのための開始位置を進める（m_playbackSpeed 分の秒数）
-            m_clipPhase.insert(clipId, startTime + ((static_cast<double>(samplesPerFrame) / m_format.sampleRate()) * m_playbackSpeed));
+            m_clipPhase[clipId] = startTime + ((static_cast<double>(samplesPerFrame) / m_format.sampleRate()) * m_playbackSpeed);
         } else {
             // 1倍速の場合はそのまま取得
             int neededSamples = samplesPerFrame;
             clipSamples = decoder->getSamples(startTime, neededSamples * 2);
-            m_clipPhase.insert(clipId, startTime + (static_cast<double>(samplesPerFrame) / m_format.sampleRate()));
+            m_clipPhase[clipId] = startTime + (static_cast<double>(samplesPerFrame) / m_format.sampleRate());
         }
 
         // プラグインチェーンを適用
