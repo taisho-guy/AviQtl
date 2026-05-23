@@ -222,9 +222,17 @@ endforeach()
 add_custom_target(AviQtl_ExternalShaders ALL DEPENDS ${EXTERNAL_QSB_FILES})
 
 # --- Executable ---
-qt_add_executable(AviQtl
+set(AVIQTL_EXECUTABLE_SOURCES
     core/src/main.cpp
     ui/resources.qrc
+)
+
+if(WIN32)
+    list(APPEND AVIQTL_EXECUTABLE_SOURCES assets/windows/aviqtl.rc)
+endif()
+
+qt_add_executable(AviQtl
+    ${AVIQTL_EXECUTABLE_SOURCES}
 )
 
 if(APPLE)
