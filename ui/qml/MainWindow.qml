@@ -848,9 +848,9 @@ ApplicationWindow {
             // C++ 側で clips プロパティの NOTIFY が呼ばれると、この式が再評価されます。
             clipModel: {
                 var _trigger = Workspace.currentTimeline ? Workspace.currentTimeline.clips : null;
-                if (Workspace.currentTimeline && sceneId >= 0) {
+                if (Workspace.currentTimeline && sceneId >= 0)
                     return Workspace.currentTimeline.getSceneClips(sceneId);
-                }
+
                 return [];
             }
             Layout.fillWidth: true

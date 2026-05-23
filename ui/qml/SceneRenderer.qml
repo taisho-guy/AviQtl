@@ -39,9 +39,9 @@ Item {
         anchors.fill: parent
         // 外部から注入されたデータを使用
         clipModel: {
-            if (root.timelineBridge && root.sceneId >= 0) {
+            if (root.timelineBridge && root.sceneId >= 0)
                 return root.timelineBridge.getSceneClips(root.sceneId);
-            }
+
             return [];
         }
         sceneId: root.sceneId

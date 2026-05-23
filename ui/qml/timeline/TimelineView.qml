@@ -384,7 +384,6 @@ ScrollView {
                     Workspace.currentTimeline.clearSelectionPreview();
                     Workspace.currentTimeline.applySelectionIds([]);
                 }
-
             }
             onReleased: (mouse) => {
                 var scale = Workspace.currentTimeline ? Workspace.currentTimeline.timelineScale : 1;
