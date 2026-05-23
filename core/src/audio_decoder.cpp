@@ -28,7 +28,7 @@ void AudioDecoder::startDecoding() {
             path = m_source.toString();
         }
 
-        if (avformat_open_input(&m_fmtCtx, path.toStdString().c_str(), nullptr, nullptr) < 0) {
+        if (avformat_open_input(&m_fmtCtx, path.toUtf8().constData(), nullptr, nullptr) < 0) {
             qWarning() << "[AudioDecoder] avformat_open_input failed:" << path;
             m_isReady = true;
             emit ready();

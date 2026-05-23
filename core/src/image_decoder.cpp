@@ -51,7 +51,7 @@ void ImageDecoder::load() {
 
 void ImageDecoder::decodeImage(const QString &path) {
     AVFormatContext *fmtCtx = nullptr;
-    if (avformat_open_input(&fmtCtx, path.toStdString().c_str(), nullptr, nullptr) != 0) {
+    if (avformat_open_input(&fmtCtx, path.toUtf8().constData(), nullptr, nullptr) != 0) {
         qWarning() << "[ImageDecoder] avformat_open_input失敗:" << path;
         return;
     }

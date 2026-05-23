@@ -84,7 +84,7 @@ auto VideoDecoder::open(const QString &path) -> bool {
     mindex.clear();
     m_prevKeyframe.clear();
 
-    if (avformat_open_input(&mfmtCtx, path.toStdString().c_str(), nullptr, nullptr) != 0) {
+    if (avformat_open_input(&mfmtCtx, path.toUtf8().constData(), nullptr, nullptr) != 0) {
         return false;
     }
     if (avformat_find_stream_info(mfmtCtx, nullptr) < 0) {

@@ -855,12 +855,8 @@ ApplicationWindow {
             }
             Layout.fillWidth: true
             Layout.fillHeight: true
-            onClipModelChanged: {
-                console.log("[Debug] MainWindow -> CompositeView: clipModel property actually CHANGED. size:", clipModel ? clipModel.length : 0);
-            }
-            onSceneIdChanged: {
-                console.log("[Debug] MainWindow -> CompositeView: sceneId changed to:", sceneId);
-            }
+            // Debug console.log removed from clipModel/sceneId change handlers
+            // to avoid synchronous I/O on every frame/property update (#41 follow-up).
             layerStates: {
                 // WindowManager.timelineVisible を依存関係に含めることでタイムライン生成後に再評価させる
                 var dummy = WindowManager.timelineVisible;

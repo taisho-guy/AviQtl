@@ -644,7 +644,10 @@ ScrollView {
 
                 break;
             default:
-                console.log("Unknown command:", cmd);
+                // Unknown command - silently ignored in release builds to avoid
+                // synchronous I/O overhead when the timeline window receives
+                // frequent external messages (shortcuts, automation, etc.).
+                break;
             }
         }
 
