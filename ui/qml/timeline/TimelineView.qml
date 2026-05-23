@@ -370,7 +370,6 @@ ScrollView {
             cursorShape: Qt.ArrowCursor
             hoverEnabled: true
             onPositionChanged: (mouse) => {
-                // ボタン押下中（ドラッグ中）やコンテキストメニュー表示中はカーソルを動かさない
                 if (Workspace.currentTimeline && !pressed && !contextMenu.visible) {
                     var scale = Workspace.currentTimeline.timelineScale;
                     var frame = timelineViewRoot.snapFrame(mouse.x / scale, (mouse.modifiers & Qt.ShiftModifier));
@@ -418,14 +417,12 @@ ScrollView {
             }
             onReleased: (mouse) => {
                 boxSelectionCurrent = mapToItem(timelineFlickable.contentItem, mouse.x, mouse.y);
-                // マウスを放した瞬間に、ドラッグ距離がしきい値を超えているか再判定（高速移動対策）
                 if (!boxSelecting) {
                     if (Math.abs(boxSelectionCurrent.x - boxSelectionStart.x) >= boxSelectionThreshold || Math.abs(boxSelectionCurrent.y - boxSelectionStart.y) >= boxSelectionThreshold)
                         boxSelecting = true;
 
                 }
                 if (!boxSelecting) {
-                    // 単一クリック（コンテキストメニュー）ロジック
                     var scale = Workspace.currentTimeline ? Workspace.currentTimeline.timelineScale : 1;
                     // ビューポート座標(mouse.x)ではなく、内容座標(boxSelectionCurrent.x)を使用することで
                     // スクロール状態に依存せず正確な位置を特定する
@@ -728,8 +725,6 @@ ScrollView {
                 }
             }
 
-            // 非同期の destroy を避け、同期的にアイテムを削除・破棄することで
-            // Kirigami/KDE Menuの実装におけるレイアウト計算のタイミング問題を回避する
             while (contextMenu.count > 0) {
                 var it = contextMenu.takeItem(0);
                 if (it) {

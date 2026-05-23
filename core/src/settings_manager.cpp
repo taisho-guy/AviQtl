@@ -21,7 +21,6 @@ auto getDefaultPluginPaths(const QString &type, const QStringList &envVars, cons
     }
     paths << (QDir::homePath() + QLatin1String("/.") + type);
 
-    // アプリケーションディレクトリからの相対パスとして追加。これにより配布時のポータビリティを確保。
     paths << type;
 
     paths << defaultDirs;

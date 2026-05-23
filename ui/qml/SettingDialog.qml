@@ -136,13 +136,11 @@ Common.AviQtlWindow {
         reloading = false;
     }
 
-    // 複数エフェクト一括削除（reload を削除完了後に1回だけ行う）
     function executeEffectDelete(indices) {
         if (!Workspace.currentTimeline)
             return ;
 
         var isAudio = Workspace.currentTimeline.isAudioClip(targetClipId);
-        // ① 削除対象を現在のモデルから事前に確定（途中のモデル更新に依存しない）
         var m = sidebarList.model;
         var toDelete = [];
         for (var i = 0; i < indices.length; i++) {
@@ -157,11 +155,9 @@ Common.AviQtlWindow {
             sidebarList.clearSelection();
             return ;
         }
-        // 高インデックスから削除してインデックスずれを防ぐ
         toDelete.sort(function(a, b) {
             return b - a;
         });
-        // ② C++ 側で一括削除（シグナルを1回だけ発火させて再帰的イテレーション競合を防ぐ）
         if (isAudio) {
             // AudioPlugin は clipsMutable ループ外で処理されるため従来方式
             root.isDeleting = true;
@@ -170,10 +166,8 @@ Common.AviQtlWindow {
             }
             root.isDeleting = false;
         } else {
-            // ビデオエフェクトは C++ removeMultipleEffects で一括削除
             Workspace.currentTimeline.removeMultipleEffects(targetClipId, toDelete);
         }
-        // ③ 全削除完了後に一回だけリロード
         reload();
         sidebarList.clearSelection();
     }
@@ -221,13 +215,11 @@ Common.AviQtlWindow {
 
     }
 
-    // 選択変更やデータ更新を監視してモデルをリロード
     Connections {
         function onSelectedClipIdChanged() {
             reload();
         }
 
-        // パラメータ変更時の反映用（入力中はリロードしない）
         function onSelectedClipDataChanged() {
             if (!inputting && !root.isDeleting)
                 reload();
@@ -496,7 +488,6 @@ Common.AviQtlWindow {
 
             }
 
-            // 右クリックコンテキストメニュー
             Menu {
                 id: effectContextMenu
 
@@ -517,7 +508,6 @@ Common.AviQtlWindow {
                             return false;
 
                         var isAudio = Workspace.currentTimeline && Workspace.currentTimeline.isAudioClip(targetClipId);
-                        // 1件でも削除可能なものがあれば有効
                         for (var i = 0; i < indices.length; i++) {
                             var idx = indices[i];
                             if (idx >= 0 && idx < m.length)
@@ -600,7 +590,6 @@ Common.AviQtlWindow {
                                 anchors.leftMargin: 10
                             }
 
-                            // 削除ボタン (Transform以外)
                             Button {
                                 visible: modelData.kind === "effect"
                                 anchors.right: parent.right
@@ -835,7 +824,6 @@ Common.AviQtlWindow {
                                     onStartValueModified: function(val) {
                                         root.inputting = true;
                                         updateParam(startFrame, val);
-                                        // 暗転状態（右側が非アクティブ）では左値変更を右側にも同期する
                                         var _rightActive = isMoving && hasKeyframeAt(endFrame) && interpType !== "" && interpType !== "constant";
                                         if (!_rightActive && endFrame !== startFrame && endFrame !== clipDur) {
                                             ensureKeyframeAt(endFrame);
@@ -883,7 +871,6 @@ Common.AviQtlWindow {
                                     onStartValueModified: function(val) {
                                         root.inputting = true;
                                         updateParam(startFrame, val);
-                                        // 暗転状態（右側が非アクティブ）では左値変更を右側にも同期する
                                         if (!rightInteractiveState && endFrame !== startFrame && endFrame !== clipDur) {
                                             ensureKeyframeAt(endFrame);
                                             updateParam(endFrame, val);
@@ -1157,7 +1144,6 @@ Common.AviQtlWindow {
                                     anchors.leftMargin: 10
                                 }
 
-                                // 削除ボタン
                                 Button {
                                     anchors.right: parent.right
                                     anchors.verticalCenter: parent.verticalCenter
@@ -1257,12 +1243,6 @@ Common.AviQtlWindow {
             }
 
             function _clearDynamicMenu() {
-                // Menu の管理から外す（takeItem/removeMenu は不要。addMenu/addItem した順序管理が複雑なため）
-                // Qt では addMenu/addItem した Menu/MenuItem は Menu の "item model" 側に保持されるが
-                // createObject で生成した Qt オブジェクト本体の所有権は parent にある。
-                // ここでは clear() で Menu の表示リストをリセットし、
-                // 自前リストに追跡しているオブジェクトを destroy() する。
-                // clear();
                 for (var i = 0; i < _dynamicObjects.length; ++i) {
                     var obj = _dynamicObjects[i];
                     if (obj) {

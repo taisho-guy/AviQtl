@@ -6,7 +6,6 @@ Common.BaseComputeEffect {
 
     // Compute Shader のファイルパスを指定するだけ
     computeShader: "pixelsorter.comp.qsb"
-    // JSON側の "mix" とシェーダー側の "mixAmount" (予約語回避) をマッピング
     uniformMapping: {
         "mix": "mixAmount"
     }

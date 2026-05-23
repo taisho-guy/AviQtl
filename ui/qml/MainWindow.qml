@@ -22,7 +22,6 @@ ApplicationWindow {
     }
 
     function syncCompositeView() {
-        // 修正: compositeViewLoader.item ではなく compositeView を直接渡す
         if (Workspace.currentTimeline)
             Workspace.currentTimeline.setCompositeView(compositeView);
 
@@ -63,8 +62,6 @@ ApplicationWindow {
         }
     }
 
-    // 修正: 有効なプロジェクト（タブ）が存在しない場合はメインウィンドウを非表示にする。
-    // これにより、不必要なレンダリングコンテキストの生成とそれによるクラッシュを抑制する。
     visible: Workspace && Workspace.tabs ? Workspace.tabs.length > 0 : false
     width: 640
     height: 360
@@ -83,7 +80,6 @@ ApplicationWindow {
     }
     // 起動時に自分自身(Window)をコントローラーに渡す
     Component.onCompleted: {
-        // 修正: visible プロパティを削除
         syncCompositeView();
     }
 
@@ -844,8 +840,6 @@ ApplicationWindow {
             // タイムラインの存在に依存するプロパティ
             sceneId: Workspace.currentTimeline ? Workspace.currentTimeline.currentSceneId : -1
             currentFrame: (Workspace.currentTimeline && Workspace.currentTimeline.transport) ? Workspace.currentTimeline.transport.currentFrame : 0
-            // 修正: clips プロパティへの依存を明示し、リアクティブなバインディングにする
-            // C++ 側で clips プロパティの NOTIFY が呼ばれると、この式が再評価されます。
             clipModel: {
                 var _trigger = Workspace.currentTimeline ? Workspace.currentTimeline.clips : null;
                 if (Workspace.currentTimeline && sceneId >= 0)
@@ -897,11 +891,6 @@ ApplicationWindow {
 
                 // シークバー
                 Slider {
-                    // 動かしている間は currentFrame を更新するがプレビューは止まる
-                    // 離した瞬間にプレビュー確定
-                    // 押した瞬間も同期
-                    // シーク後は絶対に一時停止のままにするため、endScrub() は呼ばない
-
                     id: seekSlider
 
                     Layout.fillWidth: true

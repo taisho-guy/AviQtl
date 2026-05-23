@@ -6,17 +6,6 @@
 #include <cassert>
 #include <cmath>
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Phase 2.4: CommandSystem
-//
-// CoreBridge の SPSC リングバッファからコマンドを取り出し、ECS 状態に反映する。
-// CommandSystem は ECS の毎フレーム先頭で実行される (仕様書第5章 System 実行順序)。
-//
-// 実行順序:
-//   CommandSystem → InterpolationSystem (Phase 4) → TransformSystem (Phase 4)
-//   → RenderSystem (Phase 5)
-// ─────────────────────────────────────────────────────────────────────────────
-
 namespace AviQtl::Engine::Timeline {
 
 // ─── CommandSystem ────────────────────────────────────────────────────────────
@@ -61,7 +50,6 @@ void ECS::syncClipIds(const std::bitset<MAX_CLIP_ID> &aliveFlags) {
     changed |= editState.renderStates.syncAlive(aliveFlags);
     changed |= editState.audioStates.syncAlive(aliveFlags);
 
-    // Phase 4 同期
     changed |= editState.keyframeRefs.syncAlive(aliveFlags);
     changed |= editState.ecsTransforms.syncAlive(aliveFlags);
     changed |= editState.globalMatrices.syncAlive(aliveFlags);
@@ -175,7 +163,6 @@ void ECS::commit() {
             if (const auto *s = src.audioStates.find(id))
                 dst.audioStates[id] = *s;
 
-            // Phase 4 同期
             if (const auto *s = src.keyframeRefs.find(id))
                 dst.keyframeRefs[id] = *s;
             if (const auto *s = src.ecsTransforms.find(id))

@@ -29,8 +29,6 @@ void ThemeController::setTheme(const QString &theme) {
 }
 
 void ThemeController::applyTheme() {
-    // Qt 6.5+ の機能を利用してアプリ全体のテーマを強制する。
-    // KDE Kirigami.Theme もこのシステム設定に追従します。
     if (m_theme == QStringLiteral("Dark")) {
         QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Dark);
     } else if (m_theme == QStringLiteral("Light")) {

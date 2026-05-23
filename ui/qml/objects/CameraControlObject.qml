@@ -39,9 +39,6 @@ Common.BaseObject {
     PerspectiveCamera {
         id: cam
 
-        // lookAt で注視点を設定
-        // Qt3D 6.x では Node.lookAt() が使えないため eulerRotation で代替
-        // target オフセットから方向ベクトルを計算
         readonly property vector3d _target: Qt.vector3d(root.tarX, -root.tarY, root.tarZ)
         readonly property vector3d _dir: position.minus(_target).normalized()
 

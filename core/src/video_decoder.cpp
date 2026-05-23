@@ -462,7 +462,6 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) { // NOLINT(bugprone-
                 continue;
             }
 
-            // 【修正】ターゲットフレームが既にキャッシュにある場合でも、適切にディスパッチとフラグ更新を行う
             if (decodedFrameIndex == targetFrame && !targetDispatched) {
                 QVideoFrame *cached = mframeCache.object(decodedFrameIndex);
                 if (cached && cached->isValid()) {
@@ -551,27 +550,16 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) { // NOLINT(bugprone-
                     videoFrame.setEndTime(-1);
 
                     if (videoFrame.isValid()) {
-                        // 【MLT思想 1: Deep Copy / Clone】
-                        // QVideoFrame はハンドル。ここでスタックにコピーを作成することで
-                        // デコーダーが次フレームを処理しても、このハンドルが指すバッファは保護される。
-                        // ffmpeg_video_buffer.hpp 内の av_frame_ref によりデータ実体も保護済み。
                         int bpp = (qtFmt == QVideoFrameFormat::Format_RGBA8888) ? 4 : 2;
                         int64_t cost = static_cast<int64_t>(videoFrame.width()) * videoFrame.height() * bpp;
                         auto *cachedFrame = new QVideoFrame(videoFrame);
 
-                        // 【MLT思想 3: Garbage (遅延解放)】
-                        // QCache は既存キーの上書き時に古いポインタを delete するが、
-                        // VideoFrameStore 側が copy を持っているため、描画中のフレームが
-                        // 物理メモリから消えることはない（参照カウントによる安全なゴミ箱処理）。
                         mframeCache.insert(decodedFrameIndex, cachedFrame, static_cast<int>(std::clamp<int64_t>(cost, 0, INT_MAX)));
                         newGopBlock.frames.insert(decodedFrameIndex, videoFrame);
 
                         // 最後に成功したフレームを更新 (Concealment 用)
                         m_lastGoodFrame = videoFrame;
 
-                        // 【MLT思想: 往復シャッフルに相当する O(1) ディスパッチ】
-                        // ターゲットを見つけた瞬間に UI へ横流しする。
-                        // これにより、GOP全体の充填を待たずに再生ヘッドを動かせる。
                         if (decodedFrameIndex == targetFrame && !targetDispatched) {
                             mstore->setVideoFrameSafe(clipKey, m_lastGoodFrame);
                             if (auto *app = qApp) {
@@ -604,7 +592,6 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) { // NOLINT(bugprone-
     }
     av_packet_unref(m_pkt);
 
-    // 【重要】エラー隠蔽 (Error Concealment) - 安全チェックの強化
     if (!targetDispatched && m_lastGoodFrame.isValid() && !mclosing.load(std::memory_order_acquire)) {
         mstore->setVideoFrameSafe(clipKey, m_lastGoodFrame);
         if (auto *app = qApp) {

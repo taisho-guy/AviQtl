@@ -96,7 +96,6 @@ Rectangle {
 
                     }
 
-                    // 右クリック: コンテキストメニュー
                     MouseArea {
                         anchors.fill: parent
                         hoverEnabled: true
@@ -338,7 +337,6 @@ Rectangle {
 
     }
 
-    // レイヤーコンテキストメニュー
     Menu {
         id: layerMenu
 

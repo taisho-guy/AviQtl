@@ -49,7 +49,6 @@ void TimelineService::createClipInternal(int clipId, const QString &type, int st
 
     currentClips.append(newClip);
 
-    // デフォルトで transform エフェクトを追加
     addEffectInternal(clipId, QStringLiteral("transform"));
     addEffectInternal(clipId, type);
 
@@ -86,7 +85,6 @@ void TimelineService::insertLayers(int targetLayer, int count, bool above) {
 
     m_undoStack->beginMacro(above ? tr("レイヤーを上に挿入") : tr("レイヤーを下に挿入"));
 
-    // 現在のシーンのクリップのコピーを作成（イテレート中のリスト変更を避けるため）
     QList<ClipData> sceneClips = clips();
 
     // レイヤー番号が大きい順にソート（下方向にずらすので、下のものから先に動かせば移動先に既存クリップがいない状態を作れる）
@@ -113,7 +111,6 @@ void TimelineService::shiftLayers(int startLayer, int endLayer, int delta) {
     // 現在のシーンのクリップのコピーを取得
     QList<ClipData> sceneClips = clips(); // 処理中のリスト変更を避けるためコピー
 
-    // 移動方向に応じてソート（衝突回避のため）
     if (delta > 0) {
         // 下方向への移動：下のレイヤーから順に処理
         std::sort(sceneClips.begin(), sceneClips.end(), [](const ClipData &a, const ClipData &b) { return a.layer > b.layer; });
@@ -171,9 +168,6 @@ void TimelineService::applyClipBatchMove(const QVariantList &moves) {
         }
     }
 
-    // 衝突回避ロジック:
-    // グループ全体の相対位置を崩さないため、どれか1つでも衝突したらグループ全体を右へ押し出す。
-    // それを他のクリップに当たらなくなるまで最大100回反復する。
     int maxPush = 0;
     bool needsPush = true;
     int loopCount = 0;
@@ -590,10 +584,8 @@ void TimelineService::deleteClipsByIds(const QVariantList &ids) {
 
     QString macroText = intIds.size() == 1 ? QObject::tr("クリップ削除") : QObject::tr("複数クリップ削除: %1").arg(intIds.size());
 
-    // 既存の複数削除コマンドを再利用してUndo/Redoスタックに積む
     m_undoStack->push(new DeleteClipsCommand(this, intIds, macroText));
 
-    // 削除後は選択状態をクリアする
     m_selection->clearSelection();
 }
 

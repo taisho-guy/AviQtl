@@ -10,7 +10,6 @@ ScrollView {
     required property var draftSettings
     required property var pluginFormats
 
-    // プラグイン設定変更シグナル
     signal valueChanged(string key, var value)
     signal pluginEnabledChanged(string formatName, bool enabled)
     signal pluginPathsChanged(string formatName, string textValue)

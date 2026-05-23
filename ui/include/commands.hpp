@@ -107,7 +107,6 @@ class ReorderEffectCommand : public QUndoCommand {
 
 class ReorderMultipleEffectsCommand : public QUndoCommand {
   public:
-    // 生ポインタ保持によるダングリング回避: 置換順列インデックスだけ保持する
     ReorderMultipleEffectsCommand(TimelineService *service, int clipId, QList<int> redoPerm, QList<int> undoPerm, const QString &text);
     void undo() override;
     void redo() override;

@@ -7,10 +7,7 @@
 
 namespace AviQtl::Engine::Timeline {
 
-BakeController::BakeController() {
-    // DocumentModelの構造変更（クリップ追加・削除・エフェクト増減）を監視してBakeをトリガーする
-    connect(&AviQtl::Core::DocumentModel::instance(), &AviQtl::Core::DocumentModel::structureChanged, this, &BakeController::onStructureChanged);
-}
+BakeController::BakeController() { connect(&AviQtl::Core::DocumentModel::instance(), &AviQtl::Core::DocumentModel::structureChanged, this, &BakeController::onStructureChanged); }
 
 BakeController &BakeController::instance() {
     static BakeController inst;
@@ -50,9 +47,6 @@ void BakeController::bake(int sceneId, int currentFrame) {
         if (shouldBake) {
             aliveFlags.set(static_cast<std::size_t>(clip.id));
 
-            // ECS状態に初期ベイク
-            // (キーフレーム評価・補間ランタイムはPhase 4以降 ECS::InterpolationSystem が内部で実行するため、
-            //  Bake時には位置・尺などの基本属性の登録のみを行う)
             const double relTime = static_cast<double>(std::max(0, currentFrame - clip.startFrame));
             ECS::instance().updateClipState(clip.id, clip.layer, relTime, clip.startFrame, clip.durationFrames);
 
@@ -63,7 +57,6 @@ void BakeController::bake(int sceneId, int currentFrame) {
         }
     }
 
-    // ECS側に生存エンティティIDを同期させて、範囲外・削除済みのエンティティを消去する
     ECS::instance().syncClipIds(aliveFlags);
     ECS::instance().commit();
 

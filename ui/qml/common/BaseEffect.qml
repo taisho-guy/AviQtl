@@ -11,10 +11,8 @@ Item {
     property alias sourceProxy: proxySource
     property QtObject effectModel
     property int frame: 0
-    // QMLバインディング再評価用（params/keyframes変更を確実に検知）
     property int _rev: 0
 
-    // 【統一API】キーフレーム優先評価（ECS同期）
     function evalParam(key, fallback) {
         var _ = base._rev;
         if (base.effectModel) {

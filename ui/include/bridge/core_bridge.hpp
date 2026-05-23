@@ -6,10 +6,6 @@
 
 namespace AviQtl::UI {
 
-// QMLとECS Worldの唯一の接点となるシングルトンブリッジ。
-// QML側はこのクラスのみを通じてコマンドを発行し、ECSの内部構造を知らない。
-// コマンドはロックフリーSPSCリングバッファでECS CommandSystemへ転送される。
-// 注: QML登録は main.cpp で qmlRegisterSingletonInstance により手動実施する。
 class CoreBridge : public QObject {
     Q_OBJECT
 

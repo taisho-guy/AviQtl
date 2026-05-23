@@ -48,7 +48,6 @@ void ComputeEffect::setShaderPath(const QString &path) {
     update();
 }
 
-// フェーズ8: ワークグループサイズのセッタ
 void ComputeEffect::setWorkGroupSizeX(int x) {
     const int clamped = qMax(1, x);
     if (m_workGroupX == clamped)
@@ -80,8 +79,6 @@ void ComputeEffect::setAutoWorkGroup(bool autoWG) {
     update();
 }
 
-// フェーズ6 / 8: ECS writeSSBOLayout → GPU への直接ゼロコピーパス
-// フェーズ8: このデータは updatePaintNode で ComputeRenderNode に同期される
 void ComputeEffect::setStorageBufferRaw(const QString &name, int binding, const void *data, qsizetype byteSize) {
     for (auto &entry : m_rawSSBOs) {
         if (entry.name == name) {
@@ -99,7 +96,6 @@ void ComputeEffect::setStorageBufferRaw(const QString &name, int binding, const 
     update();
 }
 
-// フェーズ8: アイテムリサイズ時に autoWorkGroup が true なら自動再計算
 void ComputeEffect::geometryChange(const QRectF &newGeometry, const QRectF &oldGeometry) {
     QQuickItem::geometryChange(newGeometry, oldGeometry);
     if (m_autoWorkGroup)
@@ -142,16 +138,12 @@ auto ComputeEffect::ssboToBytes(const QVariantMap &bufferData) -> QByteArray {
     return result;
 }
 
-// フェーズ8: ComputeRenderNode を生成・更新して返す
-// updatePaintNode は UI/レンダースレッドの同期ポイントであるため
-// m_rawSSBOs へのアクセスに mutex は不要
 auto ComputeEffect::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) -> QSGNode * {
     if (!m_enabled) {
         delete oldNode;
         return nullptr;
     }
 
-    // フェーズ8: 初回呼び出し時に ComputeRenderNode を生成する
     auto *node = static_cast<ComputeRenderNode *>(oldNode);
     if (!node) {
         node = new ComputeRenderNode(window());

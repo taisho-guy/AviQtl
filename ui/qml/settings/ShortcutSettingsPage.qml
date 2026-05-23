@@ -10,7 +10,6 @@ ScrollView {
     required property var draftSettings
     required property var shortcutList
 
-    // ショートカット変更シグナル
     signal shortcutValueChanged(string actionId, string value)
 
     function getShortcutValue(actionId, fallback) {

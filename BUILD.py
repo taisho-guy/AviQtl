@@ -224,7 +224,6 @@ class PlatformBuilder:
         return "AviQtl-Archive"
 
     def create_zip(self, archive_name: str):
-        # Windows の場合、既存の zip があるとエラーになる場合があるため削除
         zip_file = self.config.dist_dir / (archive_name + ".zip")
         if zip_file.exists():
             zip_file.unlink()
@@ -445,7 +444,6 @@ class ArchBuilder(LinuxBuilderBase):
             "qt6-shadertools", "qt6-svg", "qt6-5compat", "qt6-tools",
             "lilv", "ladspa", "carla",
             "openmp", "extra-cmake-modules",
-            # carla が間接依存する fluidsynth (--as-needed 対策)
             "fluidsynth",
         ]
         self.run_cmd(["sudo", "pacman", "-Syu", "--needed", "--noconfirm"] + deps)
@@ -486,7 +484,6 @@ class Msys2Builder(PlatformBuilder):
 
     def get_cmake_config_cmd(self) -> List[str]:
         cmd = super().get_cmake_config_cmd()
-        # super().get_cmake_config_cmd() で既に CMAKE_BUILD_TYPE が設定されているため削除
         if (self.config.source_dir / "vendor" / "carla").exists():
             cmd.append(f"-DCARLA_SDK_DIR={Path(self.config.source_dir / 'vendor' / 'carla').as_posix()}")
         cmd.append(str(self.config.source_dir))
@@ -504,18 +501,9 @@ class Msys2Builder(PlatformBuilder):
         self.copy_assets(self.config.output_dir)
         self.copy_carla_runtime()
         
-        # Msys2環境では実行ファイルと同じディレクトリにあるDLLも必要になる場合があるため、
-        # pacman経由でインストールされた外部依存DLL(ffmpeg等)をコピーするためのパス解決等も
-        # MSYS2の場合はwindeployqt以外にもntlddなどが有用ですが、一旦windeployqtに任せます。
         
-        # MSYS2 ucrt64 の Qt6 パッケージでは windeployqt6 が正式ツール名。
-        # windeployqt (Qt5 用) は存在しないため windeployqt6 を優先し、
-        # 見つからない場合のみ windeployqt にフォールバックする。
         deploy_tool = "windeployqt6" if shutil.which("windeployqt6") else "windeployqt"
 
-        # windeployqt6 は QML スキャン時に内部で qmlimportscanner を QProcess 経由で
-        # 子プロセス起動する。MSYS2 では qmlimportscanner.exe が share/qt6/bin/ にあるため、
-        # そちらも PATH に追加する。
         deploy_exe = shutil.which(deploy_tool)
         if deploy_exe:
             qt_bin_dir = str(Path(deploy_exe).resolve().parent)
@@ -1004,7 +992,6 @@ class MsvcBuilder(PlatformBuilder):
 
     def get_cmake_config_cmd(self) -> List[str]:
         cmd = super().get_cmake_config_cmd()
-        # 固定インデックスでの書き換えは脆弱なため、必要に応じてフラグを追加するように修正
         if self.ninja_path:
             cmd.append(f"-DCMAKE_MAKE_PROGRAM={self.ninja_path}")
 
@@ -1108,11 +1095,10 @@ class XcodeBuilder(PlatformBuilder):
     def install_dependencies(self):
         if self.config.is_offline:
             self.logger.log("依存関係インストールをスキップします (--offline)")
-            return # Early exit if offline build
+            return
         if not shutil.which("brew"):
             raise RuntimeError("Homebrew が見つかりません") # Homebrew is essential for macOS
         self.logger.log("brew install を実行中...")
-        # Removed KDE specific dependencies
         deps = [
             "cmake", "ninja", "qt6", "ffmpeg", "luajit",
             "vulkan-headers", "vulkan-loader", "spirv-tools", "pkg-config",
@@ -1125,7 +1111,6 @@ class XcodeBuilder(PlatformBuilder):
 
     def get_cmake_config_cmd(self) -> List[str]:
         cmd = super().get_cmake_config_cmd()
-        # super().get_cmake_config_cmd() で既に CMAKE_BUILD_TYPE が設定されているため削除
         try:
             brew_prefix = subprocess.check_output(["brew", "--prefix"], text=True).strip()
         except Exception:
@@ -1165,9 +1150,6 @@ class XcodeBuilder(PlatformBuilder):
             except subprocess.CalledProcessError:
                 self.logger.log(f"  スキップ: {rp}")
 
-        # 既知のQtバグ対策: macdeployqt が AviQtl QMLモジュールを Resources/qml にコピーすると、
-        # qrc:/ 内の同名モジュールと衝突して "AviQtl is ambiguous" エラーが発生する。
-        # リソースシステム内にのみ存在させることで回避する。
         self.logger.log("QMLモジュールの重複コピーをクリーンアップ中...")
         duplicate_qml_dirs = [
             dest_app / "Contents/Resources/qml/AviQtl",
@@ -1292,7 +1274,6 @@ def parse_args() -> argparse.Namespace:
         "--qt-dir", type=Path,
         help="MSVC ビルドで使用する公式 Qt のディレクトリ。未指定時は QT_MSVC_DIR, QT_DIR, QTDIR, PATH を確認します。MSVC では Qt が必須です。",
     )
-    # --version と --codename は parse_args() の直下に追加
     parser.add_argument(
         "--version", type=str, default="0.0.0",
         help="アプリケーションのバージョンを指定 (例: 0.1.0 または 0.1.0-Anon)。"
@@ -1358,7 +1339,6 @@ def main():
         config.version_major = int(match.group(1))
         config.version_minor = int(match.group(2))
         config.version_patch = int(match.group(3))
-    # Removed the unmatched ')' here
 
     app = QtCore.QCoreApplication(sys.argv)
     worker = BuildWorker(config)

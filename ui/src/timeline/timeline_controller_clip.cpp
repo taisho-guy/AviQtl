@@ -33,7 +33,6 @@ void TimelineController::updateSelectionPreview(int frameA, int frameB, int laye
     int maxL = std::max(layerA, layerB);
 
     for (const auto &clip : m_timeline->clips()) {
-        // GroupControlによるレイヤーの拡張分を考慮
         int groupLayerCount = 0;
         for (auto *eff : clip.effects) {
             if (eff->id() == QLatin1String("GroupControl")) {
@@ -225,14 +224,12 @@ auto TimelineController::clips() const -> QVariantList {
         map.insert(QStringLiteral("durationFrames"), clip.durationFrames);
         map.insert(QStringLiteral("layer"), clip.layer);
 
-        // オブジェクトのQMLパスを取得して追加
         auto meta = AviQtl::Core::EffectRegistry::instance().getEffect(clip.type);
         map.insert(QStringLiteral("name"), !meta.name.isEmpty() ? meta.name : clip.type);
         if (!meta.qmlSource.isEmpty()) {
             map.insert(QStringLiteral("qmlSource"), meta.qmlSource);
         }
 
-        // params を構築して追加
         QVariantMap params;
         // 基本情報もparamsに入れておく（QML側での利便性とBaseObjectでの参照用）
         params.insert(QStringLiteral("layer"), clip.layer);
@@ -310,7 +307,6 @@ void TimelineController::resizeSelectedClips(int deltaStartFrame, int deltaDurat
         return;
     }
 
-    // TimelineService と同一の衝突回避ソート順を維持する
     if (deltaStartFrame > 0 || deltaDuration > 0) {
         std::ranges::sort(pending, [](const PendingResize &a, const PendingResize &b) { return a.oldStart != b.oldStart ? a.oldStart > b.oldStart : a.layer > b.layer; });
     } else {
@@ -327,10 +323,6 @@ void TimelineController::resizeSelectedClips(int deltaStartFrame, int deltaDurat
     m_timeline->undoStack()->endMacro();
 }
 
-// ----------------------------------------------------------------
-// clampedDuration: video/audio/scene の素材長に合わせて duration を上限クランプ
-// updateClip と resizeSelectedClips の共通ロジックとして抽出
-// ----------------------------------------------------------------
 int TimelineController::clampedDuration(int clipId, int newStart, int requestedDuration) const {
     Q_UNUSED(newStart);
     const auto *clip = m_timeline->findClipById(clipId);
@@ -444,9 +436,6 @@ int TimelineController::clampedDuration(int clipId, int newStart, int requestedD
     return duration;
 }
 
-// ----------------------------------------------------------------
-// updateClip: clampedDuration() に委譲して DRY を維持
-// ----------------------------------------------------------------
 void TimelineController::updateClip(int id, int layer, int startFrame, int duration) {
     const auto *clip = m_timeline->findClipById(id);
     if (clip == nullptr) {
@@ -663,14 +652,12 @@ void TimelineController::requestDelete(int targetClipId) {
 
     // 選択が1件以上ある場合
     if (!selected.isEmpty()) {
-        // 全体削除（Delキーなど）または、選択対象を右クリックして削除する場合
         if (targetClipId < 0 || selected.contains(targetClipId)) {
             m_timeline->deleteClipsByIds(selected);
             return;
         }
     }
 
-    // 選択されていない対象を直接削除しようとする場合
     if (targetClipId >= 0) {
         QVariantList ids{targetClipId};
         m_timeline->applySelectionIds(ids); // 内部的に選択状態を同期

@@ -88,7 +88,6 @@ void EffectRegistry::loadEffectsFromDirectory(const QString &path) {
         }
 
         QJsonParseError error;
-        // 最適化: 巨大なJSONの場合はメモリマップドファイル化を検討
         const auto data = file.readAll();
         const auto doc = QJsonDocument::fromJson(data, &error);
 

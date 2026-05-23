@@ -57,7 +57,6 @@ QRhiCommandBuffer *ComputeRenderNode::resolveCommandBuffer() const {
 }
 
 bool ComputeRenderNode::ensureBuffers(QRhi *rhi) {
-    // 1. レイアウト変更 (個数/バインディング) または バッファサイズ増大のチェック
     bool needsRebuild = m_bufferLayoutDirty;
     if (!needsRebuild && m_gpuBuffers.size() == m_pendingSSBOs.size()) {
         for (int i = 0; i < m_pendingSSBOs.size(); ++i) {
@@ -114,7 +113,6 @@ bool ComputeRenderNode::ensureBuffers(QRhi *rhi) {
     }
 
     m_bufferLayoutDirty = false;
-    // バッファレイアウト変更 → パイプラインも SRB を参照しているため再構築が必要
     m_shaderDirty = true;
     return true;
 }
@@ -206,10 +204,7 @@ void ComputeRenderNode::prepare() {
     m_ssboDirty = false;
 }
 
-void ComputeRenderNode::render(const RenderState *) {
-    // フェーズ8: 実 GPU 処理は prepare() の Compute Dispatch で完結
-    // フェーズ9 でここに SceneGraph Compositor の出力テクスチャブリットを追加する
-}
+void ComputeRenderNode::render(const RenderState *) {}
 
 void ComputeRenderNode::releaseResources() { destroyResources(); }
 
@@ -230,10 +225,7 @@ void ComputeRenderNode::destroyResources() {
     m_shaderDirty = true;
 }
 
-QSGRenderNode::StateFlags ComputeRenderNode::changedStates() const {
-    // Compute パスはグラフィクスレンダーステートを変更しない
-    return {};
-}
+QSGRenderNode::StateFlags ComputeRenderNode::changedStates() const { return {}; }
 
 QSGRenderNode::RenderingFlags ComputeRenderNode::flags() const {
     // BoundedRectRendering: バウンディングボックス内のみ描画

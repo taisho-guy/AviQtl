@@ -97,7 +97,6 @@ void TimelineController::setupConnections() {
     connect(m_exportManager, &TimelineExportManager::exportProgressChanged, this, &TimelineController::exportProgressChanged);
     connect(m_exportManager, &TimelineExportManager::exportFinished, this, &TimelineController::exportFinished);
 
-    // FPSが変更されたら再生タイマーの間隔を更新
     connect(m_project, &ProjectService::fpsChanged, this, [this]() -> void { m_transport->updateTimerInterval(m_project->fps()); });
     m_transport->updateTimerInterval(m_project->fps());
 
@@ -196,12 +195,7 @@ auto TimelineController::resolveDragDelta(int clipId, int deltaFrame, int deltaL
     return {dF, dL};
 }
 
-void TimelineController::requestVideoFrame(int clipId, int relFrame) {
-    // MediaManagerは直接触れないので、TimelineService側にイベントを発火させる等するか、
-    // MediaManagerに直接シグナルで飛ばす。
-    // ここでは一番手っ取り早い「シグナル」を追加してMediaManagerに拾わせる。
-    emit videoFrameRequested(clipId, relFrame);
-}
+void TimelineController::requestVideoFrame(int clipId, int relFrame) { emit videoFrameRequested(clipId, relFrame); }
 
 void TimelineController::requestImageLoad(int clipId, const QString &path) { emit imageLoadRequested(clipId, path); }
 

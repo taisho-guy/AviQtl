@@ -92,8 +92,6 @@ Common.BaseObject {
                 renderType: Text.CurveRendering
             }
 
-            // Glow の spread: 1.0 は、ぼかしを一切行わず、100% の濃さで指定ピクセル分を
-            // 押し広げるため、単一の描画パスで完璧なソリッド縁取り(アウトライン)が完成します。
             Glow {
                 anchors.fill: textItem
                 source: textItem

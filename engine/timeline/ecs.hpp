@@ -1,8 +1,5 @@
 #pragma once
 #include "ecs_profiler.hpp"
-// PODコンポーネント定義 (仕様書第4章準拠)
-// 全フィールドは trivially_copyable なスカラー値のみ。
-// ポインタ・std::string・QString・QListの混入を厳禁とする。
 #include <cstdint>
 
 namespace AviQtl::ECS {
@@ -27,7 +24,6 @@ struct GlobalMatrixComponent {
 #include <utility>
 #include <vector>
 
-// Phase 2.4: CoreBridge の前方宣言 (循環インクルード回避)
 namespace AviQtl::UI {
 class CoreBridge;
 }
@@ -157,7 +153,6 @@ struct ECSState {
     DenseComponentMap<RenderComponent> renderStates;
     DenseComponentMap<AudioComponent> audioStates;
 
-    // Phase 4 拡張: 座標・補間管理
     DenseComponentMap<AviQtl::ECS::KeyframeRefComponent> keyframeRefs;
     DenseComponentMap<AviQtl::ECS::TransformComponent> ecsTransforms;
     DenseComponentMap<AviQtl::ECS::GlobalMatrixComponent> globalMatrices;
@@ -167,9 +162,6 @@ class ECS {
   public:
     static ECS &instance();
 
-    // ── Phase 2.4: CommandSystem ──────────────────────────────────────────────
-    // CoreBridge の SPSC リングバッファからコマンドを取り出し ECS 状態に反映する。
-    // TimelineController の毎フレーム先頭 (onTick 相当) から呼び出すこと。
     void runCommandSystem(AviQtl::UI::CoreBridge &bridge);
 
     int currentFrame() const { return m_currentFrame; }
@@ -198,7 +190,6 @@ class ECS {
 
     std::array<DirtyFlags, 3> m_dirtyFlags;
 
-    // Phase 2.4: CommandSystem が管理するグローバル再生状態
     int m_currentFrame = 0;
     bool m_isPlaying = false;
 };

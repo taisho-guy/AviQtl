@@ -43,10 +43,6 @@ Common.BaseObject {
             height: root.sizeH
 
             Canvas {
-                // 偶数角形は頂点を上に
-                // Radial
-                // Linear (上から下)
-
                 id: shapeCanvas
 
                 // 親のサイズ(sizeW/H)ではなく、padding込みのsourceItemサイズに合わせる

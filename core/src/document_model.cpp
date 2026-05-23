@@ -14,10 +14,7 @@ void DocumentModel::clear() {
     emit structureChanged();
 }
 
-void DocumentModel::setProjectSettings(const ProjectSettings &settings) {
-    m_projectSettings = settings;
-    // 設定変更自体は構造変化ではないが、プロジェクト再読み込み時は clear 経由で structureChanged が呼ばれる
-}
+void DocumentModel::setProjectSettings(const ProjectSettings &settings) { m_projectSettings = settings; }
 
 const SceneSettings *DocumentModel::findScene(int sceneId) const {
     auto it = std::find_if(m_scenes.begin(), m_scenes.end(), [sceneId](const SceneSettings &s) { return s.id == sceneId; });

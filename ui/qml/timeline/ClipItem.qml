@@ -171,9 +171,6 @@ Item {
         }
 
         MouseArea {
-            // Handled by parent if needed, or emit signal to request scroll
-            // timelineFlickable.contentX = Math.max(0, timelineFlickable.contentX + (finalF - propF) * clipDelegate.scale);
-
             id: moveArea
 
             property int pressModifiers: 0

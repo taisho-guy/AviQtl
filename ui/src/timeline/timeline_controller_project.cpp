@@ -25,7 +25,6 @@ void addRecentProject(const QString &fileUrl, ProjectService *project) {
     auto &settingsManager = AviQtl::Core::SettingsManager::instance();
     QVariantList recentList = settingsManager.value(QStringLiteral("recentProjects"), QVariantList()).toList();
 
-    // 重複を避けて先頭に追加する
     QVariantList newList;
     QVariantMap newEntry;
     newEntry[QStringLiteral("name")] = name;

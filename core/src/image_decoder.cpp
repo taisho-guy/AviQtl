@@ -93,7 +93,6 @@ void ImageDecoder::decodeImage(const QString &path) {
     AVFrame *srcFrame = av_frame_alloc();
     bool decoded = false;
 
-    // 画像は通常1パケット。確実に受け取るために Flush packet (nullptr) も考慮する
     bool eof = (av_read_frame(fmtCtx, pkt) < 0);
     while (!decoded) {
         if (avcodec_send_packet(decCtx, eof ? nullptr : pkt) == 0) {

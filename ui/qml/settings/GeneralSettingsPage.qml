@@ -9,7 +9,6 @@ ScrollView {
     // 親から受け取るドラフト設定
     required property var draftSettings
 
-    // 設定変更シグナル
     signal valueChanged(string key, var value)
 
     function valueOr(key, fb) {

@@ -3,8 +3,6 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 ApplicationWindow {
-    // keyframeFrame は変更しない（元フレームの interp をUIに正しく表示する）
-
     id: root
 
     property int clipId: -1
@@ -281,7 +279,6 @@ ApplicationWindow {
         previewScale = 1;
         previewOffsetX = 0;
         previewOffsetY = 0;
-        // 初回オープン時: 最終フレームにキーフレームがなければ通常の中間点として自動追加
         {
             const _clipDur = Workspace.currentTimeline ? Workspace.currentTimeline.clipDurationFrames : 100;
             const _fps = (Workspace.currentTimeline && Workspace.currentTimeline.project) ? Workspace.currentTimeline.project.fps : 60;
@@ -304,7 +301,6 @@ ApplicationWindow {
                 Workspace.currentTimeline.setKeyframe(clipId, effectIndex, paramName, _endFrame, _endVal, {
                     "interp": "none"
                 });
-                // 初回設定直後に UI の補間状態を確定させる（右値変更なしでも補間が反映されるよう）
                 Qt.callLater(function() {
                     if (!isInitializing)
                         updateKeyframe();
@@ -483,7 +479,6 @@ ApplicationWindow {
                     Canvas {
                         id: previewCanvas
 
-                        // 論理座標 → ピクセル変換（ズーム・パン考慮）
                         function lxToPx(lx) {
                             var scale = root.previewScale;
                             var offX = root.previewOffsetX;
@@ -694,7 +689,6 @@ ApplicationWindow {
                             // 前後の中間付近に制御点を配置する簡易初期化
                             var newSeg = [prevX + (lx - prevX) * 0.33, prevY + (ly - prevY) * 0.33, prevX + (lx - prevX) * 0.66, prevY + (ly - prevY) * 0.66, lx, ly];
                             p.splice(insertIdx, 0, newSeg[0], newSeg[1], newSeg[2], newSeg[3], newSeg[4], newSeg[5]);
-                            // 次のセグメントの制御点も少し調整（連続性を保つため）
                             if (insertIdx + 6 < p.length) {
                                 p[insertIdx + 6] = lx + (p[insertIdx + 10] - lx) * 0.33;
                                 p[insertIdx + 7] = ly + (p[insertIdx + 11] - ly) * 0.33;
@@ -704,7 +698,6 @@ ApplicationWindow {
                         onClicked: (mouse) => {
                             if (mouse.button === Qt.RightButton) {
                                 var hit = findNearest(mouse.x, mouse.y);
-                                // アンカーポイント（4, 10, 16...）かつ最後ではない場合のみ削除
                                 if (hit >= 4 && (hit + 2) % 6 === 0 && hit < root.bezierParams.length - 2) {
                                     var p = root.bezierParams.slice();
                                     p.splice(hit - 4, 6);
@@ -764,7 +757,6 @@ ApplicationWindow {
 
                 }
 
-                // 詳細パラメータ調整 (Elastic等)
                 GroupBox {
                     title: qsTr("詳細設定")
                     visible: selectedType.indexOf("elastic") !== -1

@@ -7,7 +7,6 @@ Item {
     property int sceneId: -1
     property int currentFrame: 0
     property var timelineBridge: null
-    // 外部公開用プロパティ (Decoderがサイズ調整に使用)
     property int sceneWidth: 1920
     property int sceneHeight: 1080
     // シーン情報を取得

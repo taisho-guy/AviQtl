@@ -306,9 +306,6 @@ Common.AviQtlWindow {
 
                             // 新規作成モードと編集モードで処理を分岐
                             if (isCreationMode) {
-                                // createScene() は内部でシーンを作成し、currentSceneId をそのIDに設定し、
-                                // そのシーンに自動的に切り替えるため、その後の updateSceneSettings は
-                                // 新しい currentSceneId に対して行われる。
                                 Workspace.currentTimeline.createScene(nameField.text);
                                 // 作成されたシーンに設定を適用
                                 // currentSceneId は既に新しいシーンのIDになっている

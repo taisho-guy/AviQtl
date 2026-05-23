@@ -101,7 +101,6 @@ class VideoDecoder : public AviQtl::Core::MediaDecoder {
     double msourceFps = 0.0;
     AVRational mtimeBase{0, 1};
 
-    // 再使用可能なパケット（デコードループでのalloc/refを回避）
     AVPacket *m_pkt = nullptr;
 
     static enum AVPixelFormat gethwformat(AVCodecContext *ctx, const enum AVPixelFormat *pixfmts);

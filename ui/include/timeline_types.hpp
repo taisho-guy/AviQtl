@@ -8,7 +8,6 @@
 
 namespace AviQtl::UI {
 
-// 最適化: ClipIDを導入
 using ClipID = int;
 
 struct Keyframe {
@@ -31,7 +30,6 @@ struct ClipData {
     int durationFrames;
     int layer;
 
-    // 最適化: レンダリングパスでの文字列比較を避けるためのキャッシュ
     mutable bool isSceneObject = false;
     mutable bool isSceneIdCached = false;
 
@@ -50,7 +48,6 @@ struct SceneData {
     QSet<int> lockedLayers;
     QSet<int> hiddenLayers;
 
-    // シーンのコンテキスト（自己完結化）
     int width = 1920;
     int height = 1080;
     double fps = 60.0;

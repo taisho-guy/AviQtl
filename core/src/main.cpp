@@ -126,7 +126,6 @@ auto main(int argc, char *argv[]) -> int {
             if (sm.value(QStringLiteral("pluginEnable") + key, true).toBool()) {
                 const QStringList paths = sm.value(QStringLiteral("pluginPaths") + key).toStringList();
                 const QDir appDir(QCoreApplication::applicationDirPath());
-                // macOS bundle 用の Resources ディレクトリも考慮
                 QString resPath = QDir(appDir.absolutePath() + QStringLiteral("/../Resources")).canonicalPath();
                 const QDir resDir(resPath.isEmpty() ? appDir.absolutePath() : resPath);
 

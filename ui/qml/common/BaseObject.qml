@@ -3,11 +3,6 @@ import QtQuick
 import QtQuick3D
 
 Node {
-    // object エフェクト（text/rect/image 等）のパラメータ変更検知
-    // _tmRev と同じカウンタ方式: property var 配列要素への直接依存は
-    // QML エンジンが追跡できないため Connections 経由で強制通知する
-    // 【統一API】キーフレーム優先評価（全オブジェクトで使用可能）
-
     id: base
 
     // CompositeView 側から渡される「Window配下のItem」。ここに2D系を寄せる
@@ -28,9 +23,6 @@ Node {
     property real clipNodePosY: 0
     property real clipNodeRotZ: 0
     property real clipNodeOpacity: 1
-    // CompositeView の clipNode から直接セット
-    // FB 収集対象: 変換済み2Dキャプチャアイテム
-    // FB 収集対象: 変換済み2Dキャプチャアイテム (外部から item.fbCaptureItem でアクセス可能)
     property alias fbCaptureItem: _fbCaptureItemImpl
     // --- 座標変換のモジュール化 ---
     // transformエフェクトのモデルを探す
@@ -44,10 +36,8 @@ Node {
     }
     // transformLoader.item (Transform.qmlのインスタンス) が存在するか
     readonly property bool hasTransform: transformLoader.status === Loader.Ready && transformLoader.item
-    // transformModelの変更検知用
     property alias revision: base._tmRev
     property int _tmRev: 0
-    // 合成モードの計算 (Transform.qmlを変更できないためここで処理)
     readonly property int blendMode: {
         var m = evalString("transform", "blendMode", qsTr("通常"));
         if (m === qsTr("スクリーン"))
@@ -218,13 +208,9 @@ Node {
         }
     }
 
-    // ─── 2D変換済みキャプチャアイテム ─────────────────────────────
-    // View3D の clipNode が持つ transform を 2D 空間で再現し、
-    // FB が「変換後の最終見た目」を収集できるようにする
     Item {
         id: _fbCaptureItemImpl
 
-        // 🚀 外部のブレンド合成用にプロパティを公開 (名前衝突回避のため fb* 接頭辞を使用)
         readonly property int fbBlendMode: {
             const tModel = base.transformModel;
             if (!tModel)

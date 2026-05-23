@@ -80,8 +80,6 @@ auto VideoEncoder::initHardware(const QString &codecName) -> bool {
     } else if (codecName.contains(QLatin1String("videotoolbox"))) {
         type = AV_HWDEVICE_TYPE_VIDEOTOOLBOX;
     } else if (codecName.contains(QLatin1String("amf"))) {
-        // AMFは通常DX11/Vulkanコンテキストを内部で作るが、FFmpeg上では明示的なデバイス作成が不要な場合が多い
-        // 必要に応じて AV_HWDEVICE_TYPE_D3D11VA 等を割り当てる
         type = AV_HWDEVICE_TYPE_NONE;
     }
 
@@ -135,7 +133,6 @@ auto VideoEncoder::open(const Config &config) -> bool {
     }
 
     if (m_hwDeviceCtx != nullptr) {
-        // ハードウェアフレームコンテキストの設定
         AVBufferRef *hw_frames_ref = av_hwframe_ctx_alloc(m_hwDeviceCtx);
         if (hw_frames_ref == nullptr) {
             qWarning() << "Failed to allocate hardware frame context";
@@ -365,9 +362,6 @@ auto VideoEncoder::pushFrame(const QImage &img, int64_t pts) -> bool {
 }
 
 auto VideoEncoder::processVideo(const QImage &img, int64_t pts) -> bool {
-    // 入力QImageのフォーマットを直接FFmpegのAVPixelFormatにマッピングし、
-    // 不要なconvertToFormatによるフレームコピーを回避する。
-    // プラットフォームやグラフィックスAPIによって異なるピクセルレイアウトを正確に扱う。
     QImage sourceImg = img;
     AVPixelFormat srcPixFmt = AV_PIX_FMT_NONE;
     switch (img.format()) {
@@ -572,7 +566,6 @@ auto VideoEncoder::processAudio(const std::vector<float> &samples) -> bool {
         return false;
     }
 
-    // 2. FIFOに追加
     if (av_audio_fifo_write(m_audioFifo, reinterpret_cast<void **>(convertedData), converted) < 0) {
         qWarning() << "[VideoEncoder] av_audio_fifo_write failed";
         if (convertedData != nullptr) {

@@ -69,8 +69,6 @@ auto TimelineController::getSceneClips(int sceneId) const -> QVariantList {
         list.append(map);
     }
 
-    // 最適化: QMLでの毎フレームO(n log n)の.sort()を回避し、
-    // C++側でレイヤー降順に一回ソートしておく。
     std::sort(list.begin(), list.end(), [](const QVariant &a, const QVariant &b) { return a.toMap().value(QStringLiteral("layer")).toInt() > b.toMap().value(QStringLiteral("layer")).toInt(); });
 
     return list;

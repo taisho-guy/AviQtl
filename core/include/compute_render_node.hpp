@@ -1,7 +1,4 @@
 #pragma once
-// フェーズ8: ComputeEffect スタブを実 Vulkan RHI バインディングに昇格
-// QSGRenderNode::prepare() で SSBO を QRhiBuffer に upload し Compute Shader を dispatch する
-// フェーズ9 で出力テクスチャとの接続 (SceneGraph Compositor) を行う
 #include <QByteArray>
 #include <QList>
 #include <QSGRenderNode>

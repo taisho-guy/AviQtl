@@ -100,7 +100,6 @@ void VideoFrameStore::invalidateFrame(const QString &key) {
     QMutexLocker locker(&m_mutex);
     m_frames.remove(key);
     m_lastVideoFrames.remove(key);
-    // Note: QVideoSink 自体は削除しない（QML側で再利用されるため）
 }
 
 void VideoFrameStore::invalidateScene(int sceneId) {

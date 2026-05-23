@@ -26,7 +26,6 @@ Item {
     // カメラ制御管理
     property var activeCameraControl: null
 
-    // 各クリップのレンダラー出力が確定・変更されたことを通知する集中シグナル
     signal childRendererOutputsChanged()
 
     function getLayerVisible(layer) {
@@ -200,7 +199,6 @@ Item {
                 property var clipEffectModelsRole: _clipData.effectModels || []
                 property Item fbRendererOutput: null // NodeLoader 完了後に接続
                 property int _tmRev: 0
-                // 根本的修正: 個別のパラメータ変更とフレーム移動の両方に反応する reactive なプロパティ
                 readonly property var evaluatedParams: {
                     var _trig = clipNode._tmRev; // 変更検知トリガー
                     if (!Workspace.currentTimeline)
@@ -253,7 +251,6 @@ Item {
                 readonly property real aspectY: pAspect < 0 ? (1 - pAspect) : 1
                 // 実効トランスフォーム計算 (グループ制御適用)
                 property var effectiveTransform: {
-                    // 依存関係を明示的に登録 (groupControlsの変更を検知)
                     var _gcList = root.groupControls;
                     // 1. 適用可能なグループ制御を抽出
                     var activeGroups = [];
@@ -361,7 +358,6 @@ Item {
                 onEffectiveTransformChanged: objectContainer._syncTransformToItem()
                 onVisibleChanged: root.childRendererOutputsChanged()
 
-                // 根本的修正: 個別のパラメータ変更を clipsChanged なしで検知する
                 Connections {
                     // これにより tParams や BaseObject 内部が再評価される
 

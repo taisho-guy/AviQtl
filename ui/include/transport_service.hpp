@@ -61,7 +61,6 @@ class TransportService : public QObject {
         if (std::abs(m_playbackSpeed - speed) < 0.001)
             return;
         m_playbackSpeed = speed;
-        // プレビュー再生中は変更を受け付けない
         if (m_isPlaying)
             return;
         emit playbackSpeedChanged();

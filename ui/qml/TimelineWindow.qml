@@ -134,7 +134,6 @@ Common.AviQtlWindow {
 
             }
 
-            // シーン追加ボタン
             Button {
                 flat: true
                 Layout.preferredWidth: 40

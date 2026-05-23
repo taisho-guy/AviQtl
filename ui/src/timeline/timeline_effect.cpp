@@ -73,7 +73,6 @@ void TimelineService::removeEffectInternal(int clipId, int effectIndex) { // NOL
                 effectIndex = static_cast<int>(clip.effects.size()) - 1;
             }
             if (effectIndex >= 0 && effectIndex < clip.effects.size()) {
-                // Transformエフェクトは削除不可
                 if (effectIndex == 0 && clip.effects.value(0)->id() == QStringLiteral("transform")) {
                     return;
                 }
@@ -222,7 +221,6 @@ void TimelineService::reorderMultipleEffects(int clipId, const QVariantList &ind
         }
     }
 
-    // targetIndex より前にある選択アイテムの数を計算し、挿入位置を調整
     int countBefore = 0;
     for (int idx : valid) {
         if (idx < targetIndex) {
@@ -249,9 +247,6 @@ void TimelineService::reorderMultipleEffects(int clipId, const QVariantList &ind
         return;
     }
 
-    // 置換インデックスを計算してコマンドに渡す（生ポインタをコマンドに持ち込まない）
-    //   redoPerm[i] = 現在の clip->effects のうち newOrder[i] に相当する要素の添字
-    //   undoPerm[i] = redo 後の状態のうち clip->effects[i] に相当する要素の添字
     const QList<EffectModel *> &oldOrder = clip->effects;
     QList<int> redoPerm, undoPerm;
     redoPerm.resize(n);
@@ -266,7 +261,6 @@ void TimelineService::reorderMultipleEffects(int clipId, const QVariantList &ind
 void TimelineService::applyPermutationInternal(int clipId, const QList<int> &perm) {
     auto *clip = findClipById(clipId);
     if (clip != nullptr) {
-        // サイズ不一致は Undo スタックと実際のエフェクト数が乖離した状態 → 安全のため無視
         if (perm.size() != clip->effects.size())
             return;
         QList<EffectModel *> reordered;

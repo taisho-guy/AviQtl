@@ -15,7 +15,6 @@ MenuItem {
     contentItem: RowLayout {
         spacing: 6
 
-        // チェックマーク (checkableな場合のみ表示・スペース確保)
         AviQtlIcon {
             visible: control.checkable
             iconName: "check_line"

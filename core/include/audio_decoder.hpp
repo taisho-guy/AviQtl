@@ -46,7 +46,6 @@ class AudioDecoder : public MediaDecoder {
         std::vector<PeakEntry> peaks;
     };
 
-    // FFmpeg コンテキスト
     AVFormatContext *m_fmtCtx = nullptr;
     AVCodecContext *m_decCtx = nullptr;
     AVStream *m_stream = nullptr;

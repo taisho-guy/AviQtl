@@ -94,7 +94,6 @@ auto LuaHost::evaluate(const std::string &expression, double time, int index, do
     // Reset stack
     lua_settop(threadL, 0);
 
-    // 1. コンテキスト変数を設定
     lua_pushnumber(threadL, time);
     lua_setglobal(threadL, "time");
 

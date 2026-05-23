@@ -187,7 +187,6 @@ class TimelineController : public QObject {
     Q_INVOKABLE void redo();
 
     Q_INVOKABLE void requestDelete(int targetClipId);
-    // コンテキストメニュー用のクリップ操作コマンド
     Q_INVOKABLE void deleteClip(int clipId);
     Q_INVOKABLE void splitClip(int clipId, int frame);
     Q_INVOKABLE void splitSelectedClips(int frame);
@@ -200,10 +199,8 @@ class TimelineController : public QObject {
 
     void updateActiveClipsList();
 
-    // 再生速度の同期 (QMLからTransportServiceの変更通知を受けて呼び出す)
     Q_INVOKABLE void syncPlaybackSpeed() { m_mediaManager->syncPlaybackSpeed(); }
 
-    // サンプリングレートの更新 (ProjectServiceの変更通知を受けて呼び出す)
     Q_INVOKABLE void updateAudioSampleRate() { m_mediaManager->updateAudioSampleRate(); }
 
     // 動的に計算されたタイムラインの長さ（最後のクリップの末尾フレーム）
@@ -245,7 +242,6 @@ class TimelineController : public QObject {
     void onPlayingChanged();
     void onCurrentFrameChanged();
 
-    // メディア制約（素材長）を考慮し duration を上限クランプして返す
     int clampedDuration(int clipId, int newStart, int requestedDuration) const;
 
     void updateClipActiveState();

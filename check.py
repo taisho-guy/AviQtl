@@ -123,7 +123,6 @@ def run_cppcheck(
     # C++ 標準
     cmd += ["--std=c++23"]
 
-    # チェックレベル
     if args.level == "all":
         cmd += ["--enable=all"]
     else:
@@ -191,7 +190,6 @@ def run_qmllint(files: list[Path], args: argparse.Namespace, root: Path) -> int:
             cmd += ["-I", p]
     
     if args.build_dir:
-        # ビルドディレクトリ配下のQML関連パスを自動追加
         for sub in ["qml", "AviQtl"]:
             qml_path = Path(args.build_dir) / sub
             if qml_path.exists():
@@ -217,7 +215,6 @@ def run_clazy(files: list[Path], args: argparse.Namespace, root: Path) -> int:
         print(f"{RED}エラー: {cc_json} が見つかりません。{RESET}")
         return 1
 
-    # チェックレベルの設定 (level3 は存在しないため除去)
     if args.full:
         clazy_checks = ["level1", "level2"]
     else:

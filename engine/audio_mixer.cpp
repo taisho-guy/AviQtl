@@ -85,7 +85,6 @@ auto AudioMixer::isReady() const -> bool {
 }
 
 auto AudioMixer::mix(int currentFrame, double fps, int samplesPerFrame) -> std::vector<float> { // NOLINT(bugprone-easily-swappable-parameters)
-    // 1. マスターバッファの初期化（無音）— バッファを再利用して毎フレームの確保を回避
     std::size_t newSize = static_cast<std::size_t>(samplesPerFrame) * 2;
     if (newSize != static_cast<std::size_t>(m_lastSamplesPerFrame) * 2) {
         m_masterBuffer.assign(newSize, 0.0F);
@@ -206,9 +205,6 @@ void AudioMixer::processFrame(int currentFrame, double fps, int samplesPerFrame)
     }
     m_lastFrame = currentFrame;
 
-    // 再生速度が変更されている場合、実時間に対する出力バッファ量を補正する。
-    // トランスポートのフレーム更新頻度が m_playbackSpeed 倍になっているため、
-    // 1回の呼び出しで書き込むべきデータ量は 1/m_playbackSpeed 倍にする必要がある。
     int outputSamples = samplesPerFrame;
     if (m_playbackSpeed > 0.0) {
         outputSamples = static_cast<int>(samplesPerFrame / m_playbackSpeed);

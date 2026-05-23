@@ -16,7 +16,6 @@ ScrollView {
     required property var audioChannelLabels
     required property var blockSizeValues
 
-    // 設定変更シグナル
     signal valueChanged(string key, var value)
 
     function valueOr(key, fb) {

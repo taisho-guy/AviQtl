@@ -21,7 +21,6 @@ class TimelineService : public QObject {
     QList<ClipData> &clipsMutable();                 // シリアライザ用
     const QList<ClipData> &clips(int sceneId) const; // 特定シーンのクリップ取得
 
-    // 指定された条件で配置可能な最短の開始フレームを計算する（衝突回避）
     int findVacantFrame(int layer, int startFrame, int duration, int excludeClipId) const;
 
     const QList<SceneData> &getAllScenes() const { return m_scenes; }

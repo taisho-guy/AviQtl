@@ -11,7 +11,6 @@ ScrollView {
     required property var timeUnitValues
     required property var timeUnitLabels
 
-    // 設定変更シグナル
     signal valueChanged(string key, var value)
 
     function valueOr(key, fb) {

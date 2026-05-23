@@ -619,7 +619,6 @@ class EffectModel : public QObject {
         QVariantMap track = normalizeTrackForDuration(m_keyframeTracks.value(paramName), fallback, inferredDurationForTrack(m_keyframeTracks.value(paramName)));
 
         const int startFrame = track.value(QStringLiteral("start")).toMap().value(QStringLiteral("frame")).toInt();
-        // 開始点は削除不可
         if (frame <= startFrame)
             return;
         QVariantList points = track.value(QStringLiteral("points")).toList(), next;
@@ -646,7 +645,6 @@ class EffectModel : public QObject {
         if (ktIt == m_keyframeTracks.end())
             return fallback;
 
-        // 1. キャッシュされた解決済みトラックを使用して評価（ヒープ割り当てを回避）
         auto rcIt = m_resolvedCache.find(paramName);
         if (rcIt == m_resolvedCache.end()) {
             const QVariant raw = ktIt.value();

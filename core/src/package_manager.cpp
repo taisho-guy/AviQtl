@@ -447,7 +447,6 @@ void PackageManager::fetchAssets(const QString &packageId) {
         repo.remove(repo.size() - 4, 4);
 
     if (isGitHub) {
-        // GitHub: 最新のリリースを取得（タグ名の揺れを回避）
         apiUrl = QStringLiteral("https://api.github.com/repos/%1/%2/releases/latest").arg(owner, repo);
     } else if (isCodeberg) {
         // Codeberg: リリース一覧の最新1件を取得
@@ -601,7 +600,6 @@ void PackageManager::removePackage(const QString &packageId) {
     setBusy(true);
     setStatus(tr("パッケージを削除中: %1").arg(packageId));
 
-    // 削除処理のシミュレーション（実際は展開されたフォルダを削除するロジックが必要）
     QTimer::singleShot(500, this, [this, packageId]() {
         QVariantMap installed = loadInstalledPackagesFromFile();
         if (installed.remove(packageId)) {
@@ -646,7 +644,6 @@ QVariantList PackageManager::getInstalledPackages() const {
     QVariantList list;
     QVariantMap installed = loadInstalledPackagesFromFile();
 
-    // アプリ本体の情報も追加
     installed.insert(QStringLiteral("org.aviqtl.app"), QVariantMap{{QStringLiteral("version"), QString::fromUtf8(AviQtl::VERSION_STRING)}});
 
     for (auto it = installed.begin(); it != installed.end(); ++it) {
