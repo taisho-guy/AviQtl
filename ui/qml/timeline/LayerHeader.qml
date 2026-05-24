@@ -102,6 +102,9 @@ Rectangle {
                         cursorShape: Qt.PointingHandCursor
                         acceptedButtons: Qt.RightButton
                         onClicked: {
+                            if (Workspace.currentTimeline)
+                                Workspace.currentTimeline.selectedLayer = layerBtn.layerIndex;
+
                             layerMenu.layerIndex = layerBtn.layerIndex;
                             layerMenu.popup();
                         }

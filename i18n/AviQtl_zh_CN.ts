@@ -1804,92 +1804,92 @@
         <translation type="vanished">向下插入多个图层</translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="184"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="187"/>
         <source>複数レイヤーを挿入</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="197"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="200"/>
         <source>挿入するレイヤー数:</source>
         <translation>要插入的图层数：</translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="210"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="213"/>
         <source>挿入方向:</source>
         <translation>插入方向：</translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="215"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="218"/>
         <source>選択レイヤーの上</source>
         <translation>所选图层之上</translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="225"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="228"/>
         <source>選択レイヤーの下</source>
         <translation>所选图层之下</translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="247"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="250"/>
         <source>このレイヤー以降をまとめて移動</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="261"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="264"/>
         <source>対象レイヤーの範囲:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="297"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="300"/>
         <source>移動量 (行数):</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="310"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="313"/>
         <source>方向:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="315"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="318"/>
         <source>上へ</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="325"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="328"/>
         <source>下へ</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="370"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="373"/>
         <source>複数レイヤーを挿入...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="410"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="413"/>
         <source>このレイヤーを非表示にする</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="410"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="413"/>
         <source>このレイヤーを表示する</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="421"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="424"/>
         <source>このレイヤーのロックを解除</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="421"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="424"/>
         <source>このレイヤーをロックする</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="435"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="438"/>
         <source>すべてのレイヤーを表示</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="445"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="448"/>
         <source>すべてのレイヤーを非表示</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1898,12 +1898,12 @@
         <translation type="vanished">切换显示/隐藏</translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="350"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="353"/>
         <source>上にレイヤーを挿入 (1行)</source>
         <translation>向上插入图层（1 层）</translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="360"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="363"/>
         <source>下にレイヤーを挿入 (1行)</source>
         <translation>向下插入图层（1 层）</translation>
     </message>
@@ -1916,17 +1916,17 @@
         <translation type="vanished">向下插入多个图层...</translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="380"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="383"/>
         <source>このレイヤーの内容を1行下へ</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="390"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="393"/>
         <source>このレイヤーの内容を1行上へ</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/LayerHeader.qml" line="400"/>
+        <location filename="../ui/qml/timeline/LayerHeader.qml" line="403"/>
         <source>範囲を指定してレイヤー移動...</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3311,67 +3311,67 @@
 <context>
     <name>TimelineView</name>
     <message>
-        <location filename="../ui/qml/timeline/TimelineView.qml" line="728"/>
+        <location filename="../ui/qml/timeline/TimelineView.qml" line="723"/>
         <source>オブジェクトを追加</source>
         <translation>添加对象</translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/TimelineView.qml" line="733"/>
+        <location filename="../ui/qml/timeline/TimelineView.qml" line="737"/>
         <source>元に戻す</source>
         <translation>撤销</translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/TimelineView.qml" line="734"/>
+        <location filename="../ui/qml/timeline/TimelineView.qml" line="738"/>
         <source>やり直す</source>
         <translation>重做</translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/TimelineView.qml" line="735"/>
+        <location filename="../ui/qml/timeline/TimelineView.qml" line="739"/>
         <source>貼り付け</source>
         <translation>粘贴</translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/TimelineView.qml" line="737"/>
+        <location filename="../ui/qml/timeline/TimelineView.qml" line="741"/>
         <source>シーン設定...</source>
         <translation>场景设置...</translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/TimelineView.qml" line="738"/>
+        <location filename="../ui/qml/timeline/TimelineView.qml" line="742"/>
         <source>プロジェクト設定...</source>
         <translation>项目设置...</translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/TimelineView.qml" line="739"/>
+        <location filename="../ui/qml/timeline/TimelineView.qml" line="743"/>
         <source>環境設定...</source>
         <translation>首选项...</translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/TimelineView.qml" line="741"/>
+        <location filename="../ui/qml/timeline/TimelineView.qml" line="745"/>
         <source>削除</source>
         <translation>删除</translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/TimelineView.qml" line="742"/>
+        <location filename="../ui/qml/timeline/TimelineView.qml" line="746"/>
         <source>分割</source>
         <translation>分割</translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/TimelineView.qml" line="743"/>
+        <location filename="../ui/qml/timeline/TimelineView.qml" line="747"/>
         <source>複製</source>
         <translation type="unfinished">复制副本</translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/TimelineView.qml" line="745"/>
+        <location filename="../ui/qml/timeline/TimelineView.qml" line="749"/>
         <source>切り取り</source>
         <translation>剪切</translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/TimelineView.qml" line="746"/>
+        <location filename="../ui/qml/timeline/TimelineView.qml" line="750"/>
         <source>コピー</source>
         <translation>复制</translation>
     </message>
     <message>
-        <location filename="../ui/qml/timeline/TimelineView.qml" line="748"/>
+        <location filename="../ui/qml/timeline/TimelineView.qml" line="753"/>
         <source>エフェクトを追加</source>
         <translation type="unfinished">添加效果</translation>
     </message>

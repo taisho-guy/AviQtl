@@ -369,7 +369,8 @@ ScrollView {
             acceptedButtons: Qt.LeftButton
             cursorShape: Qt.ArrowCursor
             hoverEnabled: true
-            onPositionChanged: (mouse) => { }
+            onPositionChanged: (mouse) => {
+            }
             onPressed: (mouse) => {
                 if (Workspace.currentTimeline)
                     Workspace.currentTimeline.cursorFrame = timelineViewRoot.snapFrame(mouse.x / Workspace.currentTimeline.timelineScale, (mouse.modifiers & Qt.ShiftModifier));
@@ -397,6 +398,10 @@ ScrollView {
                 if (Workspace.currentTimeline)
                     Workspace.currentTimeline.clearSelectionPreview();
 
+                var l = Math.floor(mouse.y / layerHeight);
+                if (Workspace.currentTimeline && l >= 0 && l < layerCount)
+                    Workspace.currentTimeline.selectedLayer = l;
+
             }
             onPositionChanged: (mouse) => {
                 boxSelectionCurrent = mapToItem(timelineFlickable.contentItem, mouse.x, mouse.y);
@@ -408,14 +413,7 @@ ScrollView {
             onReleased: (mouse) => {
                 boxSelectionCurrent = mapToItem(timelineFlickable.contentItem, mouse.x, mouse.y);
                 if (!boxSelecting) {
-                    if (Math.abs(boxSelectionCurrent.x - boxSelectionStart.x) >= boxSelectionThreshold || Math.abs(boxSelectionCurrent.y - boxSelectionStart.y) >= boxSelectionThreshold)
-                        boxSelecting = true;
-
-                }
-                if (!boxSelecting) {
                     var scale = Workspace.currentTimeline ? Workspace.currentTimeline.timelineScale : 1;
-                    // ビューポート座標(mouse.x)ではなく、内容座標(boxSelectionCurrent.x)を使用することで
-                    // スクロール状態に依存せず正確な位置を特定する
                     var frame = timelineViewRoot.snapFrame(boxSelectionCurrent.x / scale);
                     var layer = Math.floor(boxSelectionCurrent.y / layerHeight);
                     var clickedClipId = -1;
@@ -428,13 +426,9 @@ ScrollView {
                             }
                         }
                     }
-                    if (clickedClipId >= 0) {
-                        // すでに選択されている場合を除き、右クリックしたクリップを選択
-                        if (Workspace.currentTimeline && Workspace.currentTimeline.selection && !Workspace.currentTimeline.selection.selectedClipIds.includes(clickedClipId))
-                            Workspace.currentTimeline.applySelectionIds([clickedClipId]);
+                    if (clickedClipId >= 0 && Workspace.currentTimeline && Workspace.currentTimeline.selection && !Workspace.currentTimeline.selection.selectedClipIds.includes(clickedClipId))
+                        Workspace.currentTimeline.applySelectionIds([clickedClipId]);
 
-                    }
-                    // メニューを開く座標はビューポート（mouse.x/y）基準で良い
                     contextMenu.openAt(mouse.x, mouse.y, clickedClipId >= 0 ? "clip" : "timeline", frame, layer, clickedClipId);
                     return ;
                 }
@@ -725,9 +719,19 @@ ScrollView {
                 }
             }
             if (targetType === "timeline") {
-                var objectMenu = createSubMenu(qsTr("オブジェクトを追加"));
-                var objects = Workspace.currentTimeline.getAvailableObjects();
-                buildObjMenu(objectMenu, objects);
+                var objectMenu = subMenuComp.createObject(contextMenu, {
+                    "title": qsTr("オブジェクトを追加")
+                });
+                objectMenu.aboutToShow.connect(function() {
+                    while (objectMenu.count > 0) {
+                        var it = objectMenu.takeItem(0);
+                        if (it)
+                            it.destroy();
+
+                    }
+                    var objects = Workspace.currentTimeline.getAvailableObjects();
+                    buildObjMenu(objectMenu, objects);
+                });
                 contextMenu.addMenu(objectMenu);
                 addSeparator();
                 contextMenu.addItem(createMenuItem(qsTr("元に戻す"), "edit.undo", "arrow_go_back_line"));
@@ -745,13 +749,23 @@ ScrollView {
                 contextMenu.addItem(createMenuItem(qsTr("切り取り"), "clip.cut", "scissors_line"));
                 contextMenu.addItem(createMenuItem(qsTr("コピー"), "clip.copy", "file_copy_line"));
                 addSeparator();
-                var addEffSub = createSubMenu(qsTr("エフェクトを追加"));
-                if (Workspace.currentTimeline.isAudioClip(targetClipId)) {
-                    buildAudioPluginMenu(addEffSub);
-                } else {
-                    var effects = Workspace.currentTimeline.getAvailableEffects();
-                    buildEffectMenu(addEffSub, effects);
-                }
+                var addEffSub = subMenuComp.createObject(contextMenu, {
+                    "title": qsTr("エフェクトを追加")
+                });
+                addEffSub.aboutToShow.connect(function() {
+                    while (addEffSub.count > 0) {
+                        var it = addEffSub.takeItem(0);
+                        if (it)
+                            it.destroy();
+
+                    }
+                    if (Workspace.currentTimeline.isAudioClip(targetClipId)) {
+                        buildAudioPluginMenu(addEffSub);
+                    } else {
+                        var effects = Workspace.currentTimeline.getAvailableEffects();
+                        buildEffectMenu(addEffSub, effects);
+                    }
+                });
                 contextMenu.addMenu(addEffSub);
             }
         }
