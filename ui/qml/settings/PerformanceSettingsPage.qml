@@ -13,6 +13,12 @@ ScrollView {
 
     signal valueChanged(string key, var value)
 
+    readonly property color secondaryTextColor: Qt.rgba(palette.text.r, palette.text.g, palette.text.b, 0.7)
+
+    function setValue(key, value) {
+        valueChanged(key, value);
+    }
+
     function valueOr(key, fb) {
         return draftSettings[key] !== undefined ? draftSettings[key] : fb;
     }
@@ -92,13 +98,13 @@ ScrollView {
                 Label {
                     text: qsTr("描画スレッド数が自動のときは実行環境に応じて決定します")
                     wrapMode: Text.WordWrap
-                    color: palette.mid
+                    color: root.secondaryTextColor
                 }
 
                 Label {
                     text: qsTr("ご使用の実行環境に合わせて、まずは自動設定で動作を確認してください")
                     wrapMode: Text.WordWrap
-                    color: palette.mid
+                    color: root.secondaryTextColor
                 }
 
             }

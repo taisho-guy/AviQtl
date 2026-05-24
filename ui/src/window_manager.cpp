@@ -35,7 +35,7 @@ static void ensureWindowCreated(QQmlEngine *engine, QHash<QString, QPointer<QQui
     } else if (id == QStringLiteral("objectSettings")) {
         WindowManager::instance().spawnWindow(engine, id, QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/SettingDialog.qml"), WindowManager::tr("オブジェクト設定"), 400, 600, 800, 420, false);
     } else if (id == QStringLiteral("systemSettings")) {
-        WindowManager::instance().spawnWindow(engine, id, QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/SystemSettingsWindow.qml"), WindowManager::tr("システム設定"), 600, 500, 200, 200, false);
+        WindowManager::instance().spawnWindow(engine, id, QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/SystemSettingsWindow.qml"), WindowManager::tr("環境設定"), 600, 500, 200, 200, false);
     } else if (id == QStringLiteral("about")) {
         WindowManager::instance().spawnWindow(engine, id, QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/AboutWindow.qml"), WindowManager::tr("AviQtlについて"), 400, 250, 400, 300, false);
     } else if (id == QStringLiteral("sceneSettings")) {

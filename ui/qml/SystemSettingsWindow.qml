@@ -24,6 +24,7 @@ Common.AviQtlWindow {
     property var videoCodecLabels: [qsTr("H.264 (VAAPI)"), qsTr("HEVC (VAAPI)"), qsTr("H.264 (CPU)")]
     property var audioCodecValues: ["aac", "opus", "flac", "pcm_s16le"]
     property var audioCodecLabels: ["AAC", "Opus", "FLAC", "PCM 16bit"]
+    readonly property color secondaryTextColor: Qt.rgba(palette.text.r, palette.text.g, palette.text.b, 0.7)
     property var shortcutList: [{
         "id": "project.new",
         "name": qsTr("新規プロジェクト")
@@ -211,7 +212,7 @@ Common.AviQtlWindow {
 
     width: 760
     height: 680
-    title: qsTr("システム設定")
+    title: qsTr("環境設定")
     Component.onCompleted: loadSettings()
     onVisibleChanged: {
         if (visible)
@@ -370,7 +371,7 @@ Common.AviQtlWindow {
                 Label {
                     Layout.fillWidth: true
                     text: qsTr("設定は「適用」または「OK」で保存されます")
-                    color: palette.mid
+                    color: root.secondaryTextColor
                     elide: Text.ElideRight
                 }
 

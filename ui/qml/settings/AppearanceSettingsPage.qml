@@ -10,6 +10,10 @@ ScrollView {
 
     signal valueChanged(string key, var value)
 
+    function setValue(key, value) {
+        valueChanged(key, value);
+    }
+
     function valueOr(key, fb) {
         return draftSettings[key] !== undefined ? draftSettings[key] : fb;
     }

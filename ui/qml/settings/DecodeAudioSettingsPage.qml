@@ -14,6 +14,12 @@ ScrollView {
 
     signal valueChanged(string key, var value)
 
+    readonly property color secondaryTextColor: Qt.rgba(palette.text.r, palette.text.g, palette.text.b, 0.7)
+
+    function setValue(key, value) {
+        valueChanged(key, value);
+    }
+
     function valueOr(key, fb) {
         return draftSettings[key] !== undefined ? draftSettings[key] : fb;
     }
@@ -132,7 +138,7 @@ ScrollView {
 
         Label {
             text: qsTr("デコードと音声関連の設定は再起動後に反映されます")
-            color: palette.mid
+            color: root.secondaryTextColor
             wrapMode: Text.WordWrap
         }
 

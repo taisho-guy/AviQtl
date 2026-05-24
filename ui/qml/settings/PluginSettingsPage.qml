@@ -14,6 +14,8 @@ ScrollView {
     signal pluginEnabledChanged(string formatName, bool enabled)
     signal pluginPathsChanged(string formatName, string textValue)
 
+    readonly property color secondaryTextColor: Qt.rgba(palette.text.r, palette.text.g, palette.text.b, 0.7)
+
     function pluginPathsText(formatName) {
         var vals = draftSettings["pluginPaths" + formatName];
         return vals ? vals.join("\n") : "";
@@ -52,7 +54,7 @@ ScrollView {
 
         Label {
             text: qsTr("各形式ごとに有効化と検索パスを設定できます")
-            color: palette.mid
+            color: root.secondaryTextColor
             wrapMode: Text.WordWrap
         }
 
@@ -77,7 +79,7 @@ ScrollView {
 
                     Label {
                         text: qsTr("検索パス")
-                        color: palette.mid
+                        color: root.secondaryTextColor
                     }
 
                     TextArea {
@@ -102,7 +104,7 @@ ScrollView {
 
                     Label {
                         text: qsTr("1行に1パスを入力します")
-                        color: palette.mid
+                        color: root.secondaryTextColor
                         font.pixelSize: 11
                     }
 

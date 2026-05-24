@@ -12,6 +12,12 @@ ScrollView {
 
     signal shortcutValueChanged(string actionId, string value)
 
+    readonly property color secondaryTextColor: Qt.rgba(palette.text.r, palette.text.g, palette.text.b, 0.7)
+
+    function setShortcutValue(actionId, value) {
+        shortcutValueChanged(actionId, value);
+    }
+
     function getShortcutValue(actionId, fallback) {
         if (!draftSettings["shortcuts"])
             return fallback;
@@ -48,7 +54,7 @@ ScrollView {
 
         Label {
             text: qsTr("「Ctrl+S」や「Alt+Shift+N」の形式で入力してください")
-            color: palette.mid
+            color: root.secondaryTextColor
         }
 
         GridLayout {
