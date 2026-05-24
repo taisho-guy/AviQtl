@@ -7,6 +7,8 @@ Common.BaseObject {
     id: root
 
     // CompositeView から注入 (properties ではなく onItemChanged で動的セット)
+    property int clipId: -1
+    property int clipLayer: 0
     property var sceneRootRef: null
     // onItemChanged で item.clipLayer = model.layer される
     property bool clearBelow: Boolean(evalParam("frame_buffer", "clearBelow", false))
@@ -107,6 +109,7 @@ Common.BaseObject {
             Loader {
                 id: layerLoader
 
+                property Item foregroundSource: modelData
                 property Item prevOutput: {
                     if (index === 0)
                         return dummyBackground;
@@ -138,7 +141,7 @@ Common.BaseObject {
             // この段階の合成結果テクスチャを公開
             property alias output: resultCapture
             property Item backgroundItem: prevOutput
-            property Item foregroundItem: modelData
+            property Item foregroundItem: foregroundSource
 
             anchors.fill: parent
 
