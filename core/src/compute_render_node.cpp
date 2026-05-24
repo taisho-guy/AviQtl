@@ -144,12 +144,11 @@ bool ComputeRenderNode::ensureBuffers(QRhi *rhi) {
             m_bufferLayoutDirty = false;
         }
 
-        // デバッグ用: 何が原因で「Nothing to do」になっているのかを明確にする
-        static int infoCount = 0;
-        if (infoCount++ % 120 == 0)
-            qCDebug(lcComputeRenderNode) << "ComputeRenderNode Status: inputTex=" << m_inputTexture << " pendingSSBOs=" << m_pendingSSBOs.size();
-
         if (!m_inputTexture) {
+            static int infoCount = 0;
+            if (infoCount++ % 120 == 0)
+                qCDebug(lcComputeRenderNode) << "ComputeRenderNode Status: inputTex is NULL. Waiting for QML source binding...";
+
             static int warnCount = 0;
             if (warnCount++ % 60 == 0)
                 qCWarning(lcComputeRenderNode) << "ComputeRenderNode: No SSBOs AND No Input Texture. Is 'source' bound in QML?";
@@ -173,6 +172,9 @@ bool ComputeRenderNode::ensureBuffers(QRhi *rhi) {
 
             // 出力イメージ (Binding 1)
             QSize sz = m_inputTexture->textureSize();
+            // Compute Shader 側で image2D として書き込むために UsedWithLoadStore を、
+            // その後の描画（Blit）パイプラインで利用可能にするために RenderTarget を指定します。
+            // Qt 6.11.1 では UsedAsShaderResource は存在しません。
             m_outputTexture = rhi->newTexture(QRhiTexture::RGBA8, sz, 1, QRhiTexture::UsedWithLoadStore | QRhiTexture::RenderTarget);
             qCDebug(lcComputeRenderNode) << "ComputeRenderNode: Creating output texture" << sz << "Success:" << (m_outputTexture != nullptr);
             if (sz.width() <= 0 || sz.height() <= 0)
@@ -257,11 +259,23 @@ bool ComputeRenderNode::ensurePipeline(QRhi *rhi) {
         inputLayout.setAttributes({{0, 0, QRhiVertexInputAttribute::Float2, 0}, {0, 1, QRhiVertexInputAttribute::Float2, 2 * sizeof(float)}});
         m_renderPipeline->setVertexInputLayout(inputLayout);
 
-        QFile vfile(QStringLiteral(":/qt/qml/AviQtl/ui/qml/common/shaders/blit.vert.qsb"));
-        QFile ffile(QStringLiteral(":/qt/qml/AviQtl/ui/qml/common/shaders/blit.frag.qsb"));
-        if (vfile.open(QIODevice::ReadOnly) && ffile.open(QIODevice::ReadOnly)) {
-            m_renderPipeline->setShaderStages({{QRhiShaderStage::Vertex, QShader::fromSerialized(vfile.readAll())}, {QRhiShaderStage::Fragment, QShader::fromSerialized(ffile.readAll())}});
+        // 実行ファイルからの相対パスで直置きファイルを読み込む
+        QString baseDir = QCoreApplication::applicationDirPath();
+        if (baseDir.endsWith("/bin")) {
+            baseDir.chop(4);
         }
+        QString shaderDir = baseDir + "/common/shaders/";
+
+        QFile vfile(shaderDir + "blit.vert.qsb");
+        QFile ffile(shaderDir + "blit.frag.qsb");
+        if (vfile.open(QIODevice::ReadOnly) && ffile.open(QIODevice::ReadOnly)) {
+            qCDebug(lcComputeRenderNode) << "ComputeRenderNode: SUCCESS - Loaded blit shaders from" << shaderDir;
+            m_renderPipeline->setShaderStages({{QRhiShaderStage::Vertex, QShader::fromSerialized(vfile.readAll())}, {QRhiShaderStage::Fragment, QShader::fromSerialized(ffile.readAll())}});
+        } else {
+            qCWarning(lcComputeRenderNode) << "ComputeRenderNode: CRITICAL - Failed to load blit shaders from:" << shaderDir;
+        }
+    } else {
+        qCDebug(lcComputeRenderNode) << "ComputeRenderNode: Graphics pipeline skipped (m_renderSrb is NULL). inputTexture might be missing.";
     }
 
     if (m_shaderPath.isEmpty()) {
@@ -359,17 +373,6 @@ void ComputeRenderNode::prepare() {
     cb->dispatch(m_workGroupX, m_workGroupY, m_workGroupZ);
     cb->endComputePass();
 
-    QRhiResourceUpdateBatch *syncBatch = m_rhi->nextResourceUpdateBatch();
-    // 2. 行列の更新 (render()内は禁止されているため、ここで事前に行う)
-    if (m_ubuf) {
-        QMatrix4x4 mat;
-        mat.ortho(0, 1, 1, 0, -1, 1); // 頂点が 0..1 のため単位行列的な正射影
-        mat.scale(m_width, m_height, 1.0f);
-        syncBatch->updateDynamicBuffer(m_ubuf, 0, 64, mat.constData());
-    }
-
-    cb->resourceUpdate(syncBatch);
-
     m_ssboDirty = false;
 }
 
@@ -377,6 +380,15 @@ void ComputeRenderNode::render(const RenderState *state) {
     auto *cb = resolveCommandBuffer();
     if (!cb || !m_renderPipeline || !m_vbuf || !m_outputTexture)
         return;
+
+    // 表示位置を QML アイテムの座標系と完全に同期させます
+    if (m_ubuf && state && state->projectionMatrix()) {
+        QRhiResourceUpdateBatch *batch = m_rhi->nextResourceUpdateBatch();
+        QMatrix4x4 mat = *state->projectionMatrix();
+        mat.scale(m_width, m_height, 1.0f); // 頂点データ (0..1) をアイテムの論理サイズに合わせる
+        batch->updateDynamicBuffer(m_ubuf, 0, 64, mat.constData());
+        cb->resourceUpdate(batch);
+    }
 
     cb->setGraphicsPipeline(m_renderPipeline);
 

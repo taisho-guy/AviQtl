@@ -335,15 +335,15 @@ class PlatformBuilder:
                 tmp_file.unlink()
 
     def copy_assets(self, asset_dest: Path):
-        for d in ["effects", "objects"]:
+        for d in ["effects", "objects", "common/shaders"]:
             src = self.config.source_dir / "ui/qml" / d
             dst = asset_dest / d
             if src.exists():
                 shutil.copytree(src, dst, ignore=shutil.ignore_patterns("*.frag", "*.vert", "*.comp", "*.glsl"), dirs_exist_ok=True)
-        for d in ["effects", "objects"]:
+        for d in ["effects", "objects", "common/shaders"]:
             qsb_src = self.config.work_dir / d
             qsb_dst = asset_dest / d
-            if qsb_src.exists() and qsb_dst.exists():
+            if qsb_src.exists():
                 for f in qsb_src.glob("*.qsb"):
                     shutil.copy2(f, qsb_dst / f.name)
         plugins_src = self.config.source_dir / "plugins"

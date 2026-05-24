@@ -7,8 +7,9 @@ Common.BaseComputeEffect {
 
     id: root
 
-    // 親スコープ (BaseObject) の fbCaptureItem を直接参照（Loader 階層を貫通させる）
-    source: typeof fbCaptureItem !== "undefined" ? fbCaptureItem : null
+    // 直接の親アイテムから fbCaptureItem を取得。
+    // エフェクトが Loader 内にある場合は parent.parent 等が必要になる可能性があるため、動的解決を利用
+    source: (typeof fbCaptureItem !== "undefined") ? fbCaptureItem : (parent ? parent.fbCaptureItem : null)
     // Qt.resolvedUrl を使うことで、この QML ファイルと同じディレクトリにある QSB を絶対パスで指定できます
     computeShader: Qt.resolvedUrl("pixelsorter.comp.qsb")
     // C++ の params プロパティに直接マップする（BaseComputeEffect の実装に依存）
