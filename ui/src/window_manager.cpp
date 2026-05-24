@@ -1,4 +1,5 @@
 #include "window_manager.hpp"
+#include "settings_manager.hpp"
 #include "workspace.hpp"
 #include <QCoreApplication>
 #include <QDebug>
@@ -21,31 +22,35 @@ static void ensureWindowCreated(QQmlEngine *engine, QHash<QString, QPointer<QQui
     if (auto it = windows.find(id); it != windows.end() && !it.value().isNull()) {
         return;
     }
-    if (!engine) {
+    if (!engine)
         return;
-    }
+
+    // 保存された位置・サイズを取得。なければデフォルト値を使用
+    QVariantMap geo = Core::SettingsManager::instance().value("windowGeometry_" + id).toMap();
+    auto get = [&](const QString &k, int def) { return geo.contains(k) ? geo[k].toInt() : def; };
+    bool maximized = geo.value("maximized", false).toBool();
 
     // 各ウィンドウの遅延生成パラメータを集中定義
     if (id == QStringLiteral("main")) {
-        WindowManager::instance().spawnWindow(engine, id, QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/MainWindow.qml"), WindowManager::tr("AviQtl メインプレビュー"), 640, 480, 100, 100, true);
+        WindowManager::instance().spawnWindow(engine, id, QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/MainWindow.qml"), WindowManager::tr("AviQtl メインプレビュー"), get("width", 640), get("height", 480), get("x", 100), get("y", 100), true, maximized);
     } else if (id == QStringLiteral("timeline")) {
-        WindowManager::instance().spawnWindow(engine, id, QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/TimelineWindow.qml"), WindowManager::tr("タイムライン"), 1280, 300, 100, 600, true);
+        WindowManager::instance().spawnWindow(engine, id, QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/TimelineWindow.qml"), WindowManager::tr("タイムライン"), get("width", 1280), get("height", 300), get("x", 100), get("y", 600), true, maximized);
     } else if (id == QStringLiteral("projectSettings")) {
-        WindowManager::instance().spawnWindow(engine, id, QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/ProjectSettingsWindow.qml"), WindowManager::tr("プロジェクト設定"), 450, 250, 800, 100, false);
+        WindowManager::instance().spawnWindow(engine, id, QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/ProjectSettingsWindow.qml"), WindowManager::tr("プロジェクト設定"), get("width", 450), get("height", 250), get("x", 800), get("y", 100), false, maximized);
     } else if (id == QStringLiteral("objectSettings")) {
-        WindowManager::instance().spawnWindow(engine, id, QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/SettingDialog.qml"), WindowManager::tr("オブジェクト設定"), 400, 600, 800, 420, false);
+        WindowManager::instance().spawnWindow(engine, id, QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/SettingDialog.qml"), WindowManager::tr("オブジェクト設定"), get("width", 400), get("height", 600), get("x", 800), get("y", 420), false, maximized);
     } else if (id == QStringLiteral("systemSettings")) {
-        WindowManager::instance().spawnWindow(engine, id, QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/SystemSettingsWindow.qml"), WindowManager::tr("環境設定"), 600, 500, 200, 200, false);
+        WindowManager::instance().spawnWindow(engine, id, QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/SystemSettingsWindow.qml"), WindowManager::tr("環境設定"), get("width", 600), get("height", 500), get("x", 200), get("y", 200), false, maximized);
     } else if (id == QStringLiteral("about")) {
-        WindowManager::instance().spawnWindow(engine, id, QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/AboutWindow.qml"), WindowManager::tr("AviQtlについて"), 400, 250, 400, 300, false);
+        WindowManager::instance().spawnWindow(engine, id, QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/AboutWindow.qml"), WindowManager::tr("AviQtlについて"), get("width", 400), get("height", 250), get("x", 400), get("y", 300), false, maximized);
     } else if (id == QStringLiteral("sceneSettings")) {
-        WindowManager::instance().spawnWindow(engine, id, QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/SceneSettingsWindow.qml"), WindowManager::tr("シーン設定"), 450, 300, 300, 200, false);
+        WindowManager::instance().spawnWindow(engine, id, QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/SceneSettingsWindow.qml"), WindowManager::tr("シーン設定"), get("width", 450), get("height", 300), get("x", 300), get("y", 200), false, maximized);
     } else if (id == QStringLiteral("export")) {
-        WindowManager::instance().spawnWindow(engine, id, QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/ExportDialog.qml"), WindowManager::tr("メディアの書き出し"), 620, 580, 240, 160, false);
+        WindowManager::instance().spawnWindow(engine, id, QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/ExportDialog.qml"), WindowManager::tr("メディアの書き出し"), get("width", 620), get("height", 580), get("x", 240), get("y", 160), false, maximized);
     } else if (id == QStringLiteral("easingConfig")) {
-        WindowManager::instance().spawnWindow(engine, id, QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/common/EasingConfigWindow.qml"), WindowManager::tr("補間設定"), 820, 540, 420, 180, false);
+        WindowManager::instance().spawnWindow(engine, id, QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/common/EasingConfigWindow.qml"), WindowManager::tr("補間設定"), get("width", 820), get("height", 540), get("x", 420), get("y", 180), false, maximized);
     } else if (id == QStringLiteral("packageManager")) {
-        WindowManager::instance().spawnWindow(engine, id, QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/PackageManagerWindow.qml"), WindowManager::tr("パッケージマネージャー"), 600, 400, 500, 300, false);
+        WindowManager::instance().spawnWindow(engine, id, QStringLiteral("qrc:/qt/qml/AviQtl/ui/qml/PackageManagerWindow.qml"), WindowManager::tr("パッケージマネージャー"), get("width", 600), get("height", 400), get("x", 500), get("y", 300), false, maximized);
     } else {
         qWarning() << "[WindowManager] Unknown lazy window id:" << id;
     }
@@ -102,7 +107,7 @@ void WindowManager::showLauncher(QQmlEngine *engine) {
     }
 }
 
-void WindowManager::spawnWindow(QQmlEngine *engine, const QString &id, const QString &urlStr, const QString &title, int w, int h, int x, int y, bool visible) { // NOLINT(bugprone-easily-swappable-parameters)
+void WindowManager::spawnWindow(QQmlEngine *engine, const QString &id, const QString &urlStr, const QString &title, int w, int h, int x, int y, bool visible, bool maximized) { // NOLINT(bugprone-easily-swappable-parameters)
     if (engine == nullptr) {
         qWarning() << "WindowManager: QMLエンジンがnullです！";
         return;
@@ -121,6 +126,10 @@ void WindowManager::spawnWindow(QQmlEngine *engine, const QString &id, const QSt
         win->setX(x);
         win->setY(y);
         registerWindow(id, win);
+        if (maximized) {
+            win->setVisibility(QWindow::Maximized);
+        }
+
         if (visible) {
             win->show();
         } else {
@@ -138,6 +147,10 @@ void WindowManager::spawnWindow(QQmlEngine *engine, const QString &id, const QSt
         if (item != nullptr) {
             item->setParentItem(window->contentItem());
         }
+        if (maximized) {
+            window->setVisibility(QWindow::Maximized);
+        }
+
         registerWindow(id, window);
         if (visible) {
             window->show();
@@ -150,8 +163,12 @@ void WindowManager::spawnWindow(QQmlEngine *engine, const QString &id, const QSt
 void WindowManager::registerWindow(const QString &id, QQuickWindow *win) {
     m_windows.insert(id, win);
 
-    // hide/showした場合の同期
-    connect(win, &QQuickWindow::visibleChanged, this, [this, id]() -> void { emitVisibilityChanged(id); });
+    // 表示状態が変わった（または閉じられた）際に現在の位置を保存
+    connect(win, &QQuickWindow::visibleChanged, this, [this, id, win]() -> void {
+        if (!win->isVisible())
+            saveWindowGeometry(id);
+        emitVisibilityChanged(id);
+    });
     connect(win, &QObject::destroyed, this, [this, id]() -> void {
         m_windows.remove(id);
         emitVisibilityChanged(id);
@@ -231,10 +248,26 @@ auto WindowManager::getWindow(const QString &id) -> QObject * {
     return m_windows.value(id);
 }
 
+void WindowManager::saveWindowGeometry(const QString &id) {
+    auto win = m_windows.value(id);
+    if (win) {
+        QVariantMap geo;
+        geo["x"] = win->x();
+        geo["y"] = win->y();
+        geo["width"] = win->width();
+        geo["height"] = win->height();
+        // 最大化状態を保存 (Waylandで最も有用なレイアウト情報)
+        geo["maximized"] = (win->visibility() == QWindow::Maximized);
+        // SettingsManager は key が "_" で始まらなければ自動的にディスクへ保存します
+        Core::SettingsManager::instance().setValue("windowGeometry_" + id, geo);
+    }
+}
+
 void WindowManager::requestQuit() {
     // 全Windowを閉じる
     for (auto it = m_windows.begin(); it != m_windows.end(); ++it) {
         if (it.value()) {
+            saveWindowGeometry(it.key()); // 終了直前の状態を保存
             it.value()->close();
         }
     }

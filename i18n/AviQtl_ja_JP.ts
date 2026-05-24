@@ -1151,52 +1151,52 @@
 <context>
     <name>AviQtl::UI::WindowManager</name>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="30"/>
+        <location filename="../ui/src/window_manager.cpp" line="34"/>
         <source>AviQtl メインプレビュー</source>
         <translation>AviQtl メインプレビュー</translation>
     </message>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="32"/>
+        <location filename="../ui/src/window_manager.cpp" line="36"/>
         <source>タイムライン</source>
         <translation>タイムライン</translation>
     </message>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="34"/>
+        <location filename="../ui/src/window_manager.cpp" line="38"/>
         <source>プロジェクト設定</source>
         <translation>プロジェクト設定</translation>
     </message>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="36"/>
+        <location filename="../ui/src/window_manager.cpp" line="40"/>
         <source>オブジェクト設定</source>
         <translation>オブジェクト設定</translation>
     </message>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="38"/>
+        <location filename="../ui/src/window_manager.cpp" line="42"/>
         <source>環境設定</source>
         <translation>環境設定</translation>
     </message>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="40"/>
+        <location filename="../ui/src/window_manager.cpp" line="44"/>
         <source>AviQtlについて</source>
         <translation>AviQtlについて</translation>
     </message>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="42"/>
+        <location filename="../ui/src/window_manager.cpp" line="46"/>
         <source>シーン設定</source>
         <translation>シーン設定</translation>
     </message>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="44"/>
+        <location filename="../ui/src/window_manager.cpp" line="48"/>
         <source>メディアの書き出し</source>
         <translation>メディアの書き出し</translation>
     </message>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="46"/>
+        <location filename="../ui/src/window_manager.cpp" line="50"/>
         <source>補間設定</source>
         <translation>補間設定</translation>
     </message>
     <message>
-        <location filename="../ui/src/window_manager.cpp" line="48"/>
+        <location filename="../ui/src/window_manager.cpp" line="52"/>
         <source>パッケージマネージャー</source>
         <translation>パッケージマネージャー</translation>
     </message>

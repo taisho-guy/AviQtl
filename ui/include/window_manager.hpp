@@ -22,7 +22,7 @@ class WindowManager : public QObject {
     Q_INVOKABLE bool systemSettingsVisible() const;
     static WindowManager &instance();
     void spawnInitialWindows(QQmlEngine *engine);
-    void spawnWindow(QQmlEngine *engine, const QString &id, const QString &urlStr, const QString &title, int w, int h, int x, int y, bool visible = true);
+    void spawnWindow(QQmlEngine *engine, const QString &id, const QString &urlStr, const QString &title, int w, int h, int x, int y, bool visible = true, bool maximized = false);
 
   public slots:
     // タブ 0 / 新規作成要求でランチャーを表示する
@@ -52,6 +52,7 @@ class WindowManager : public QObject {
   private:
     explicit WindowManager(QObject *parent = nullptr);
     void registerWindow(const QString &id, QQuickWindow *win);
+    void saveWindowGeometry(const QString &id);
     void emitVisibilityChanged(const QString &id);
 
     QHash<QString, QPointer<QQuickWindow>> m_windows;
