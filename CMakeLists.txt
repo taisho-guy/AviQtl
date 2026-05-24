@@ -194,7 +194,7 @@ qt_add_qml_module(AviQtl_UI
 # effects と objects のシェーダーは .qsb にコンパイルして BUILD.py が拾えるようにする
 # バイナリに埋め込まず、ファイルとして出力する
 set(EXTERNAL_QSB_FILES "")
-foreach(DIR "effects" "objects")
+foreach(DIR "effects" "objects" "common/shaders")
     file(GLOB_RECURSE SHADERS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "ui/qml/${DIR}/*.frag" "ui/qml/${DIR}/*.vert" "ui/qml/${DIR}/*.comp")
     foreach(SH ${SHADERS})
         get_filename_component(SH_FILE_NAME ${SH} NAME)

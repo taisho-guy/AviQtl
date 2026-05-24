@@ -40,6 +40,7 @@ void ComputeRenderNode::syncShaderPath(const QString &path) {
 void ComputeRenderNode::syncSize(float w, float h) {
     if (qFuzzyCompare(m_width, w) && qFuzzyCompare(m_height, h))
         return;
+    qCDebug(lcComputeRenderNode) << "ComputeRenderNode: Size changed to" << w << "x" << h;
     m_width = w;
     m_height = h;
     m_bufferLayoutDirty = true;
@@ -82,8 +83,10 @@ bool ComputeRenderNode::ensureBuffers(QRhi *rhi) {
     bool textureSizeChanged = false;
     if (m_inputTexture) {
         QSize sz = m_inputTexture->textureSize();
-        if (!m_outputTexture || m_outputTexture->pixelSize() != sz)
+        if (!m_outputTexture || m_outputTexture->pixelSize() != sz) {
+            qCDebug(lcComputeRenderNode) << "ComputeRenderNode: Resizing output texture to" << sz;
             textureSizeChanged = true;
+        }
     }
 
     bool needsRebuild = m_bufferLayoutDirty || textureSizeChanged;
@@ -138,8 +141,12 @@ bool ComputeRenderNode::ensureBuffers(QRhi *rhi) {
         if (m_gpuBuffers.isEmpty()) {
             m_bufferLayoutDirty = false;
         }
-        if (!m_inputTexture)
+        if (!m_inputTexture) {
+            static int warnCount = 0;
+            if (warnCount++ % 60 == 0)
+                qCWarning(lcComputeRenderNode) << "ComputeRenderNode: No SSBOs AND No Input Texture. Is 'source' bound in QML?";
             return false;
+        }
     }
 
     m_srb = rhi->newShaderResourceBindings();
@@ -159,6 +166,9 @@ bool ComputeRenderNode::ensureBuffers(QRhi *rhi) {
             // 出力イメージ (Binding 1)
             QSize sz = m_inputTexture->textureSize();
             m_outputTexture = rhi->newTexture(QRhiTexture::RGBA8, sz, 1, QRhiTexture::UsedWithLoadStore | QRhiTexture::RenderTarget);
+            qCDebug(lcComputeRenderNode) << "ComputeRenderNode: Creating output texture" << sz << "Success:" << (m_outputTexture != nullptr);
+            if (sz.width() <= 0 || sz.height() <= 0)
+                return false;
             if (!m_outputTexture->create()) {
                 return false;
             }
@@ -221,6 +231,8 @@ bool ComputeRenderNode::ensurePipeline(QRhi *rhi) {
         delete m_renderPipeline;
     m_renderPipeline = nullptr;
 
+    m_error.clear();
+
     auto *ri = m_window->rendererInterface();
 
     // 1. 表示用グラフィックスパイプラインの構築
@@ -242,18 +254,20 @@ bool ComputeRenderNode::ensurePipeline(QRhi *rhi) {
     }
 
     if (m_shaderPath.isEmpty()) {
-        qCDebug(lcComputeRenderNode) << "shaderPath 未設定 (パイプライン構築スキップ)";
+        qCWarning(lcComputeRenderNode) << "ComputeRenderNode: shaderPath is empty!";
         return false;
     }
     if (!m_srb) {
-        qCWarning(lcComputeRenderNode) << "SRB が未構築: ensureBuffers() を先に呼ぶこと";
+        qCWarning(lcComputeRenderNode) << "ComputeRenderNode: SRB not built! ensureBuffers() might have failed.";
+        m_error = "Resource binding failed";
         return false;
     }
 
     // .qsb ファイルをロード (Qt Shader Baker 出力形式)
+    qCDebug(lcComputeRenderNode) << "ComputeRenderNode: Attempting to load shader:" << m_shaderPath;
     QFile f(m_shaderPath);
     if (!f.open(QIODevice::ReadOnly)) {
-        qCWarning(lcComputeRenderNode) << "シェーダーファイルが開けません:" << m_shaderPath;
+        qCWarning(lcComputeRenderNode) << "ComputeRenderNode: Cannot open shader file:" << m_shaderPath << "(Check path and resource prefix)";
         return false;
     }
     m_shader = QShader::fromSerialized(f.readAll());
@@ -267,6 +281,7 @@ bool ComputeRenderNode::ensurePipeline(QRhi *rhi) {
     m_pipeline->setShaderResourceBindings(m_srb);
     if (!m_pipeline->create()) {
         qCWarning(lcComputeRenderNode) << "QRhiComputePipeline::create() 失敗";
+        m_error = "Compute Pipeline Creation Failed";
         delete m_pipeline;
         m_pipeline = nullptr;
         return false;
@@ -303,6 +318,13 @@ void ComputeRenderNode::prepare() {
     if (!cb)
         return;
 
+    // 実行の追跡（初回またはリセット後のみ）
+    static bool firstDispatch = true;
+    if (firstDispatch || m_shaderDirty) {
+        qCDebug(lcComputeRenderNode) << "ComputeRenderNode: Dispatching compute shader" << m_workGroupX << "x" << m_workGroupY;
+        firstDispatch = false;
+    }
+
     // CPU → GPU アップロードバッチを構築
     QRhiResourceUpdateBatch *batch = m_rhi->nextResourceUpdateBatch();
     for (const auto &entry : std::as_const(m_pendingSSBOs)) {
@@ -327,6 +349,12 @@ void ComputeRenderNode::prepare() {
 }
 
 void ComputeRenderNode::render(const RenderState *state) {
+    static bool firstRender = true;
+    if (firstRender) {
+        qCDebug(lcComputeRenderNode) << "ComputeRenderNode: First graphics render pass started";
+        firstRender = false;
+    }
+
     auto *cb = resolveCommandBuffer();
     if (!cb || !m_renderPipeline || !m_vbuf || !m_outputTexture)
         return;

@@ -1,11 +1,14 @@
 #pragma once
 #include <QByteArray>
 #include <QList>
+#include <QLoggingCategory>
 #include <QSGRenderNode>
 #include <QSGTexture>
 #include <QString>
 #include <rhi/qrhi.h>
 #include <rhi/qshader.h>
+
+Q_DECLARE_LOGGING_CATEGORY(lcComputeRenderNode)
 
 QT_FORWARD_DECLARE_CLASS(QQuickWindow)
 
@@ -29,6 +32,8 @@ class ComputeRenderNode final : public QSGRenderNode {
     void syncInputTexture(QSGTexture *tex);
     void syncSize(float w, float h);
     void syncWorkGroupSize(int x, int y, int z = 1);
+
+    QString errorMessage() const { return m_error; }
 
     // QSGRenderNode オーバーライド
     QRectF rect() const override;
@@ -75,6 +80,7 @@ class ComputeRenderNode final : public QSGRenderNode {
     bool m_ssboDirty = false;
 
     QString m_shaderPath;
+    QString m_error;
     float m_width = 0;
     float m_height = 0;
     QSGTexture *m_inputTexture = nullptr;

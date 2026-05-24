@@ -492,7 +492,15 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) { // NOLINT(bugprone-
 
                 if (srcFrame != nullptr) {
                     // Qtが直接扱えないフォーマット(10bit等)の場合、YUV420P(8bit)に変換する
-                    bool isSupported = (srcFrame->format == AV_PIX_FMT_YUV420P || srcFrame->format == AV_PIX_FMT_YUVJ420P || srcFrame->format == AV_PIX_FMT_NV12 || srcFrame->format == AV_PIX_FMT_RGBA);
+                    AVPixelFormat pixFmt = static_cast<AVPixelFormat>(srcFrame->format);
+                    if (pixFmt == AV_PIX_FMT_YUVJ420P)
+                        pixFmt = AV_PIX_FMT_YUV420P;
+                    if (pixFmt == AV_PIX_FMT_YUVJ422P)
+                        pixFmt = AV_PIX_FMT_YUV422P;
+                    if (pixFmt == AV_PIX_FMT_YUVJ444P)
+                        pixFmt = AV_PIX_FMT_YUV444P;
+
+                    bool isSupported = (pixFmt == AV_PIX_FMT_YUV420P || pixFmt == AV_PIX_FMT_NV12 || pixFmt == AV_PIX_FMT_RGBA);
 
                     if (!isSupported) {
                         mswsCtx = sws_getCachedContext(mswsCtx, srcFrame->width, srcFrame->height, static_cast<AVPixelFormat>(srcFrame->format), srcFrame->width, srcFrame->height, AV_PIX_FMT_YUV420P, SWS_BILINEAR, nullptr, nullptr, nullptr);

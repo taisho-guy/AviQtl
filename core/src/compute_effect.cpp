@@ -1,6 +1,7 @@
 #include "compute_effect.hpp"
 #include "compute_render_node.hpp"
 #include <QDebug>
+#include <QLoggingCategory>
 #include <QSGNode>
 #include <QSGTexture>
 #include <QSGTextureProvider>
@@ -183,8 +184,13 @@ auto ComputeEffect::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) -> 
         if (m_source) {
             // updatePaintNode はレンダースレッドで呼ばれるため、テクスチャプロバイダーから安全にテクスチャを取得可能
             QSGTextureProvider *provider = m_source->textureProvider();
-            if (provider) {
-                node->syncInputTexture(provider->texture());
+            QSGTexture *tex = provider ? provider->texture() : nullptr;
+            node->syncInputTexture(tex);
+
+            if (!tex) {
+                static int warnCount = 0;
+                if (warnCount++ % 60 == 0)
+                    qCWarning(lcComputeRenderNode) << "ComputeEffect: Source item exists but has NO texture. Check if layer.enabled is true.";
             }
         } else {
             node->syncInputTexture(nullptr);
@@ -195,6 +201,13 @@ auto ComputeEffect::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) -> 
         node->syncSize(width(), height());
         node->syncWorkGroupSize(m_workGroupX, m_workGroupY);
         m_dirty = false;
+    }
+
+    // レンダースレッド側で発生したエラーを QML プロパティへ同期する
+    QString nodeErr = node->errorMessage();
+    if (m_error != nodeErr) {
+        m_error = nodeErr;
+        emit errorChanged();
     }
 
     // QSGNode のダーティフラグを立てて prepare() / render() が呼ばれることを保証する
