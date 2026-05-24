@@ -11,7 +11,7 @@ Common.BaseObject {
     property int clipLayer: 0
     property var sceneRootRef: null
     // onItemChanged で item.clipLayer = model.layer される
-    readonly property bool clearBelow: Boolean(evalParam("frame_buffer", "clearBelow", false))
+    property bool clearBelow: Boolean(evalParam("frame_buffer", "clearBelow", false))
     // ObjectRenderer の Binding が要求するダミープロパティ (警告抑制)
     property var source: undefined
     property var params: ({
@@ -161,6 +161,7 @@ Common.BaseObject {
                 background: ShaderEffectSource {
                     sourceItem: backgroundItem
                     live: true
+                    recursive: true
                     hideSource: false
                 }
 
@@ -192,8 +193,9 @@ Common.BaseObject {
 
         materials: DefaultMaterial {
             lighting: DefaultMaterial.NoLighting
-            blendMode: root.clearBelow ? DefaultMaterial.NoBlending : root.blendMode
-            cullMode: root.cullMode
+            // undefined エラー回避のため、プロパティの存在チェックとデフォルト値(Normal)を設定
+            blendMode: root.clearBelow ? DefaultMaterial.NoBlending : (root.hasOwnProperty("blendMode") ? root.blendMode : DefaultMaterial.Normal)
+            cullMode: root.hasOwnProperty("cullMode") ? root.cullMode : DefaultMaterial.BackFaceCulling
 
             diffuseMap: Texture {
                 sourceItem: renderer.output
@@ -224,9 +226,12 @@ Common.BaseObject {
 
         ShaderEffectSource {
             anchors.fill: parent
+            textureSize: Qt.size(parent.width, parent.height)
             sourceItem: fbSourceWrapper.finalCaptureItem()
             live: true
             hideSource: true
+            recursive: true
+            format: ShaderEffectSource.RGBA
         }
 
     }
