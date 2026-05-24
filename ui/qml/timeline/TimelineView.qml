@@ -554,7 +554,7 @@ ScrollView {
                 return ;
 
             if (cmd.startsWith("add.")) {
-                Workspace.currentTimeline.createObject(cmd.substring(4), contextClickFrame, contextClickLayer);
+                Workspace.currentTimeline.createObject(cmd.substring(4), Workspace.currentTimeline.cursorFrame, Workspace.currentTimeline.selectedLayer);
                 return ;
             }
             switch (cmd) {
@@ -571,7 +571,7 @@ ScrollView {
                     Workspace.currentTimeline.deleteClip(targetClipId);
                 break;
             case "clip.split":
-                Workspace.currentTimeline.splitClip(targetClipId, contextClickFrame);
+                Workspace.currentTimeline.splitClip(targetClipId, Workspace.currentTimeline.cursorFrame);
                 break;
             case "clip.duplicate":
                 Workspace.currentTimeline.copySelectedClips();
@@ -590,7 +590,7 @@ ScrollView {
                     Workspace.currentTimeline.copyClip(targetClipId);
                 break;
             case "edit.paste":
-                Workspace.currentTimeline.pasteClip(contextClickFrame, contextClickLayer);
+                Workspace.currentTimeline.pasteClip(Workspace.currentTimeline.cursorFrame, Workspace.currentTimeline.selectedLayer);
                 break;
             case "view.scenesettings":
                 var win = WindowManager.getWindow("sceneSettings");

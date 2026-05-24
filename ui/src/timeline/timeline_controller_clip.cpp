@@ -195,6 +195,8 @@ auto TimelineController::activeObjectType() const -> QString { return m_selectio
 void TimelineController::createObject(const QString &type, int startFrame, int layer) {
     if (m_timeline != nullptr) {
         m_timeline->createClip(type, startFrame, layer);
+        int duration = AviQtl::Core::SettingsManager::instance().value(QStringLiteral("defaultClipDuration"), 100).toInt();
+        setCursorFrame(startFrame + duration);
     }
 }
 
@@ -704,7 +706,12 @@ void TimelineController::copyClip(int clipId) { m_timeline->copyClip(clipId); }
 
 void TimelineController::cutClip(int clipId) { m_timeline->cutClip(clipId); }
 
-void TimelineController::pasteClip(int frame, int layer) { m_timeline->pasteClip(frame, layer); }
+void TimelineController::pasteClip(int frame, int layer) {
+    int duration = m_timeline->getClipboardDuration();
+    m_timeline->pasteClip(frame, layer);
+    if (duration > 0)
+        setCursorFrame(frame + duration);
+}
 
 void TimelineController::copySelectedClips() {
     if (m_timeline != nullptr) {

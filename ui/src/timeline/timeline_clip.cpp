@@ -894,4 +894,18 @@ void TimelineService::setClipboard(const QList<ClipData> &clips) {
     }
 }
 
+int TimelineService::getClipboardDuration() const {
+    if (m_clipboard.isEmpty())
+        return 0;
+    int minStart = 2147483647;
+    int maxEnd = -2147483648;
+    for (const auto &clip : std::as_const(m_clipboard)) {
+        minStart = std::min(minStart, clip.startFrame);
+        maxEnd = std::max(maxEnd, clip.startFrame + clip.durationFrames);
+    }
+    if (maxEnd <= minStart)
+        return 0;
+    return maxEnd - minStart;
+}
+
 } // namespace AviQtl::UI

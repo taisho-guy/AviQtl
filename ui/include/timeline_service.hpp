@@ -82,6 +82,7 @@ class TimelineService : public QObject {
     void cutSelectedClips();
     void deleteSelectedClips();
     void deleteClipsByIds(const QVariantList &ids);
+    int getClipboardDuration() const;
 
     // 内部用 (コマンドから呼び出される)
     void deleteClipInternal(int clipId, bool emitSignal = true);

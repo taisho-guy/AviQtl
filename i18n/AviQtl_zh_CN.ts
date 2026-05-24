@@ -1097,7 +1097,7 @@
         <translation>图层更改</translation>
     </message>
     <message>
-        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="317"/>
+        <location filename="../ui/src/timeline/timeline_controller_clip.cpp" line="319"/>
         <source>複数クリップリサイズ: %1</source>
         <translation>调整多个片段大小：%1</translation>
     </message>
