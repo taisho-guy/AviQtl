@@ -245,6 +245,7 @@ Common.AviQtlWindow {
             // 旧プロジェクトのサイドバー選択状態をクリア
             sidebarList.selectedIndices = [];
             sidebarList.currentIndex = -1;
+            filterMenu._lastBuiltClipId = -2; // メニューキャッシュをリセット
             // エフェクトモデルを即座に空にしてから新プロジェクト向けに再ロード
             effectsModel = [];
             audioEffectsModel = [];
@@ -1232,25 +1233,20 @@ Common.AviQtlWindow {
 
             id: filterMenu
 
+            property int _lastBuiltClipId: -2
             // 動的生成したオブジェクトをここで管理する
             property var _dynamicObjects: []
 
             function _registerDynamic(obj) {
-                if (obj)
-                    _dynamicObjects.push(obj);
-
                 return obj;
             }
 
             function _clearDynamicMenu() {
-                for (var i = 0; i < _dynamicObjects.length; ++i) {
-                    var obj = _dynamicObjects[i];
-                    if (obj) {
-                        try {
-                            obj.destroy();
-                        } catch (e) {
-                        }
-                    }
+                while (filterMenu.count > 0) {
+                    var it = filterMenu.takeItem(0);
+                    if (it)
+                        it.destroy();
+
                 }
                 _dynamicObjects = [];
             }
@@ -1259,13 +1255,13 @@ Common.AviQtlWindow {
                 for (var i = 0; i < items.length; ++i) {
                     var node = items[i];
                     if (node.isCategory) {
-                        var subMenu = _registerDynamic(subMenuComp.createObject(root.contentItem, {
+                        var subMenu = _registerDynamic(subMenuComp.createObject(parentMenu, {
                             "title": node.title
                         }));
                         buildMenu(subMenu, node.children);
                         parentMenu.addMenu(subMenu);
                     } else {
-                        var effItem = _registerDynamic(menuItemComp.createObject(root.contentItem, {
+                        var effItem = _registerDynamic(menuItemComp.createObject(parentMenu, {
                             "text": node.name,
                             "iconName": "magic_line"
                         }));
@@ -1281,7 +1277,12 @@ Common.AviQtlWindow {
 
             title: qsTr("エフェクトを追加")
             onAboutToShow: {
+                // 同じクリップに対してすでにメニューが構築されている場合は再構築をスキップ
+                if (_lastBuiltClipId === targetClipId && filterMenu.count > 0)
+                    return ;
+
                 _clearDynamicMenu();
+                _lastBuiltClipId = targetClipId;
                 if (!Workspace.currentTimeline)
                     return ;
 
@@ -1290,13 +1291,13 @@ Common.AviQtlWindow {
                     var categories = Workspace.currentTimeline.getPluginCategories();
                     for (var c = 0; c < categories.length; c++) {
                         var catName = categories[c];
-                        var subMenu = _registerDynamic(subMenuComp.createObject(root.contentItem, {
+                        var subMenu = _registerDynamic(subMenuComp.createObject(filterMenu, {
                             "title": catName
                         }));
                         var plugins = Workspace.currentTimeline.getPluginsByCategory(catName);
                         for (var p = 0; p < plugins.length; p++) {
                             var plug = plugins[p];
-                            var plugItem = _registerDynamic(menuItemComp.createObject(root.contentItem, {
+                            var plugItem = _registerDynamic(menuItemComp.createObject(subMenu, {
                                 "text": plug.name,
                                 "iconName": "music_line"
                             }));

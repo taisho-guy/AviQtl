@@ -2795,42 +2795,42 @@
         <translation>設定ダイアログ</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="499"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="500"/>
         <source>削除</source>
         <translation>削除</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="499"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="500"/>
         <source>選択した %1 件を削除</source>
         <translation>選択した %1 件を削除</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="810"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="811"/>
         <source> (直線)</source>
         <translation> (直線)</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="811"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="812"/>
         <source> (加速)</source>
         <translation> (加速)</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="812"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="813"/>
         <source> (減速)</source>
         <translation> (減速)</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="813"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="814"/>
         <source> (加減速)</source>
         <translation> (加減速)</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="814"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="815"/>
         <source> (ベジェ)</source>
         <translation> (ベジェ)</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="1282"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="1278"/>
         <source>エフェクトを追加</source>
         <translation>エフェクトを追加</translation>
     </message>

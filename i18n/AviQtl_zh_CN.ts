@@ -2855,42 +2855,42 @@
         <translation>设置对话框</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="499"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="500"/>
         <source>削除</source>
         <translation>删除</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="499"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="500"/>
         <source>選択した %1 件を削除</source>
         <translation>删除选中的 %1 项</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="810"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="811"/>
         <source> (直線)</source>
         <translation>（直线）</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="811"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="812"/>
         <source> (加速)</source>
         <translation>（加速）</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="812"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="813"/>
         <source> (減速)</source>
         <translation>（减速）</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="813"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="814"/>
         <source> (加減速)</source>
         <translation>（加减速）</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="814"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="815"/>
         <source> (ベジェ)</source>
         <translation>（贝塞尔）</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="1282"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="1278"/>
         <source>エフェクトを追加</source>
         <translation>添加效果</translation>
     </message>

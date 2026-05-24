@@ -2855,42 +2855,42 @@ Please restart the application to apply.</translation>
         <translation>Settings Dialog</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="499"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="500"/>
         <source>削除</source>
         <translation>Delete</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="499"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="500"/>
         <source>選択した %1 件を削除</source>
         <translation>Delete %1 selected items</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="810"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="811"/>
         <source> (直線)</source>
         <translation> (Linear)</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="811"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="812"/>
         <source> (加速)</source>
         <translation> (Ease In)</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="812"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="813"/>
         <source> (減速)</source>
         <translation> (Ease Out)</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="813"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="814"/>
         <source> (加減速)</source>
         <translation> (Ease In/Out)</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="814"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="815"/>
         <source> (ベジェ)</source>
         <translation> (Bezier)</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="1282"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="1278"/>
         <source>エフェクトを追加</source>
         <translation>Add Effect</translation>
     </message>
