@@ -200,7 +200,7 @@ auto ComputeEffect::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) -> 
             }
             QSGTexture *tex = provider ? provider->texture() : nullptr;
 
-            qCDebug(lcComputeRenderNode) << "ComputeEffect: Syncing texture" << tex << "from source" << m_source->objectName() << "to node";
+            qCDebug(lcComputeRenderNode) << "ComputeEffect: Syncing texture" << tex << "from source" << (m_source ? m_source->objectName() : "deleted") << "to node";
             node->syncInputTexture(tex);
 
             if (!tex) {

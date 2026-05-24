@@ -11,13 +11,13 @@ Common.BaseComputeEffect {
     source: {
         var p = parent;
         while (p) {
-            // fbCaptureItem を持ち、かつそれが単なる数値や自分自身ではない有効なオブジェクトであることを確認
-            if (p.fbCaptureItem !== undefined && p.fbCaptureItem !== null && typeof p.fbCaptureItem === "object" && p.fbCaptureItem !== root)
+            // fbCaptureItem を持ち、かつそれがエフェクト自身ではなく、テクスチャソースとしての性質を持つか確認
+            if (p.fbCaptureItem !== undefined && p.fbCaptureItem !== null && p.fbCaptureItem !== root && p.fbCaptureItem.hasOwnProperty("recursive"))
                 return p.fbCaptureItem;
 
             p = p.parent;
         }
-        console.warn("[PixelSorter] fbCaptureItem could not be found in any parent!");
+        // 初期化中の一時的な null は許容する
         return null;
     }
     // デバッグ用: バインディングの状態をコンソールに出力
