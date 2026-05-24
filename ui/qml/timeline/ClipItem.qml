@@ -53,6 +53,8 @@ Item {
 
         readonly property var _rawColor: Workspace.currentTimeline ? Workspace.currentTimeline.getClipTypeColor(modelData.type) : ""
         readonly property color _baseColor: _rawColor !== "" ? _rawColor : Qt.darker(palette.highlight, 1.6)
+        // テキストのコントラスト計算用に現在の実効的な背景色を保持
+        readonly property color _displayColor: isSelected ? (_rawColor !== "" ? Qt.lighter(_rawColor, 1.3) : palette.highlight) : _baseColor
 
         anchors.fill: parent
         color: isSelected ? (_rawColor !== "" ? Qt.lighter(_rawColor, 1.3) : palette.highlight) : "transparent"
@@ -85,7 +87,14 @@ Item {
 
             anchors.verticalCenter: parent.verticalCenter
             text: clipDelegate.clipDisplayName
-            color: "white"
+            color: {
+                if (isSelected && clipRect._rawColor === "")
+                    return palette.highlightedText;
+
+                // 背景の輝度（Luminance）に基づいて文字色を黒か白に切り替える
+                var luma = (0.299 * clipRect._displayColor.r) + (0.587 * clipRect._displayColor.g) + (0.114 * clipRect._displayColor.b);
+                return luma > 0.6 ? "#000000" : "#ffffff";
+            }
             font.pixelSize: 10
             elide: Text.ElideRight
             x: Math.min(stickyX, parent.width - width - padding) + padding
