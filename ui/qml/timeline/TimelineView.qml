@@ -459,8 +459,8 @@ ScrollView {
         Rectangle {
             visible: boxSelecting
             z: 1000
-            color: "#3388aaff"
-            border.color: "#88aaff"
+            color: Qt.rgba(palette.highlight.r, palette.highlight.g, palette.highlight.b, 0.2)
+            border.color: palette.highlight
             border.width: 1
             x: Math.min(boxSelectionStart.x, boxSelectionCurrent.x)
             y: Math.min(boxSelectionStart.y, boxSelectionCurrent.y)

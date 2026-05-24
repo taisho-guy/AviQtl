@@ -1281,47 +1281,47 @@
 <context>
     <name>DecodeAudioSettingsPage</name>
     <message>
-        <location filename="../ui/qml/settings/DecodeAudioSettingsPage.qml" line="45"/>
+        <location filename="../ui/qml/settings/DecodeAudioSettingsPage.qml" line="44"/>
         <source>映像デコード</source>
         <translation>映像デコード</translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/DecodeAudioSettingsPage.qml" line="55"/>
+        <location filename="../ui/qml/settings/DecodeAudioSettingsPage.qml" line="54"/>
         <source>インデックス予約数</source>
         <translation>インデックス予約数</translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/DecodeAudioSettingsPage.qml" line="67"/>
+        <location filename="../ui/qml/settings/DecodeAudioSettingsPage.qml" line="66"/>
         <source>最小キャッシュ量</source>
         <translation>最小キャッシュ量</translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/DecodeAudioSettingsPage.qml" line="79"/>
+        <location filename="../ui/qml/settings/DecodeAudioSettingsPage.qml" line="78"/>
         <source>ハードウェアフレームプール数</source>
         <translation>ハードウェアフレームプール数</translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/DecodeAudioSettingsPage.qml" line="94"/>
+        <location filename="../ui/qml/settings/DecodeAudioSettingsPage.qml" line="93"/>
         <source>音声</source>
         <translation>音声</translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/DecodeAudioSettingsPage.qml" line="104"/>
+        <location filename="../ui/qml/settings/DecodeAudioSettingsPage.qml" line="103"/>
         <source>音声チャンネル数</source>
         <translation>音声チャンネル数</translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/DecodeAudioSettingsPage.qml" line="114"/>
+        <location filename="../ui/qml/settings/DecodeAudioSettingsPage.qml" line="113"/>
         <source>プラグイン最大ブロックサイズ</source>
         <translation>プラグイン最大ブロックサイズ</translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/DecodeAudioSettingsPage.qml" line="124"/>
+        <location filename="../ui/qml/settings/DecodeAudioSettingsPage.qml" line="123"/>
         <source>Lua フック間隔</source>
         <translation>Lua フック間隔</translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/DecodeAudioSettingsPage.qml" line="140"/>
+        <location filename="../ui/qml/settings/DecodeAudioSettingsPage.qml" line="139"/>
         <source>デコードと音声関連の設定は再起動後に反映されます</source>
         <translation>デコードと音声関連の設定は再起動後に反映されます</translation>
     </message>
@@ -1723,72 +1723,72 @@
 <context>
     <name>GeneralSettingsPage</name>
     <message>
-        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="42"/>
+        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="41"/>
         <source>ファイル</source>
         <translation>ファイル</translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="49"/>
+        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="48"/>
         <source>終了時に確認ダイアログを表示する</source>
         <translation>終了時に確認ダイアログを表示する</translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="55"/>
+        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="54"/>
         <source>自動バックアップを有効にする</source>
         <translation>自動バックアップを有効にする</translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="64"/>
+        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="63"/>
         <source>バックアップ間隔</source>
         <translation>バックアップ間隔</translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="75"/>
+        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="74"/>
         <source>分</source>
         <translation>分</translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="82"/>
+        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="81"/>
         <source>最近使ったプロジェクトの保持数</source>
         <translation>最近使ったプロジェクトの保持数</translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="93"/>
+        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="92"/>
         <source>件</source>
         <translation>件</translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="103"/>
+        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="102"/>
         <source>編集</source>
         <translation>編集</translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="111"/>
+        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="110"/>
         <source>元に戻す回数</source>
         <translation>元に戻す回数</translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="124"/>
+        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="123"/>
         <source>回数を増やすとメモリ使用量が増えます</source>
         <translation>回数を増やすとメモリ使用量が増えます</translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="134"/>
+        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="133"/>
         <source>起動</source>
         <translation>起動</translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="144"/>
+        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="143"/>
         <source>スプラッシュ表示時間</source>
         <translation>スプラッシュ表示時間</translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="156"/>
+        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="155"/>
         <source>スプラッシュ画像サイズ</source>
         <translation>スプラッシュ画像サイズ</translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="168"/>
+        <location filename="../ui/qml/settings/GeneralSettingsPage.qml" line="167"/>
         <source>起動後の遅延時間</source>
         <translation>起動後の遅延時間</translation>
     </message>
@@ -2312,37 +2312,37 @@
 <context>
     <name>PerformanceSettingsPage</name>
     <message>
-        <location filename="../ui/qml/settings/PerformanceSettingsPage.qml" line="44"/>
+        <location filename="../ui/qml/settings/PerformanceSettingsPage.qml" line="43"/>
         <source>メモリとキャッシュ</source>
         <translation>メモリとキャッシュ</translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/PerformanceSettingsPage.qml" line="54"/>
+        <location filename="../ui/qml/settings/PerformanceSettingsPage.qml" line="53"/>
         <source>最大画像サイズ</source>
         <translation>最大画像サイズ</translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/PerformanceSettingsPage.qml" line="66"/>
+        <location filename="../ui/qml/settings/PerformanceSettingsPage.qml" line="65"/>
         <source>キャッシュ容量</source>
         <translation>キャッシュ容量</translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/PerformanceSettingsPage.qml" line="78"/>
+        <location filename="../ui/qml/settings/PerformanceSettingsPage.qml" line="77"/>
         <source>描画スレッド数</source>
         <translation>描画スレッド数</translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/PerformanceSettingsPage.qml" line="92"/>
+        <location filename="../ui/qml/settings/PerformanceSettingsPage.qml" line="91"/>
         <source>補足</source>
         <translation>補足</translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/PerformanceSettingsPage.qml" line="99"/>
+        <location filename="../ui/qml/settings/PerformanceSettingsPage.qml" line="98"/>
         <source>描画スレッド数が自動のときは実行環境に応じて決定します</source>
         <translation>描画スレッド数が自動のときは実行環境に応じて決定します</translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/PerformanceSettingsPage.qml" line="105"/>
+        <location filename="../ui/qml/settings/PerformanceSettingsPage.qml" line="104"/>
         <source>ご使用の実行環境に合わせて、まずは自動設定で動作を確認してください</source>
         <translation>ご使用の実行環境に合わせて、まずは自動設定で動作を確認してください</translation>
     </message>
@@ -2350,22 +2350,22 @@
 <context>
     <name>PluginSettingsPage</name>
     <message>
-        <location filename="../ui/qml/settings/PluginSettingsPage.qml" line="56"/>
+        <location filename="../ui/qml/settings/PluginSettingsPage.qml" line="55"/>
         <source>各形式ごとに有効化と検索パスを設定できます</source>
         <translation>各形式ごとに有効化と検索パスを設定できます</translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/PluginSettingsPage.qml" line="75"/>
+        <location filename="../ui/qml/settings/PluginSettingsPage.qml" line="74"/>
         <source>%1 を読み込む</source>
         <translation>%1 を読み込む</translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/PluginSettingsPage.qml" line="81"/>
+        <location filename="../ui/qml/settings/PluginSettingsPage.qml" line="80"/>
         <source>検索パス</source>
         <translation>検索パス</translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/PluginSettingsPage.qml" line="106"/>
+        <location filename="../ui/qml/settings/PluginSettingsPage.qml" line="105"/>
         <source>1行に1パスを入力します</source>
         <translation>1行に1パスを入力します</translation>
     </message>
@@ -2838,17 +2838,17 @@
 <context>
     <name>ShortcutSettingsPage</name>
     <message>
-        <location filename="../ui/qml/settings/ShortcutSettingsPage.qml" line="50"/>
+        <location filename="../ui/qml/settings/ShortcutSettingsPage.qml" line="49"/>
         <source>キーボードショートカット</source>
         <translation>キーボードショートカット</translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/ShortcutSettingsPage.qml" line="56"/>
+        <location filename="../ui/qml/settings/ShortcutSettingsPage.qml" line="55"/>
         <source>「Ctrl+S」や「Alt+Shift+N」の形式で入力してください</source>
         <translation>「Ctrl+S」や「Alt+Shift+N」の形式で入力してください</translation>
     </message>
     <message>
-        <location filename="../ui/qml/settings/ShortcutSettingsPage.qml" line="83"/>
+        <location filename="../ui/qml/settings/ShortcutSettingsPage.qml" line="82"/>
         <source>未設定</source>
         <translation>未設定</translation>
     </message>

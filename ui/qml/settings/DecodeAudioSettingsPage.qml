@@ -11,10 +11,9 @@ ScrollView {
     required property var audioChannelValues
     required property var audioChannelLabels
     required property var blockSizeValues
+    readonly property color secondaryTextColor: Qt.rgba(palette.text.r, palette.text.g, palette.text.b, 0.7)
 
     signal valueChanged(string key, var value)
-
-    readonly property color secondaryTextColor: Qt.rgba(palette.text.r, palette.text.g, palette.text.b, 0.7)
 
     function setValue(key, value) {
         valueChanged(key, value);

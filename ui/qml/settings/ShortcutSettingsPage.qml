@@ -9,10 +9,9 @@ ScrollView {
     // 親から受け取るドラフト設定
     required property var draftSettings
     required property var shortcutList
+    readonly property color secondaryTextColor: Qt.rgba(palette.text.r, palette.text.g, palette.text.b, 0.7)
 
     signal shortcutValueChanged(string actionId, string value)
-
-    readonly property color secondaryTextColor: Qt.rgba(palette.text.r, palette.text.g, palette.text.b, 0.7)
 
     function setShortcutValue(actionId, value) {
         shortcutValueChanged(actionId, value);

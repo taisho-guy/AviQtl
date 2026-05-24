@@ -9,12 +9,11 @@ ScrollView {
     // 親から受け取るドラフト設定
     required property var draftSettings
     required property var pluginFormats
+    readonly property color secondaryTextColor: Qt.rgba(palette.text.r, palette.text.g, palette.text.b, 0.7)
 
     signal valueChanged(string key, var value)
     signal pluginEnabledChanged(string formatName, bool enabled)
     signal pluginPathsChanged(string formatName, string textValue)
-
-    readonly property color secondaryTextColor: Qt.rgba(palette.text.r, palette.text.g, palette.text.b, 0.7)
 
     function pluginPathsText(formatName) {
         var vals = draftSettings["pluginPaths" + formatName];
