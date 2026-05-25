@@ -37,6 +37,22 @@ RowLayout {
 
     }
 
+    function clearFieldFocus(field) {
+        if (field && field.activeFocus) {
+            field.ignoreNextEditingFinished = true;
+            field.focus = false;
+
+        }
+    }
+
+    function ignoreEditingFinished(field) {
+        if (!field || !field.ignoreNextEditingFinished)
+            return false;
+
+        field.ignoreNextEditingFinished = false;
+        return true;
+    }
+
     function pushLeftValue(val) {
         var text = formatValue(val);
         if (leftValueField.text !== text)
@@ -107,16 +123,22 @@ RowLayout {
     TextField {
         id: leftValueField
 
+        property bool ignoreNextEditingFinished: false
+
         Layout.preferredWidth: 70
         text: root.formatValue(root.startValue)
         horizontalAlignment: TextInput.AlignHCenter
         selectByMouse: true
         enabled: root.enabled
         onEditingFinished: {
+            if (root.ignoreEditingFinished(leftValueField))
+                return ;
+
             var newVal = parseFloat(text);
             if (!isNaN(newVal))
                 root.pushLeftValue(newVal);
 
+            root.clearFieldFocus(leftValueField);
         }
 
         validator: DoubleValidator {
@@ -140,6 +162,8 @@ RowLayout {
     TextField {
         id: rightValueField
 
+        property bool ignoreNextEditingFinished: false
+
         Layout.preferredWidth: 70
         text: root.formatValue(root.rightLinked ? root.startValue : root.endValue)
         horizontalAlignment: TextInput.AlignHCenter
@@ -147,10 +171,14 @@ RowLayout {
         enabled: root.rightInteractive
         opacity: root.rightInteractive ? 1 : 0.45
         onEditingFinished: {
+            if (root.ignoreEditingFinished(rightValueField))
+                return ;
+
             var newVal = parseFloat(text);
             if (!isNaN(newVal))
                 root.endValueModified(newVal);
 
+            root.clearFieldFocus(rightValueField);
         }
 
         validator: DoubleValidator {

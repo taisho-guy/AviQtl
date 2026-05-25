@@ -124,6 +124,22 @@ Loader {
         return result;
     }
 
+    function _clearFieldFocus(field) {
+        if (field && field.activeFocus) {
+            field.ignoreNextEditingFinished = true;
+            field.focus = false;
+
+        }
+    }
+
+    function _ignoreEditingFinished(field) {
+        if (!field || !field.ignoreNextEditingFinished)
+            return false;
+
+        field.ignoreNextEditingFinished = false;
+        return true;
+    }
+
     // キーフレーム区間探索（共通ロジック）
     function _findKeyframeInterval(kfs, cur, total) {
         var s = 0, e = total;
@@ -237,15 +253,23 @@ Loader {
             }
 
             TextField {
+                id: intField
+
+                property bool ignoreNextEditingFinished: false
+
                 text: String(controlLoader.value !== undefined ? controlLoader.value : (controlLoader.definition.default || 0))
                 Layout.preferredWidth: 80
                 horizontalAlignment: TextInput.AlignRight
                 selectByMouse: true
                 onEditingFinished: {
+                    if (controlLoader._ignoreEditingFinished(intField))
+                        return ;
+
                     var val = parseInt(text);
                     if (!isNaN(val))
                         controlLoader.valueModified(val);
 
+                    controlLoader._clearFieldFocus(intField);
                 }
 
                 validator: IntValidator {
@@ -362,13 +386,19 @@ Loader {
             TextField {
                 id: startHexField
 
+                property bool ignoreNextEditingFinished: false
+
                 Layout.preferredWidth: 70
                 Layout.minimumWidth: 50
                 text: colorRow._startVal
                 horizontalAlignment: TextInput.AlignHCenter
                 selectByMouse: true
                 onEditingFinished: {
+                    if (controlLoader._ignoreEditingFinished(startHexField))
+                        return ;
+
                     colorRow._commit(colorRow._startFrame, text);
+                    controlLoader._clearFieldFocus(startHexField);
                 }
 
                 Binding on text {
@@ -389,6 +419,8 @@ Loader {
             TextField {
                 id: endHexField
 
+                property bool ignoreNextEditingFinished: false
+
                 Layout.preferredWidth: 70
                 Layout.minimumWidth: 50
                 text: colorRow._endVal
@@ -397,7 +429,11 @@ Loader {
                 horizontalAlignment: TextInput.AlignHCenter
                 selectByMouse: true
                 onEditingFinished: {
+                    if (controlLoader._ignoreEditingFinished(endHexField))
+                        return ;
+
                     colorRow._commit(colorRow._endFrame, text);
+                    controlLoader._clearFieldFocus(endHexField);
                 }
 
                 Binding on text {
@@ -484,11 +520,19 @@ Loader {
             }
 
             TextField {
+                id: pathField
+
+                property bool ignoreNextEditingFinished: false
+
                 text: String(controlLoader.value || "")
                 Layout.fillWidth: true
                 selectByMouse: true
                 onEditingFinished: {
+                    if (controlLoader._ignoreEditingFinished(pathField))
+                        return ;
+
                     controlLoader.valueModified(text);
+                    controlLoader._clearFieldFocus(pathField);
                 }
             }
 
@@ -532,6 +576,8 @@ Loader {
                 TextArea {
                     id: textAreaItem
 
+                    property bool ignoreNextEditingFinished: false
+
                     text: String(controlLoader.value !== undefined && controlLoader.value !== null ? controlLoader.value : "")
                     selectByMouse: true
                     wrapMode: TextArea.Wrap
@@ -541,7 +587,11 @@ Loader {
 
                     }
                     onEditingFinished: {
+                        if (controlLoader._ignoreEditingFinished(textAreaItem))
+                            return ;
+
                         controlLoader.valueModified(text);
+                        controlLoader._clearFieldFocus(textAreaItem);
                     }
 
                     Binding on text {

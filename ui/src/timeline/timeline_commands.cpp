@@ -248,6 +248,13 @@ RemoveKeyframeCommand::RemoveKeyframeCommand(TimelineService *service, int clipI
 void RemoveKeyframeCommand::redo() { m_service->removeKeyframeInternal(m_clipId, m_effectIndex, m_paramName, m_frame); }
 void RemoveKeyframeCommand::undo() { m_service->setKeyframeInternal(m_clipId, m_effectIndex, m_paramName, m_frame, m_savedValue, m_savedOptions); }
 
+MoveKeyframeCommand::MoveKeyframeCommand(TimelineService *service, int clipId, int effectIndex, const QString &paramName, int oldFrame, int newFrame) // NOLINT(bugprone-easily-swappable-parameters)
+    : m_service(service), m_clipId(clipId), m_effectIndex(effectIndex), m_oldFrame(oldFrame), m_newFrame(newFrame), m_paramName(paramName) {
+    setText(QObject::tr("キーフレーム移動: %1 [%2 -> %3]").arg(paramName).arg(oldFrame).arg(newFrame));
+}
+void MoveKeyframeCommand::redo() { m_service->moveKeyframeInternal(m_clipId, m_effectIndex, m_paramName, m_oldFrame, m_newFrame); }
+void MoveKeyframeCommand::undo() { m_service->moveKeyframeInternal(m_clipId, m_effectIndex, m_paramName, m_newFrame, m_oldFrame); }
+
 AddSceneCommand::AddSceneCommand(TimelineService *service, int sceneId, const QString &name) : m_service(service), m_sceneId(sceneId), m_name(name) { setText(QObject::tr("シーン追加: %1").arg(name)); }
 void AddSceneCommand::redo() { m_service->createSceneInternal(m_sceneId, m_name); }
 void AddSceneCommand::undo() { m_service->removeSceneInternal(m_sceneId); }

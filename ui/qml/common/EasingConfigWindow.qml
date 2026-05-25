@@ -49,9 +49,22 @@ ApplicationWindow {
         }
 
         var bz = root.bezierParams;
+        if (type === "none")
+            return t >= 1 ? 1 : 0;
+
         if (type === "linear")
             return t;
 
+        if (type === "random") {
+            var step = Math.max(1, root.stepFrames);
+            var idx = Math.floor(t * 16 / step);
+            var n = Math.abs(Math.sin((idx + 1) * 12.9898) * 43758.5453);
+            return n - Math.floor(n);
+        }
+        if (type === "alternate") {
+            var altStep = Math.max(1, root.stepFrames);
+            return Math.floor(t * 16 / altStep) % 2 === 0 ? 0 : 1;
+        }
         if (type === "ease_in_sine")
             return 1 - Math.cos(t * Math.PI / 2);
 
@@ -266,6 +279,88 @@ ApplicationWindow {
         return t;
     }
 
+    function textColor(alpha) {
+        return Qt.rgba(root.palette.text.r, root.palette.text.g, root.palette.text.b, alpha);
+    }
+
+    function panelColor(alpha) {
+        return Qt.rgba(root.palette.base.r, root.palette.base.g, root.palette.base.b, alpha);
+    }
+
+    function itemFamily(type) {
+        if (type.indexOf("_sine") !== -1)
+            return qsTr("サイン");
+
+        if (type.indexOf("_quad") !== -1)
+            return qsTr("2次");
+
+        if (type.indexOf("_cubic") !== -1)
+            return qsTr("3次");
+
+        if (type.indexOf("_quart") !== -1)
+            return qsTr("4次");
+
+        if (type.indexOf("_quint") !== -1)
+            return qsTr("5次");
+
+        if (type.indexOf("_expo") !== -1)
+            return qsTr("指数");
+
+        if (type.indexOf("_circ") !== -1)
+            return qsTr("円");
+
+        if (type.indexOf("_back") !== -1)
+            return qsTr("戻る");
+
+        if (type.indexOf("_elastic") !== -1)
+            return qsTr("弾性");
+
+        if (type.indexOf("_bounce") !== -1)
+            return qsTr("跳ね返り");
+
+        return "";
+    }
+
+    function itemDirection(type) {
+        if (type.indexOf("_in_out_") !== -1)
+            return qsTr("加減速");
+
+        if (type.indexOf("_out_in_") !== -1)
+            return qsTr("減加速");
+
+        if (type.indexOf("_in_") !== -1)
+            return qsTr("加速");
+
+        if (type.indexOf("_out_") !== -1)
+            return qsTr("減速");
+
+        return "";
+    }
+
+    function itemLabel(type) {
+        if (type === "none")
+            return qsTr("瞬間移動");
+
+        if (type === "linear")
+            return qsTr("直線");
+
+        if (type === "custom")
+            return qsTr("カスタム");
+
+        if (type === "random")
+            return qsTr("ランダム移動");
+
+        if (type === "alternate")
+            return qsTr("反復移動");
+
+        var family = itemFamily(type);
+        var direction = itemDirection(type);
+        if (family !== "" && direction !== "")
+            return family + " " + direction;
+
+        return type;
+    }
+
     function openConfig(args) {
         isInitializing = true;
         clipId = args.clipId;
@@ -289,14 +384,6 @@ ApplicationWindow {
             });
             if (!_hasKfAtEnd) {
                 const _endVal = effectModel.evaluatedParam(paramName, _endFrame, _fps);
-                // 末尾の既存キーフレーム（= 末尾セグメントの左端）の interp を linear に更新
-                // これにより 左端フレーム→endFrame が直線補間になる
-                if (_track.length > 0) {
-                    const _prevKf = _track[_track.length - 1];
-                    Workspace.currentTimeline.setKeyframe(clipId, effectIndex, paramName, _prevKf.frame, _prevKf.value, {
-                        "interp": "linear"
-                    });
-                }
                 // endFrame 自体は末尾なので interp は使われない（none のまま）
                 Workspace.currentTimeline.setKeyframe(clipId, effectIndex, paramName, _endFrame, _endVal, {
                     "interp": "none"
@@ -390,6 +477,24 @@ ApplicationWindow {
             updateKeyframe();
 
     }
+    onStepFramesChanged: {
+        requestPreview();
+        if (!isInitializing)
+            updateKeyframe();
+
+    }
+    onElasticAmplitudeChanged: {
+        requestPreview();
+        if (!isInitializing)
+            updateKeyframe();
+
+    }
+    onElasticPeriodChanged: {
+        requestPreview();
+        if (!isInitializing)
+            updateKeyframe();
+
+    }
     onPreviewScaleChanged: requestPreview()
     onPreviewOffsetXChanged: requestPreview()
     onPreviewOffsetYChanged: requestPreview()
@@ -424,7 +529,7 @@ ApplicationWindow {
                     Label {
                         text: qsTr("ズーム:")
                         font.pixelSize: 11
-                        color: palette.mid
+                        color: root.textColor(0.7)
                     }
 
                     Button {
@@ -752,14 +857,43 @@ ApplicationWindow {
                         anchors.margins: 4
                         text: qsTr("右ドラッグ:パン  ホイール:ズーム") + (root.selectedType === "custom" ? qsTr("  左ドラッグ:ハンドル") : "")
                         font.pixelSize: 9
-                        color: palette.mid
+                        color: root.textColor(0.65)
+                    }
+
+                }
+
+                GroupBox {
+                    title: qsTr("更新間隔:")
+                    visible: root.selectedType === "random" || root.selectedType === "alternate"
+                    Layout.fillWidth: true
+
+                    RowLayout {
+                        anchors.fill: parent
+                        spacing: 6
+
+                        SpinBox {
+                            from: 1
+                            to: 9999
+                            value: root.stepFrames
+                            onValueModified: root.stepFrames = value
+                        }
+
+                        Label {
+                            text: qsTr("フレーム")
+                            color: root.textColor(0.8)
+                        }
+
+                        Item {
+                            Layout.fillWidth: true
+                        }
+
                     }
 
                 }
 
                 GroupBox {
                     title: qsTr("詳細設定")
-                    visible: selectedType.indexOf("elastic") !== -1
+                    visible: root.selectedType.indexOf("elastic") !== -1
                     Layout.fillWidth: true
 
                     ColumnLayout {
@@ -858,7 +992,7 @@ ApplicationWindow {
                                 Label {
                                     text: modelData.label
                                     font.pixelSize: 11
-                                    color: palette.mid
+                                    color: root.textColor(0.7)
                                 }
 
                                 TextField {
@@ -903,45 +1037,26 @@ ApplicationWindow {
             SplitView.preferredWidth: 280
 
             ColumnLayout {
+                id: easingPanel
+
                 // カテゴリ別グリッド
                 property string filterText: ""
                 // イージングカテゴリ定義
                 property var categories: [{
-                    "name": qsTr("直線"),
-                    "items": ["linear"]
+                    "name": qsTr("基本"),
+                    "items": ["none", "linear"]
                 }, {
-                    "name": qsTr("サイン"),
-                    "items": ["ease_in_sine", "ease_out_sine", "ease_in_out_sine", "ease_out_in_sine"]
+                    "name": qsTr("標準カーブ"),
+                    "items": ["ease_in_sine", "ease_out_sine", "ease_in_out_sine", "ease_out_in_sine", "ease_in_quad", "ease_out_quad", "ease_in_out_quad", "ease_out_in_quad", "ease_in_cubic", "ease_out_cubic", "ease_in_out_cubic", "ease_out_in_cubic"]
                 }, {
-                    "name": qsTr("2次"),
-                    "items": ["ease_in_quad", "ease_out_quad", "ease_in_out_quad", "ease_out_in_quad"]
+                    "name": qsTr("強いカーブ"),
+                    "items": ["ease_in_quart", "ease_out_quart", "ease_in_out_quart", "ease_out_in_quart", "ease_in_quint", "ease_out_quint", "ease_in_out_quint", "ease_out_in_quint", "ease_in_expo", "ease_out_expo", "ease_in_out_expo", "ease_out_in_expo", "ease_in_circ", "ease_out_circ", "ease_in_out_circ", "ease_out_in_circ"]
                 }, {
-                    "name": qsTr("3次"),
-                    "items": ["ease_in_cubic", "ease_out_cubic", "ease_in_out_cubic", "ease_out_in_cubic"]
+                    "name": qsTr("反動と弾性"),
+                    "items": ["ease_in_back", "ease_out_back", "ease_in_out_back", "ease_out_in_back", "ease_in_elastic", "ease_out_elastic", "ease_in_out_elastic", "ease_out_in_elastic", "ease_in_bounce", "ease_out_bounce", "ease_in_out_bounce", "ease_out_in_bounce"]
                 }, {
-                    "name": qsTr("4次"),
-                    "items": ["ease_in_quart", "ease_out_quart", "ease_in_out_quart", "ease_out_in_quart"]
-                }, {
-                    "name": qsTr("5次"),
-                    "items": ["ease_in_quint", "ease_out_quint", "ease_in_out_quint", "ease_out_in_quint"]
-                }, {
-                    "name": qsTr("指数"),
-                    "items": ["ease_in_expo", "ease_out_expo", "ease_in_out_expo", "ease_out_in_expo"]
-                }, {
-                    "name": qsTr("円"),
-                    "items": ["ease_in_circ", "ease_out_circ", "ease_in_out_circ", "ease_out_in_circ"]
-                }, {
-                    "name": qsTr("戻る"),
-                    "items": ["ease_in_back", "ease_out_back", "ease_in_out_back", "ease_out_in_back"]
-                }, {
-                    "name": qsTr("弾性"),
-                    "items": ["ease_in_elastic", "ease_out_elastic", "ease_in_out_elastic", "ease_out_in_elastic"]
-                }, {
-                    "name": qsTr("跳ね返り"),
-                    "items": ["ease_in_bounce", "ease_out_bounce", "ease_in_out_bounce", "ease_out_in_bounce"]
-                }, {
-                    "name": qsTr("カスタム"),
-                    "items": ["custom"]
+                    "name": qsTr("特殊"),
+                    "items": ["random", "alternate", "custom"]
                 }]
 
                 anchors.fill: parent
@@ -1000,7 +1115,7 @@ ApplicationWindow {
                         spacing: 2
 
                         Repeater {
-                            model: easingGrid.parent.categories
+                            model: easingPanel.categories
 
                             delegate: ColumnLayout {
                                 id: catCol
@@ -1018,14 +1133,14 @@ ApplicationWindow {
                                 }
 
                                 visible: visibleItems.length > 0
-                                width: parent.width
+                                Layout.fillWidth: true
                                 spacing: 1
 
                                 Label {
                                     text: catCol.catData.name
                                     font.pixelSize: 10
                                     font.bold: true
-                                    color: palette.mid
+                                    color: root.textColor(0.75)
                                     leftPadding: 2
                                     topPadding: 4
                                 }
@@ -1034,12 +1149,14 @@ ApplicationWindow {
                                     columns: 4
                                     columnSpacing: 4
                                     rowSpacing: 4
-                                    width: parent.width
+                                    Layout.fillWidth: true
 
                                     Repeater {
                                         model: catCol.visibleItems
 
                                         delegate: Button {
+                                            id: easingButton
+
                                             property string easingName: modelData
                                             property bool isCurrent: root.selectedType === easingName
 
@@ -1065,7 +1182,7 @@ ApplicationWindow {
                                                 Canvas {
                                                     id: miniCanvas
 
-                                                    property string etype: easingName
+                                                    property string etype: easingButton.easingName
 
                                                     // ミニプレビュー専用軽量評価
                                                     function miniEval(t, type) {
@@ -1079,10 +1196,10 @@ ApplicationWindow {
                                                         var ctx = getContext("2d");
                                                         var w = width, h = height;
                                                         ctx.clearRect(0, 0, w, h);
-                                                        ctx.fillStyle = isCurrent ? Qt.darker(root.palette.highlight, 2.5) : root.palette.window;
+                                                        ctx.fillStyle = easingButton.isCurrent ? root.palette.highlight : root.palette.base;
                                                         ctx.fillRect(0, 0, w, h);
                                                         // カーブ
-                                                        ctx.strokeStyle = isCurrent ? root.palette.brightText : root.palette.highlight;
+                                                        ctx.strokeStyle = easingButton.isCurrent ? root.palette.highlightedText : root.palette.highlight;
                                                         ctx.lineWidth = 1.5;
                                                         ctx.beginPath();
                                                         var steps = 48;
@@ -1103,35 +1220,19 @@ ApplicationWindow {
                                                             miniCanvas.requestPaint();
                                                         }
 
+                                                        function onStepFramesChanged() {
+                                                            miniCanvas.requestPaint();
+                                                        }
+
                                                         target: root
                                                     }
 
                                                 }
 
                                                 Label {
-                                                    text: {
-                                                        if (easingName === "linear")
-                                                            return qsTr("直線");
-
-                                                        if (easingName === "custom")
-                                                            return qsTr("カスタム");
-
-                                                        if (easingName.indexOf("_in_out_") !== -1)
-                                                            return qsTr("加減速");
-
-                                                        if (easingName.indexOf("_out_in_") !== -1)
-                                                            return qsTr("減加速");
-
-                                                        if (easingName.indexOf("_in_") !== -1)
-                                                            return qsTr("加速");
-
-                                                        if (easingName.indexOf("_out_") !== -1)
-                                                            return qsTr("減速");
-
-                                                        return easingName;
-                                                    }
+                                                    text: root.itemLabel(easingButton.easingName)
                                                     font.pixelSize: 9
-                                                    color: isCurrent ? "white" : palette.mid
+                                                    color: easingButton.isCurrent ? root.palette.highlightedText : root.textColor(0.82)
                                                     elide: Text.ElideRight
                                                     Layout.fillWidth: true
                                                     horizontalAlignment: Text.AlignHCenter
@@ -1140,9 +1241,9 @@ ApplicationWindow {
                                             }
 
                                             background: Rectangle {
-                                                color: isCurrent ? palette.highlight : (parent.hovered ? Qt.rgba(1, 1, 1, 0.06) : Qt.rgba(1, 1, 1, 0.03))
-                                                border.color: isCurrent ? palette.highlight : palette.mid
-                                                border.width: isCurrent ? 2 : 1
+                                                color: easingButton.isCurrent ? root.palette.highlight : (easingButton.hovered ? root.textColor(0.10) : root.panelColor(0.55))
+                                                border.color: easingButton.isCurrent ? root.palette.highlight : root.textColor(0.24)
+                                                border.width: easingButton.isCurrent ? 2 : 1
                                                 radius: 4
                                             }
 
@@ -1160,88 +1261,6 @@ ApplicationWindow {
 
                 }
 
-            }
-
-        }
-
-    }
-
-    header: ToolBar {
-        RowLayout {
-            anchors.fill: parent
-            anchors.margins: 4
-            spacing: 8
-
-            Label {
-                text: qsTr("補間方法:")
-                font.pixelSize: 12
-            }
-
-            ComboBox {
-                id: displayTypeCombo
-
-                font.pixelSize: 12
-                Layout.preferredWidth: 150
-                textRole: "text"
-                valueRole: "value"
-                model: [{
-                    "text": qsTr("瞬間移動"),
-                    "value": "none"
-                }, {
-                    "text": qsTr("直線移動"),
-                    "value": "linear"
-                }, {
-                    "text": qsTr("曲線移動"),
-                    "value": "custom"
-                }, {
-                    "text": qsTr("ランダム移動"),
-                    "value": "random"
-                }, {
-                    "text": qsTr("反復移動"),
-                    "value": "alternate"
-                }]
-                currentIndex: {
-                    for (var i = 0; i < count; i++) {
-                        if (model[i].value === root.selectedType)
-                            return i;
-
-                    }
-                    return -1;
-                }
-                onActivated: {
-                    if (currentIndex >= 0)
-                        root.selectedType = model[currentIndex].value;
-
-                }
-            }
-
-            RowLayout {
-                visible: root.selectedType === "random" || root.selectedType === "alternate"
-                spacing: 4
-
-                Label {
-                    text: qsTr("更新間隔:")
-                    font.pixelSize: 12
-                }
-
-                SpinBox {
-                    from: 1
-                    to: 9999
-                    value: root.stepFrames
-                    onValueModified: root.stepFrames = value
-                    font.pixelSize: 12
-                }
-
-                Label {
-                    text: qsTr("フレーム")
-                    font.pixelSize: 12
-                }
-
-            }
-
-            // spacer
-            Item {
-                Layout.fillWidth: true
             }
 
         }

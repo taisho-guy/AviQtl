@@ -397,7 +397,7 @@ void TimelineService::setKeyframe(int clipId, int effectIndex, const QString &pa
     bool wasExisting = false;
     QVariant oldValue;
     QVariantMap oldOptions;
-    const auto track = eff->keyframeTracks().value(paramName).toList();
+    const auto track = eff->keyframeListForUi(paramName);
     for (const auto &v : std::as_const(track)) {
         const auto m = v.toMap();
         if (m.value(QStringLiteral("frame")).toInt() == frame) {
@@ -412,23 +412,61 @@ void TimelineService::setKeyframe(int clipId, int effectIndex, const QString &pa
 
 void TimelineService::removeKeyframe(int clipId, int effectIndex, const QString &paramName, int frame) {
     const auto *clip = findClipById(clipId);
+    if ((clip == nullptr) || effectIndex < 0 || effectIndex >= clip->effects.size()) {
+        return;
+    }
+    const auto *eff = clip->effects.value(effectIndex);
+    if (eff == nullptr) {
+        return;
+    }
+
+    QVariant savedValue;
+    QVariantMap savedOptions;
+    bool foundKeyframe = false;
+    const auto track = eff->keyframeListForUi(paramName);
+    for (const auto &v : std::as_const(track)) {
+        const auto m = v.toMap();
+        if (m.value(QStringLiteral("frame")).toInt() == frame) {
+            if (eff->isEndpointFrame(paramName, frame)) {
+                return;
+            }
+            savedValue = m.value(QStringLiteral("value"));
+            savedOptions = m;
+            foundKeyframe = true;
+            break;
+        }
+    }
+    if (!foundKeyframe) {
+        return;
+    }
+    m_undoStack->push(new RemoveKeyframeCommand(this, clipId, effectIndex, paramName, frame, savedValue, savedOptions));
+}
+
+void TimelineService::moveKeyframe(int clipId, int effectIndex, const QString &paramName, int oldFrame, int newFrame) {
+    if (oldFrame == newFrame || newFrame <= 0) {
+        return;
+    }
+    const auto *clip = findClipById(clipId);
     if ((clip == nullptr) || effectIndex >= clip->effects.size()) {
         return;
     }
     const auto *eff = clip->effects.value(effectIndex);
-
-    QVariant savedValue;
-    QVariantMap savedOptions;
-    const auto track = eff->keyframeTracks().value(paramName).toList();
+    bool foundSource = false;
+    const auto track = eff->keyframeListForUi(paramName);
     for (const auto &v : std::as_const(track)) {
-        const auto m = v.toMap();
-        if (m.value(QStringLiteral("frame")).toInt() == frame) {
-            savedValue = m.value(QStringLiteral("value"));
-            savedOptions = m;
-            break;
+        const int frame = v.toMap().value(QStringLiteral("frame")).toInt();
+        if (frame == oldFrame && !eff->isEndpointFrame(paramName, oldFrame)) {
+            foundSource = true;
+        }
+        if (frame == newFrame) {
+            return;
         }
     }
-    m_undoStack->push(new RemoveKeyframeCommand(this, clipId, effectIndex, paramName, frame, savedValue, savedOptions));
+    if (!foundSource) {
+        return;
+    }
+
+    m_undoStack->push(new MoveKeyframeCommand(this, clipId, effectIndex, paramName, oldFrame, newFrame));
 }
 
 void TimelineService::setKeyframeInternal(int clipId, int effectIndex, const QString &paramName, int frame, const QVariant &value, const QVariantMap &options) { // NOLINT(bugprone-easily-swappable-parameters)
@@ -450,6 +488,20 @@ void TimelineService::removeKeyframeInternal(int clipId, int effectIndex, const 
     const auto *clip = findClipById(clipId);
     if ((clip != nullptr) && effectIndex < clip->effects.size()) {
         clip->effects.value(effectIndex)->removeKeyframe(paramName, frame);
+
+        emit effectParamChanged(clipId, effectIndex, paramName, QVariant());
+        if (paramName == QLatin1String("path") || paramName == QLatin1String("source") || paramName == QStringLiteral("targetSceneId") || paramName == QStringLiteral("layerCount")) {
+            emit clipsChanged();
+        }
+    }
+}
+
+void TimelineService::moveKeyframeInternal(int clipId, int effectIndex, const QString &paramName, int oldFrame, int newFrame) { // NOLINT(bugprone-easily-swappable-parameters)
+    const auto *clip = findClipById(clipId);
+    if ((clip != nullptr) && effectIndex < clip->effects.size()) {
+        if (!clip->effects.value(effectIndex)->moveKeyframe(paramName, oldFrame, newFrame)) {
+            return;
+        }
 
         emit effectParamChanged(clipId, effectIndex, paramName, QVariant());
         if (paramName == QLatin1String("path") || paramName == QLatin1String("source") || paramName == QStringLiteral("targetSceneId") || paramName == QStringLiteral("layerCount")) {

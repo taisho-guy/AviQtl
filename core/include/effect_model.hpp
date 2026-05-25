@@ -406,7 +406,6 @@ class EffectModel : public QObject {
     }
 
     Q_INVOKABLE QVariantList keyframeListForUi(const QString &paramName) const {
-        invalidateCache(paramName);
         const QVariant raw = m_keyframeTracks.value(paramName);
         if (isStructuredTrack(raw))
             return flattenStructuredTrack(raw.toMap());
@@ -628,6 +627,40 @@ class EffectModel : public QObject {
         track[QStringLiteral("points")] = next;
         m_keyframeTracks[paramName] = track;
         emit keyframeTracksChanged();
+    }
+
+    Q_INVOKABLE bool moveKeyframe(const QString &paramName, int oldFrame, int newFrame) {
+        if (oldFrame == newFrame)
+            return true;
+
+        invalidateCache(paramName);
+        const QVariant fallback = m_params.value(paramName);
+        QVariantMap track = normalizeTrackForDuration(m_keyframeTracks.value(paramName), fallback, inferredDurationForTrack(m_keyframeTracks.value(paramName)));
+
+        const int startFrame = track.value(QStringLiteral("start")).toMap().value(QStringLiteral("frame")).toInt();
+        if (oldFrame <= startFrame || newFrame <= startFrame)
+            return false;
+
+        QVariantList points = track.value(QStringLiteral("points")).toList();
+        int sourceIndex = -1;
+        for (int i = 0; i < points.size(); ++i) {
+            const int frame = points[i].toMap().value(QStringLiteral("frame")).toInt();
+            if (frame == newFrame)
+                return false;
+            if (frame == oldFrame)
+                sourceIndex = i;
+        }
+
+        if (sourceIndex < 0)
+            return false;
+
+        QVariantMap moved = points[sourceIndex].toMap();
+        moved[QStringLiteral("frame")] = newFrame;
+        points[sourceIndex] = moved;
+        track[QStringLiteral("points")] = sortPoints(points);
+        m_keyframeTracks[paramName] = track;
+        emit keyframeTracksChanged();
+        return true;
     }
 
     Q_INVOKABLE QVariantMap evaluatedParams(int frame, double fps = 60.0) const {

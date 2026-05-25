@@ -76,6 +76,7 @@ class TimelineService : public QObject {
     void updateEffectParam(int clipId, int effectIndex, const QString &paramName, const QVariant &value);
     void setKeyframe(int clipId, int effectIndex, const QString &paramName, int frame, const QVariant &value, const QVariantMap &options);
     void removeKeyframe(int clipId, int effectIndex, const QString &paramName, int frame);
+    void moveKeyframe(int clipId, int effectIndex, const QString &paramName, int oldFrame, int newFrame);
 
     // クリップボード
     void copyClip(int clipId);
@@ -114,6 +115,7 @@ class TimelineService : public QObject {
     void applySceneSettingsInternal(int sceneId, const SceneData &data);
     void setKeyframeInternal(int clipId, int effectIndex, const QString &paramName, int frame, const QVariant &value, const QVariantMap &options);
     void removeKeyframeInternal(int clipId, int effectIndex, const QString &paramName, int frame);
+    void moveKeyframeInternal(int clipId, int effectIndex, const QString &paramName, int oldFrame, int newFrame);
     void setLayerStateInternal(int sceneId, int layer, bool value, int type);
     ClipData *findClipById(int clipId);
     const ClipData *findClipById(int clipId) const;

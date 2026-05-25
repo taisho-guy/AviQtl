@@ -652,6 +652,8 @@ void TimelineController::setKeyframe(int clipId, int effectIndex, const QString 
 
 void TimelineController::removeKeyframe(int clipId, int effectIndex, const QString &paramName, int frame) { m_timeline->removeKeyframe(clipId, effectIndex, paramName, frame); }
 
+void TimelineController::moveKeyframe(int clipId, int effectIndex, const QString &paramName, int oldFrame, int newFrame) { m_timeline->moveKeyframe(clipId, effectIndex, paramName, oldFrame, newFrame); }
+
 void TimelineController::deleteClip(int clipId) { requestDelete(clipId); }
 
 void TimelineController::requestDelete(int targetClipId) {

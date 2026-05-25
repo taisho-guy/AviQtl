@@ -260,6 +260,18 @@ class RemoveKeyframeCommand : public QUndoCommand {
     QVariantMap m_savedOptions;
 };
 
+class MoveKeyframeCommand : public QUndoCommand {
+  public:
+    MoveKeyframeCommand(TimelineService *service, int clipId, int effectIndex, const QString &paramName, int oldFrame, int newFrame);
+    void undo() override;
+    void redo() override;
+
+  private:
+    TimelineService *m_service;
+    int m_clipId, m_effectIndex, m_oldFrame, m_newFrame;
+    QString m_paramName;
+};
+
 class AddSceneCommand : public QUndoCommand {
   public:
     AddSceneCommand(TimelineService *service, int sceneId, const QString &name);

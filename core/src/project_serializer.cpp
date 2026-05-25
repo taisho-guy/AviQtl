@@ -161,6 +161,10 @@ auto ProjectSerializer::load(const QString &fileUrl, UI::TimelineService *timeli
             QJsonObject eObj = ev.toObject();
             QString effId = eObj.value(QStringLiteral("id")).toString();
             EffectMetadata meta = EffectRegistry::instance().getEffect(effId);
+            if (effId.isEmpty() || meta.id.isEmpty()) {
+                qWarning().noquote() << QStringLiteral("Skipping missing effect while loading project:") << effId;
+                continue;
+            }
             QString displayName = meta.name.isEmpty() ? eObj.value(QStringLiteral("name")).toString() : meta.name;
             auto *eff = new UI::EffectModel(effId, displayName, meta.kind, meta.categories, eObj.value(QStringLiteral("params")).toObject().toVariantMap(), meta.qmlSource, meta.uiDefinition, timeline);
             eff->setEnabled(eObj.value(QStringLiteral("enabled")).toBool(true));

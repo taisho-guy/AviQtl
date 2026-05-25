@@ -189,6 +189,23 @@ Common.AviQtlWindow {
         }
     }
 
+    function isEditableFocusItem(item) {
+        if (!item)
+            return false;
+
+        return item.hasOwnProperty("echoMode") || (item.hasOwnProperty("selectionStart") && item.readOnly === false);
+    }
+
+    function clearInputFocusOutside(item, container, position) {
+        if (!isEditableFocusItem(item) || !container || !position)
+            return ;
+
+        var localPos = item.mapFromItem(container, position.x, position.y);
+        if (localPos.x < 0 || localPos.y < 0 || localPos.x > item.width || localPos.y > item.height)
+            item.focus = false;
+
+    }
+
     // UI定義を正規化してリストとして取得するヘルパー
     function getUiModel(effectModel) {
         if (!effectModel)
@@ -256,10 +273,20 @@ Common.AviQtlWindow {
     }
 
     SplitView {
+        id: settingsSplitView
+
         anchors.fill: parent
         orientation: Qt.Horizontal
         LayoutMirroring.enabled: root.sidebarOnRight
         LayoutMirroring.childrenInherit: true
+
+        TapHandler {
+            acceptedButtons: Qt.LeftButton
+            gesturePolicy: TapHandler.WithinBounds
+            onTapped: function(eventPoint) {
+                root.clearInputFocusOutside(root.activeFocusItem, settingsSplitView, eventPoint.position);
+            }
+        }
 
         // エフェクト一覧サイドバー
         Rectangle {
@@ -592,7 +619,7 @@ Common.AviQtlWindow {
                             }
 
                             Button {
-                                visible: modelData.kind === "effect"
+                                visible: modelData.kind === "effect" && !(effectRoot.effectIndex === 0 && modelData.id === "transform")
                                 anchors.right: parent.right
                                 anchors.verticalCenter: parent.verticalCenter
                                 flat: true
@@ -647,10 +674,11 @@ Common.AviQtlWindow {
                                 property int curRelFrame: (Workspace.currentTimeline && Workspace.currentTimeline.transport) ? Math.max(0, Workspace.currentTimeline.transport.currentFrame - Workspace.currentTimeline.clipStartFrame) : 0
                                 property int clipDur: Workspace.currentTimeline ? Workspace.currentTimeline.clipDurationFrames : 100
                                 property var tracks: effectModel ? effectModel.keyframeTracks : null
-                                property var kfs: {
+                                property var rawKfs: {
                                     var _ = tracks;
                                     return effectModel ? effectModel.keyframeListForUi(key) : [];
                                 }
+                                property var kfs: keyframesWithVirtualEnd(rawKfs, clipDur)
                                 property bool hasKeyframes: kfs.length > 0
                                 property var interval: findInterval(kfs, curRelFrame, clipDur)
                                 property int startFrame: interval.start
@@ -683,19 +711,68 @@ Common.AviQtlWindow {
                                     return false;
                                 }
 
+                                function hasRealKeyframeAt(f) {
+                                    if (!rawKfs)
+                                        return false;
+
+                                    for (var i = 0; i < rawKfs.length; i++) {
+                                        if (rawKfs[i].frame === f)
+                                            return true;
+
+                                    }
+                                    return false;
+                                }
+
+                                function keyframesWithVirtualEnd(points, totalDur) {
+                                    var out = [];
+                                    if (points) {
+                                        for (var i = 0; i < points.length; i++)
+                                            out.push(points[i]);
+
+                                    }
+                                    if (totalDur > 0) {
+                                        var hasEnd = false;
+                                        for (var j = 0; j < out.length; j++) {
+                                            if (out[j].frame === totalDur) {
+                                                hasEnd = true;
+                                                break;
+                                            }
+                                        }
+                                        if (!hasEnd) {
+                                            var endValue = effectModel ? effectModel.evaluatedParam(key, totalDur, root._projectFps) : effVal;
+                                            out.push({
+                                                "frame": totalDur,
+                                                "value": endValue,
+                                                "interp": "none",
+                                                "virtualEnd": true
+                                            });
+                                        }
+                                    }
+                                    out.sort(function(a, b) {
+                                        return a.frame - b.frame;
+                                    });
+                                    return out;
+                                }
+
+                                function seekTrackFrameAt(xPos) {
+                                    if (!Workspace.currentTimeline || !Workspace.currentTimeline.transport || clipDur <= 0 || trackItem.width <= 0)
+                                        return ;
+
+                                    var rawRelFrame = (xPos / trackItem.width) * clipDur;
+                                    var relFrame = Math.max(0, Math.min(clipDur, Math.round(rawRelFrame)));
+                                    Workspace.currentTimeline.transport.setCurrentFrame_seek(Workspace.currentTimeline.clipStartFrame + relFrame);
+                                }
+
                                 function ensureKeyframeAt(f) {
                                     if (!effectModel || !key)
                                         return ;
 
-                                    if (hasKeyframeAt(f))
+                                    if (hasRealKeyframeAt(f))
                                         return ;
 
                                     var raw = effectModel.evaluatedParam(key, f, root._projectFps);
                                     var v = (raw !== undefined && raw !== null) ? raw : effVal;
-                                    var interp = "linear";
-                                    paramDelegate.effectModel.setKeyframe(paramDelegate.key, f, v, {
-                                        "interp": interp
-                                    });
+                                    Workspace.currentTimeline.setKeyframe(targetClipId, effIdx, paramDelegate.key, f, v, interpolationOptionsAt(f));
                                 }
 
                                 function ensureRangeKeyframes() {
@@ -712,6 +789,20 @@ Common.AviQtlWindow {
                                         "start": s,
                                         "end": e
                                     };
+
+                                    if (cur >= totalDur) {
+                                        e = totalDur;
+                                        for (let i = kfs.length - 1; i >= 0; i--) {
+                                            if (kfs[i].frame < totalDur) {
+                                                s = kfs[i].frame;
+                                                break;
+                                            }
+                                        }
+                                        return {
+                                            "start": s,
+                                            "end": e
+                                        };
+                                    }
 
                                     let foundStart = false;
                                     for (let i = kfs.length - 1; i >= 0; i--) {
@@ -745,6 +836,36 @@ Common.AviQtlWindow {
 
                                     }
                                     return "linear";
+                                }
+
+                                function interpolationOptionsAt(f) {
+                                    var options = {
+                                        "interp": "none"
+                                    };
+                                    if (!kfs)
+                                        return options;
+
+                                    var source = null;
+                                    for (var i = kfs.length - 1; i >= 0; i--) {
+                                        if (kfs[i].frame <= f) {
+                                            source = kfs[i];
+                                            break;
+                                        }
+                                    }
+                                    if (!source && kfs.length > 0)
+                                        source = kfs[0];
+
+                                    if (!source)
+                                        return options;
+
+                                    options.interp = source.interp || "none";
+                                    if (source.points)
+                                        options.points = source.points;
+
+                                    if (source.modeParams)
+                                        options.modeParams = source.modeParams;
+
+                                    return options;
                                 }
 
                                 function getGridLines() {
@@ -965,7 +1086,7 @@ Common.AviQtlWindow {
                                             property var rootWindow: root
                                             property int minDragFrame: 0
                                             property int maxDragFrame: clipDur
-                                            property bool isEndpoint: targetModel ? targetModel.isEndpointFrame(targetKey, originalFrame) : false
+                                            property bool isEndpoint: originalFrame === 0 || originalFrame === clipDur
 
                                             width: 16
                                             height: 16
@@ -986,11 +1107,13 @@ Common.AviQtlWindow {
 
                                                 anchors.fill: parent
                                                 hoverEnabled: true
-                                                cursorShape: kfItem.originalFrame === 0 ? Qt.ArrowCursor : (pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor)
+                                                cursorShape: kfItem.isEndpoint ? Qt.ArrowCursor : (pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor)
                                                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                                                 onClicked: function(mouse) {
-                                                    if (mouse.button === Qt.RightButton && kfItem.originalFrame !== 0)
-                                                        kfItem.targetModel.removeKeyframe(kfItem.targetKey, kfItem.originalFrame);
+                                                    if (mouse.button === Qt.LeftButton)
+                                                        paramDelegate.seekTrackFrameAt(kfItem.currentFrame / clipDur * trackItem.width);
+                                                    else if (mouse.button === Qt.RightButton && !kfItem.isEndpoint)
+                                                        Workspace.currentTimeline.removeKeyframe(targetClipId, effIdx, kfItem.targetKey, kfItem.originalFrame);
 
                                                 }
                                                 onDoubleClicked: function(mouse) {
@@ -1004,7 +1127,7 @@ Common.AviQtlWindow {
                                                 property real startX: 0
 
                                                 target: null
-                                                enabled: kfItem.originalFrame !== 0
+                                                enabled: !kfItem.isEndpoint
                                                 acceptedButtons: Qt.LeftButton
                                                 onActiveChanged: {
                                                     if (active) {
@@ -1032,28 +1155,7 @@ Common.AviQtlWindow {
                                                             paramDelegate.activeDragOriginal = -1;
 
                                                         if (kfItem.currentFrame !== kfItem.originalFrame) {
-                                                            var val = kfItem.targetModel.evaluatedParam(kfItem.targetKey, kfItem.originalFrame, root._projectFps);
-                                                            var track = kfItem.targetModel.keyframeListForUi(kfItem.targetKey) || [];
-                                                            var interp = "linear";
-                                                            var pts = [];
-                                                            for (let i = 0; i < track.length; i++) {
-                                                                if (track[i].frame === kfItem.originalFrame) {
-                                                                    val = track[i].value;
-                                                                    interp = track[i].interp || "linear";
-                                                                    if (track[i].points)
-                                                                        pts = track[i].points;
-
-                                                                    break;
-                                                                }
-                                                            }
-                                                            kfItem.targetModel.removeKeyframe(kfItem.targetKey, kfItem.originalFrame);
-                                                            let options = {
-                                                                "interp": interp
-                                                            };
-                                                            if (pts.length > 0)
-                                                                options.points = pts;
-
-                                                            kfItem.targetModel.setKeyframe(kfItem.targetKey, kfItem.currentFrame, val, options);
+                                                            Workspace.currentTimeline.moveKeyframe(targetClipId, effIdx, kfItem.targetKey, kfItem.originalFrame, kfItem.currentFrame);
                                                         }
                                                         kfItem.rootWindow.inputting = false;
                                                     }
@@ -1087,6 +1189,9 @@ Common.AviQtlWindow {
                                     MouseArea {
                                         anchors.fill: parent
                                         acceptedButtons: Qt.LeftButton
+                                        onClicked: function(mouse) {
+                                            seekTrackFrameAt(mouse.x);
+                                        }
                                         onDoubleClicked: function(mouse) {
                                             let rawRelFrame = (mouse.x / trackItem.width) * clipDur;
                                             let f = snapRelativeFrame(rawRelFrame);
@@ -1095,10 +1200,8 @@ Common.AviQtlWindow {
                                                 return ;
 
                                             let val = effectModel.evaluatedParam(key, f, root._projectFps);
-                                            let options = {
-                                                "interp": "linear"
-                                            };
-                                            effectModel.setKeyframe(key, f, val, options);
+                                            let options = interpolationOptionsAt(f);
+                                            Workspace.currentTimeline.setKeyframe(targetClipId, effIdx, key, f, val, options);
                                         }
                                     }
 
