@@ -71,6 +71,7 @@ struct ProjectSettings {
     double defaultFps = 60.0;
     int audioSampleRate = 48000;
     QString colorSpace = QStringLiteral("BT.709");
+    bool highBitDepth = false; // true の場合 16bit float 処理を有効化
 };
 
 // ─── DocumentModel ───

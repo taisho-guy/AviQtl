@@ -58,7 +58,7 @@ ApplicationWindow {
         if (type === "random") {
             var step = Math.max(1, root.stepFrames);
             var idx = Math.floor(t * 16 / step);
-            var n = Math.abs(Math.sin((idx + 1) * 12.9898) * 43758.5453);
+            var n = Math.abs(Math.sin((idx + 1) * 12.9898) * 43758.5);
             return n - Math.floor(n);
         }
         if (type === "alternate") {
@@ -1241,7 +1241,7 @@ ApplicationWindow {
                                             }
 
                                             background: Rectangle {
-                                                color: easingButton.isCurrent ? root.palette.highlight : (easingButton.hovered ? root.textColor(0.10) : root.panelColor(0.55))
+                                                color: easingButton.isCurrent ? root.palette.highlight : (easingButton.hovered ? root.textColor(0.1) : root.panelColor(0.55))
                                                 border.color: easingButton.isCurrent ? root.palette.highlight : root.textColor(0.24)
                                                 border.width: easingButton.isCurrent ? 2 : 1
                                                 radius: 4

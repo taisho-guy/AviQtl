@@ -109,9 +109,10 @@ void ImageDecoder::decodeImage(const QString &path) {
     }
 
     if (decoded) {
-        // Convert to RGBA via sws_scale (same format as VideoDecoder, for compatibility with Vulkan/RHI backends)
+        // 高精度処理のため RGBA64LE (16bit integer) を使用
+        AVPixelFormat targetFmt = AV_PIX_FMT_RGBA64LE;
         AVFrame *rgbaFrame = av_frame_alloc();
-        rgbaFrame->format = AV_PIX_FMT_RGBA;
+        rgbaFrame->format = targetFmt;
         rgbaFrame->width = srcFrame->width;
         rgbaFrame->height = srcFrame->height;
         if (av_frame_get_buffer(rgbaFrame, 0) < 0) {
@@ -123,7 +124,7 @@ void ImageDecoder::decodeImage(const QString &path) {
             return;
         }
 
-        SwsContext *swsCtx = sws_getContext(srcFrame->width, srcFrame->height, static_cast<AVPixelFormat>(srcFrame->format), rgbaFrame->width, rgbaFrame->height, AV_PIX_FMT_RGBA, SWS_BILINEAR, nullptr, nullptr, nullptr);
+        SwsContext *swsCtx = sws_getContext(srcFrame->width, srcFrame->height, static_cast<AVPixelFormat>(srcFrame->format), rgbaFrame->width, rgbaFrame->height, targetFmt, SWS_BILINEAR, nullptr, nullptr, nullptr);
         if (swsCtx == nullptr) {
             av_frame_free(&rgbaFrame);
             av_frame_free(&srcFrame);
@@ -137,7 +138,7 @@ void ImageDecoder::decodeImage(const QString &path) {
         sws_freeContext(swsCtx);
 
         // QQuickImageProvider 用に QImage としても保存する（これがプレビューされない直接的な原因）
-        QImage img(rgbaFrame->data[0], rgbaFrame->width, rgbaFrame->height, rgbaFrame->linesize[0], QImage::Format_RGBA8888);
+        QImage img(rgbaFrame->data[0], rgbaFrame->width, rgbaFrame->height, rgbaFrame->linesize[0], QImage::Format_RGBA64);
         m_cachedImage = img.copy();
         const QString &clipIdStr = clipIdString();
         m_store->setFrameSafe(clipIdStr, m_cachedImage);
@@ -145,6 +146,8 @@ void ImageDecoder::decodeImage(const QString &path) {
         QVideoFrameFormat fmt(QSize(rgbaFrame->width, rgbaFrame->height), QVideoFrameFormat::Format_RGBA8888);
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+        // QVideoFrame(Metadata)は8bitだが、データはHBDのままだと表示が崩れるため
+        // 将来的にGPU側で16bitテクスチャとして扱うまで、表示用は8bitを維持
         auto *buf = new FFmpegVideoBuffer(rgbaFrame, fmt);
         QVideoFrame vf(buf, fmt);
 #pragma clang diagnostic pop

@@ -1243,37 +1243,37 @@ This software is released under the GNU Affero General Public License Version 3.
         <translation>Parameters</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="368"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="367"/>
         <source>開始色 (f%1)</source>
         <translation>Start color (f%1)</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="368"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="367"/>
         <source>色を選択</source>
         <translation>Select Color</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="457"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="456"/>
         <source>終了色 (f%1)</source>
         <translation>End color (f%1)</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="503"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="502"/>
         <source>ファイルを選択</source>
         <translation>Select File</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="650"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="649"/>
         <source>設定</source>
         <translation>Settings</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="742"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="741"/>
         <source>フォントを選択</source>
         <translation>Select Font</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="758"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="757"/>
         <source>デフォルト</source>
         <translation>Default</translation>
     </message>
@@ -2900,32 +2900,32 @@ Please restart the application to apply.</translation>
         <translation>Delete %1 selected items</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="932"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="929"/>
         <source> (直線)</source>
         <translation> (Linear)</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="933"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="930"/>
         <source> (加速)</source>
         <translation> (Ease In)</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="934"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="931"/>
         <source> (減速)</source>
         <translation> (Ease Out)</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="935"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="932"/>
         <source> (加減速)</source>
         <translation> (Ease In/Out)</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="936"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="933"/>
         <source> (ベジェ)</source>
         <translation> (Bezier)</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="1386"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="1382"/>
         <source>エフェクトを追加</source>
         <translation>Add Effect</translation>
     </message>

@@ -6,7 +6,6 @@ BaseEffect {
 
     property alias computeShader: compEffect.computeShader
     property alias autoWorkGroup: compEffect.autoWorkGroup
-    property alias storageBuffers: compEffect.storageBuffers
     property alias workGroupSizeX: compEffect.workGroupSizeX
     property alias workGroupSizeY: compEffect.workGroupSizeY
     property alias computeError: compEffect.error

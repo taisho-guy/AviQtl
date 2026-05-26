@@ -9,6 +9,7 @@ extern "C" {
 #include <libavutil/hwcontext.h>
 #include <libavutil/imgutils.h>
 #include <libavutil/opt.h>
+#include <libavutil/pixdesc.h>
 #include <libswresample/swresample.h>
 #include <libswscale/swscale.h>
 }
@@ -173,12 +174,19 @@ auto VideoEncoder::open(const Config &config) -> bool {
     if (m_encCtx->hw_frames_ctx != nullptr) {
         m_encCtx->pix_fmt = (reinterpret_cast<AVHWFramesContext *>(m_encCtx->hw_frames_ctx->data))->format;
     } else {
-        // SWエンコードのデフォルト
+        // SWエンコードのデフォルト: 可能な限り10bit以上の高精度フォーマットを優先選択
         m_encCtx->pix_fmt = AV_PIX_FMT_YUV420P;
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
         if (codec->pix_fmts != nullptr) {
-            m_encCtx->pix_fmt = codec->pix_fmts[0];
+            m_encCtx->pix_fmt = codec->pix_fmts[0]; // 互換性のためデフォルトを最初の候補に
+            for (const enum AVPixelFormat *p = codec->pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
+                const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(*p);
+                if (desc && !(desc->flags & AV_PIX_FMT_FLAG_RGB) && desc->comp[0].depth >= 10) {
+                    m_encCtx->pix_fmt = *p;
+                    break;
+                }
+            }
         }
 #pragma clang diagnostic pop
     }
@@ -220,7 +228,11 @@ auto VideoEncoder::open(const Config &config) -> bool {
 
     // 6. Frame allocation
     m_swFrame = av_frame_alloc();
-    m_swFrame->format = AV_PIX_FMT_NV12; // SW intermediate buffer
+    if (m_encCtx->hw_frames_ctx != nullptr) {
+        m_swFrame->format = (reinterpret_cast<AVHWFramesContext *>(m_encCtx->hw_frames_ctx->data))->sw_format;
+    } else {
+        m_swFrame->format = m_encCtx->pix_fmt;
+    }
     m_swFrame->width = config.width;
     m_swFrame->height = config.height;
     if (av_frame_get_buffer(m_swFrame, 32) < 0) {
@@ -382,6 +394,20 @@ auto VideoEncoder::processVideo(const QImage &img, int64_t pts) -> bool {
     case QImage::Format_RGB888:
         srcPixFmt = AV_PIX_FMT_RGB24;
         break;
+    case QImage::Format_RGBA16FPx4:
+#if Q_BYTE_ORDER == Q_LITTLE_ENDIAN
+        srcPixFmt = AV_PIX_FMT_RGBAF16LE;
+#else
+        srcPixFmt = AV_PIX_FMT_RGBAF16BE;
+#endif
+        break;
+    case QImage::Format_RGBA64:
+#if Q_BYTE_ORDER == Q_LITTLE_ENDIAN
+        srcPixFmt = AV_PIX_FMT_RGBA64LE;
+#else
+        srcPixFmt = AV_PIX_FMT_RGBA64BE;
+#endif
+        break;
     default:
         // 未対応/プレマルチプライドフォーマットはRGBA8888に変換してフォールバック
         sourceImg = img.convertToFormat(QImage::Format_RGBA8888);
@@ -404,7 +430,7 @@ auto VideoEncoder::processVideo(const QImage &img, int64_t pts) -> bool {
         if (m_swsCtx != nullptr) {
             sws_freeContext(m_swsCtx);
         }
-        m_swsCtx = sws_getContext(sourceImg.width(), sourceImg.height(), srcPixFmt, m_config.width, m_config.height, AV_PIX_FMT_NV12, SWS_BILINEAR, nullptr, nullptr, nullptr);
+        m_swsCtx = sws_getContext(sourceImg.width(), sourceImg.height(), srcPixFmt, m_config.width, m_config.height, static_cast<AVPixelFormat>(m_swFrame->format), SWS_BILINEAR, nullptr, nullptr, nullptr);
         m_swsSrcFmt = static_cast<int>(srcPixFmt);
     }
 

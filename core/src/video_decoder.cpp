@@ -1,4 +1,5 @@
 #include "video_decoder.hpp"
+#include "document_model.hpp"
 #include "settings_manager.hpp"
 #include "video_frame_store.hpp"
 #include <QDebug>
@@ -500,13 +501,20 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) { // NOLINT(bugprone-
                     if (pixFmt == AV_PIX_FMT_YUVJ444P)
                         pixFmt = AV_PIX_FMT_YUV444P;
 
+                    bool useHBD = DocumentModel::instance().projectSettings().highBitDepth;
+
+                    // プロジェクト設定に応じてサポート対象を判定
                     bool isSupported = (pixFmt == AV_PIX_FMT_YUV420P || pixFmt == AV_PIX_FMT_NV12 || pixFmt == AV_PIX_FMT_RGBA);
+                    if (useHBD)
+                        isSupported |= (pixFmt == AV_PIX_FMT_RGBA64LE || pixFmt == AV_PIX_FMT_P010LE);
 
                     if (!isSupported) {
-                        mswsCtx = sws_getCachedContext(mswsCtx, srcFrame->width, srcFrame->height, static_cast<AVPixelFormat>(srcFrame->format), srcFrame->width, srcFrame->height, AV_PIX_FMT_YUV420P, SWS_BILINEAR, nullptr, nullptr, nullptr);
+                        // プロジェクト設定に応じてターゲットフォーマットを選択
+                        AVPixelFormat targetFmt = useHBD ? AV_PIX_FMT_RGBA64LE : AV_PIX_FMT_RGBA;
+                        mswsCtx = sws_getCachedContext(mswsCtx, srcFrame->width, srcFrame->height, static_cast<AVPixelFormat>(srcFrame->format), srcFrame->width, srcFrame->height, targetFmt, SWS_BILINEAR, nullptr, nullptr, nullptr);
                         if (mswsCtx != nullptr) {
                             convertedFrame = av_frame_alloc();
-                            convertedFrame->format = AV_PIX_FMT_YUV420P;
+                            convertedFrame->format = targetFmt;
                             convertedFrame->width = srcFrame->width;
                             convertedFrame->height = srcFrame->height;
                             if (av_frame_get_buffer(convertedFrame, 32) == 0) {
@@ -530,8 +538,11 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) { // NOLINT(bugprone-
                     case AV_PIX_FMT_NV12:
                         qtFmt = QVideoFrameFormat::Format_NV12;
                         break;
-                    case AV_PIX_FMT_RGBA:
-                        qtFmt = QVideoFrameFormat::Format_RGBA8888;
+                    case AV_PIX_FMT_P010LE:
+                        qtFmt = QVideoFrameFormat::Format_P010;
+                        break;
+                    case AV_PIX_FMT_RGBA64LE:
+                        qtFmt = QVideoFrameFormat::Format_RGBA8888; // メタデータ上は8bitとして扱う
                         break;
                     default:
                         qtFmt = QVideoFrameFormat::Format_YUV420P;
@@ -558,7 +569,8 @@ void VideoDecoder::decodeTask(int targetFrame, double fps) { // NOLINT(bugprone-
                     videoFrame.setEndTime(-1);
 
                     if (videoFrame.isValid()) {
-                        int bpp = (qtFmt == QVideoFrameFormat::Format_RGBA8888) ? 4 : 2;
+                        // メタデータが8bitでも、実際のメモリ消費(RGBA64)に合わせてコスト計算を行う
+                        int bpp = (srcFrame->format == AV_PIX_FMT_RGBA64LE) ? 8 : (qtFmt == QVideoFrameFormat::Format_RGBA8888 ? 4 : 2);
                         int64_t cost = static_cast<int64_t>(videoFrame.width()) * videoFrame.height() * bpp;
                         auto *cachedFrame = new QVideoFrame(videoFrame);
 

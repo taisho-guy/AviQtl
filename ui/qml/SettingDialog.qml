@@ -726,9 +726,7 @@ Common.AviQtlWindow {
                                 function keyframesWithVirtualEnd(points, totalDur) {
                                     var out = [];
                                     if (points) {
-                                        for (var i = 0; i < points.length; i++)
-                                            out.push(points[i]);
-
+                                        for (var i = 0; i < points.length; i++) out.push(points[i])
                                     }
                                     if (totalDur > 0) {
                                         var hasEnd = false;
@@ -803,7 +801,6 @@ Common.AviQtlWindow {
                                             "end": e
                                         };
                                     }
-
                                     let foundStart = false;
                                     for (let i = kfs.length - 1; i >= 0; i--) {
                                         if (kfs[i].frame <= cur) {
@@ -1114,7 +1111,6 @@ Common.AviQtlWindow {
                                                         paramDelegate.seekTrackFrameAt(kfItem.currentFrame / clipDur * trackItem.width);
                                                     else if (mouse.button === Qt.RightButton && !kfItem.isEndpoint)
                                                         Workspace.currentTimeline.removeKeyframe(targetClipId, effIdx, kfItem.targetKey, kfItem.originalFrame);
-
                                                 }
                                                 onDoubleClicked: function(mouse) {
                                                     mouse.accepted = true;
@@ -1154,9 +1150,9 @@ Common.AviQtlWindow {
                                                         if (typeof paramDelegate !== "undefined")
                                                             paramDelegate.activeDragOriginal = -1;
 
-                                                        if (kfItem.currentFrame !== kfItem.originalFrame) {
+                                                        if (kfItem.currentFrame !== kfItem.originalFrame)
                                                             Workspace.currentTimeline.moveKeyframe(targetClipId, effIdx, kfItem.targetKey, kfItem.originalFrame, kfItem.currentFrame);
-                                                        }
+
                                                         kfItem.rootWindow.inputting = false;
                                                     }
                                                 }

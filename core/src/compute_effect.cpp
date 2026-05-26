@@ -38,15 +38,6 @@ void ComputeEffect::setParams(const QVariantMap &params) {
     update();
 }
 
-void ComputeEffect::setStorageBuffers(const QVariantMap &buffers) {
-    if (m_storageBuffers == buffers)
-        return;
-    m_storageBuffers = buffers;
-    m_dirty = true;
-    emit storageBuffersChanged();
-    update();
-}
-
 void ComputeEffect::setShaderEnabled(bool enabled) {
     if (m_enabled == enabled)
         return;
@@ -96,23 +87,6 @@ void ComputeEffect::setAutoWorkGroup(bool autoWG) {
     update();
 }
 
-void ComputeEffect::setStorageBufferRaw(const QString &name, int binding, const void *data, qsizetype byteSize) {
-    for (auto &entry : m_rawSSBOs) {
-        if (entry.name == name) {
-            if (entry.data.size() == byteSize && std::memcmp(entry.data.constData(), data, static_cast<std::size_t>(byteSize)) == 0)
-                return;
-            entry.binding = binding;
-            entry.data = QByteArray(static_cast<const char *>(data), static_cast<qsizetype>(byteSize));
-            m_dirty = true;
-            update();
-            return;
-        }
-    }
-    m_rawSSBOs.push_back(RawSSBOEntry{name, binding, QByteArray(static_cast<const char *>(data), static_cast<qsizetype>(byteSize))});
-    m_dirty = true;
-    update();
-}
-
 void ComputeEffect::setErrorFromRenderThread(const QString &error) {
     if (m_error == error)
         return;
@@ -126,8 +100,6 @@ void ComputeEffect::geometryChange(const QRectF &newGeometry, const QRectF &oldG
         recalcAutoWorkGroup();
 }
 
-// 16x16 スレッドを 1 ワークグループとして item の縦横スレッド数を算出する
-// アイテム幅/高さが 0 の場合はデフォルト (1x1) を維持する
 void ComputeEffect::recalcAutoWorkGroup() {
     if (width() > 0.0) {
         const int newX = qMax(1, static_cast<int>(std::ceil(width() / 16.0)));
@@ -145,61 +117,6 @@ void ComputeEffect::recalcAutoWorkGroup() {
     }
 }
 
-// QVariantMap → バイト列変換 (旧来の互換パス。フェーズ6以降は setStorageBufferRaw を優先)
-auto ComputeEffect::ssboToBytes(const QVariantMap &bufferData) -> QByteArray {
-    QByteArray result;
-    result.reserve(static_cast<qsizetype>(bufferData.size()) * static_cast<qsizetype>(sizeof(float)));
-    for (auto it = bufferData.constBegin(); it != bufferData.constEnd(); ++it) {
-        const QVariant &v = it.value();
-        if (v.canConvert<float>()) {
-            float f = v.toFloat();
-            result.append(reinterpret_cast<const char *>(&f), sizeof(float));
-        } else if (v.canConvert<int>()) {
-            int i = v.toInt();
-            result.append(reinterpret_cast<const char *>(&i), sizeof(int));
-        }
-    }
-    return result;
-}
-
-auto ComputeEffect::paramsToUniformBytes(const QVariantMap &params) -> QByteArray {
-    struct ParamsBlock {
-        float blockSize = 24.0f;
-        float minLuma = 0.15f;
-        float maxLuma = 0.90f;
-        float mixAmount = 1.0f;
-        int direction = 0;
-        int reverse = 0;
-        int _pad0 = 0;
-        int _pad1 = 0;
-    };
-
-    auto numberValue = [&params](const QString &key, float fallback) {
-        const QVariant value = params.value(key);
-        bool ok = false;
-        const float result = value.toFloat(&ok);
-        return ok ? result : fallback;
-    };
-    auto intValue = [&params](const QString &key, int fallback) {
-        const QVariant value = params.value(key);
-        if (value.metaType().id() == QMetaType::Bool)
-            return value.toBool() ? 1 : 0;
-        bool ok = false;
-        const int result = value.toInt(&ok);
-        return ok ? result : fallback;
-    };
-
-    ParamsBlock block;
-    block.blockSize = numberValue(QStringLiteral("blockSize"), block.blockSize);
-    block.minLuma = numberValue(QStringLiteral("minLuma"), block.minLuma);
-    block.maxLuma = numberValue(QStringLiteral("maxLuma"), block.maxLuma);
-    block.mixAmount = numberValue(QStringLiteral("mixAmount"), numberValue(QStringLiteral("mix"), block.mixAmount));
-    block.direction = intValue(QStringLiteral("direction"), block.direction);
-    block.reverse = intValue(QStringLiteral("reverse"), block.reverse);
-
-    return QByteArray(reinterpret_cast<const char *>(&block), sizeof(block));
-}
-
 auto ComputeEffect::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) -> QSGNode * {
     if (!m_enabled) {
         delete oldNode;
@@ -212,38 +129,11 @@ auto ComputeEffect::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) -> 
         m_dirty = true;
     }
 
-    // m_dirty だけでなく、ソース（動画・画像）がある場合は毎フレーム更新を試みる
-    // これにより動画再生中のテクスチャ更新がノードへ伝播する
     if (m_dirty || m_source) {
-        // m_rawSSBOs → ComputeRenderNode::SSBOEntry に変換して転送
-        QList<ComputeRenderNode::SSBOEntry> entries;
-        if (!m_rawSSBOs.isEmpty()) {
-            entries.reserve(m_rawSSBOs.size());
-            for (const auto &raw : std::as_const(m_rawSSBOs))
-                entries.push_back({raw.binding, raw.data});
-        }
-
-        // m_rawSSBOs が空の場合、params (m_params) を Binding 2 の uniform block として自動転送
-        if (entries.isEmpty() && !m_params.isEmpty()) {
-            const QByteArray bytes = paramsToUniformBytes(m_params);
-            if (!bytes.isEmpty())
-                entries.push_back({2, bytes});
-        } else if (entries.isEmpty() && !m_storageBuffers.isEmpty()) {
-            // 旧来 QVariantMap パス: m_rawSSBOs が空の場合のみ使用する
-            for (auto it = m_storageBuffers.cbegin(); it != m_storageBuffers.cend(); ++it) {
-                const QByteArray bytes = ssboToBytes(it.value().toMap());
-                if (!bytes.isEmpty())
-                    entries.push_back({0, bytes});
-            }
-        } else if (entries.isEmpty()) {
-            const QByteArray bytes = paramsToUniformBytes(m_params);
-            if (!bytes.isEmpty())
-                entries.push_back({2, bytes});
-        }
+        node->syncParams(m_params);
 
         // ソーステクスチャの同期
         if (m_source) {
-            // updatePaintNode はレンダースレッドで呼ばれるため、テクスチャプロバイダーから安全にテクスチャを取得可能
             QSGTextureProvider *provider = m_source->textureProvider();
             if (!provider) {
                 static int pWarn = 0;
@@ -264,8 +154,6 @@ auto ComputeEffect::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) -> 
             node->syncInputTexture(nullptr);
         }
 
-        node->syncSSBOs(entries);
-        // QUrl が file:// 形式ならローカルパスへ、そうでなければ(qrc等)そのまま文字列へ
         QString pathStr = m_shaderPath.isLocalFile() ? m_shaderPath.toLocalFile() : m_shaderPath.toString();
         node->syncShaderPath(pathStr);
         node->syncSize(width(), height());
@@ -273,7 +161,6 @@ auto ComputeEffect::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) -> 
         m_dirty = false;
     }
 
-    // レンダースレッド側で発生したエラーを QML プロパティへ同期する
     const QString nodeErr = node->errorMessage();
     if (m_error != nodeErr) {
         QPointer<ComputeEffect> self(this);
@@ -286,7 +173,6 @@ auto ComputeEffect::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) -> 
             Qt::QueuedConnection);
     }
 
-    // QSGNode のダーティフラグを立てて prepare() / render() が呼ばれることを保証する
     node->markDirty(QSGNode::DirtyMaterial);
     return node;
 }

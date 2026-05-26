@@ -6,6 +6,7 @@
 #include <QSGRenderNode>
 #include <QSGTexture>
 #include <QString>
+#include <QVariantMap>
 #include <rhi/qrhi.h>
 #include <rhi/qshader.h>
 
@@ -17,18 +18,10 @@ namespace AviQtl::UI::Effects {
 
 class ComputeRenderNode final : public QSGRenderNode {
   public:
-    // ComputeEffect (UI スレッド) → ComputeRenderNode (レンダースレッド) の転送単位
-    // updatePaintNode から syncSSBOs() に渡す。UI スレッドブロック中に呼ばれるため mutex 不要
-    struct SSBOEntry {
-        int binding = 0;
-        QByteArray data;
-    };
-
     explicit ComputeRenderNode(QQuickWindow *window);
     ~ComputeRenderNode() override;
 
-    // updatePaintNode から呼ぶ同期 API (UI スレッドブロック保証)
-    void syncSSBOs(const QList<SSBOEntry> &entries);
+    void syncParams(const QVariantMap &params);
     void syncShaderPath(const QString &path);
     void syncInputTexture(QSGTexture *tex);
     void syncSize(float w, float h);
@@ -36,7 +29,6 @@ class ComputeRenderNode final : public QSGRenderNode {
 
     QString errorMessage() const { return m_error; }
 
-    // QSGRenderNode オーバーライド
     QRectF rect() const override;
     void prepare() override;
     void render(const RenderState *state) override;
@@ -45,18 +37,9 @@ class ComputeRenderNode final : public QSGRenderNode {
     RenderingFlags flags() const override;
 
   private:
-    // GPU バッファの管理単位 (binding → QRhiBuffer の 1 対 1 対応)
-    struct GpuBuffer {
-        int binding = 0;
-        QRhiBuffer *buf = nullptr;
-        qsizetype size = 0;
-    };
-
-    // QRhi / CommandBuffer の取得ヘルパー
     QRhi *resolveRhi() const;
     QRhiCommandBuffer *resolveCommandBuffer() const;
 
-    // リソース構築 (prepare() 内で段階的に呼び出す)
     bool ensureBuffers(QRhi *rhi);
     bool ensurePipeline(QRhi *rhi);
     void destroyResources();
@@ -64,7 +47,6 @@ class ComputeRenderNode final : public QSGRenderNode {
     QQuickWindow *m_window = nullptr;
     QRhi *m_rhi = nullptr;
 
-    QList<GpuBuffer> m_gpuBuffers;
     QRhiTexture *m_outputTexture = nullptr;
     QRhiSampler *m_sampler = nullptr;
     QRhiBuffer *m_vbuf = nullptr;
@@ -78,9 +60,8 @@ class ComputeRenderNode final : public QSGRenderNode {
     QRhiComputePipeline *m_pipeline = nullptr;
     QShader m_shader;
 
-    // updatePaintNode でセットされる転送データ
-    QList<SSBOEntry> m_pendingSSBOs;
-    bool m_ssboDirty = false;
+    QVariantMap m_params;
+    bool m_paramsDirty = false;
 
     QString m_shaderPath;
     QString m_error;
@@ -97,8 +78,6 @@ class ComputeRenderNode final : public QSGRenderNode {
     int m_workGroupX = 1;
     int m_workGroupY = 1;
     int m_workGroupZ = 1;
-
-    QByteArray m_paramData;
 };
 
 } // namespace AviQtl::UI::Effects

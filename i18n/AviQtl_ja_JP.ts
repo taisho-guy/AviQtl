@@ -1243,37 +1243,37 @@
         <translation>パラメータ</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="368"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="367"/>
         <source>開始色 (f%1)</source>
         <translation>開始色 (f%1)</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="368"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="367"/>
         <source>色を選択</source>
         <translation>色を選択</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="457"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="456"/>
         <source>終了色 (f%1)</source>
         <translation>終了色 (f%1)</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="503"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="502"/>
         <source>ファイルを選択</source>
         <translation>ファイルを選択</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="650"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="649"/>
         <source>設定</source>
         <translation>設定</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="742"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="741"/>
         <source>フォントを選択</source>
         <translation>フォントを選択</translation>
     </message>
     <message>
-        <location filename="../ui/qml/common/ControlLoader.qml" line="758"/>
+        <location filename="../ui/qml/common/ControlLoader.qml" line="757"/>
         <source>デフォルト</source>
         <translation>デフォルト</translation>
     </message>
@@ -2840,32 +2840,32 @@
         <translation>選択した %1 件を削除</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="932"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="929"/>
         <source> (直線)</source>
         <translation> (直線)</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="933"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="930"/>
         <source> (加速)</source>
         <translation> (加速)</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="934"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="931"/>
         <source> (減速)</source>
         <translation> (減速)</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="935"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="932"/>
         <source> (加減速)</source>
         <translation> (加減速)</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="936"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="933"/>
         <source> (ベジェ)</source>
         <translation> (ベジェ)</translation>
     </message>
     <message>
-        <location filename="../ui/qml/SettingDialog.qml" line="1386"/>
+        <location filename="../ui/qml/SettingDialog.qml" line="1382"/>
         <source>エフェクトを追加</source>
         <translation>エフェクトを追加</translation>
     </message>

@@ -41,7 +41,6 @@ RowLayout {
         if (field && field.activeFocus) {
             field.ignoreNextEditingFinished = true;
             field.focus = false;
-
         }
     }
 
