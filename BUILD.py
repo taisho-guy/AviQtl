@@ -148,6 +148,11 @@ class PlatformBuilder:
     def package(self):
         pass
 
+    def prepare_output_dir(self):
+        if self.config.output_dir.exists():
+            self.remove_tree(self.config.output_dir)
+        self.config.output_dir.mkdir(parents=True, exist_ok=True)
+
     def archive(self):
         self.config.dist_dir.mkdir(parents=True, exist_ok=True)
         archive_name = self.get_archive_name()
@@ -403,7 +408,7 @@ class LinuxBuilderBase(PlatformBuilder):
         return cmd
 
     def package(self):
-        self.config.output_dir.mkdir(parents=True, exist_ok=True)
+        self.prepare_output_dir()
         dest_bin = self.config.output_dir / "AviQtl"
         # CMAKE_RUNTIME_OUTPUT_DIRECTORY = bin/ のため bin/ 下に生成される
         src_bin = self.config.work_dir / "bin" / "AviQtl"
@@ -454,6 +459,12 @@ class ArchBuilder(LinuxBuilderBase):
 
 
 class Msys2Builder(PlatformBuilder):
+    MSYS2_RUNTIME_DLLS = (
+        "libgcc_s_seh-1.dll",
+        "libwinpthread-1.dll",
+        "libstdc++-6.dll",
+        "lua51.dll",
+    )
 
     def install_dependencies(self):
         if self.config.is_offline:
@@ -490,7 +501,7 @@ class Msys2Builder(PlatformBuilder):
         return cmd
 
     def package(self):
-        self.config.output_dir.mkdir(parents=True, exist_ok=True)
+        self.prepare_output_dir()
         dest_bin = self.config.output_dir / "AviQtl.exe"
         src_bin = self.config.work_dir / "bin" / "AviQtl.exe"
         if dest_bin.exists():
@@ -500,6 +511,8 @@ class Msys2Builder(PlatformBuilder):
         shutil.copy2(src_bin, dest_bin)
         self.copy_assets(self.config.output_dir)
         self.copy_carla_runtime()
+        self.copy_carla_link_dlls()
+        self.copy_msys2_runtime_dlls()
         
         
         deploy_tool = "windeployqt6" if shutil.which("windeployqt6") else "windeployqt"
@@ -542,6 +555,71 @@ class Msys2Builder(PlatformBuilder):
             self.remove_tree(dest)
         shutil.copytree(str(carla_runtime), str(dest))
         self.logger.log(f"Carla ランタイムを同梱: {dest}")
+
+    def get_msys2_bin_dirs(self) -> List[Path]:
+        dirs: List[Path] = []
+        for env_name in ("MINGW_PREFIX", "MSYSTEM_PREFIX"):
+            prefix = os.environ.get(env_name) or self.env.get(env_name)
+            if prefix:
+                dirs.append(Path(prefix) / "bin")
+        for part in self.env.get("PATH", os.environ.get("PATH", "")).split(os.pathsep):
+            if part:
+                dirs.append(Path(part))
+
+        seen = set()
+        result: List[Path] = []
+        for directory in dirs:
+            key = str(directory).lower()
+            if key not in seen:
+                seen.add(key)
+                result.append(directory)
+        return result
+
+    def find_runtime_dll(self, dll_name: str) -> Path | None:
+        found = shutil.which(dll_name, path=self.env.get("PATH"))
+        if found:
+            return Path(found)
+        for directory in self.get_msys2_bin_dirs():
+            candidate = directory / dll_name
+            if candidate.exists():
+                return candidate
+        return None
+
+    def copy_msys2_runtime_dlls(self):
+        """Copy MinGW/LuaJIT runtime DLLs that windeployqt does not always deploy."""
+        missing = []
+        for dll_name in self.MSYS2_RUNTIME_DLLS:
+            src = self.find_runtime_dll(dll_name)
+            if not src:
+                missing.append(dll_name)
+                continue
+            shutil.copy2(src, self.config.output_dir / dll_name)
+            self.logger.log(f"MSYS2 ランタイムを同梱: {dll_name}")
+        if missing:
+            raise FileNotFoundError(
+                "MSYS2 ランタイム DLL が見つかりません: "
+                + ", ".join(missing)
+                + "。MSYS2 UCRT64 環境で実行しているか確認してください。"
+            )
+
+    def copy_carla_link_dlls(self):
+        carla_lib = self.config.source_dir / "vendor" / "carla" / "lib"
+        if not carla_lib.exists():
+            self.logger.log("Carla lib/ が見つかりません。Carla リンク DLL を同梱しません")
+            return
+        copied = set()
+        for pattern in self.CARLA_DLL_PATTERNS:
+            for dll in carla_lib.glob(pattern):
+                if dll.name in copied:
+                    continue
+                shutil.copy2(dll, self.config.output_dir / dll.name)
+                copied.add(dll.name)
+                self.logger.log(f"Carla リンク DLL を同梱: {dll.name}")
+                if dll.name in self.CARLA_DLL_ALIASES:
+                    alias = self.CARLA_DLL_ALIASES[dll.name]
+                    shutil.copy2(dll, self.config.output_dir / alias)
+                    copied.add(alias)
+                    self.logger.log(f"Carla リンク DLL alias を同梱: {alias}")
 
     def find_carla_discovery_tool(self) -> Path | None:
         # runtime/ 内の carla-discovery-native.exe を探す
@@ -1025,7 +1103,7 @@ class MsvcBuilder(PlatformBuilder):
         return None
 
     def package(self):
-        self.config.output_dir.mkdir(parents=True, exist_ok=True)
+        self.prepare_output_dir()
         dest_bin = self.config.output_dir / "AviQtl.exe"
         src_bin = self.config.work_dir / "bin" / "AviQtl.exe"
         if dest_bin.exists():
@@ -1120,7 +1198,7 @@ class XcodeBuilder(PlatformBuilder):
         return cmd
 
     def package(self):
-        self.config.output_dir.mkdir(parents=True, exist_ok=True)
+        self.prepare_output_dir()
         src_app = self.config.work_dir / "bin" / "AviQtl.app"
         dest_app = self.config.output_dir / "AviQtl.app"
         if dest_app.exists():
@@ -1236,8 +1314,8 @@ def parse_args() -> argparse.Namespace:
             "使用例:\n"
             "  python BUILD.py --arch\n"
             "  python BUILD.py --msys2 --debug\n"
-            "  python BUILD.py --msvc --qt-dir F:\\Qt\n"
-            "  python BUILD.py --qt-dir F:\\Qt  # Windows では既定で MSVC\n"
+            "  python BUILD.py --msvc --qt-dir C:\\Qt\n"
+            "  python BUILD.py  # Windows では既定で MSYS2\n"
             "  python BUILD.py --xcode --offline\n"
         ),
     )
@@ -1272,7 +1350,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--qt-dir", type=Path,
-        help="MSVC ビルドで使用する公式 Qt のディレクトリ。未指定時は QT_MSVC_DIR, QT_DIR, QTDIR, PATH を確認します。MSVC では Qt が必須です。",
+        help="MSVC ビルドで使用する公式 Qt のディレクトリ。--msvc 指定時のみ使用します。未指定時は QT_MSVC_DIR, QT_DIR, QTDIR, PATH を確認します。",
     )
     parser.add_argument(
         "--version", type=str, default="0.0.0",
@@ -1297,7 +1375,7 @@ def determine_target(args: argparse.Namespace, system_name: str | None = None) -
     system_name = (system_name or platform.system()).lower()
     return {
         "linux": "arch",
-        "windows": "msvc",
+        "windows": "msys2",
         "darwin": "xcode",
     }.get(system_name)
 
