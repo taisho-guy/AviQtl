@@ -12,6 +12,9 @@ Rectangle {
     property int timeWidth: 60
     property double fps: 60
     property alias canvas: rulerCanvas
+    property int timelineDuration: 0
+
+    signal zoomRequested(int percent)
 
     // ユーティリティ
     function pxToFrame(px, contentX) {
@@ -29,6 +32,13 @@ Rectangle {
             return percent / 100;
 
         return 1 + ((percent - 100) * 9 / 300);
+    }
+
+    function scaleToZoomPercent(scale) {
+        if (scale <= 1)
+            return scale * 100;
+
+        return 100 + ((scale - 1) * 300 / 9);
     }
 
     function zoomAt(wheel, zoomFactor) {
@@ -70,20 +80,45 @@ Rectangle {
         spacing: 0
 
         // 左上の空白（レイヤーヘッダーの上）
-        Rectangle {
+        ComboBox {
+            id: zoomCombo
+
             Layout.preferredWidth: timeWidth
             Layout.fillHeight: true
-            color: palette.base
-            border.color: palette.mid
-            border.width: 1
             z: 100
+            editable: true
+            flat: true
+            model: [10, 25, 50, 75, 100, 150, 200, 300, 400]
+            onAccepted: {
+                var val = parseInt(editText);
+                if (!isNaN(val))
+                    rulerRoot.zoomRequested(val);
 
-            Text {
-                anchors.centerIn: parent
-                text: Workspace.currentTimeline ? Workspace.currentTimeline.cursorFrame : "0"
-                font.pixelSize: 11
-                font.bold: true
-                color: palette.highlight
+                focus = false;
+            }
+            onActivated: (index) => {
+                rulerRoot.zoomRequested(model[index]);
+            }
+            Component.onCompleted: {
+                if (Workspace.currentTimeline)
+                    editText = Math.round(rulerRoot.scaleToZoomPercent(Workspace.currentTimeline.timelineScale)).toString();
+                else
+                    editText = "100";
+            }
+
+            Connections {
+                function onTimelineScaleChanged() {
+                    if (!zoomCombo.activeFocus)
+                        zoomCombo.editText = Math.round(rulerRoot.scaleToZoomPercent(Workspace.currentTimeline.timelineScale)).toString();
+
+                }
+
+                target: Workspace.currentTimeline
+            }
+
+            validator: IntValidator {
+                bottom: 10
+                top: 400
             }
 
         }

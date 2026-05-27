@@ -49,7 +49,6 @@ Item {
     }
     property bool enableSnap: currentSceneData && currentSceneData.enableSnap !== undefined ? currentSceneData.enableSnap : (SettingsManager.settings ? SettingsManager.settings.enableSnap : true)
     property int magneticSnapRange: currentSceneData && currentSceneData.magneticSnapRange !== undefined ? currentSceneData.magneticSnapRange : (SettingsManager.settings ? SettingsManager.value("magneticSnapRange", 10) : 10)
-    property int tailPaddingFrames: 120
     property var gridSettings: {
         if (currentSceneData)
             return {
@@ -68,9 +67,21 @@ Item {
             "subdivision": 4
         };
     }
-    readonly property int maxClipEndFrame: (Workspace.currentTimeline && Workspace.currentTimeline.timelineDuration > 0) ? Workspace.currentTimeline.timelineDuration : 0
-    readonly property int sceneTotalFrames: currentSceneData && currentSceneData.totalFrames !== undefined ? currentSceneData.totalFrames : 0
-    readonly property int timelineLengthFrames: Math.max(100, sceneTotalFrames, maxClipEndFrame + tailPaddingFrames)
+    readonly property int maxClipEndFrame: {
+        var clips = Workspace.currentTimeline ? Workspace.currentTimeline.clips : null;
+        if (!clips)
+            return 0;
+
+        var max = 0;
+        for (var i = 0; i < clips.length; i++) {
+            var end = clips[i].startFrame + clips[i].durationFrames;
+            if (end > max)
+                max = end;
+
+        }
+        return max;
+    }
+    readonly property int timelineLengthFrames: Math.max(1, maxClipEndFrame)
     readonly property int scrollBarThickness: 14
 
     function beginDragAutoScroll(callback) {
@@ -160,12 +171,9 @@ Item {
         // unified loop handles viewport updates now
         id: timelineFlickable
 
-        anchors.left: parent.left
-        anchors.top: parent.top
-        anchors.right: verticalScrollBar.left
-        anchors.bottom: horizontalScrollBar.top
+        anchors.fill: parent
         clip: true
-        contentWidth: Math.max(width, timelineLengthFrames * (Workspace.currentTimeline ? Workspace.currentTimeline.timelineScale : 1))
+        contentWidth: timelineLengthFrames * (Workspace.currentTimeline ? Workspace.currentTimeline.timelineScale : 1)
         contentHeight: layerCount * layerHeight
         interactive: true
         onMovementStarted: timelineViewRoot.autoScrollSuspended = true
@@ -290,6 +298,7 @@ Item {
                 layerCount: timelineViewRoot.layerCount
                 layerHeight: timelineViewRoot.layerHeight
                 gridSettings: timelineViewRoot.gridSettings
+                timelineDuration: timelineViewRoot.timelineLengthFrames
             }
 
         }
@@ -523,11 +532,11 @@ Item {
         id: horizontalScrollBar
 
         anchors.left: parent.left
-        anchors.right: scrollCorner.left
+        anchors.right: parent.right
         anchors.bottom: parent.bottom
         height: timelineViewRoot.scrollBarThickness
         orientation: Qt.Horizontal
-        policy: ScrollBar.AlwaysOn
+        policy: ScrollBar.AsNeeded
         active: true
         size: timelineFlickable.visibleArea.widthRatio
         position: timelineFlickable.visibleArea.xPosition
@@ -543,10 +552,10 @@ Item {
 
         anchors.top: parent.top
         anchors.right: parent.right
-        anchors.bottom: scrollCorner.top
+        anchors.bottom: parent.bottom
         width: timelineViewRoot.scrollBarThickness
         orientation: Qt.Vertical
-        policy: ScrollBar.AlwaysOn
+        policy: ScrollBar.AsNeeded
         active: true
         size: timelineFlickable.visibleArea.heightRatio
         position: timelineFlickable.visibleArea.yPosition
@@ -555,18 +564,6 @@ Item {
                 timelineFlickable.contentY = position * timelineFlickable.contentHeight;
 
         }
-    }
-
-    Rectangle {
-        id: scrollCorner
-
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        width: timelineViewRoot.scrollBarThickness
-        height: timelineViewRoot.scrollBarThickness
-        color: palette.window
-        border.color: palette.mid
-        border.width: 1
     }
 
     Menu {

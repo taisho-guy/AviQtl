@@ -245,9 +245,13 @@ Common.AviQtlWindow {
             rulerHeight: timelineWindow.rulerHeight
             timeWidth: timelineWindow.headerWidth
             fps: Workspace.currentTimeline && Workspace.currentTimeline.project ? Workspace.currentTimeline.project.fps : 60
+            timelineDuration: timelineView.timelineLengthFrames
             Layout.preferredHeight: timelineWindow.rulerHeight
             Layout.minimumHeight: timelineWindow.rulerHeight
             Layout.maximumHeight: timelineWindow.rulerHeight
+            onZoomRequested: (p) => {
+                return setTimelineZoomPercent(p, "center");
+            }
         }
 
         RowLayout {
@@ -305,94 +309,15 @@ Common.AviQtlWindow {
 
         }
 
-        RowLayout {
-            Layout.fillWidth: true
-            Layout.preferredHeight: 30
-            Layout.minimumHeight: 30
-            Layout.maximumHeight: 30
-            spacing: 6
-
-            Rectangle {
-                Layout.preferredWidth: timelineWindow.headerWidth
-                Layout.fillHeight: true
-                color: palette.base
-                border.color: palette.mid
-                border.width: 1
-            }
-
-            Button {
-                flat: true
-                Layout.preferredWidth: 28
-                Layout.preferredHeight: 28
-                enabled: Workspace.currentTimeline !== null
-                hoverEnabled: true
-                onClicked: {
-                    var step = SettingsManager ? SettingsManager.value("timelineZoomStep", 10) : 10;
-                    setTimelineZoomPercent(zoomSlider.value - step, "center");
-                }
-
-                contentItem: Common.AviQtlIcon {
-                    iconName: "subtract_line"
-                    size: 18
-                    color: parent.enabled && parent.hovered ? parent.palette.highlight : parent.palette.text
-                }
-
-            }
-
-            Slider {
-                id: zoomSlider
-
-                from: SettingsManager ? SettingsManager.value("timelineZoomMin", 10) : 10
-                to: SettingsManager ? SettingsManager.value("timelineZoomMax", 400) : 400
-                stepSize: SettingsManager ? SettingsManager.value("timelineZoomStep", 10) : 10
-                Layout.fillWidth: true
-                Layout.preferredHeight: 28
-                enabled: Workspace.currentTimeline !== null
-                live: true
-                value: Workspace.currentTimeline ? Math.round(timelineWindow.scaleToZoomPercent(Workspace.currentTimeline.timelineScale)) : 100
-                onMoved: setTimelineZoomPercent(value, "center")
-            }
-
-            Label {
-                Layout.preferredWidth: 54
-                horizontalAlignment: Text.AlignRight
-                verticalAlignment: Text.AlignVCenter
-                text: Workspace.currentTimeline ? Math.round(timelineWindow.scaleToZoomPercent(Workspace.currentTimeline.timelineScale)) + "%" : "--"
-                color: palette.text
-                font.pixelSize: 11
-            }
-
-            Button {
-                flat: true
-                Layout.preferredWidth: 28
-                Layout.preferredHeight: 28
-                enabled: Workspace.currentTimeline !== null
-                hoverEnabled: true
-                onClicked: {
-                    var step = SettingsManager ? SettingsManager.value("timelineZoomStep", 10) : 10;
-                    setTimelineZoomPercent(zoomSlider.value + step, "center");
-                }
-
-                contentItem: Common.AviQtlIcon {
-                    iconName: "add_line"
-                    size: 18
-                    color: parent.enabled && parent.hovered ? parent.palette.highlight : parent.palette.text
-                }
-
-            }
-
-            Item {
-                Layout.preferredWidth: 14
-                Layout.fillHeight: true
-            }
-
-        }
-
     }
 
     Connections {
         function onCurrentTimelineChanged() {
             timelineWindow.syncGlobalLayerStates();
+            // 新しいタイムラインがロード/作成された際、ズームを100%に設定
+            if (Workspace.currentTimeline)
+                timelineWindow.setTimelineZoomPercent(100, "center");
+
         }
 
         target: Workspace

@@ -9,6 +9,7 @@ Canvas {
     property int layerCount: 128
     property int layerHeight: 30
     property real scale: Workspace.currentTimeline ? Workspace.currentTimeline.timelineScale : 1
+    property int timelineDuration: 0
     property var gridSettings: ({
         "mode": "Auto",
         "bpm": 120,
@@ -30,6 +31,8 @@ Canvas {
             return ;
 
         var ctx = getContext("2d");
+        var currentScale = scale;
+        var currentContentX = contentX;
         // 境界の1px残りを防ぐため、クリア範囲を広めにとる
         ctx.clearRect(-1, -1, width + 2, height + 2);
         ctx.lineWidth = 1;
@@ -56,8 +59,6 @@ Canvas {
             return ;
 
         // 垂直グリッド線
-        var currentScale = scale;
-        var currentContentX = contentX;
         var step = gridInterval;
         if (step <= 0)
             return ;
@@ -66,7 +67,7 @@ Canvas {
         var isBpm = (gridSettings.mode === "BPM");
         var bpmDiv = isBpm ? (currentScale > 3 ? 4 : currentScale > 1.5 ? 2 : 1) : 1;
         var startN = Math.ceil((Math.floor(currentContentX / currentScale) - offsetF) / step);
-        var endN = Math.floor((Math.ceil((currentContentX + width) / currentScale) - offsetF) / step);
+        var endN = Math.floor(((currentContentX + width) / currentScale - offsetF) / step);
         for (var n = startN; n <= endN; n++) {
             var f = offsetF + n * step;
             var x = f * currentScale - currentContentX;
