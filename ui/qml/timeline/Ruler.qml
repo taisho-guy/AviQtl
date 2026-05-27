@@ -117,6 +117,10 @@ Rectangle {
                     if (!Workspace.currentTimeline)
                         return ;
 
+                    // ルーラー背景に対してコントラストの確保された描画色を算出
+                    var bgLuma = (0.299 * palette.window.r) + (0.587 * palette.window.g) + (0.114 * palette.window.b);
+                    var drawColor = bgLuma > 0.5 ? "#000000" : "#ffffff";
+                    var subColor = bgLuma > 0.5 ? "#555555" : "#aaaaaa";
                     var viewWidth = width;
                     var viewOffsetX = offsetX;
                     // 簡易的なグリッド描画（詳細は元のロジックを維持）
@@ -133,8 +137,8 @@ Rectangle {
                     var startFrame = Math.floor(viewOffsetX / scale);
                     var endFrame = Math.ceil((viewOffsetX + viewWidth) / scale);
                     var alignedStart = Math.floor(startFrame / frameInterval) * frameInterval;
-                    ctx.strokeStyle = palette.text;
-                    ctx.fillStyle = palette.text;
+                    ctx.strokeStyle = drawColor;
+                    ctx.fillStyle = drawColor;
                     ctx.lineWidth = 1;
                     ctx.font = "10px sans-serif";
                     for (var f = alignedStart; f <= endFrame; f += frameInterval) {
@@ -158,16 +162,16 @@ Rectangle {
                                 timeLabel = minutes + ":" + ("0" + seconds).slice(-2);
                             else
                                 timeLabel = seconds + "s";
-                            ctx.fillStyle = palette.text;
+                            ctx.fillStyle = drawColor;
                             ctx.fillText(timeLabel, pixelX + 3, 12);
                             // フレーム番号を小さく表示
                             ctx.font = "8px sans-serif";
-                            ctx.fillStyle = palette.mid;
+                            ctx.fillStyle = subColor;
                             ctx.fillText(f + "f", pixelX + 3, 24);
                             ctx.font = "10px sans-serif";
                         } else {
                             // フレーム数テキスト（秒単位以外）
-                            ctx.fillStyle = palette.text;
+                            ctx.fillStyle = drawColor;
                             ctx.fillText(f, pixelX + 2, 12);
                         }
                     }
