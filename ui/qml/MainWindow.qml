@@ -761,6 +761,14 @@ ApplicationWindow {
                             TabButton {
                                 id: projectTabBtn
 
+                                readonly property color _displayBgColor: checked ? palette.highlight : palette.window
+                                readonly property color _contrastColor: {
+                                    var bg = _displayBgColor;
+                                    // 背景の輝度（Luminance）に基づいて文字色を黒か白に切り替える
+                                    var luma = (0.299 * bg.r) + (0.587 * bg.g) + (0.114 * bg.b);
+                                    return luma > 0.6 ? "#000000" : "#ffffff";
+                                }
+
                                 implicitWidth: Math.max(120, contentItem.implicitWidth + leftPadding + rightPadding)
                                 checked: Workspace && Workspace.currentIndex === index
                                 onClicked: {
@@ -775,7 +783,7 @@ ApplicationWindow {
                                     Text {
                                         text: modelData.name + (modelData.hasUnsavedChanges ? " *" : "")
                                         font: projectTabBtn.font
-                                        color: palette.text
+                                        color: projectTabBtn._contrastColor
                                         horizontalAlignment: Text.AlignHCenter
                                         verticalAlignment: Text.AlignVCenter
                                         elide: Text.ElideRight
@@ -799,11 +807,17 @@ ApplicationWindow {
                                         contentItem: Common.AviQtlIcon {
                                             iconName: "close_line"
                                             size: 14
-                                            color: parent.hovered ? parent.palette.highlight : parent.palette.text
+                                            color: parent.hovered ? parent.palette.highlight : projectTabBtn._contrastColor
                                         }
 
                                     }
 
+                                }
+
+                                background: Rectangle {
+                                    color: projectTabBtn.checked ? palette.highlight : (projectTabBtn.hovered ? Qt.rgba(palette.highlight.r, palette.highlight.g, palette.highlight.b, 0.16) : "transparent")
+                                    border.color: projectTabBtn.checked ? palette.highlight : palette.mid
+                                    border.width: projectTabBtn.checked ? 1 : 0
                                 }
 
                             }

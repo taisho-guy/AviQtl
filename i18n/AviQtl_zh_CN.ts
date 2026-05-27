@@ -2172,7 +2172,7 @@
     </message>
     <message>
         <location filename="../ui/qml/MainWindow.qml" line="171"/>
-        <location filename="../ui/qml/MainWindow.qml" line="1305"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1319"/>
         <source>終了</source>
         <translation>退出</translation>
     </message>
@@ -2324,12 +2324,12 @@
         <translation>另存为</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1013"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1027"/>
         <source>速度</source>
         <translation>速度</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1268"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1282"/>
         <source>ファイル</source>
         <translation>文件</translation>
     </message>
@@ -2349,27 +2349,27 @@
         <translation>首选项</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1361"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1375"/>
         <source>ツール</source>
         <translation>工具</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1364"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1378"/>
         <source>パッケージマネージャー</source>
         <translation>软件包管理器</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1328"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1342"/>
         <source>設定</source>
         <translation>设置</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1313"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1327"/>
         <source>編集</source>
         <translation>编辑</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1346"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1360"/>
         <source>表示</source>
         <translation>显示</translation>
     </message>
@@ -2384,7 +2384,7 @@
         <translation>显示设置对话框</translation>
     </message>
     <message>
-        <location filename="../ui/qml/MainWindow.qml" line="1383"/>
+        <location filename="../ui/qml/MainWindow.qml" line="1397"/>
         <source>バージョン情報</source>
         <translation>版本信息</translation>
     </message>
@@ -3599,7 +3599,7 @@
         <translation>时间线</translation>
     </message>
     <message>
-        <location filename="../ui/qml/TimelineWindow.qml" line="221"/>
+        <location filename="../ui/qml/TimelineWindow.qml" line="229"/>
         <source>シーン %1</source>
         <translation>场景 %1</translation>
     </message>

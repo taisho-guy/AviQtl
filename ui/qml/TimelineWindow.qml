@@ -139,6 +139,14 @@ Common.AviQtlWindow {
                         TabButton {
                             id: tabBtn
 
+                            readonly property color _displayBgColor: checked ? palette.highlight : palette.window
+                            readonly property color _contrastColor: {
+                                var bg = _displayBgColor;
+                                // 背景の輝度（Luminance）に基づいて文字色を黒か白に切り替える
+                                var luma = (0.299 * bg.r) + (0.587 * bg.g) + (0.114 * bg.b);
+                                return luma > 0.6 ? "#000000" : "#ffffff";
+                            }
+
                             implicitWidth: Math.max(100, contentItem.implicitWidth + leftPadding + rightPadding)
                             height: sceneTabHeight
                             checked: Workspace.currentTimeline && Workspace.currentTimeline.currentSceneId === modelData.id
@@ -165,7 +173,7 @@ Common.AviQtlWindow {
                                 Text {
                                     text: modelData.name
                                     font: tabBtn.font
-                                    color: palette.text
+                                    color: tabBtn._contrastColor
                                     horizontalAlignment: Text.AlignHCenter
                                     verticalAlignment: Text.AlignVCenter
                                     elide: Text.ElideRight
@@ -187,7 +195,7 @@ Common.AviQtlWindow {
                                     contentItem: Common.AviQtlIcon {
                                         iconName: "close_line"
                                         size: 14
-                                        color: parent.hovered ? parent.palette.highlight : parent.palette.text
+                                        color: parent.hovered ? parent.palette.highlight : tabBtn._contrastColor
                                     }
 
                                 }
