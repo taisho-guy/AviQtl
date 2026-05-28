@@ -587,9 +587,6 @@ Item {
             searchField.text = "";
             rebuildMenu();
             popup();
-            Qt.callLater(() => {
-                searchField.forceActiveFocus();
-            });
         }
 
         function createMenuItem(label, cmd, icon) {
@@ -913,6 +910,10 @@ Item {
                 contextMenu.addMenu(addEffSub);
             }
         }
+
+        onAboutToShow: Qt.callLater(() => {
+            searchField.forceActiveFocus();
+        })
 
         TextField {
             id: searchField

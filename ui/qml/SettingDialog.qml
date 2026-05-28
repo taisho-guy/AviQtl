@@ -1340,14 +1340,17 @@ Common.AviQtlWindow {
             id: filterMenu
 
             property string searchText: ""
+            property string _lastBuildSearch: ""
             property int _lastBuiltClipId: -2
             property var _dynamicObjects: []
 
             function rebuildMenu() {
-                if (_lastBuiltClipId === targetClipId && filterMenu.count > 0 && searchText === "")
+                // クリップが変わっておらず、かつ検索ワードも変わっていない場合のみスキップ
+                if (_lastBuiltClipId === targetClipId && _lastBuildSearch === searchText && filterMenu.count > 0)
                     return ;
 
                 _clearDynamicMenu();
+                _lastBuildSearch = searchText;
                 _lastBuiltClipId = targetClipId;
                 if (!Workspace.currentTimeline)
                     return ;
@@ -1491,17 +1494,6 @@ Common.AviQtlWindow {
                     filterMenu.searchText = text;
                     filterMenu.rebuildMenu();
                 }
-
-                // メニューが閉じられないようにクリックイベントを制御
-                MouseArea {
-                    anchors.fill: parent
-                    acceptedButtons: Qt.AllButtons
-                    onPressed: (mouse) => {
-                        mouse.accepted = false;
-                        effectSearchField.forceActiveFocus();
-                    }
-                }
-
             }
 
             Component {
