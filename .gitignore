@@ -1,5 +1,5 @@
-push.fish
 vendor
+QtQuickComputeItem
 
 # Builds
 vcpkg/
