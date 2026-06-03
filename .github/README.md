@@ -3,7 +3,7 @@
 > 開発は[Codeberg](https://codeberg.org/taisho-guy/AviQtl)上で行われています。
 
 <p align="center">
-  <img src="./assets/splash.svg" width="256">
+  <img src="../assets/splash.svg" width="256">
 </p>
 
 <p align="center"><b>AviUtlを踏襲し凌駕する次世代動画編集ソフト</b></p>
@@ -54,7 +54,7 @@
 
 ## [AviQtl](https://aviqtl.taisho-guy.org)とは
 
-<img src="./assets/screenshot.webp">
+<img src="../assets/screenshot.webp">
 
 **AviUtl 1.10** & **ExEdit 0.92**の操作感を踏襲しつつ、**AviUtlを超える性能**を持つ動画編集ソフトを開発するプロジェクトです。
 
@@ -195,7 +195,7 @@ AviQtlは構造的な弱点を根本的に解決します：
 アイコンは、QtとAviUtlのロゴを組み合わせたデザインになっています。
 
 <p align="center">
-  <img src="./assets/qt.svg" width="64" align="middle"> + <img src="./assets/aviutl.svg" width="64" align="middle"> = <img src="./assets/icon.svg" width="64" align="middle">
+  <img src="../assets/qt.svg" width="64" align="middle"> + <img src="../assets/aviutl.svg" width="64" align="middle"> = <img src="../assets/icon.svg" width="64" align="middle">
 </p>
 </details>
 
