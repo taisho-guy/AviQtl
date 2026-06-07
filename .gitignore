@@ -1,5 +1,6 @@
 vendor
 QtQuickComputeItem
+bgfx.cmake
 
 # Builds
 vcpkg/
