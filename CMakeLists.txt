@@ -4,19 +4,19 @@ set(CMAKE_C_COMPILER "clang")
 set(CMAKE_CXX_COMPILER "clang++")
 set(CMAKE_LINKER_TYPE MOLD)
 
-# プロジェクト定義・グローバルポリシー
-
 project(BgfxUtl 
     VERSION 1.0.0 
     LANGUAGES CXX
 )
 
+# === 【追加】実行ファイルとライブラリの出力先をトップレベル（build直下）に固定 ===
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_AUTOMOC ON)
-
-# 依存パッケージの探索と取り込み
 
 find_package(Qt6 6.11.1 REQUIRED COMPONENTS Widgets Gui GuiPrivate)
 
@@ -27,8 +27,9 @@ elseif(APPLE)
     find_library(QUARTZ_FRAMEWORK QuartzCore REQUIRED)
 endif()
 
+# bgfxの取り込み
 if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/bgfx.cmake/CMakeLists.txt")
-    message(FATAL_ERROR "bgfx.cmake が見つかりません。Gitサブモジュール等を確認してください。")
+    message(FATAL_ERROR "bgfx.cmake が見つかりません。")
 endif()
 
 set(BGFX_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
@@ -38,8 +39,7 @@ add_subdirectory(bgfx.cmake)
 set(BGFX_TARGETS bgfx bimg bx)
 foreach(tgt IN LISTS BGFX_TARGETS)
     if(TARGET ${tgt})
-        target_compile_options(${tgt} PRIVATE "-w")
-        target_compile_options(${tgt} PRIVATE "-fms-extensions")
+        target_compile_options(${tgt} PRIVATE "-w" "-fms-extensions")
     endif()
 endforeach()
 
@@ -50,24 +50,5 @@ if(TARGET bgfx AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     )
 endif()
 
-# ターゲット定義と構成
-
-add_executable(BgfxUtl app/main.cpp)
-
-target_link_libraries(BgfxUtl PRIVATE 
-    Qt6::Widgets
-    Qt6::GuiPrivate
-    bgfx
-    bx
-    bimg
-)
-
-if(WIN32 OR LINUX)
-    target_link_libraries(BgfxUtl PRIVATE Vulkan::Vulkan)
-elseif(APPLE)
-    target_link_libraries(BgfxUtl PRIVATE ${METAL_FRAMEWORK} ${QUARTZ_FRAMEWORK})
-    
-    set_source_files_properties(app/main.cpp PROPERTIES 
-        LANGUAGE OBJCXX
-    )
-endif()
+add_subdirectory(app/ui)
+add_subdirectory(app/system)

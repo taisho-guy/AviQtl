@@ -1,0 +1,6 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource prefix="/">
+    <file alias="assets/icon.svg">../../assets/icon.svg</file>
+    <file alias="assets/splash.svg">../../assets/splash.svg</file>
+    </qresource>
+</RCC>
