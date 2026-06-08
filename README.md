@@ -27,9 +27,11 @@
 ### AviQtlの今後
 - 開発リセット直後はコア機能を実装するためプルリクエストをお受けできません。御了承下さい。
 - AviQtl Legacyのソースコード及び最終バージョン（AviQtl Legacy 0.0.95）のリリースは、引き続き[GNU Affero General Public License Version 3 or later](https://www.gnu.org/licenses/agpl-3.0.txt)でライセンスされ、公開を続けます。しかし、動画編集ソフトとしての実用性はありません。AviQtl Legacyの今後のアップデートや互換性は保証されません。
-- AviQtlのコントリビューターだった[GT-610](https://codeberg.org/GT610)さんが、[AviQtl-Plus](https://github.com/GT-610/AviQtl-Plus)としてAviQtl Legacyの開発を継続されています。もしAviQtl Legacyがお気に召したのであれば、AviQtl-Plusを是非ご参照下さい。
-- 総じて、現在のAviQtlには3つの顔がございます。
-  - **AviQtl** : 
+- AviQtlのコントリビューターだった[GT-610](https://codeberg.org/GT610)さんが、[AviQtl-Plus](https://github.com/GT-610/AviQtl-Plus)としてAviQtl Legacyの開発を継続されています。もしAviQtl Legacyがお気に召したのであれば、是非AviQtl-Plusをご参照下さい。
+- 現在3種のAviQtlが並行して存在します。
+  - **AviQtl** : 新しい技術を採用して作り直しているAviQtl。
+  - **AviQtl Legacy** : Qt Quickベースの旧AviQtl。今後更新されない。
+  - **AviQtl-Plus** : AviQtl Legacyを継続して開発する派生プロジェクト。
 
 <details>
 <summary>AviQtl Legacyについて</summary>
