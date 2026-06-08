@@ -21,6 +21,10 @@ int main(int argc, char *argv[]) {
   QApplication app(argc, argv);
   initMyResources();
 
+  // [変更] SDL ウィンドウがメインウィンドウになったため、
+  // Qt の最後のウィンドウが閉じられてもアプリを終了しない。
+  // 終了トリガーは SDL の SDL_EVENT_WINDOW_CLOSE_REQUESTED →
+  // QApplication::quit()。
   app.setQuitOnLastWindowClosed(false);
   QApplication::setApplicationName(QStringLiteral("AviQtl"));
   app.setWindowIcon(QIcon(QStringLiteral(":/assets/icon.svg")));
@@ -43,7 +47,9 @@ int main(int argc, char *argv[]) {
 
   QTimer::singleShot(500, [&]() {
     AviQtl::System::WindowManager::instance().spawnInitialWindows();
-    splash.finish(AviQtl::System::WindowManager::instance().getMainWindow());
+    // [変更] メインウィンドウは SDL ウィンドウのため nullptr を渡す。
+    // nullptr を渡すと QSplashScreen は即座に非表示になる。
+    splash.finish(nullptr);
   });
 
   int ret = app.exec();

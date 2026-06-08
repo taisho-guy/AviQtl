@@ -5,15 +5,15 @@ project(AviQtlUI LANGUAGES CXX)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
+# [変更] preview は system 層の PreviewHostSdl に統合したため削除。
+#        UI 層は settings / timeline のみ。
 set(UI_SOURCES
-    preview/preview.cpp
     settings/settings.cpp
     timeline/timeline.cpp
     resources.qrc
 )
 
 set(UI_HEADERS
-    preview/preview.hpp
     settings/settings.hpp
     timeline/timeline.hpp
 )

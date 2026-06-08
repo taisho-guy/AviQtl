@@ -18,7 +18,11 @@ public:
   // SDL プレビューの破棄 (main() の app.exec() 終了後に呼ぶ)
   void shutdown();
 
-  QMainWindow *getMainWindow() const { return m_mainWindow.data(); }
+  // [変更] メインウィンドウは SDL ウィンドウになったため nullptr を返す。
+  //        main.cpp の splash.finish() は nullptr を渡すと即座に非表示になる
+  //        ので実害なし。将来 SDL ウィンドウの QWindow* ラッパーが必要になれば
+  //        ここで返す。
+  QMainWindow *getMainWindow() const { return nullptr; }
   QMainWindow *getSettingsWindow() const { return m_settingsWindow.data(); }
   QMainWindow *getTimelineWindow() const { return m_timelineWindow.data(); }
 
@@ -29,7 +33,7 @@ private:
   WindowManager(const WindowManager &) = delete;
   WindowManager &operator=(const WindowManager &) = delete;
 
-  QPointer<QMainWindow> m_mainWindow;
+  // [削除] m_mainWindow — SDL ウィンドウがメインウィンドウを兼ねるため不要
   QPointer<QMainWindow> m_settingsWindow;
   QPointer<QMainWindow> m_timelineWindow;
 };

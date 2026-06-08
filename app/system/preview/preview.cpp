@@ -81,7 +81,6 @@ VideoRenderWorker::~VideoRenderWorker() {
 void VideoRenderWorker::setNativeWindowInfo(void *nwh, void *ndt, int width,
                                             int height,
                                             WindowSubsystem subsystem) {
-  // スレッド開始前に呼ぶ想定なので、ここではロック不要
   m_nwh = nwh;
   m_ndt = ndt;
   m_width = width;
@@ -117,31 +116,15 @@ void VideoRenderWorker::initBgfx() {
     return;
   }
 
-  // ── 重要 ──────────────────────────────────────────────────────────────
-  // bgfx::setPlatformData() はリセット後のホットスワップ用。
-  // 初期化時の headless 判定は _init.platformData を直接参照するため、
-  // bgfx::Init 構造体の platformData メンバーに代入しなければならない。
-  // setPlatformData() だけでは headless と判定されて Init に失敗する。
-  //
-  // [修正] Linux では Wayland と X11 を明示的に区別する。
-  // bgfx の Vulkan バックエンドは ndt が非 NULL の場合、
-  // デフォルトで Xlib surface を試みる。Wayland の場合は
-  // ndt に wl_display* を入れるだけでなく、
-  // bgfx::PlatformData::type に Wayland を示す値を設定する必要がある。
-  // ─────────────────────────────────────────────────────────────────────
   bgfx::PlatformData pd{};
   pd.nwh = m_nwh;
 
 #if defined(SDL_PLATFORM_LINUX)
   if (m_subsystem == WindowSubsystem::Wayland) {
-    // Wayland: ndt = wl_display*, nwh = wl_surface*
-    // bgfx は ndt が非 NULL + type == Wayland の場合のみ
-    // vkCreateWaylandSurfaceKHR を使う。
     pd.ndt = m_ndt;
     pd.type = bgfx::NativeWindowHandleType::Wayland;
     qDebug() << "[VideoRenderWorker::initBgfx] NativeWindowHandleType::Wayland";
   } else {
-    // X11: ndt = Display*, nwh = Window (uintptr_t cast)
     pd.ndt = m_ndt;
     pd.type = bgfx::NativeWindowHandleType::Default; // Xlib
     qDebug() << "[VideoRenderWorker::initBgfx] NativeWindowHandleType::Default "
@@ -151,7 +134,7 @@ void VideoRenderWorker::initBgfx() {
   pd.ndt = nullptr;
   pd.type = bgfx::NativeWindowHandleType::Default;
 #else
-  pd.ndt = nullptr; // Windows は不要
+  pd.ndt = nullptr;
   pd.type = bgfx::NativeWindowHandleType::Default;
 #endif
 
@@ -232,10 +215,13 @@ void VideoRenderWorker::run() {
       m_width = newW;
       m_height = newH;
       qDebug() << "[VideoRenderWorker::run] bgfx::reset" << newW << "x" << newH;
+
+      // リサイズ後は即座に再描画する
+      frameToRender = m_frameCounter;
     }
 
     if (frameToRender < 0)
-      continue; // リサイズのみで起こされた場合
+      continue;
 
     // フレーム描画 (動作確認: 虹色クリア)
     float hue = static_cast<float>(m_frameCounter % 300) / 300.0f;
@@ -278,14 +264,12 @@ bool PreviewHostSdl::getNativeHandles(
   }
 
 #if defined(SDL_PLATFORM_WIN32)
-  // Windows — HWND
   *outNwh = SDL_GetPointerProperty(props, SDL_PROP_WINDOW_WIN32_HWND_POINTER,
                                    nullptr);
   *outNdt = nullptr;
   *outSubsystem = VideoRenderWorker::WindowSubsystem::Win32;
 
 #elif defined(SDL_PLATFORM_MACOS)
-  // macOS — CAMetalLayer バックの NSView を bgfx に渡す
   SDL_MetalView metalView = SDL_Metal_CreateView(window);
   if (!metalView) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
@@ -298,7 +282,6 @@ bool PreviewHostSdl::getNativeHandles(
   *outSubsystem = VideoRenderWorker::WindowSubsystem::Metal;
 
 #elif defined(SDL_PLATFORM_LINUX)
-  // Linux — X11 または Wayland を動的に判定
   const char *driver = SDL_GetCurrentVideoDriver();
   if (SDL_strcmp(driver, "x11") == 0) {
     *outNdt = SDL_GetPointerProperty(props, SDL_PROP_WINDOW_X11_DISPLAY_POINTER,
@@ -340,10 +323,9 @@ bool PreviewHostSdl::getNativeHandles(
 bool PreviewHostSdl::create(const char *title, int width, int height) {
   qDebug() << "[PreviewHostSdl::create]" << title << width << "x" << height;
 
-  // SDL ウィンドウ生成フラグ
-  // Vulkan / Metal どちらも bgfx が独自に surface を作るため、
-  // 余計なフラグは付けない (SDL_WINDOW_VULKAN は bgfx と競合する可能性あり)
-  m_sdlWindow = SDL_CreateWindow(title, width, height, 0);
+  // [変更] SDL_WINDOW_RESIZABLE フラグを付けてリサイズ可能にする。
+  // bgfx は surface を自前で管理するため SDL_WINDOW_VULKAN は付けない。
+  m_sdlWindow = SDL_CreateWindow(title, width, height, SDL_WINDOW_RESIZABLE);
   if (!m_sdlWindow) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
                  "[PreviewHostSdl::create] SDL_CreateWindow failed: %s",
@@ -374,7 +356,6 @@ bool PreviewHostSdl::create(const char *title, int width, int height) {
 // ── destroy ──────────────────────────────────────────────────────────────────
 void PreviewHostSdl::destroy() {
   if (m_renderWorker) {
-    // デストラクタで m_running = false & wait() が呼ばれる
     delete m_renderWorker;
     m_renderWorker = nullptr;
     m_workerStarted = false;
@@ -391,6 +372,7 @@ void PreviewHostSdl::pollEvents() {
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
     switch (event.type) {
+
     case SDL_EVENT_QUIT:
       emit windowCloseRequested();
       break;
@@ -399,18 +381,31 @@ void PreviewHostSdl::pollEvents() {
       emit windowCloseRequested();
       break;
 
-    case SDL_EVENT_WINDOW_RESIZED:
-      if (m_workerStarted && m_renderWorker) {
-        int w = event.window.data1;
-        int h = event.window.data2;
-        qDebug() << "[PreviewHostSdl] SDL_EVENT_WINDOW_RESIZED" << w << "x"
-                 << h;
+    // [変更] SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED を使う。
+    //
+    // SDL3 のリサイズイベントは 2 種類ある:
+    //   SDL_EVENT_WINDOW_RESIZED          … 論理サイズ変化 (DPI非考慮)
+    //   SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED … ピクセルサイズ変化 (HiDPI 考慮)
+    //
+    // bgfx のバックバッファは物理ピクセル単位で管理されるため、
+    // PIXEL_SIZE_CHANGED を優先して使用する。
+    // 非 HiDPI 環境では両イベントが同時に発火するが、
+    // PIXEL_SIZE_CHANGED のみを処理することで二重呼び出しを防ぐ。
+    case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED: {
+      if (!m_workerStarted || !m_renderWorker)
+        break;
+      // SDL3: event.window.data1 / data2 は int 型 (SDL_WindowEvent)
+      int w = event.window.data1;
+      int h = event.window.data2;
+      if (w > 0 && h > 0) {
+        qDebug() << "[PreviewHostSdl] SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED" << w
+                 << "x" << h;
         m_renderWorker->requestResize(w, h);
       }
       break;
+    }
 
     default:
-      // 将来の preview_interaction 層で入力イベントをここで処理する
       break;
     }
   }

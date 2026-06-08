@@ -1,5 +1,4 @@
 #include "window_manager.hpp"
-#include "../../ui/preview/preview.hpp"
 #include "../../ui/settings/settings.hpp"
 #include "../../ui/timeline/timeline.hpp"
 #include "../preview/preview.hpp"
@@ -7,16 +6,12 @@
 #include <QApplication>
 #include <QDebug>
 #include <QTimer>
-#include <QVBoxLayout>
-#include <QWidget>
 
 namespace AviQtl {
 namespace System {
 
 // ─────────────────────────────────────────────
-//  内部実装クラス
-//  WindowManager の .cpp 内に閉じ込め、
-//  ヘッダに SDL / bgfx の型を漏らさない。
+//  定数
 // ─────────────────────────────────────────────
 namespace {
 
@@ -46,17 +41,17 @@ WindowManager::~WindowManager() { qDebug() << "[WindowManager] destructor"; }
 void WindowManager::spawnInitialWindows() {
   qDebug() << "[WindowManager::spawnInitialWindows] called";
 
-  if (m_mainWindow || m_settingsWindow || m_timelineWindow) {
+  if (m_settingsWindow || m_timelineWindow) {
     qWarning() << "[WindowManager::spawnInitialWindows] already spawned, skip";
     return;
   }
 
-  // ── 1. SDL プレビューウィンドウ ──────────────────────────────────────
+  // ── 1. SDL プレビューウィンドウ (= メインウィンドウ) ─────────────────
   //  PreviewHostSdl は Qt オブジェクトとして this の子にする。
-  //  これにより Qt の親子関係でライフタイムが管理される。
+  //  Qt の親子関係でライフタイムが管理される。
   auto *previewHost = new PreviewHostSdl(this);
 
-  if (!previewHost->create("AviQtl - Preview", 1280, 720)) {
+  if (!previewHost->create("AviQtl", 1280, 720)) {
     qCritical() << "[WindowManager] FATAL: PreviewHostSdl::create() failed!";
     delete previewHost;
     return;
@@ -74,54 +69,29 @@ void WindowManager::spawnInitialWindows() {
   connect(previewHost, &PreviewHostSdl::windowCloseRequested, qApp,
           &QApplication::quit);
 
-  // ── 2. Qt メインウィンドウ (タイムライン / 設定 等の編集 UI) ─────────
-  m_mainWindow = new QMainWindow();
-  m_mainWindow->setWindowTitle(QStringLiteral("AviQtl"));
-  m_mainWindow->resize(800, 600);
-  qDebug() << "[WindowManager] Qt mainWindow created";
-
-  // UI レイヤー: VideoEditorPreviewWidget はシーク要求を中継するだけ
-  auto *centralWidget = new QWidget(m_mainWindow.data());
-  auto *centralLayout = new QVBoxLayout(centralWidget);
-  centralLayout->setContentsMargins(0, 0, 0, 0);
-
-  auto *uiPreview = new UI::VideoEditorPreviewWidget(centralWidget);
-  centralLayout->addWidget(uiPreview);
-  m_mainWindow->setCentralWidget(centralWidget);
-  qDebug() << "[WindowManager] UI::VideoEditorPreviewWidget created";
-
-  m_mainWindow->show();
-  qDebug() << "[WindowManager] Qt mainWindow shown";
-
-  // ── 3. 設定ウィンドウ ────────────────────────────────────────────────
+  // ── 2. 設定ウィンドウ (Qt トップレベル) ─────────────────────────────
   m_settingsWindow = new QMainWindow();
   m_settingsWindow->setWindowTitle(QStringLiteral("AviQtl - Settings"));
   m_settingsWindow->resize(400, 300);
-  m_settingsWindow->move(m_mainWindow->x() + 50, m_mainWindow->y() + 50);
   auto *settingsWidget = new UI::SettingsDialogWidget(m_settingsWindow.data());
   m_settingsWindow->setCentralWidget(settingsWidget);
   m_settingsWindow->show();
   qDebug() << "[WindowManager] settingsWindow shown";
 
-  // ── 4. タイムラインウィンドウ ─────────────────────────────────────────
+  // ── 3. タイムラインウィンドウ (Qt トップレベル) ──────────────────────
   m_timelineWindow = new QMainWindow();
   m_timelineWindow->setWindowTitle(QStringLiteral("AviQtl - Timeline"));
   m_timelineWindow->resize(800, 250);
-  m_timelineWindow->move(m_mainWindow->x(),
-                         m_mainWindow->y() + m_mainWindow->height() + 40);
   auto *timelineWidget = new UI::TimelineWidget(m_timelineWindow.data());
   m_timelineWindow->setCentralWidget(timelineWidget);
   m_timelineWindow->show();
   qDebug() << "[WindowManager] timelineWindow shown";
 
   // ── シグナル接続 ──────────────────────────────────────────────────────
-  //  timeline ──frameChanged──► uiPreview ──requestSeek──► previewHost
-  //
-  //  Qt の編集 UI ↔ SDL プレビューの境界は
-  //  frameChanged(int64_t) / requestSeek(int64_t) のみ。
-  connect(timelineWidget, &UI::TimelineWidget::frameChanged, uiPreview,
-          &UI::VideoEditorPreviewWidget::seekToFrame);
-  connect(uiPreview, &UI::VideoEditorPreviewWidget::requestSeek, previewHost,
+  //  [変更] 中継役の VideoEditorPreviewWidget を撤廃し、
+  //  タイムラインから PreviewHostSdl へ直結する。
+  //  Qt 編集 UI ↔ SDL プレビューの境界は frameChanged(int64_t) のみ。
+  connect(timelineWidget, &UI::TimelineWidget::frameChanged, previewHost,
           &PreviewHostSdl::seekToFrame);
 
   qDebug() << "[WindowManager::spawnInitialWindows] all windows spawned";
@@ -131,10 +101,8 @@ void WindowManager::spawnInitialWindows() {
 //  shutdown
 // ─────────────────────────────────────────────
 void WindowManager::shutdown() {
-  // PreviewHostSdl は this の子なので、
-  // findChild で取得してから明示的に destroy() を呼ぶ。
-  // デストラクタでも destroy() は呼ばれるが、
-  // SDL_Quit() の前に確実に破棄したいため手動で行う。
+  // PreviewHostSdl は this の子なので findChild で取得し、
+  // SDL_Quit() の前に確実に destroy() する。
   auto *previewHost = findChild<PreviewHostSdl *>();
   if (previewHost)
     previewHost->destroy();
