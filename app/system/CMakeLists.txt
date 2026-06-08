@@ -17,7 +17,6 @@ set(SYSTEM_HEADERS
 
 add_executable(BgfxUtl ${SYSTEM_SOURCES} ${SYSTEM_HEADERS})
 
-# インクルードパスの調整（相対位置を確実に解決）
 target_include_directories(BgfxUtl PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/window_manager
@@ -25,9 +24,9 @@ target_include_directories(BgfxUtl PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../ui
 )
 
-target_link_libraries(BgfxUtl PRIVATE 
+target_link_libraries(BgfxUtl PRIVATE
     Qt6::Widgets
-    Qt6::GuiPrivate
+    SDL3::SDL3
     AviQtlUI
     bgfx
     bx
@@ -35,14 +34,11 @@ target_link_libraries(BgfxUtl PRIVATE
 )
 
 if(WIN32 OR LINUX)
-    # トップレベルでfindしたVulkanをリンク
     find_package(Vulkan REQUIRED)
     target_link_libraries(BgfxUtl PRIVATE Vulkan::Vulkan)
 elseif(APPLE)
-    # トップレベルで定義されたライブラリパスを再指定、または再探索して確実に関連付け
     find_library(METAL_FRAMEWORK Metal REQUIRED)
     find_library(QUARTZ_FRAMEWORK QuartzCore REQUIRED)
     target_link_libraries(BgfxUtl PRIVATE ${METAL_FRAMEWORK} ${QUARTZ_FRAMEWORK})
-    
     set_source_files_properties(${SYSTEM_SOURCES} PROPERTIES LANGUAGE OBJCXX)
 endif()

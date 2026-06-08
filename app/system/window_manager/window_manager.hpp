@@ -12,7 +12,11 @@ class WindowManager : public QObject {
 public:
   static WindowManager &instance();
 
+  // Qt ウィンドウ群と SDL プレビューウィンドウを生成する
   void spawnInitialWindows();
+
+  // SDL プレビューの破棄 (main() の app.exec() 終了後に呼ぶ)
+  void shutdown();
 
   QMainWindow *getMainWindow() const { return m_mainWindow.data(); }
   QMainWindow *getSettingsWindow() const { return m_settingsWindow.data(); }
