@@ -54,5 +54,9 @@ if(TARGET bgfx AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     )
 endif()
 
+add_subdirectory(app/render)
+add_subdirectory(app/platform)
 add_subdirectory(app/ui)
-add_subdirectory(app/system)
+add_subdirectory(app/runtime)
+add_subdirectory(app/boot)
+

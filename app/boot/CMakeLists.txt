@@ -1,33 +1,28 @@
 cmake_minimum_required(VERSION 4.3.3)
 
-project(AviQtlSystem LANGUAGES CXX)
+project(AviQtlBoot LANGUAGES CXX)
 
 set(CMAKE_AUTOMOC ON)
 
-set(SYSTEM_SOURCES
+set(BOOT_SOURCES
     main.cpp
-    preview/preview.cpp
-    window_manager/window_manager.cpp
 )
 
-set(SYSTEM_HEADERS
-    preview/preview.hpp
-    window_manager/window_manager.hpp
-)
-
-add_executable(BgfxUtl ${SYSTEM_SOURCES} ${SYSTEM_HEADERS})
+add_executable(BgfxUtl ${BOOT_SOURCES})
 
 target_include_directories(BgfxUtl PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/window_manager
-    ${CMAKE_CURRENT_SOURCE_DIR}/preview
-    ${CMAKE_CURRENT_SOURCE_DIR}/../ui
+    ${CMAKE_CURRENT_SOURCE_DIR}/../runtime
+    ${CMAKE_CURRENT_SOURCE_DIR}/../runtime/windowing
 )
 
 target_link_libraries(BgfxUtl PRIVATE
     Qt6::Widgets
     SDL3::SDL3
     AviQtlUI
+    AviQtlRuntime
+    AviQtlPlatform
+    AviQtlRender
     bgfx
     bx
     bimg
@@ -40,5 +35,5 @@ elseif(APPLE)
     find_library(METAL_FRAMEWORK Metal REQUIRED)
     find_library(QUARTZ_FRAMEWORK QuartzCore REQUIRED)
     target_link_libraries(BgfxUtl PRIVATE ${METAL_FRAMEWORK} ${QUARTZ_FRAMEWORK})
-    set_source_files_properties(${SYSTEM_SOURCES} PROPERTIES LANGUAGE OBJCXX)
+    set_source_files_properties(${BOOT_SOURCES} PROPERTIES LANGUAGE OBJCXX)
 endif()
