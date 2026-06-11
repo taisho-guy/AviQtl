@@ -11,8 +11,9 @@
   / <a href="https://codeberg.org/taisho-guy/AviQtl/releases">リリース</a>
   / <a href="https://codeberg.org/taisho-guy/AviQtl/wiki/Home">Wiki</a>
 </p>
+<details>
+<summary>開発リセットのお知らせ</summary>
 
-## 開発リセットのお知らせ
 ### AviQtlは2026年5月末日を持って、開発をリセットしました
 - 理由は以下のとおりです。
   - Qt Quick独自のレンダリングループとCompute Shaderとの相性が悪く、実装が困難
@@ -32,11 +33,12 @@
   - **AviQtl** : 新しい技術を採用して作り直しているAviQtl。
   - **AviQtl Legacy** : Qt Quickベースの旧AviQtl。今後更新されない。
   - **AviQtl-Plus** : AviQtl Legacyを継続して開発する派生プロジェクト。
+</details>
 
 <details>
 <summary>AviQtl Legacyについて</summary>
 
-## [AviQtl](https://aviqtl.taisho-guy.org)とは
+## AviQtl Legacyとは
 
 <img src="./assets/screenshot.webp">
 
@@ -48,8 +50,6 @@
 - GPUを使った**高速で強力なエフェクト**
 - VST3やLV2等の**音声エフェクト**に対応
 - **Linux**、**Windows**、**macOS**に対応
-
-### 詳細は[AviQtlのお部屋](https://aviqtl.taisho-guy.org)をご確認ください。
 
 ## インストール手順
 
@@ -209,3 +209,20 @@ AviQtlは[GNU Affero General Public License](https://www.gnu.org/licenses/agpl-3
 AviQtl内で使用されている[Remix Icon](https://remixicon.com/)は[Remix Icon License](https://raw.githubusercontent.com/Remix-Design/RemixIcon/refs/heads/master/License)に基づいて提供されています。
 
 </details>
+
+## AviQtl（新版）とは
+**AviUtl 1.10** & **ExEdit 0.92**の操作感を踏襲しつつ、**AviUtlを超える性能**を持つ動画編集ソフトを開発するプロジェクトです。
+### 開発目標
+- [x] 自由ライセンス且つ無料
+- [ ] AviUtlに酷似したUI
+- [ ] VST3やLV2等の音声エフェクトのホスト
+- [ ] Linux、Windows、macOSにネイティブ対応
+- [ ] Vulkan、Metal、DirectX12によるゼロコピーGPUエフェクト
+- [ ] ECSアーキテクチャによるデータ指向設計
+- [ ] FFmpegによるリアルタイムHWデコード
+### AviQtl Legacyとの違い
+| **評価項目** | 旧AviQtl | 新AviQtl |
+| --- | --- | --- |
+| 描画エンジン | Qt Quick | bgfx |
+| GUIフレームワーク | Qt QML | Qt Widgets / SDL3 |
+Qt QuickベースではCompute Shaderへの対応や完全なECSアーキテクチャの実装が困難でしたから、新しい技術基盤で再出発しました。[AviQtl Legacy](https://codeberg.org/taisho-guy/AviQtl/src/branch/legacy)や[AviQtl-Plus](https://github.com/GT-610/AviQtl-Plus)とは異なるプロジェクトです。
