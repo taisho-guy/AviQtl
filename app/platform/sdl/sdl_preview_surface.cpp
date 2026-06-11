@@ -89,7 +89,8 @@ bool SdlPreviewSurface::getNativeHandles(
 bool SdlPreviewSurface::create(const char *title, int width, int height) {
   qDebug() << "[SdlPreviewSurface::create]" << title << width << "x" << height;
 
-  m_sdlWindow = SDL_CreateWindow(title, width, height, SDL_WINDOW_RESIZABLE);
+  m_sdlWindow = SDL_CreateWindow(title, width, height,
+                                 SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN);
   if (!m_sdlWindow) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
                  "[SdlPreviewSurface::create] SDL_CreateWindow failed: %s",

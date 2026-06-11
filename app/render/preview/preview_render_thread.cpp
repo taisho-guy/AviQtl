@@ -189,8 +189,8 @@ void PreviewRenderThread::run() {
 
     {
       QMutexLocker lock(&m_mutex);
-      while (m_running && m_requestedFrame == -1 && !m_pendingResize)
-        m_condition.wait(&m_mutex);
+      if (m_running && m_requestedFrame == -1 && !m_pendingResize)
+        m_condition.wait(&m_mutex, 16);
 
       if (!m_running)
         break;
@@ -204,6 +204,8 @@ void PreviewRenderThread::run() {
       if (m_requestedFrame != -1) {
         frameToRender = m_requestedFrame;
         m_requestedFrame = -1;
+      } else {
+        frameToRender = m_frameCounter;
       }
     }
 
