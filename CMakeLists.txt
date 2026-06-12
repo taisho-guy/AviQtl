@@ -4,7 +4,7 @@ set(CMAKE_C_COMPILER "clang")
 set(CMAKE_CXX_COMPILER "clang++")
 set(CMAKE_LINKER_TYPE MOLD)
 
-project(BgfxUtl
+project(AviQtl
     VERSION 1.0.0
     LANGUAGES CXX C
 )
@@ -54,9 +54,11 @@ if(TARGET bgfx AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     )
 endif()
 
+add_subdirectory(app/engine)
 add_subdirectory(app/render)
 add_subdirectory(app/platform)
 add_subdirectory(app/ui)
 add_subdirectory(app/runtime)
 add_subdirectory(app/boot)
+
 
