@@ -10,6 +10,11 @@ set(CMAKE_AUTORCC ON)
 set(UI_SOURCES
     settings/settings.cpp
     timeline/timeline.cpp
+    timeline/timeline_grid.cpp
+    timeline/timeline_clip.cpp
+    timeline/timeline_header.cpp
+    timeline/timeline_ruler.cpp
+    timeline/timeline_view.cpp
     resources.qrc
 )
 
