@@ -1,12 +1,22 @@
 @charset "utf-8";
 
 :root {
-    --bg-color: #000000;
-    --text-color: #f1ebf7;
-    --accent-color: #b866ff;      
-    --accent-hover: #ff66ff;      
-    --accent-visited: #8a33ff;    
-    --border-color: #3d1a66;
+    /* 添付サイトのカラーパレットから厳密に抽出した単色 */
+    --bg-color: #efffef;         /* 全体の背景色 (薄い緑) */
+    --text-color: #1f5f1f;       /* 基本テキスト色・見出し文字色 (濃い緑) */
+    --accent-color: #009fff;     /* ヘッダー・見出しの背景色 (鮮やかな青) */
+    --accent-text: #ffffbf;      /* 青見出し内の重要テキスト色 (薄い黄) */
+    --accent-text-alt: #dfffaf;  /* 青見出し内の装飾テキスト色 (薄い黄緑) */
+    
+    /* リンクカラー・アラートタイトルテキスト色 */
+    --link-color: #2f4fdf;       /* 通常リンク・アラートタイトル (青) */
+    --link-visited: #00009f;     /* 訪問済みリンク (紺) */
+    --link-active: #9f0000;      /* アクティブリンク (赤) */
+
+    /* 枠線とボックス背景 */
+    --border-color: #1f5f1f;     /* 枠線用のソリッドカラー (濃い緑) */
+    --box-bg: #fdffff;           /* テーブルやボックスの内側背景 (白) */
+    --table-header-bg: #efffcf;  /* 指定された緑色（アラートタイトル背景、一部の表の見出し用） */
     
     --border-thick: 2px;
     --border-thin: 1px;
@@ -19,29 +29,28 @@
     --sp-xs: 8px;
     --sp-sm: 10px;
     --sp-md: 15px;
-    
-    --theme-gradient: linear-gradient(135deg, #ff00ff 0%, #00ffff 100%) fixed;
 }
 
 /* ==========================================================================
-   Outer Borders (2px)
-   ========================================================================== */
+   Outer Borders (2px) - グラデーション時代と全く同じ多重背景・枠線ロジック
+   ========================================================================= */
 img,
 table,
 .download-grid,
 :is(.alert, details) {
     border: var(--border-thick) solid transparent !important;
-    background: linear-gradient(var(--bg-color), var(--bg-color)) padding-box, var(--theme-gradient) border-box !important;
+    background: linear-gradient(var(--bg-color), var(--bg-color)) padding-box, linear-gradient(var(--border-color), var(--border-color)) border-box !important;
 }
 
 /* ==========================================================================
-   Inner Borders (1px Double Line Effect)
-   ========================================================================== */
+   Inner Borders (1px Double Line Effect) - グラデーション時代と全く同じロジック
+   ========================================================================= */
 table :is(th, td),
 .download-item,
-.download-info-row {
+.download-info-row,
+:is(.alert, details) :is(.alert-title, summary) {
     border: var(--border-thin) solid transparent !important;
-    background: linear-gradient(var(--bg-color), var(--bg-color)) padding-box, var(--theme-gradient) border-box !important;
+    background: linear-gradient(var(--bg-color), var(--bg-color)) padding-box, linear-gradient(var(--border-color), var(--border-color)) border-box !important;
 }
 
 /* ==========================================================================
@@ -50,7 +59,7 @@ table :is(th, td),
 body {
     background-color: var(--bg-color);
     color: var(--text-color);
-    font-family: 'Lexend', system-ui, 'Noto Sans JP', sans-serif;
+    font-family: system-ui, 'Noto Sans JP', 'MS PGothic', sans-serif;
     font-weight: 400;
     line-height: 1.6;
     margin: 0;
@@ -81,7 +90,7 @@ main > :last-child { margin-block-end: 0; }
     text-align: center !important;
     border-block: var(--border-thick) solid transparent !important;
     border-inline: none !important;
-    background: linear-gradient(var(--bg-color), var(--bg-color)) padding-box, var(--theme-gradient) border-box !important;
+    background: linear-gradient(var(--bg-color), var(--bg-color)) padding-box, linear-gradient(var(--border-color), var(--border-color)) border-box !important;
 }
 
 .hero-title-static {
@@ -90,29 +99,22 @@ main > :last-child { margin-block-end: 0; }
 }
 
 /* ==========================================================================
-   Gradient Typography
+   Typography & Links
    ========================================================================== */
-a,
-.hero-title-static,
-table th,
-.icon-origin-box .symbol {
-    background: var(--theme-gradient);
-    -webkit-background-clip: text !important;
-    background-clip: text !important;
-    color: transparent !important;
-    -webkit-text-fill-color: transparent !important;
-}
-
 a {
-    text-decoration: none;
-    transition: filter 0.2s;
-    &:hover { filter: brightness(1.15); }
-    &:visited { filter: saturate(0.9) brightness(0.95); }
+    color: var(--link-color) !important;
+    text-decoration: underline;
+    transition: color 0.1s;
+    
+    &:visited { color: var(--link-visited) !important; }
+    &:active { color: var(--link-active) !important; }
+    &:hover { color: var(--link-active) !important; text-decoration: underline; }
 }
 
 .hero-title-static {
     font-size: clamp(1.6rem, 4vw, 2.5rem);
     font-weight: bold;
+    color: var(--text-color) !important;
     margin: 0;
     user-select: text;
 
@@ -122,18 +124,17 @@ a {
 }
 
 h2.section-header {
-    background: var(--theme-gradient);
-    color: #000000;
-    -webkit-text-fill-color: #000000;
+    background-color: var(--accent-color) !important;
+    color: var(--accent-text) !important;
     font-size: 1.2em;
     font-weight: bold;
     text-align: center;
     padding-block: var(--sp-xs);
     margin-block: var(--spacing-base) 0;
+    border: none !important;
 
     & span {
-        color: #000000;
-        -webkit-text-fill-color: #000000;
+        color: var(--accent-text-alt) !important;
         opacity: var(--op-low);
     }
 
@@ -145,13 +146,14 @@ h2.section-header {
 }
 
 code {
-    background: linear-gradient(transparent 70%, rgba(184, 102, 255, 0.3) 70%);
-    font-family: 'JetBrains Mono', monospace;
+    background-color: var(--table-header-bg);
+    font-family: monospace;
     color: var(--text-color);
-    padding-inline: 2px;
+    padding-inline: 4px;
+    padding-block: 2px;
+    border: var(--border-thin) solid var(--border-color);
     font-weight: bold;
     cursor: pointer;
-    transition: background 0.2s, color 0.2s;
 
     pre & {
         background: none;
@@ -159,10 +161,8 @@ code {
         font-weight: normal;
         cursor: default;
         display: block;
+        border: none;
     }
-
-    &:hover { background: rgba(184, 102, 255, 0.4); }
-    &:active { background: var(--accent-color); color: var(--bg-color); }
 }
 
 /* ==========================================================================
@@ -170,8 +170,8 @@ code {
    ========================================================================== */
 hr {
     border: 0;
-    block-size: var(--border-thick);
-    background: var(--theme-gradient);
+    block-size: var(--border-thin);
+    background-color: var(--border-color);
     margin-block: var(--spacing-base) 0;
 }
 
@@ -198,6 +198,7 @@ img {
     margin-block: var(--spacing-tight) 0;
     contain: layout;
 
+    /* タイトルの内側：指定された緑色（#EFFFCF）にする */
     & :is(.alert-title, summary) {
         box-sizing: border-box;
         display: block;
@@ -206,33 +207,26 @@ img {
         font-weight: bold;
         cursor: pointer;
         
-        position: relative;
-        z-index: 1;
+        /* タイトルテキストの色：ご指定の青色（#2F4FDF）に設定 */
+        color: var(--link-color) !important; 
         
         border: var(--border-thin) solid transparent !important;
-        background: linear-gradient(var(--bg-color), var(--bg-color)) padding-box, var(--theme-gradient) border-box !important;
-    }
-
-    & :is(.alert-title, summary) span,
-    & :is(.alert-title, summary) a,
-    & :is(.alert-title, summary) {
-        background: var(--theme-gradient) !important;
-        -webkit-background-clip: text !important;
-        background-clip: text !important;
-        color: transparent !important;
-        -webkit-text-fill-color: transparent !important;
+        background: linear-gradient(var(--table-header-bg), var(--table-header-bg)) padding-box, linear-gradient(var(--border-color), var(--border-color)) border-box !important;
+        
+        position: relative;
+        z-index: 1;
     }
 
     & :is(.alert-title, [open] summary) { margin-block-end: var(--sp-gap); }
 
+    /* 項目の内側：白色（#fdffff）にする */
     & > :is(p, h3, h4, ul, ol, div, table, pre, img) {
         color: var(--text-color) !important;
-        -webkit-text-fill-color: initial !important;
         padding: var(--sp-sm);
         margin-block: 0 var(--sp-gap);
         
         border: var(--border-thin) solid transparent !important;
-        background: linear-gradient(var(--bg-color), var(--bg-color)) padding-box, var(--theme-gradient) border-box !important;
+        background: linear-gradient(var(--box-bg), var(--box-bg)) padding-box, linear-gradient(var(--border-color), var(--border-color)) border-box !important;
         
         &:last-child { margin-block-end: 0; }
     }
@@ -264,15 +258,26 @@ table {
 
     & tr { contain: layout; }
 
+    /* 表（テーブル）の内側は原則白色（#fdffff）にする */
     & :is(th, td) {
         padding: var(--sp-xs);
         vertical-align: top;
+        background: linear-gradient(var(--box-bg), var(--box-bg)) padding-box, linear-gradient(var(--border-color), var(--border-color)) border-box !important;
+    }
+
+    /* 曜日の行や見出し行など、特定の背景色が指定されている行のみ緑色（#EFFFCF）にする */
+    & tr[bgcolor="#efffcf"],
+    & tr.heading-row {
+        & :is(th, td) {
+            background: linear-gradient(var(--table-header-bg), var(--table-header-bg)) padding-box, linear-gradient(var(--border-color), var(--border-color)) border-box !important;
+        }
     }
 
     & th {
         font-weight: bold;
         text-align: center;
         vertical-align: middle;
+        color: var(--link-color) !important;
     }
 }
 
@@ -285,12 +290,9 @@ table {
     gap: var(--sp-gap);
     padding: var(--sp-gap);
     margin-block: var(--spacing-tight) 0;
-
-    @media (max-width: 600px) {
-        grid-template-columns: repeat(2, 1fr);
-    }
 }
 
+/* ダウンロードセクションの各マスの内側も白色（#fdffff）にする */
 .download-item {
     display: flex;
     flex-direction: column;
@@ -299,28 +301,29 @@ table {
     padding-block: var(--spacing-tight);
     padding-inline: var(--sp-sm);
     text-align: center;
+    background: linear-gradient(var(--box-bg), var(--box-bg)) padding-box, linear-gradient(var(--border-color), var(--border-color)) border-box !important;
 
     @media (max-width: 600px) {
-        padding-block: 20px;
-        padding-inline: 5px;
+        grid-template-columns: repeat(2, 1fr);
     }
 
     &.is-disabled { cursor: not-allowed; opacity: 0.3; }
 }
 
+/* ダウンロードセクションの案内行の見出し背景は緑色（#EFFFCF）にする */
 .download-info-row {
     grid-column: 1 / -1;
     padding-block: var(--sp-md);
     padding-inline: var(--sp-sm);
     text-align: center;
+    background: linear-gradient(var(--table-header-bg), var(--table-header-bg)) padding-box, linear-gradient(var(--border-color), var(--border-color)) border-box !important;
 }
 
 .download-icon {
     inline-size: 48px;
     block-size: 48px;
     aspect-ratio: 1 / 1;
-    
-    background: var(--theme-gradient) !important;
+    background-color: var(--text-color) !important;
     
     mask-size: contain !important;
     mask-repeat: no-repeat !important;
@@ -337,11 +340,10 @@ table {
     &.is-loading {
         mask-image: url('assets/loader.svg') !important;
         -webkit-mask-image: url('assets/loader.svg') !important;
-        background: linear-gradient(135deg, rgba(110, 50, 190, 0.95), rgba(36, 16, 64, 0.98)) fixed !important;
+        background-color: var(--link-color) !important;
     }
 
     &.is-missing {
-        background: linear-gradient(135deg, rgba(54, 18, 84, 0.9), rgba(18, 8, 32, 0.98)) fixed !important;
         opacity: 0.4;
     }
 }
