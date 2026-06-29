@@ -63,6 +63,10 @@ body {
     margin-inline: auto;
 }
 
+main.container {
+    contain: content;
+}
+
 main > :last-child {
     margin-block-end: 0;
 }
@@ -95,9 +99,10 @@ li:hover {
     margin-bottom: var(--spacing-base);
 }
 
-.hero p {
-    font-size: 0.95rem;
-    color: var(--text-muted);
+.hero .hero-links {
+    text-align: center;
+    margin-block-start: 0.5rem;
+    margin-block-end: 0;
 }
 
 .hero a {
@@ -142,16 +147,22 @@ a:hover {
     text-shadow: 0 0 8px rgba(36, 236, 255, 0.4);
 }
 
-/* テキストを隠し、SVG画像をタイトルとして表示 */
-.hero-title-static {
-    inline-size: 100%;
+.hero-title {
+    margin: 0 auto 32px;
+    padding: 0;
+}
+
+.hero-logo {
+    display: block;
+    margin: 0 auto;
+    max-inline-size: 100%;
     block-size: 120px;
-    margin: 0 auto 24px;
-    background: url("assets/splash.svg") no-repeat center center;
-    background-size: contain;
-    text-indent: 100%;
-    white-space: nowrap;
-    overflow: hidden;
+    object-fit: contain;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.hero-logo:hover {
+    transform: scale(1.03);
 }
 
 h3 {
@@ -188,10 +199,6 @@ h2.section-header:hover::after {
     width: 60px;
 }
 
-h2.section-header span {
-    display: none;
-}
-
 code {
     background-color: rgba(157, 78, 223, 0.12);
     font-family: "JetBrains Mono", monospace;
@@ -208,6 +215,11 @@ code {
 code:hover {
     background-color: rgba(157, 78, 223, 0.25);
     border-color: rgba(157, 78, 223, 0.5);
+}
+
+code.is-copied {
+    color: var(--bg-color);
+    background-color: var(--accent-color);
 }
 
 pre code {
@@ -231,15 +243,12 @@ pre code:hover {
 /* ==========================================================================
    Box Components (Alert, Details, Cards, Tables)
    ========================================================================== */
-img,
 table,
 .download-grid,
 .alert,
 details {
     border: 1px solid var(--border-color);
     background: var(--surface-glass);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
     border-radius: var(--radius-lg);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
     overflow: hidden;
@@ -250,7 +259,7 @@ details {
         box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-:is(img, table, .download-grid, .alert, details):hover {
+:is(table, .download-grid, .alert, details):hover {
     transform: translateY(-4px);
     border-color: var(--border-hover);
     box-shadow:
@@ -493,7 +502,6 @@ img {
     border-top: 1px solid var(--border-color);
     background: none;
     box-shadow: none;
-    backdrop-filter: none;
 }
 
 .footer-content p {
@@ -553,4 +561,91 @@ img {
 .lazy-render-section {
     content-visibility: auto;
     contain-intrinsic-size: 1px 400px;
+}
+
+/* ==========================================================================
+   Header Layout (Left-aligned Text & Right-aligned Icons)
+   ========================================================================== */
+.hero {
+    display: flex;
+    flex-wrap: wrap; /* 画面が狭いときは上下2列に折り返す */
+    justify-content: space-between; /* 左端と右端に綺麗に振り分ける */
+    align-items: center; /* 上下の中央を揃える */
+    gap: 16px; /* 折り返したときや、要素間の最低限の隙間 */
+    width: 100%;
+    margin-block-end: 2rem; /* セクションとの間隔 */
+}
+
+.hero .hero-title-static {
+    margin: 0;
+    padding: 0;
+    font-family: inherit; /* 既存のフォント指定を引き継ぐ */
+}
+
+.hero .hero-links {
+    display: flex;
+    flex-wrap: wrap; /* スマホなどの極小画面でアイコン同士がさらに折り返せるように */
+    justify-content: flex-end; /* 右詰めで配置 */
+    gap: 4px; /* アイコン同士の間隔 */
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.hero .hero-links a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    /* 縦横を完全に固定して綺麗な正円を作る */
+    width: 44px;
+    height: 44px;
+    box-sizing: border-box;
+    border-radius: 50%; /* 完全な円形 */
+
+    /* 普段の背景・枠線は一切なし（透明） */
+    background: transparent;
+    border: 1px solid transparent;
+    padding: 0;
+    flex-shrink: 0; /* 円が潰れないように固定 */
+
+    transition:
+        transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+        background-color 0.2s ease,
+        border-color 0.2s ease;
+}
+
+/* ホバー時に初めて完全な円の背景が現れる */
+.hero .hero-links a:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* アイコン自体の調整（常にホワイト） */
+.hero .hero-links .link-icon {
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    padding: 0;
+    object-fit: contain;
+    /* 元のSVGの色に関わらず、完全に純白にするフィルタ */
+    filter: brightness(0) invert(1);
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+}
+
+/* ホバー時にアイコンをくっきり100%表示 */
+.hero .hero-links a:hover .link-icon {
+    opacity: 1;
+}
+
+/* スマートフォンなどの縦画面向け調整 */
+@media (max-width: 600px) {
+    .hero {
+        justify-content: center; /* 画面幅が狭く、1列に入らない時は上下2列にして中央に寄せる */
+        text-align: center;
+    }
+    .hero .hero-links {
+        justify-content: center; /* アイコンたちも中央寄せに */
+    }
 }
