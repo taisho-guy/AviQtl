@@ -33,7 +33,7 @@ const initReleases = async () => {
       );
       el.href = asset
         ? `https://codeberg.org/${REPO}/releases/download/${latest.tag_name}/${asset.name}`
-        : "#";
+        : "https://codeberg.org/taisho-guy/NeoUtl/releases";
       el.classList.toggle("is-disabled", !asset);
       el.querySelector(".download-icon")?.classList.toggle(
         "is-missing",

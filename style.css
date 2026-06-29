@@ -517,6 +517,11 @@ details > ol {
     border-color: rgba(255, 94, 151, 0.3);
 }
 
+.tag-link {
+    font-weight: bold;
+    font-size: 0.9em;
+}
+
 hr {
     border: 0;
     height: 1px;
