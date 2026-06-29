@@ -7,7 +7,7 @@ const initReleases = async () => {
   };
   const info = document.getElementById("download-info-row");
   const CACHE_KEY = "neoutl_release_cache";
-  const CACHE_TTL = 3600000; // 1時間
+  const CACHE_TTL = 3600000;
   const OBSERVER_MARGIN = "100px";
 
   const updateUI = (latest, prev) => {
@@ -92,7 +92,7 @@ document.addEventListener("click", ({ target }) => {
   if (target.tagName === "CODE") {
     navigator.clipboard.writeText(target.textContent).then(() => {
       target.classList.add("is-copied");
-      setTimeout(() => target.classList.remove("is-copied"), 200);
+      setTimeout(() => target.classList.remove("is-copied"), 1500);
     });
   }
 });

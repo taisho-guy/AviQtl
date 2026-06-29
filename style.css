@@ -4,36 +4,36 @@
     --bg-color: #0d0816;
     --surface-color: #171026;
     --surface-glass: #1d1430;
-
     --text-color: #e3dbf0;
     --text-muted: #9b8fb6;
-
     --accent-color: #9d4edf;
     --accent-glow: rgba(157, 78, 223, 0.3);
     --secondary-color: #24ecff;
-
     --link-color: #24ecff;
-    --link-visited: #9d4edf;
+    --link-visited: #c490f5;
     --link-active: #ff5e97;
-
     --border-color: rgba(157, 78, 223, 0.25);
     --border-hover: rgba(36, 236, 255, 0.6);
     --radius-lg: 12px;
     --radius-md: 8px;
     --radius-sm: 4px;
-
     --spacing-base: 40px;
     --spacing-tight: 24px;
-
     --sp-gap: 12px;
     --sp-xs: 8px;
     --sp-sm: 12px;
     --sp-md: 20px;
 }
 
-/* ==========================================================================
-   Base Layout
-   ========================================================================== */
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
 body {
     background-color: var(--bg-color);
     background-image:
@@ -70,6 +70,7 @@ main.container {
 main > :last-child {
     margin-block-end: 0;
 }
+
 :is(main, section) > :is(p, ul, ol) {
     margin-block: var(--spacing-tight) 0;
 }
@@ -85,51 +86,79 @@ li {
     transition: transform 0.2s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
-li:hover {
+li:has(a):hover {
     transform: translateX(4px);
 }
 
-/* ==========================================================================
-   Header & Footer
-   ========================================================================== */
 .hero {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
     padding-block: var(--spacing-base) var(--spacing-tight);
-    text-align: center;
     border-bottom: 1px solid var(--border-color);
     margin-bottom: var(--spacing-base);
 }
 
+.hero .hero-title-static {
+    margin: 0;
+    padding: 0;
+    font-family: inherit;
+}
+
 .hero .hero-links {
-    text-align: center;
-    margin-block-start: 0.5rem;
-    margin-block-end: 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
 }
 
 .hero a {
-    display: inline-block;
-    padding: 6px 14px;
-    border-radius: var(--radius-sm);
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    margin: 4px;
-    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    box-sizing: border-box;
+    border-radius: 50%;
+    background: transparent;
+    border: 1px solid transparent;
+    padding: 0;
+    flex-shrink: 0;
     transition:
-        transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
-        background-color 0.25s ease,
-        border-color 0.25s ease,
-        box-shadow 0.25s ease;
+        transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+        background-color 0.2s ease,
+        border-color 0.2s ease;
 }
 
-.hero a:hover {
-    transform: translateY(-2px) scale(1.03);
-    background: rgba(36, 236, 255, 0.08);
-    border-color: var(--secondary-color);
-    box-shadow: 0 0 12px rgba(36, 236, 255, 0.25);
+.hero a:hover,
+.hero a:focus-visible {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
 }
 
-/* ==========================================================================
-   Typography & Links
-   ========================================================================== */
+.hero .hero-links .link-icon {
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    padding: 0;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+}
+
+.hero a:hover .link-icon,
+.hero a:focus-visible .link-icon {
+    opacity: 1;
+}
+
 a {
     color: var(--link-color);
     text-decoration: none;
@@ -142,27 +171,18 @@ a:visited {
     color: var(--link-visited);
 }
 
-a:hover {
+a:hover,
+a:focus-visible {
     color: var(--link-color);
     text-shadow: 0 0 8px rgba(36, 236, 255, 0.4);
 }
 
-.hero-title {
-    margin: 0 auto 32px;
-    padding: 0;
-}
-
-.hero-logo {
-    display: block;
-    margin: 0 auto;
-    max-inline-size: 100%;
-    block-size: 120px;
-    object-fit: contain;
-    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.hero-logo:hover {
-    transform: scale(1.03);
+a:focus-visible,
+details summary:focus-visible,
+.download-item:focus-visible,
+.link-card:focus-within {
+    outline: 2px solid var(--secondary-color);
+    outline-offset: 4px;
 }
 
 h3 {
@@ -209,7 +229,8 @@ code {
     font-size: 0.9em;
     transition:
         background-color 0.2s cubic-bezier(0.25, 1, 0.5, 1),
-        border-color 0.2s cubic-bezier(0.25, 1, 0.5, 1);
+        border-color 0.2s cubic-bezier(0.25, 1, 0.5, 1),
+        color 0.3s ease;
 }
 
 code:hover {
@@ -218,8 +239,9 @@ code:hover {
 }
 
 code.is-copied {
-    color: var(--bg-color);
-    background-color: var(--accent-color);
+    color: var(--bg-color) !important;
+    background-color: var(--accent-color) !important;
+    border-color: var(--accent-color) !important;
 }
 
 pre code {
@@ -240,13 +262,10 @@ pre code:hover {
     transform: translateY(-2px);
 }
 
-/* ==========================================================================
-   Box Components (Alert, Details, Cards, Tables)
-   ========================================================================== */
-table,
 .download-grid,
 .alert,
-details {
+details,
+.link-card {
     border: 1px solid var(--border-color);
     background: var(--surface-glass);
     border-radius: var(--radius-lg);
@@ -259,7 +278,7 @@ details {
         box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-:is(table, .download-grid, .alert, details):hover {
+:is(.download-grid, .alert, details, .link-card):hover {
     transform: translateY(-4px);
     border-color: var(--border-hover);
     box-shadow:
@@ -271,6 +290,23 @@ details {
 details {
     padding: 0;
     margin-block-start: var(--spacing-tight);
+}
+
+details.deprecated {
+    border-color: rgba(255, 94, 151, 0.3);
+    background: linear-gradient(
+        180deg,
+        rgba(255, 94, 151, 0.03),
+        rgba(0, 0, 0, 0)
+    );
+}
+
+details.deprecated summary {
+    background: linear-gradient(90deg, rgba(255, 94, 151, 0.12), transparent);
+}
+
+details.deprecated summary:hover {
+    color: var(--link-active);
 }
 
 .alert-title,
@@ -303,7 +339,6 @@ details summary:hover,
 .alert > ul,
 .alert > ol,
 .alert > div,
-.alert > table,
 .alert > pre,
 .alert > img,
 details > p,
@@ -312,7 +347,6 @@ details > h4,
 details > ul,
 details > ol,
 details > div,
-details > table,
 details > pre,
 details > img {
     padding: var(--sp-md);
@@ -329,57 +363,12 @@ details > ol {
     padding-block: var(--sp-md);
 }
 
-/* ==========================================================================
-   Data Tables
-   ========================================================================== */
-table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    margin-block-start: var(--spacing-tight);
-}
-
-table th,
-table td {
-    padding: var(--sp-sm) var(--sp-md);
-    vertical-align: middle;
-    background: none;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-    transition: background-color 0.2s cubic-bezier(0.25, 1, 0.5, 1);
-}
-
-table tr:last-child th,
-table tr:last-child td {
-    border-bottom: none;
-}
-
-table tr:hover td {
-    background: rgba(255, 255, 255, 0.025);
-}
-
-table th {
-    font-weight: 700;
-    text-align: left;
-    color: var(--accent-color);
-    background: rgba(157, 78, 223, 0.04);
-    border-bottom: 1px solid var(--border-color);
-}
-
-/* ==========================================================================
-   Download Grid
-   ========================================================================= */
 .download-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 1px;
     background: var(--border-color);
     padding: 0;
-}
-
-@media (max-width: 768px) {
-    .download-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
 }
 
 .download-item {
@@ -400,7 +389,8 @@ table th {
     opacity: 0.6;
 }
 
-.download-item:hover:not(.is-disabled) {
+.download-item:hover:not(.is-disabled),
+.download-item:focus-visible:not(.is-disabled) {
     background: linear-gradient(
         185deg,
         var(--surface-color),
@@ -410,7 +400,8 @@ table th {
     transform: scale(1.02);
 }
 
-.download-item:hover:not(.is-disabled) .download-icon {
+.download-item:hover:not(.is-disabled) .download-icon,
+.download-item:focus-visible:not(.is-disabled) .download-icon {
     transform: translateY(-4px) scale(1.08);
     background-color: var(--secondary-color);
     filter: drop-shadow(0 0 6px rgba(36, 236, 255, 0.5));
@@ -419,6 +410,18 @@ table th {
 .download-item.is-disabled {
     opacity: 0.25;
     cursor: not-allowed;
+}
+
+.download-label {
+    margin-top: 12px;
+    font-size: 0.9rem;
+    color: var(--text-color);
+    font-weight: 700;
+    transition: color 0.25s ease;
+}
+
+.download-item:hover .download-label {
+    color: var(--secondary-color);
 }
 
 .download-info-row {
@@ -430,6 +433,7 @@ table th {
     background: rgba(10, 6, 18, 0.4);
     border: none;
     border-top: 1px solid var(--border-color);
+    min-height: 26px;
 }
 
 .download-icon {
@@ -466,14 +470,53 @@ table th {
 }
 
 .download-icon.is-loading {
-    mask-image: url("assets/loader.svg");
-    -webkit-mask-image: url("assets/loader.svg");
+    mask-image: url("assets/loader.svg") !important;
+    -webkit-mask-image: url("assets/loader.svg") !important;
     background-color: var(--secondary-color);
+    animation: spin 1s linear infinite !important;
 }
 
-/* ==========================================================================
-   Footer & Utilities
-   ========================================================================== */
+.related-links-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 20px;
+    margin-block-start: var(--spacing-tight);
+}
+
+.link-card {
+    padding: var(--sp-md);
+    margin-block-end: 0;
+}
+
+.link-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.link-card p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+}
+
+.license-badge {
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    background: rgba(157, 78, 223, 0.15);
+    color: var(--text-color);
+    border: 1px solid rgba(157, 78, 223, 0.3);
+}
+
+.license-badge.badge-warn {
+    background: rgba(255, 94, 151, 0.15);
+    color: var(--link-active);
+    border-color: rgba(255, 94, 151, 0.3);
+}
+
 hr {
     border: 0;
     height: 1px;
@@ -521,32 +564,6 @@ img {
     color: #ffffff;
 }
 
-.icon-origin-box {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--sp-md);
-    padding: var(--sp-sm) 0;
-    flex-wrap: wrap;
-}
-
-.icon-origin-box img {
-    border: none;
-    margin-block: 0;
-    background: none;
-    box-shadow: none;
-    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.icon-origin-box img:hover {
-    transform: scale(1.15) rotate(4deg);
-}
-
-.tag-link {
-    font-weight: bold;
-    font-size: 0.9em;
-}
-
 .visually-hidden {
     position: absolute;
     inline-size: 1px;
@@ -563,89 +580,16 @@ img {
     contain-intrinsic-size: 1px 400px;
 }
 
-/* ==========================================================================
-   Header Layout (Left-aligned Text & Right-aligned Icons)
-   ========================================================================== */
-.hero {
-    display: flex;
-    flex-wrap: wrap; /* 画面が狭いときは上下2列に折り返す */
-    justify-content: space-between; /* 左端と右端に綺麗に振り分ける */
-    align-items: center; /* 上下の中央を揃える */
-    gap: 16px; /* 折り返したときや、要素間の最低限の隙間 */
-    width: 100%;
-    margin-block-end: 2rem; /* セクションとの間隔 */
-}
-
-.hero .hero-title-static {
-    margin: 0;
-    padding: 0;
-    font-family: inherit; /* 既存のフォント指定を引き継ぐ */
-}
-
-.hero .hero-links {
-    display: flex;
-    flex-wrap: wrap; /* スマホなどの極小画面でアイコン同士がさらに折り返せるように */
-    justify-content: flex-end; /* 右詰めで配置 */
-    gap: 4px; /* アイコン同士の間隔 */
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}
-
-.hero .hero-links a {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    /* 縦横を完全に固定して綺麗な正円を作る */
-    width: 44px;
-    height: 44px;
-    box-sizing: border-box;
-    border-radius: 50%; /* 完全な円形 */
-
-    /* 普段の背景・枠線は一切なし（透明） */
-    background: transparent;
-    border: 1px solid transparent;
-    padding: 0;
-    flex-shrink: 0; /* 円が潰れないように固定 */
-
-    transition:
-        transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
-        background-color 0.2s ease,
-        border-color 0.2s ease;
-}
-
-/* ホバー時に初めて完全な円の背景が現れる */
-.hero .hero-links a:hover {
-    transform: translateY(-2px);
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.15);
-}
-
-/* アイコン自体の調整（常にホワイト） */
-.hero .hero-links .link-icon {
-    width: 20px;
-    height: 20px;
-    margin: 0;
-    padding: 0;
-    object-fit: contain;
-    /* 元のSVGの色に関わらず、完全に純白にするフィルタ */
-    filter: brightness(0) invert(1);
-    opacity: 0.8;
-    transition: opacity 0.2s ease;
-}
-
-/* ホバー時にアイコンをくっきり100%表示 */
-.hero .hero-links a:hover .link-icon {
-    opacity: 1;
-}
-
-/* スマートフォンなどの縦画面向け調整 */
-@media (max-width: 600px) {
+@media (max-width: 768px) {
     .hero {
-        justify-content: center; /* 画面幅が狭く、1列に入らない時は上下2列にして中央に寄せる */
+        flex-direction: column;
+        justify-content: center;
         text-align: center;
     }
     .hero .hero-links {
-        justify-content: center; /* アイコンたちも中央寄せに */
+        justify-content: center;
+    }
+    .download-grid {
+        grid-template-columns: repeat(2, 1fr);
     }
 }

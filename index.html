@@ -17,10 +17,8 @@
             name="google-site-verification"
             content="xmXYtl-62Vi0ktTxGecj5qIXhQ81q76_dCKlFycBDEY"
         />
-
         <link rel="manifest" href="manifest.json" />
         <meta name="theme-color" content="#121b1d" />
-
         <meta
             property="og:title"
             content="NeoUtlのお部屋 | AviUtlを踏襲し凌駕する次世代動画編集ソフト"
@@ -35,7 +33,6 @@
             property="og:image"
             content="https://neoutl.taisho-guy.org/assets/splash.svg"
         />
-
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link
@@ -50,7 +47,6 @@
             media="print"
             onload="this.media = 'all'"
         />
-
         <link
             rel="icon"
             href="assets/icon.svg"
@@ -58,7 +54,6 @@
             fetchpriority="high"
         />
         <link rel="apple-touch-icon" href="assets/icon.svg" />
-
         <script type="application/ld+json">
             {
                 "@context": "https://schema.org",
@@ -167,7 +162,6 @@
 
             <section>
                 <h2 class="section-header">ダウンロード</h2>
-
                 <div class="alert alert-note">
                     <div class="alert-title">ダウンロード前にご確認下さい</div>
                     <ul>
@@ -214,6 +208,7 @@
                         title="Linux用ビルド"
                     >
                         <div class="download-icon icon-linux is-loading"></div>
+                        <span class="download-label">Linux</span>
                     </a>
                     <a
                         href="#"
@@ -224,6 +219,7 @@
                         <div
                             class="download-icon icon-windows is-loading"
                         ></div>
+                        <span class="download-label">Windows</span>
                     </a>
                     <a
                         href="#"
@@ -232,6 +228,7 @@
                         title="macOS用ビルド"
                     >
                         <div class="download-icon icon-apple is-loading"></div>
+                        <span class="download-label">macOS</span>
                     </a>
                     <a
                         href="#"
@@ -242,6 +239,7 @@
                         <div
                             class="download-icon icon-codeberg is-loading"
                         ></div>
+                        <span class="download-label">Source</span>
                     </a>
                     <div
                         class="download-info-row"
@@ -320,7 +318,7 @@ python -m pip install --upgrade pip PySide6</code></pre>
                     </ol>
                 </details>
 
-                <details>
+                <details class="deprecated">
                     <summary>Windows (MSVC - 非推奨)</summary>
                     <p>環境構築の複雑さから非推奨としています。</p>
                     <ol>
@@ -345,112 +343,114 @@ python -m pip install --upgrade pip PySide6</code></pre>
                 <p>
                     NeoUtlは、多くの素晴らしいプロジェクトの上に成り立っています。この場を借りて、感謝を申し上げます。
                 </p>
-                <table class="lazy-render-section">
-                    <tr>
-                        <td>
+                <div class="related-links-grid lazy-render-section">
+                    <div class="link-card">
+                        <div class="link-card-header">
                             <a
                                 href="http://spring-fragrance.mints.ne.jp/aviutl/"
                                 target="_blank"
                                 >AviUtl</a
                             >
-                        </td>
-                        <td>非自由</td>
-                        <td>
+                            <span class="license-badge badge-warn">非自由</span>
+                        </div>
+                        <p>
                             本プロジェクトがリスペクトしている、ＫＥＮくん氏開発の動画編集ソフト「AviUtl」の公式サイトです。
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
+                        </p>
+                    </div>
+                    <div class="link-card">
+                        <div class="link-card-header">
                             <a
                                 href="https://kx.studio/Applications:Carla"
                                 target="_blank"
                                 >Carla</a
                             >
-                        </td>
-                        <td>GPLv2+</td>
-                        <td>
+                            <span class="license-badge">GPLv2+</span>
+                        </div>
+                        <p>
                             VST3やLV2等の音声エフェクトをホストするためのバックエンドとして利用しています。
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
+                        </p>
+                    </div>
+                    <div class="link-card">
+                        <div class="link-card-header">
                             <a
                                 href="https://codeberg.org/taisho-guy/NeoUtl"
                                 target="_blank"
                                 >NeoUtl</a
                             >
-                        </td>
-                        <td>AGPLv3+</td>
-                        <td>
+                            <span class="license-badge">AGPLv3+</span>
+                        </div>
+                        <p>
                             Codeberg上のメインリポジトリです。開発の最前線であり、ソースコードや最新リリースが公開されています。
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
+                        </p>
+                    </div>
+                    <div class="link-card">
+                        <div class="link-card-header">
                             <a href="https://ffmpeg.org/" target="_blank"
                                 >FFmpeg</a
                             >
-                        </td>
-                        <td>GPLv2+</td>
-                        <td>
+                            <span class="license-badge">GPLv2+</span>
+                        </div>
+                        <p>
                             動画・音声のデコード、エンコード、変換を司る、映像処理の要です。
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
+                        </p>
+                    </div>
+                    <div class="link-card">
+                        <div class="link-card-header">
                             <a href="https://luajit.org/" target="_blank"
                                 >LuaJIT</a
                             >
-                        </td>
-                        <td>MIT</td>
-                        <td>
+                            <span class="license-badge">MIT</span>
+                        </div>
+                        <p>
                             非常に高速なJITコンパイルが可能なLuaエンジンで、エフェクト記述や拡張機能に使用しています。
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
+                        </p>
+                    </div>
+                    <div class="link-card">
+                        <div class="link-card-header">
                             <a href="https://www.qt.io/" target="_blank">Qt</a>
-                        </td>
-                        <td>GPLv3</td>
-                        <td>
+                            <span class="license-badge">GPLv3</span>
+                        </div>
+                        <p>
                             UI/UXの構築にQt
                             QuickおよびQMLを採用し、クロスプラットフォームで軽快な操作感を実現しています。
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
+                        </p>
+                    </div>
+                    <div class="link-card">
+                        <div class="link-card-header">
                             <a
                                 href="https://github.com/Remix-Design/RemixIcon"
                                 target="_blank"
                                 >Remix Icon</a
                             >
-                        </td>
-                        <td>Remix Icon License v1.0</td>
-                        <td>NeoUtl内のシンボルアイコンに採用されています。</td>
-                    </tr>
-                    <tr>
-                        <td>
+                            <span class="license-badge"
+                                >Remix Icon License v1.0</span
+                            >
+                        </div>
+                        <p>NeoUtl内のシンボルアイコンに採用されています。</p>
+                    </div>
+                    <div class="link-card">
+                        <div class="link-card-header">
                             <a href="https://www.vulkan.org/" target="_blank"
                                 >Vulkan</a
                             >
-                        </td>
-                        <td>Apache 2.0</td>
-                        <td>
+                            <span class="license-badge">Apache 2.0</span>
+                        </div>
+                        <p>
                             GPUを最大限に引き出し、リアルタイムでの高度な描画とエフェクト処理を支える基盤APIです。
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
+                        </p>
+                    </div>
+                    <div class="link-card">
+                        <div class="link-card-header">
                             <a href="https://www.zrythm.org" target="_blank"
                                 >Zrythm</a
                             >
-                        </td>
-                        <td>AGPLv3</td>
-                        <td>
+                            <span class="license-badge">AGPLv3</span>
+                        </div>
+                        <p>
                             音声プラグイン（Carla等）の対応において、実装を参考にしました。
-                        </td>
-                    </tr>
-                </table>
+                        </p>
+                    </div>
+                </div>
             </section>
 
             <section>
